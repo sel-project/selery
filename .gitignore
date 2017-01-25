@@ -1,0 +1,17 @@
+*.exe
+*.sln
+*.userprefs
+*.dproj
+node/.config
+node/main
+node/init
+node/node
+node/resources
+node/plugins
+hub/.config
+hub/main
+hub/hub
+hub/resources
+
+res/lang/es_ES.lang
+res/lang/fur_IT.lang

@@ -1,0 +1,112 @@
+# SEL LANGUAGE FILE
+# VERSION 3
+# COMPLETE
+
+language.name = English (United Kingdom)
+
+startup.connecting = Connecting to {0} with name "{1}"
+startup.running = Running on {0} compiled {1} on {2}
+startup.starting = Starting server with {0}
+startup.plugin.enabled = Enabled {0} by {1} version {2}
+startup.plugin.enabled.asapi = Enabled {0} as API by {1} version {2}
+startup.plugin.enabled.withapi = Enabled {0} with API by {1} version {2} 
+startup.started = Server started
+startup.unsupported = This OS is not fully supported by {}. Something may not work correctly
+
+warning.overload = Warning! The server is overloaded and the ticking is low!
+warning.connectionError = A connection with the hub at "{0}" cannot be established: {1}
+warning.refused = The connection has been refused
+warning.closed = The connection has been closed by the hub
+warning.outofram = The server is using too much RAM memory and it will be stopped
+warning.protocolRequired = The node uses protocol {0}, but protocol {1} is required by the hub
+warning.invalidGame = Game "{0}" ({1}) required by the hub is not supported by this version of {2}
+warning.invalidProtocol = Protocol {0} for game "{1}" required by the hub is not supported by this version of {2}
+warning.rebuild = This node has been compiled with different protocols than the ones required by the hub and it needs to be compiled again
+warning.removingDefaultWorld = Trying to remove world "{0}", but the default world cannot be removed
+warning.removingWithPlayers = Removing world "{0}" with {1} players online!
+warning.unknownPacket = Unknown packet received by {0} with ID {1} ({2} bytes)
+warning.crash = {0}: {1} in {2} at line {3}
+warning.savedCrash = A file with the details of the crash has been saved at {0}
+warning.blocked = Blocked {0} for {1} seconds
+
+status.outdatedHub = Could not connect! Outdated hub
+status.outdatedNode = Could not connect! Outdated node
+status.passwordRequired = The hub requires a password
+status.wrongPassword = Wrong password!
+status.invalidNameLength = Invalid name length
+status.invalidNameCharacters = The chosen name contains invalid characters. Check the hub's documentation to see which characters you can use
+status.nameAlreadyUsed = A node with same name is already connected
+status.nameReserved = The hub has reserved the chosen name and it cannot be used
+status.unknown = Could not connect! Unknown reason
+
+handler.listening = Handler {0} listening on {1}
+handler.error.bind = Handler {0} cannot bind on {1}: {2}
+handler.error.address = Handler {0} cannot resolve address {1}
+
+connection.join = {0} joined the game
+connection.left = {0} left the game
+
+death.fell.accident.ladder = {0} fell off a ladder
+death.fell.accident.vines = {0} fell off some vines
+death.fell.accident.water = {0} fell out of the water
+death.fell.accident.generic = {0} fell from a high place
+death.fell.killer = {0} was doomed to fall
+death.fell.assist = {0} was doomed to fall by {1}
+death.fell.assist.item = {0} was doomed to fall by {1} using {2}
+death.fell.finish = {0} fell too far and was finished by {1}
+death.fell.finish.item = {0} fell too far and was finished by {1} using {2}
+
+death.attack.inFire = {0} went up in flames
+death.attack.inFire.player = {0} walked into fire whilst fighting {1}
+death.attack.onFire = {0} burnt to death
+death.attack.onFire.player = {0} was burnt to a crisp whilst fighting {1}
+death.attack.lava = {0} tried to swim in lava
+death.attack.lava.player = {0} tried to swim in lava to escape {1}
+death.attack.inWall = {0} suffocated in a wall
+death.attack.drown = {0} drowned
+death.attack.drown.player = {0} drowned whilst trying to escape {1}
+death.attack.starve = {0} starved to death
+death.attack.cactus = {0} was pricked to death
+death.attack.cactus.player = {0} walked into a cactus whilst trying to escape {1}
+death.attack.generic = {0} died
+death.attack.explosion = {0} blew up
+death.attack.explosion.player = {0} was blown up by {1}
+death.attack.magic = {0} was killed by magic
+death.attack.wither = {0} withered away
+death.attack.anvil = {0} was squashed by a falling anvil
+death.attack.fallingBlock = {0} was squashed by a falling block
+death.attack.player = {0} was slain by {1}
+death.attack.player.item = {0} was slain by {1} using {2}
+death.attack.arrow = {0} was shot by {1}
+death.attack.arrow.item = {0} was shot by {1} using {2}
+death.attack.fireball = {0} was fireballed by {1}
+death.attack.fireball.item = {0} was fireballed by {1} using {2}
+death.attack.thrown = {0} was pummelled by {1}
+death.attack.thrown.item = {0} was pummelled by {1} using {2}
+death.attack.indirectMagic = {0} was killed by {1} using magic
+death.attack.indirectMagic.item = {0} was killed by {1} using {2}
+death.attack.thorns = {0} was killed trying to hurt {1}
+death.attack.fall = {0} hit the ground too hard
+death.attack.outOfWorld = {0} fell out of the world
+death.attack.outOfWorld.player = {0} was pushed out of the world by {1}
+death.attack.lightning = {0} was struck by lightning
+
+commands.notonline = The selected player is not online
+commands.noworld = The selected world doesn't exist
+commands.ban.usage = Usage: /ban <player>
+commands.ban.description = Ban a player from the server
+commands.ban.already_banned = This player has already been banned
+commands.ban.banned = {0} has been banned from the server
+commands.give.usage = Usage: /give <player> <item[:meta]> [<count=item.max>]
+commands.give.description = Gives a player some items
+commands.give.metaerr = "{0}" is not a valid meta/damage
+commands.give.counterr = "{0}" is not a valid number for count
+commands.give.noitem = There's no item named "{0}"
+commands.give.full = {0} can't be added due to full inventory
+commands.give.given = {0} has been added to the inventory
+commands.kill.usage = Usage: /kill <player>
+commands.kill.description = Kills a player
+commands.kill.killed = {0} has been killed
+commands.toggledownfall.usage = Usage: /toggledownfall <world>
+commands.toggledownfall.description = Toggles/Untoggles the downfalls in the selected world
+commands.toggledownfall.success = Downfalls has been reverted

@@ -1,0 +1,92 @@
+﻿/*
+ * Copyright (c) 2016-2017 SEL
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details.
+ * 
+ */
+module sel.util.log;
+
+import std.conv : to;
+import std.path : dirSeparator;
+import std.string : replace, startsWith, indexOf;
+
+import common.sel;
+import common.util.format : Text, writeln;
+import common.util.time : milliseconds;
+
+mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".types : Log;");
+
+private shared(Log)[] last_logged_messages;
+
+public Log[] get_and_clear_logged_messages() {
+	auto ret = cast(Log[])last_logged_messages;
+	last_logged_messages.length = 0;
+	return ret;
+}
+
+public void log_m(bool hub, E...)(string logger, E logs) {
+	string message = "";
+	foreach(immutable l ; logs) {
+		static if(is(typeof(l) : string)) {
+			message ~= l;
+		} else {
+			message ~= to!string(l);
+		}
+	}
+	static if(hub) last_logged_messages ~= Log(milliseconds, logger, message);
+	writeln("[" ~ logger ~ "] " ~ message);
+}
+
+/**
+ * Logs a message to the node and the hub's console.
+ * This function is the same as writeln, but also sends the message
+ * to the hub and the eventual external consoles.
+ * The function takes a number of arguments and concatenates them. If the
+ * arguments are not strings they are transformed in it through the template
+ * to in std.conv.
+ * Example:
+ * ---
+ * log("string");
+ * log("value: ", 33);
+ * log(tuple(1, '2'), " ", new Object());
+ * ---
+ */
+public void log(bool hub=true, string mod=__MODULE__, E...)(E logs) {
+	enum m = mod.replace(".", dirSeparator);
+	static if(mod.startsWith("sel.")) {
+		enum mm = m[4..$];
+	} else {
+		static if(mod.indexOf(".") != -1) {
+			enum mm = "plugin" ~ dirSeparator ~ m[0..mod.indexOf(".")];
+		} else {
+			enum mm = "plugin" ~ dirSeparator ~ m;
+		}
+	}
+	log_m!hub(mm, logs);
+}
+
+public void debug_log(string m=__MODULE__, E...)(E logs) {
+	//debug {
+		log!(false, m ~ "@debug")(cast(string)Text.blue, logs);
+	//}
+}
+
+public void warning_log(string m=__MODULE__, E...)(E logs) {
+	log!(true, m ~ "@warning")(cast(string)Text.yellow, logs);
+}
+
+public void error_log(string m=__MODULE__, E...)(E logs) {
+	log!(true, m ~ "@error")(cast(string)Text.red, logs);
+}
+
+public void success_log(string m=__MODULE__, E...)(E logs) {
+	log!(true, m ~ "@success")(cast(string)Text.green, logs);
+}
