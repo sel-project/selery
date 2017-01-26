@@ -371,7 +371,7 @@ struct AnvilImpl(immutable(char)[3] order) {
 				if(compound.has!(ByteArray)("Biomes")) {
 					chunk.biomes = cast(ubyte[])(compound.get!(ByteArray)("Biomes")[]);
 				}
-				world.set(chunk);
+				world[] = chunk;
 			}
 		}
 

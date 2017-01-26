@@ -152,7 +152,7 @@ abstract class Living : Entity {
 
 	protected @trusted void healthUpdated() {}
 
-	protected final override bool validateAttack(EntityDamageEvent event) {
+	protected override bool validateAttack(EntityDamageEvent event) {
 		return this.alive && (!this.immortal || event.imminent) && (!cast(EntityDamageByEntityEvent)event || this.last_received_attack + 10 <= this.ticks);
 	}
 
@@ -169,9 +169,6 @@ abstract class Living : Entity {
 
 		//hurt animation
 		this.viewers!Player.call!"sendHurtAnimation"(this);
-
-		//knockback
-		//if(event.doKnockback) this.knockback(event.knockback, event.knockbackPower);
 
 		//update the viewers if dead
 		if(this.dead) {

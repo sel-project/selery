@@ -35,9 +35,20 @@ void main(string[] args) {
 
 		if(args.length >= 2 && args[1] == "about") {
 
+			import std.json : JSONValue;
 			import std.stdio : writeln;
 			import common.sel;
-			writeln("{\"software\":\"" ~ Software.display ~ "\"}");
+
+			auto json = JSONValue([
+				"type": JSONValue("hub"),
+				"software": JSONValue([
+					"name": JSONValue(Software.name),
+					"version": JSONValue(Software.displayVersion),
+					"stable": JSONValue(Software.stable)
+				])
+			]);
+
+			writeln(json.toString());
 
 		} else {
 

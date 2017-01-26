@@ -625,7 +625,7 @@ class MinecraftPlayer(uint __protocol) : MinecraftPlayerBase {
 		foreach(update ; updates) {
 			records ~= tuple!R(update);
 		}
-		this.sendPacket(new Clientbound.Explosion(tuple!(typeof(Clientbound.Explosion.position))(position), radius, records));
+		this.sendPacket(new Clientbound.Explosion(tuple!(typeof(Clientbound.Explosion.position))(position), radius, records, typeof(Clientbound.Explosion.motion)(0, 0, 0)));
 	}
 	
 	public override void sendMap(Map map) {

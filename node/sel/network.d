@@ -61,13 +61,17 @@ final class Handler {
 	}
 	
 	private ubyte[] n_next;
+	private size_t n_next_length = 0;
 
 	public ubyte[] next(ref bool closed) {
-		if(!this.addNext(uint.sizeof, closed)) return new ubyte[0];
-		size_t length = read!(uint, Endian.littleEndian)(this.n_next);
-		if(length == 0 || !this.addNext(length, closed)) return new ubyte[0];
-		ubyte[] ret = this.n_next[0..length];
-		this.n_next = this.n_next[length..$];
+		if(this.n_next_length == 0) {
+			if(!this.addNext(4, closed)) return new ubyte[0];
+			this.n_next_length = read!(uint, Endian.littleEndian)(this.n_next);
+		}
+		if(this.n_next_length == 0 || !this.addNext(this.n_next_length, closed)) return new ubyte[0];
+		ubyte[] ret = this.n_next[0..this.n_next_length];
+		this.n_next = this.n_next[this.n_next_length..$];
+		this.n_next_length = 0;
 		return ret;
 	}
 	

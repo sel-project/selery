@@ -39,11 +39,6 @@ enum size_t POCKET_BUFFER_SIZE = 1464;
 enum size_t POCKET_TIMEOUT = 12;
 
 /**
- * Default: true
- */
-enum bool FILTER_POCKET_COMPRESSED_MOVE_PLAYER_PACKETS = true;
-
-/**
  * Mojang's 120-bytes public key used for the login packet
  * encryption.
  */

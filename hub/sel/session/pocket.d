@@ -274,11 +274,6 @@ final class PocketSession : PlayerSession {
 	private shared ubyte[][] decompressionQueue;
 	private shared Thread decompressionThread;
 
-	static if(FILTER_POCKET_COMPRESSED_MOVE_PLAYER_PACKETS) {
-		private shared ubyte movePacketId = Play.MovePlayer.ID;
-		private shared ubyte[] lastMovePacket;
-	}
-
 	public shared this(shared Server server, session_t code, PocketHandler handler, Socket socket, Address address, ushort mtu) {
 		super(server);
 		this.code = code;
@@ -573,31 +568,17 @@ final class PocketSession : PlayerSession {
 
 	public shared void decompressQueue() {
 		while(this.decompressionQueue.length) {
-			import std.datetime : StopWatch;
-			StopWatch time;
-			time.start();
 			//TODO handle exception
 			shared ubyte[] scompressed = this.decompressionQueue[0];
 			ubyte[] compressed = cast(ubyte[])scompressed;
 			this.decompressionQueue = this.decompressionQueue[1..$];
-			static if(FILTER_POCKET_COMPRESSED_MOVE_PLAYER_PACKETS) {
-				if(scompressed == this.lastMovePacket) {
-					continue;
-				}
-			}
 			try {
 				UnCompress uc = new UnCompress(HeaderFormat.determineFromData);
 				ubyte[] packet = cast(ubyte[])uc.uncompress(compressed);
 				packet ~= cast(ubyte[])uc.flush();
-				time.stop();
 				while(packet.length) {
 					size_t length = varuint.fromBuffer(packet);
 					if(length && length <= packet.length) {
-						static if(FILTER_POCKET_COMPRESSED_MOVE_PLAYER_PACKETS) {
-							if(packet[0] == this.movePacketId) {
-								this.lastMovePacket = scompressed;
-							}
-						}
 						this.handleUncompressedPlay(packet[0..length]);
 						packet = packet[length..$];
 					}

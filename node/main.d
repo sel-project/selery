@@ -49,60 +49,70 @@ void main(string[] args) {
 	args = args[1..$];
 	
 	if(args.length && args[0] == "about") {
+
+		import std.json : JSONValue;
 		import std.stdio : writeln;
-		string info = "{";
-		info ~= "\"sel\":\"" ~ Software.name ~ "\",";
-		info ~= "\"pocket\":" ~ to!string(__pocketProtocols).replace(" ", "") ~ ",";
-		info ~= "\"minecraft\":" ~ to!string(__minecraftProtocols).replace(" ", "");
-		info ~= "}";
-		writeln(info);
-		return;
-	}
 
-	import std.file : exists, remove;
-	if(exists(Paths.hidden ~ "crash")) remove(Paths.hidden ~ "crash");
+		auto json = JSONValue([
+			"type": JSONValue("node"),
+			"software": JSONValue([
+				"name": JSONValue(Software.name),
+				"version": JSONValue(Software.displayVersion),
+				"stable": JSONValue(Software.stable)
+			]),
+			"minecraft": JSONValue(__minecraftProtocols),
+			"pocket": JSONValue(__pocketProtocols)
+		]);
 
-	Server server;
-	
-	try {
+		writeln(json.toString());
 
-		string name = args.length > 0 ? args[0] : "node";
-		Address address;
-		ushort port = args.length > 2 ? to!ushort(args[2]) : 28232;
-		bool main = args.length > 3 ? to!bool(args[3]) : true;
-		string password = args.length > 4 ? args[4..$].join(" ") : "";
+	} else {
+
+		import std.file : exists, remove;
+		if(exists(Paths.hidden ~ "crash")) remove(Paths.hidden ~ "crash");
+
+		Server server;
 		
-		if(args.length > 1) {
-			string ip = args[1];
-			try {
-				address = getAddress(ip, port)[0];
-			} catch(SocketException e) {
-				version(Posix) {
-					// assume it's a unix address
-					address = new UnixAddress(ip);
-				} else {
-					throw e;
+		try {
+
+			string name = args.length > 0 ? args[0] : "node";
+			Address address;
+			ushort port = args.length > 2 ? to!ushort(args[2]) : 28232;
+			bool main = args.length > 3 ? to!bool(args[3]) : true;
+			string password = args.length > 4 ? args[4..$].join(" ") : "";
+			
+			if(args.length > 1) {
+				string ip = args[1];
+				try {
+					address = getAddress(ip, port)[0];
+				} catch(SocketException e) {
+					version(Posix) {
+						// assume it's a unix address
+						address = new UnixAddress(ip);
+					} else {
+						throw e;
+					}
 				}
+			} else {
+				address = new InternetAddress("127.0.0.1", port);
 			}
-		} else {
-			address = new InternetAddress("127.0.0.1", port);
+			
+			server = new Server(address, password, name, main);
+
+		} catch(LinkTerminated) {
+
+		} catch(UnloggedException) {
+			
+		} catch(Throwable e) {
+			
+			crash(e);
+
+		} finally {
+			
+			import std.c.stdlib : exit;
+			exit(12014);
+			
 		}
-		
-		server = new Server(address, password, name, main);
-
-	} catch(LinkTerminated) {
-
-	} catch(UnloggedException) {
-		
-	} catch(Throwable e) {
-		
-		crash(e);
-
-	} finally {
-		
-		import std.c.stdlib : exit;
-		exit(12014);
-		
 	}
 	
 }

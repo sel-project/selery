@@ -25,7 +25,7 @@ module sel.session.hncom;
 import core.thread : Thread;
 
 import std.algorithm : canFind;
-import std.bitmanip : write;
+import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : dur;
 import std.math : round;
@@ -152,6 +152,9 @@ class HncomHandler : HandlerThread {
 	
 }
 
+/**
+ * Session of a node. It's executed in a dedicated thread.
+ */
 class Node : Session {
 	
 	public static Types.Address hncomAddress(Address address) {
@@ -209,7 +212,7 @@ class Node : Session {
 		this.remoteAddress = socket.remoteAddress.toString();
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
 		auto receiver = new Receiver!(uint, Endian.littleEndian)();
-		ubyte[] buffer = new ubyte[64];
+		ubyte[] buffer = new ubyte[256];
 		auto recv = socket.receive(buffer);
 		if(recv > 0) {
 			this.server.traffic.receive(recv);
@@ -230,7 +233,7 @@ class Node : Session {
 				else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
 				else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 				else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-				else if(["reload", "threads"].canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+				else if(["about", "disconnect", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
 				this.send(response.encode());
 				if(response.status == Login.ConnectionResponse.OK) {
 					// send info packets
@@ -526,11 +529,16 @@ class Node : Session {
 	 * little endian 4-bytes unsigned integer.
 	 */
 	public override shared ptrdiff_t send(const(void)[] buffer) {
-		size_t length = buffer.length;
-		ubyte[] b = new ubyte[4] ~ cast(ubyte[])buffer;
-		write!(uint, Endian.littleEndian)(b, length.to!uint, 0);
-		this.server.traffic.send(b.length);
-		return (cast()this.socket).send(b);
+		buffer = nativeToLittleEndian(buffer.length.to!uint) ~ buffer;
+		immutable length = buffer.length;
+		auto socket = cast()this.socket;
+		while(true) {
+			immutable sent = socket.send(buffer);
+			if(sent <= 0 || sent == buffer.length) break;
+			buffer = buffer[sent..$];
+		}
+		this.server.traffic.send(length);
+		return length;
 	}
 	
 	/**

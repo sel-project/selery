@@ -609,6 +609,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		if(this.tasks.has) {
 			this.tasks.tick(this.ticks);
 		}
+
 		//tick the worlds
 		/*foreach(World world ; this.worlds) {
 			world.tick(); // <-- this can cause memory leaks when the netowrk is busy!
@@ -619,10 +620,12 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		foreach(world ; this.m_worlds) {
 			world.tick();
 		}
+
 		// flush packets
-		foreach(ref Player player ; this.players_hubid) {
+		foreach(player ; this.players_hubid) {
 			player.flush();
 		}
+
 		// sends the logs to the hub
 		auto logs = get_and_clear_logged_messages();
 		if(logs.length) {
@@ -1452,28 +1455,8 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 }
 
-struct Settings {
-	
-	public bool onlineMode;
-	
-	public string name;
-	
-	public GameInfo pocket;
-	public GameInfo minecraft;
-	
-	public string language;
-	public string[] acceptedLanguages;
-
-	private static struct GameInfo {
-
-		public bool accepted;
-
-		public string motd;
-		public ushort port;
-		public uint[] protocols;
-
-		alias accepted this;
-
-	}
-
+@property string fullGameName(ubyte game) {
+	if(game == PE) return "Minecraft: Pocket Edition";
+	else if(game == PC) return "Minecraft";
+	else return "Unknown";
 }

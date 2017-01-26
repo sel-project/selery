@@ -362,6 +362,19 @@ abstract class Player : Human {
 
 	// ticks the player entity
 	public override void tick() {
+		
+		// animation
+		if(this.do_animation) {
+			this.handleArmSwingImpl();
+			this.do_animation = false;
+		}
+		
+		// movement
+		if(this.do_movement) {
+			this.handleMovementPacketImpl(this.last_position, this.last_yaw, this.last_body_yaw, this.last_pitch);
+			this.do_movement = false;
+		}
+
 		super.tick();
 		//TODO handle movements here
 
@@ -382,18 +395,6 @@ abstract class Player : Human {
 			}
 			this.inventory.update_viewers = 0;
 		}
-
-		// animation
-		if(this.do_animation) {
-			this.handleArmSwingImpl();
-			this.do_animation = false;
-		}
-
-		// movement
-		if(this.do_movement) {
-			this.handleMovementPacketImpl(this.last_position, this.last_yaw, this.last_body_yaw, this.last_pitch);
-			this.do_movement = false;
-		}
 	}
 	
 	/**
@@ -407,6 +408,8 @@ abstract class Player : Human {
 		this.m_subtitle = Message.init;
 		this.m_tip = Message.init;
 		this.sendResetTitles();
+
+		this.rules = world.rules.dup;
 
 		auto old = this.n_world.dimension;
 		this.world.despawnPlayer(this);
@@ -1092,6 +1095,7 @@ abstract class Player : Human {
 	/// ditto
 	private void handleMovementPacketImpl(EntityPosition position, float yaw, float bodyYaw, float pitch) {
 		if(!sel.math.vector.isFinite(position) || /*position < int.min || position > int.max || */!isFinite(yaw) || !isFinite(bodyYaw) || !isFinite(pitch)) {
+			warning_log(this.name, " sent an invalid position! x: ", position.x, ", y: ", position.y, ", z: ", position.z, ", yaw: ", yaw, ", bodyYaw: ", bodyYaw, ", pitch: ", pitch);
 			this.kick("Invalid position!");
 		} else {
 			auto old = this.position;

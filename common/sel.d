@@ -14,7 +14,7 @@
  */
 module common.sel;
 
-import std.algorithm : sort;
+import std.algorithm : sort, reverse;
 import std.conv : to;
 import std.string : toLower, split, join, startsWith;
 import std.typecons : Tuple;
@@ -45,17 +45,6 @@ alias MINECRAFT = PC;
 
 alias MC = PC;
 
-@property string gameName(ubyte game) {
-	if(game == PE) return "pocket";
-	else if(game == PC) return "minecraft";
-	else return "unknown";
-}
-
-@property string fullGameName(ubyte game) {
-	if(game == PE) return "Minecraft: Pocket Edition";
-	else if(game == PC) return "Minecraft";
-	else return "Unknown";
-}
 
 /**
  * Informations about the software, like name, codename,
@@ -112,7 +101,7 @@ const struct Software {
 
 	enum ubyte minor = 0;
 
-	enum ubyte revision = 0;
+	enum ubyte revision = 1;
 
 	enum ubyte[3] versions = [major, minor, revision];
 
@@ -153,9 +142,11 @@ private uint[] latest(string[][uint] protocols) {
 	string start = protocols[keys[0]][0].split(".")[0..2].join(".");
 	size_t i = 1;
 	while(protocols[keys[i]][0].startsWith(start)) i++;
-	return keys[0..i];
+	keys = keys[0..i];
+	reverse(keys);
+	return keys;
 }
 
-enum newestPocketProtocol = latestPocketProtocols[0];
+enum newestPocketProtocol = latestPocketProtocols[$-1];
 
-enum newestMinecraftProtocol = latestMinecraftProtocols[0];
+enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];

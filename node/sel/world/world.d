@@ -191,7 +191,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new Blocks();
 		this.n_items = server ? server.items.dup : new ItemsStorage().registerAll!Items();
-		this.rules = Rules.defaultRules.dup;
+		this.rules = this.parent is null ? Rules.defaultRules.dup : this.parent.rules.dup;
 		this.n_random = Random(this.seed);
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
@@ -865,7 +865,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 */
 	public final @safe Entity entity(uint eid) {
 		auto ret = eid in this.w_entities;
-		return ret ? *ret : null;
+		return ret ? *ret : this.player(eid);
 	}
 
 	/**

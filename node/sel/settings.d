@@ -44,19 +44,38 @@ version(Edu) {
 
 }
 
-static if(__traits(compiles, import("protocols." ~ to!string(PC)))) {
+version(OneNode) {
+
+	// try to read supported protocols from hub.txt
+	static if(__traits(compiles, import("hub.txt"))) {
+
+		private enum __hub = (){ string[string] ret;foreach(line;split(import("hub.txt"), "\n")){auto s=line.split(":");if(s.length>=2){ret[s[0].strip]=s[1..$].join("=").strip;}}return ret; }();
+
+		static if(("minecraft" !in __hub || __hub["minecraft"] != "false") && "minecraft-accepted-protocols" in __hub) {
+			enum uint[] __minecraftProtocols = parse(__hub["minecraft-accepted-protocols"], supportedMinecraftProtocols.keys, latestMinecraftProtocols);
+		}
+
+		static if(("pocket" !in __hub || __hub["pocket"] != "false") && "pocket-accepted-protocols" in __hub) {
+			enum uint[] __pocketProtocols = parse(__hub["pocket-accepted-protocols"], supportedPocketProtocols.keys, latestPocketProtocols);
+		}
+
+	}
+
+}
+
+static if(!is(typeof(__minecraftProtocols)) && __traits(compiles, import("protocols." ~ to!string(PC)))) {
 
 	enum uint[] __minecraftProtocols = parse(import("protocols." ~ to!string(PC)), supportedMinecraftProtocols.keys);
 
 }
 
-static if(__traits(compiles, import("protocols." ~ to!string(PE)))) {
+static if(!is(typeof(__pocketProtocols)) && __traits(compiles, import("protocols." ~ to!string(PE)))) {
 
 	enum uint[] __pocketProtocols = parse(import("protocols." ~ to!string(PE)), supportedPocketProtocols.keys);
 
 }
 
-private uint[] parse(string str, uint[] check) {
+private uint[] parse(string str, uint[] check, uint[] def=[]) {
 	uint[] protocols;
 	foreach(string s ; str.split(",")) {
 		try {
@@ -68,25 +87,23 @@ private uint[] parse(string str, uint[] check) {
 	foreach(protocol ; protocols) {
 		if(check.canFind(protocol)) ret ~= protocol;
 	}
-	return sort(ret).release();
+	if(ret.length) {
+		return sort(ret).release();
+	} else {
+		return def;
+	}
 }
 
 static if(!is(typeof(__minecraftProtocols))) {
 
-	enum uint[] __minecraftProtocols = !__edu ? reverse(latestMinecraftProtocols) : [];
+	enum uint[] __minecraftProtocols = !__edu ? latestMinecraftProtocols : [];
 
 }
 
 static if(!is(typeof(__pocketProtocols))) {
 
-	enum uint[] __pocketProtocols = reverse(latestPocketProtocols);
+	enum uint[] __pocketProtocols = latestPocketProtocols;
 
-}
-
-uint[] reverse(uint[] a) {
-	uint[] ret;
-	foreach_reverse(v ; a) ret ~= v;
-	return ret;
 }
 
 enum bool __minecraft = __minecraftProtocols.length != 0;
@@ -107,6 +124,32 @@ mixin("alias __minecraftProtocolsTuple = TypeTuple!(" ~ __minecraftProtocols.to!
 mixin("alias __pocketProtocolsTuple = TypeTuple!(" ~ __pocketProtocols.to!string[1..$-1] ~ ");");
 
 // runtime settings
+
+struct Settings {
+	
+	public bool onlineMode;
+	
+	public string name;
+	
+	public GameInfo pocket;
+	public GameInfo minecraft;
+	
+	public string language;
+	public string[] acceptedLanguages;
+	
+	private static struct GameInfo {
+		
+		public bool accepted;
+		
+		public string motd;
+		public ushort port;
+		public uint[] protocols;
+		
+		alias accepted this;
+		
+	}
+	
+}
 
 /**
  * Returns: the maximum number of players accepted by the node

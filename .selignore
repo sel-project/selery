@@ -17,6 +17,7 @@ node/.config
 node/node
 node/main
 node/main.exe
+node/node.exe
 node/sel-node.dproj
 node/sel.sln
 node/sel.userprefs
@@ -24,7 +25,8 @@ hub/resources/
 hub/crash/
 hub/hub
 hub/main
-hub/*.exe
+hub/main.exe
+hub/hub.exe
 hub/sel-hub.dproj
 hub/sel-hub.sln
 hub/sel-hub.userprefs

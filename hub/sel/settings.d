@@ -337,6 +337,9 @@ struct Settings {
 		filter(settings.minecraftProtocols, supportedMinecraftProtocols.keys);
 		filter(settings.pocketProtocols, supportedPocketProtocols.keys);
 
+		if(!settings.minecraftProtocols.length) settings.minecraftProtocols = latestMinecraftProtocols;
+		if(!settings.pocketProtocols.length) settings.pocketProtocols = latestPocketProtocols;
+
 		if("max-players" in values) {
 			auto mp = values["max-players"].toLower;
 			if(["inf", "infinity", "infinite", "unlimited", "∞"].canFind(mp)) {
@@ -404,13 +407,6 @@ struct Settings {
 			settings.maxNodes = 0;
 		}
 
-		version(OneNode) {
-			version(Posix) {
-				settings.useUnixSockets = true;
-				settings.unixSocketAddress = "/tmp/hub_" ~ randomPassword;
-			}
-		}
-
 		settings.save();
 
 		return settings;
@@ -420,7 +416,7 @@ struct Settings {
 	protected void save() {
 
 		string file = "";
-		with(Software) file ~= "## " ~ name ~ " " ~ displayVersion ~ (stable ? " " : " dev ") ~ fullCodename ~ newline;
+		with(Software) file ~= "## " ~ name ~ " " ~ displayVersion ~ (stable ? " " : "-dev ") ~ fullCodename ~ newline;
 		with(Clock.currTime()) file ~= "## " ~ toSimpleString().split(".")[0] ~ " " ~ timezone.dstName ~ newline ~ newline;
 
 		void protocols(string[][uint] s) {
@@ -443,7 +439,7 @@ struct Settings {
 			file ~= newline;
 		}
 		
-		file ~= "## Documentation can be found at https://github.com/sel-project/sel-server/blob/master/hub/sel/settings.d" ~ newline ~ newline;
+		file ~= "## Documentation can be found at https://github.com/sel-project/sel-server/blob/master/README.md" ~ newline ~ newline;
 
 		void add(T)(string key, T value) {
 			static if(isArray!T && !is(T == string)) {
@@ -461,11 +457,11 @@ struct Settings {
 		static if(!__edu) add("minecraft", this.minecraft);
 		static if(!__edu) add("minecraft-motd", pad(this.minecraftMotd));
 		static if(!__edu) add("minecraft-addresses", this.minecraftAddresses);
-		static if(!__edu) add("minecraft-accepted-protocols", this.minecraftProtocols.length ? this.minecraftProtocols : latestMinecraftProtocols.reverse);
+		static if(!__edu) add("minecraft-accepted-protocols", this.minecraftProtocols);
 		static if(!__edu) add("pocket", this.pocket);
 		add(__pocketPrefix ~ "motd", pad(this.pocketMotd));
 		add(__pocketPrefix ~ "addresses", this.pocketAddresses);
-		add(__pocketPrefix ~ "accepted-protocols", this.pocketProtocols.length ? this.pocketProtocols : latestPocketProtocols.reverse);
+		add(__pocketPrefix ~ "accepted-protocols", this.pocketProtocols);
 		//add(__pocketPrefix ~ "use-encryption", __pocketEncryption);
 		static if(__edu) add("allow-not-edu-players", allowMcpePlayers);
 		add("max-players", this.maxPlayers == MAX_PLAYERS_UNLIMITED ? "unlimited" : (this.maxPlayers == MAX_PLAYERS_AUTO ? "auto" : to!string(this.maxPlayers)));

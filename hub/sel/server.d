@@ -276,9 +276,9 @@ class Server {
 		uint last_online, last_max = this.n_settings.maxPlayers;
 		while(true) {
 			uint online = this.onlinePlayers.to!uint;
-			if(online != last_online || this.n_settings.maxPlayers != last_max) {
+			if(online != last_online || this.maxPlayers != last_max) {
 				last_online = online;
-				last_max = this.n_settings.maxPlayers;
+				last_max = this.maxPlayers;
 				foreach(node ; this.nodes) {
 					node.updatePlayers(last_online, last_max);
 				}
@@ -848,7 +848,7 @@ struct List {
 		}
 
 		public override string toString() {
-			return this.uuid.toString() ~ "@" ~ gameName(this.game);
+			return this.uuid.toString() ~ "@" ~ to!string(this.game);
 		}
 
 		public override bool opEquals(Object o) {
