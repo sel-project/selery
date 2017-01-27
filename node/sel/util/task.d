@@ -46,14 +46,14 @@ final class TaskManager {
 	}
 
 	public void tick(tick_t tick) {
-		foreach(Task task; this.tasks) {
+		foreach(task ; this.tasks) {
 			if(task.expired) array_remove(task, this.tasks);
 			else task.execute(tick);
 		}
 	}
 
-	public @property @safe bool has() {
-		return this.tasks.length != 0;
+	public pure nothrow @property @safe @nogc size_t length() {
+		return this.tasks.length;
 	}
 
 }

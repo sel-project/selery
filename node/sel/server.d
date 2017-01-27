@@ -611,12 +611,10 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		// try to receive one command from the console
 		//receiveTimeout(dur!"seconds"(0), (string cmd){ this.handleCommand(ServerCommandEvent.Origin.prompt, null, cmd); });
 		
-		//execute the tasks
-		if(this.tasks.has) {
-			this.tasks.tick(this.ticks);
-		}
+		// execute the tasks
+		if(this.tasks.length) this.tasks.tick(this.ticks);
 
-		//tick the worlds
+		// tick the worlds
 		/*foreach(World world ; this.worlds) {
 			world.tick(); // <-- this can cause memory leaks when the netowrk is busy!
 		}*/

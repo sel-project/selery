@@ -88,7 +88,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					world.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op));
 				}
 				static if(hasUDA!(func, task)) {
-					//TODO
+					mixin("auto del = &world." ~ fname ~ ";");
+					world.addTask(del, getUDAs!(func, task)[0]);
 				}
 			}
 		}
@@ -183,6 +184,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private ScheduledUpdate[] scheduled_updates;
 
+	private TaskManager tasks;
+
 	private Command[string] commands;
 	
 	public this(string name="world", Generator generator=null, uint seed=unpredictableSeed) {
@@ -198,6 +201,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.n_type = this.generator.type;
 		this.spawnPoint = this.generator.spawn;
 		this.no_rain = this.random.next(0, 180000);
+		this.tasks = new TaskManager();
 	}
 	
 	public this(string name, uint seed) {
@@ -401,17 +405,19 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 */
 	public void tick() {
 		this.n_ticks++;
-		//update the time
+
+		// tasks
+		if(this.tasks.length) this.tasks.tick(this.ticks);
+
+		// update the time
 		if(this.rules.daylightCycle) {
 			this.m_time++;
 			if(this.m_time >= 24000) {
 				this.m_time %= 24000;
 			}
-		} /*else if((this.ticks & 63) == 0) {
-			//clients' time is not stopped
-			this.online!MinecraftPlayer.call!"sendTimePacket"();
-		}*/
-		//update the weather
+		}
+
+		// update the weather
 		if(this.rules.toggledownfall) {
 			bool update = false;
 			if(this.m_weather.rain != 0) {
@@ -437,7 +443,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				this.w_players.call!"sendWeather"();
 			}
 		}
-		//random chunk ticks
+
+		// random chunk ticks
 		if(this.rules.chunkTick) {
 			foreach(ref c ; this.n_chunks) {
 				foreach(ref chunk ; c) {
@@ -458,9 +465,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 							//TODO check biome (cold for snow, non-desert for rain)
 							BlockPosition position = BlockPosition(cx | xz.x, y, cz | xz.z);
 							Block dest = this[position];
-							/*if(dest == Blocks.SNOW_LAYER && dest.metas.pe < Blocks.SNOW_LAYER.length - 1) this[position] = Blocks.SNOW_LAYER[dest.metas.pe + 1];
-							else if(y < Chunk.HEIGHT - 1 && dest.blastResistance != 0) this[position + [0, 1, 0]] = Blocks.SNOW_LAYER_0;*/
-							//TODO the check mustn't be done on blast resistance, but on the shape
+							//TODO check whether the snow can lay on the block
 							if(dest != Blocks.SNOW_LAYER) {
 								this[position + [0, 1, 0]] = Blocks.SNOW_LAYER_0;
 							}
@@ -481,7 +486,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				}
 			}
 		}
-		//scheduled updates
+
+		// scheduled updates
 		/*if(this.scheduled_updates.length > 0) {
 			for(uint i=0; i<this.scheduled_updates.length; i++) {
 				if(this.scheduled_updates[i].time-- == 0) {
@@ -491,20 +497,21 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			}
 		}*/
 		
-		//tick the entities
+		// tick the entities
 		foreach(ref Entity entity ; this.w_entities) {
 			if(entity.ticking) entity.tick();
 		}
+		// and the players
 		foreach(ref Player player ; this.w_players) {
 			if(player.ticking) player.tick();
 		}
 
-		//send the updated movements
+		// send the updated movements
 		foreach(ref Player player ; this.w_players) {
 			player.sendMovements();
 		}
 
-		//set the entities as non-moved
+		// set the entities as non-moved
 		foreach(ref Entity entity ; this.w_entities) {
 			if(entity.moved) {
 				entity.moved = false;
@@ -520,12 +527,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			if(player.motionmoved) player.motionmoved = false;
 		}
 
-		//send the updated blocks
+		// send the updated blocks
 		if(this.updated_blocks.length > 0) {
 			this.w_players.call!"sendBlocks"(this.updated_blocks);
 			this.updated_blocks.length = 0;
 		}
-		//send the updated tiles
+		// send the updated tiles
 		if(this.updated_tiles.length > 0) {
 			foreach(Tile tile ; this.updated_tiles) {
 				this.w_players.call!"sendTile"(tile, cast(ITranslatable)tile ? true : false);
@@ -1223,7 +1230,41 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.commands.remove(command);
 	}
 
-	//TODO tasks
+	/**
+	 * Registers a task.
+	 * Params:
+	 *		task = a delegate of a function that will be called every interval
+	 *		interval = number of ticks indicating between the calls
+	 *		repeat = number of times to repeat the task
+	 * Returns:
+	 * 		the new task id that can be used to remove the task
+	 */
+	public @safe size_t addTask(E...)(void delegate(E) task, size_t interval, size_t repeat=size_t.max) if(areValidTaskArgs!E) {
+		return this.tasks.add(task, interval, repeat, this.ticks);
+	}
+	
+	/// ditto
+	alias addTask schedule;
+	
+	/**
+	 * Executes a task one time after the given ticks.
+	 */
+	public @safe size_t delay(E...)(void delegate(E) task, size_t timeout) if(areValidTaskArgs!E) {
+		return this.addTask(task, timeout, 1);
+	}
+	
+	/**
+	 * Removes a task using the task's delegate or the id returned
+	 * by the addTask function.
+	 */
+	public @safe void removeTask(E...)(void delegate(E) task) if(areValidTaskArgs!E) {
+		this.tasks.remove(task);
+	}
+	
+	/// ditto
+	public @safe void removeTask(size_t tid) {
+		this.tasks.remove(tid);
+	}
 
 	public override @safe bool opEquals(Object o) {
 		if(cast(World)o) return this.id == (cast(World)o).id;
