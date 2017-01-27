@@ -420,12 +420,17 @@ abstract class Player : Human {
 		//TODO if not switching to child/parent remove effects, update gamemode, reset health, hunger
 		this.n_world = world;
 		this.m_gamemode = world.rules.gamemode; //TODO only if not a child
+
+		Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
 		this.sendChangeDimension(old, world.dimension);
 		this.world.spawnPlayer(this);
+
 		return this.world;
 	}
 
 	alias world = super.world;
+
+	public abstract pure nothrow @property @safe @nogc byte dimension();
 	
 	// overrides the attack function for the self hurt animation.
 	protected override void attackImpl(EntityDamageEvent event) {

@@ -31,7 +31,6 @@ hub/sel-hub.dproj
 hub/sel-hub.sln
 hub/sel-hub.userprefs
 hub/.config
-res/dbip-country.csv
 utils/
 website/
 worlds/

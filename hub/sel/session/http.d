@@ -207,6 +207,7 @@ class HttpHandler : HandlerThread {
 							json["display"] = JSONValue(player.displayName);
 							json["version"] = JSONValue(player.game);
 							if(player.skin !is null) json["picture"] = JSONValue(player.skin.face);
+							json["world"] = JSONValue(["name": JSONValue(player.world), "dimension": JSONValue(player.dimension)]);
 							return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], JSONValue(json).toString());
 						}
 					} catch(Exception) {}

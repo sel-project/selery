@@ -87,6 +87,10 @@ abstract class PocketPlayerBase : Player {
 		if(this.m_title.duration || this.m_subtitle.duration || this.m_tip.duration) this.sendTitles();
 	}
 
+	public final override pure nothrow @property @safe @nogc byte dimension() {
+		return this.world.dimension.pe;
+	}
+
 	alias title = super.title;
 
 	public override @property Message title(Message title, string[] args=[]) {

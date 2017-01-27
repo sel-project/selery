@@ -47,6 +47,9 @@ abstract class PlayerSession : Session {
 	
 	protected shared string n_username;
 	protected shared string n_display_name;
+
+	protected shared string n_world;
+	protected shared byte n_dimension;
 	
 	protected shared Address n_address;
 	protected shared string n_language;
@@ -140,12 +143,32 @@ abstract class PlayerSession : Session {
 	public final shared nothrow @property @safe @nogc const(string) displayName() {
 		return this.n_display_name;
 	}
-	
-	/// ditto
+
 	public final shared nothrow @property @safe @nogc const(string) displayName(string displayName) {
 		return this.n_display_name = displayName;
 	}
+
+	/**
+	 * Gets the player's world, which is updated by the node every
+	 * time the client changes dimension.
+	 */
+	public final shared nothrow @property @safe @nogc const(string) world() {
+		return this.n_world;
+	}
 	
+	public final shared nothrow @property @safe @nogc const(string) world(string world) {
+		return this.n_world = world;
+	}
+
+	/// ditto
+	public final shared nothrow @property @safe @nogc const(byte) dimension() {
+		return this.n_dimension;
+	}
+
+	public final shared nothrow @property @safe @nogc const(byte) dimension(byte dimension) {
+		return this.n_dimension = dimension;
+	}
+
 	/**
 	 * Gets the player's remote address. it's usually an ipv4, ipv6
 	 * or an ipv4-mapped ipv6.
@@ -185,8 +208,7 @@ abstract class PlayerSession : Session {
 	public final shared nothrow @property @safe @nogc const(string) language() {
 		return this.n_language;
 	}
-	
-	/// ditto
+
 	public final shared nothrow @property @safe @nogc const(string) language(string language) {
 		return this.n_language = language;
 	}

@@ -377,17 +377,25 @@ class Node : Session {
 						this.handleTransferPlayer(Player.Transfer.fromBuffer(payload));
 						break;
 					case Player.UpdateLanguage.ID:
-						auto upl = Player.UpdateLanguage.fromBuffer(payload);
-						auto player = upl.hubId in this.players;
+						auto ul = Player.UpdateLanguage.fromBuffer(payload);
+						auto player = ul.hubId in this.players;
 						if(player) {
-							(*player).language = upl.language;
+							(*player).language = ul.language;
 						}
 						break;
 					case Player.UpdateDisplayName.ID:
-						auto updn = Player.UpdateDisplayName.fromBuffer(payload);
-						auto player = updn.hubId in this.players;
+						auto udn = Player.UpdateDisplayName.fromBuffer(payload);
+						auto player = udn.hubId in this.players;
 						if(player) {
-							(*player).displayName = updn.displayName;
+							(*player).displayName = udn.displayName;
+						}
+						break;
+					case Player.UpdateWorld.ID:
+						auto uw = Player.UpdateWorld.fromBuffer(payload);
+						auto player = uw.hubId in this.players;
+						if(player) {
+							(*player).world = uw.name;
+							(*player).dimension = uw.dimension;
 						}
 						break;
 					case Player.GamePacket.ID:
@@ -596,7 +604,7 @@ class Node : Session {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.username, player.displayName, hncomAddress(player.address), cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
+		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.username, player.displayName, player.dimension, hncomAddress(player.address), cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
 		this.send(player.encodeHncomAddPacket(packet));
 	}
 	

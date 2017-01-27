@@ -1301,7 +1301,11 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 			// do not spawn if it has been disconnected during the event
 			if(player.hubId in this.players_hubid) {
+				if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
+					player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
+				}
 				player.world.spawnPlayer(player);
+				this.sendPacket(new HncomPlayer.UpdateWorld(player.hubId, world.name, player.dimension).encode());
 			}
 
 		}
