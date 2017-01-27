@@ -584,11 +584,11 @@ abstract class Player : Human {
 		return !this.creative;
 	}
 
-	public final pure nothrow @property @safe @nogc bool operator() {
+	public pure nothrow @property @safe @nogc bool operator() {
 		return this.m_op;
 	}
 
-	public final @property bool operator(bool operator) {
+	public @property bool operator(bool operator) {
 		if(operator ^ this.m_op) {
 			this.m_op = operator;
 			this.sendOpStatus();
@@ -800,10 +800,10 @@ abstract class Player : Human {
 	 *    player.addCommand("test", (arguments args){ player.sendMessage("test"); });
 	 * }
 	 * ---
-	 * Bugs: doesn't check for aliases
 	 */
 	public @safe bool hasCommand(string cmd) {
-		return cmd.toLower in this.commands ? true : false;
+		auto ptr = cmd.toLower in this.commands;
+		return ptr && (!(*ptr).op || this.op);
 	}
 	
 	/**
@@ -813,7 +813,7 @@ abstract class Player : Human {
 	public bool callCommand(string cmd, immutable(string)[] args) {
 		auto ptr = cmd.toLower in this.commands;
 		bool called = false;
-		if(ptr) {
+		if(ptr && (!(*ptr).op || this.op)) {
 			called = (*ptr).callArgs(this, args);
 		}
 		if(!called) {
@@ -832,7 +832,7 @@ abstract class Player : Human {
 	public bool callCommandOverload(string cmd, size_t overload, immutable(string)[] args) {
 		auto ptr = cmd.toLower in this.commands;
 		bool called = false;
-		if(ptr && overload < (*ptr).overloads.length) {
+		if(ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op)) {
 			called = (*ptr).overloads[overload].callArgs(this, args);
 		}
 		if(!called) {
@@ -857,21 +857,18 @@ abstract class Player : Human {
 
 	/**
 	 * Removes a command using the command class given in registerCommand.
-	 * Returns: true if the commands is unregistered, false otherwise
 	 */
-	public @safe bool unregisterCommand(Command command) {
+	public @safe void unregisterCommand(Command command) {
 		foreach(string cmd, c; this.commands) {
 			if(c.id == command.id) {
 				this.commands.remove(cmd);
 				this.commands_not_aliases.remove(cmd);
-				return true;
 			}
 		}
-		return false;
 	}
 
 	/// ditto
-	public @safe bool unregisterCommand(string command) {
+	public @safe void unregisterCommand(string command) {
 		auto c = command in this.commands;
 		return c && this.unregisterCommand(*c);
 	}
@@ -881,9 +878,19 @@ abstract class Player : Human {
 		return ptr ? *ptr : null;
 	}
 	
-	// returns the full command map.
+	/**
+	 * Returns: an unsorted list with the available commands
+	 */
 	public @property @trusted Command[] commandMap() {
-		return this.commands_not_aliases.values;
+		if(this.operator) {
+			return this.commands_not_aliases.values;
+		} else {
+			Command[] ret;
+			foreach(command ; this.commands_not_aliases) {
+				if(!command.op) ret ~= command;
+			}
+			return ret;
+		}
 	}
 	
 	public override @trusted bool onCollect(Collectable collectable) {
@@ -1011,36 +1018,61 @@ abstract class Player : Human {
 	// *** DEFAULT HANDLINGS (WITH CALLS TO EVENTS) ***
 
 	/**
-	 * 
+	 * Completes the command args (or the command itself) if the arg type
+	 * is an enum or a player (the ones in the world's list are sent), even
+	 * if they are not spawned or visible to the player.
 	 */
-	protected void handleCompleteMessage(string message) {
-		string[] entries;
-		string filter = (message.length > 1 ? message[1..$] : message).split(" ")[$-1].toLower;
-		if(message.length > 0 && message[0] == '/') {
-			string[] args = message[1..$].split(" ");
-			if(args.length == 1) {
-				// send a list of available commands
-				foreach(string cmd ; this.commands.keys) {
-					if(cmd != "*") entries ~= "/" ~ cmd;
+	protected void handleCompleteMessage(string message, bool assumeCommand) {
+		if((message.length && message[0] == '/') || assumeCommand) {
+			string[] spl = (assumeCommand ? message : message[1..$]).split(" ");
+			immutable isCommands = spl.length <= 1;
+			string[] entries;
+			string filter = spl.length ? spl[$-1].toLower : "";
+			if(spl.length <= 1) {
+				// send a command
+				if(this.operator) {
+					entries = this.commands_not_aliases.keys;
+				} else {
+					foreach(name, command; this.commands_not_aliases) {
+						if(!command.op) entries ~= name;
+					}
 				}
-				filter = "/" ~ filter;
-			} else if(args.length > 1) {
-				//TODO let the commands complete themselfes
+			} else {
+				auto cmd = spl[0].toLower in this.commands;
+				if(cmd) {
+					//TODO use the right overload that matches previous parameters
+					foreach(overload ; (*cmd).overloads) {
+						immutable type = overload.typeOf(spl.length - 2);
+						if(type == "bool") {
+							// boolean value
+							entries = ["true", "false"];
+						} else if(type == "player") {
+							// send a list of the players
+							foreach(player ; this.world.playersList) {
+								entries ~= player.name.replace(" ", "-");
+							}
+						} else {
+							// try enum
+							entries = overload.enumMembers(spl.length - 2);
+						}
+						if(entries.length) break;
+					}
+				}
 			}
-		} else {
-			// send a list of the players
-			foreach(Player player ; this.world.playersList) {
-				entries ~= player.name;
+			if(filter.length) {
+				string[] ne;
+				foreach(entry ; entries) {
+					if(entry.toLower.startsWith(filter)) ne ~= entry;
+				}
+				entries = ne;
 			}
-			entries ~= this.name;
-		}
-		string[] ne;
-		foreach(string s ; entries) {
-			if(s.toLower.startsWith(filter)) ne ~= s;
-		}
-		if(ne.length > 0) {
-			//sort(ne);
-			this.sendCompletedMessages(ne);
+			if(entries.length) {
+				if(spl.length <= 1 && !assumeCommand) {
+					// add slashes
+					foreach(ref entry ; entries) entry = "/" ~ entry;
+				}
+				this.sendCompletedMessages(entries);
+			}
 		}
 	}
 	

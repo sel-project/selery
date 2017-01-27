@@ -12,6 +12,7 @@ hub/.config
 hub/main
 hub/hub
 hub/resources
+#res/dbip-country.csv
 
 res/lang/es_ES.lang
 res/lang/fur_IT.lang

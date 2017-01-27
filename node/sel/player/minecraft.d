@@ -228,7 +228,7 @@ class MinecraftPlayer(uint __protocol) : MinecraftPlayerBase {
 
 	protected override void sendCompletedMessages(string[] messages) {
 		static if(__protocol < 307) {
-			sort(messages);
+			sort!"a.toLower < b.toLower"(messages);
 		}
 		this.sendPacket(new Clientbound.TabComplete(messages));
 	}
@@ -656,7 +656,7 @@ class MinecraftPlayer(uint __protocol) : MinecraftPlayerBase {
 	protected void handleTeleportConfirmPacket(uint id) {}
 
 	protected void handleTabCompletePacket(string text, bool command, bool hasPosition, ulong position) {
-		this.handleCompleteMessage(text);
+		this.handleCompleteMessage(text, command);
 	}
 
 	protected void handleChatMessagePacket(string message) {

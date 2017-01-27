@@ -56,7 +56,6 @@ void main(string[] args) {
 	} else {
 		temp = randomUUID.toString().toUpper();
 		write(Paths.hidden ~ "temp", temp);
-		write(Paths.hidden ~ "plugintemp", temp); // compatibility with old manager
 	}
 	temp = tempDir() ~ dirSeparator ~ "sel" ~ dirSeparator ~ temp ~ dirSeparator;
 

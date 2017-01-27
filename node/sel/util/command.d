@@ -89,7 +89,7 @@ class Command {
 					else static if(is(T == arguments) || is(T == string[])) return "args";
 					else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return "int";
 					else static if(is(T == float) || is(T == double) || is(T == real)) return "float";
-					else return T.stringof;
+					else return T.stringof.toLower;
 				}
 			}
 			return "unknown";
@@ -174,22 +174,21 @@ class Command {
 
 	immutable size_t id;
 	
-	string command;
-	string description;
-	string[] aliases;
+	immutable string command;
+	immutable string description;
+	immutable string[] aliases;
+
+	immutable bool op;
 	
 	Cmd[] overloads;
 	
-	this(string command, string description="", string[] aliases=[]) {
+	this(string command, string description="", string[] aliases=[], bool op=false) {
 		this.id = count++;
-		this.command = command;
+		this.command = command.toLower;
 		this.description = description;
-		this.aliases = aliases;
+		this.aliases = aliases.idup;
+		this.op = op;
 	}
-	
-	/*void add(E...)(void delegate(Player, E) del) {
-		this.overloads ~= new CmdOf!E(del);
-	}*/
 
 	void add(alias func)(void delegate(Parameters!func) del, string[] params) if(Parameters!func.length >= 1 && is(Parameters!func[0] == Player)) {
 		while(params.length < Parameters!func.length - 1) params ~= [ParameterIdentifierTuple!func][params.length + 1];

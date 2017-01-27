@@ -123,6 +123,38 @@ mixin("alias __minecraftProtocolsTuple = TypeTuple!(" ~ __minecraftProtocols.to!
 
 mixin("alias __pocketProtocolsTuple = TypeTuple!(" ~ __pocketProtocols.to!string[1..$-1] ~ ");");
 
+enum __supportedImpl(string op, uint protocol, uint[] supported) = (){
+	static if(supported.length) {
+		mixin("return supported[0] " ~ op ~ " protocol || __supportedImpl!(op, protocol, supported[1..$]);");
+	} else {
+		return false;
+	}
+}();
+
+enum __minecraftSupported(uint protocol) = __minecraftProtocols.canFind(protocol);
+
+enum __pocketSupported(uint protocol) = __pocketProtocols.canFind(protocol);
+
+alias __minecraftSupportedHigher(uint protocol) = __supportedImpl!(">", protocol, __minecraftProtocols);
+
+alias __pocketSupportedHigher(uint protocol) = __supportedImpl!(">", protocol, __pocketProtocols);
+
+alias __minecraftSupportedHigherEquals(uint protocol) = __supportedImpl!(">=", protocol, __minecraftProtocols);
+
+alias __pocketSupportedHigherEquals(uint protocol) = __supportedImpl!(">=", protocol, __pocketProtocols);
+
+alias __minecraftSupportedLower(uint protocol) = __supportedImpl!("<", protocol, __minecraftProtocols);
+
+alias __pocketSupportedLower(uint protocol) = __supportedImpl!("<", protocol, __pocketProtocols);
+
+alias __minecraftSupportedLowerEquals(uint protocol) = __supportedImpl!("<=", protocol, __minecraftProtocols);
+
+alias __pocketSupportedLowerEquals(uint protocol) = __supportedImpl!("<=", protocol, __pocketProtocols);
+
+enum __minecraftSupportedBetween(uint a, uint b) = __minecraftSupportedHigherEquals!a && __minecraftSupportedLowerEquals!b;
+
+enum __pocketSupportedBetween(uint a, uint b) = __pocketSupportedHigherEquals!a && __pocketSupportedLowerEquals!b;
+
 // runtime settings
 
 struct Settings {

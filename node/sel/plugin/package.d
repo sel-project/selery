@@ -25,6 +25,6 @@ public import sel.player.player : Player, Gamemode;
 
 public import sel.plugin.config : Config, _, Value, value;
 public import sel.plugin.file : exists, isDir, isFile, read, write, remove;
-public import sel.plugin.plugin : start, reload, stop, event, global, inherit, cancel, command, description, aliases, params, task, arguments;
+public import sel.plugin.plugin : start, reload, stop, event, global, inherit, cancel, command, description, aliases, params, op, task, arguments;
 
 public import sel.util.log : log, debug_log, warning_log, error_log;

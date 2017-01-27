@@ -425,6 +425,12 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		if(this.n_settings.acceptedLanguages.length > 1) {
 			this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
+			version(UpdateLang) {
+				this.lang_searcher.fromCSV();
+				this.lang_searcher.convert();
+			} else {
+				this.lang_searcher.fromBin();
+			}
 		}
 
 		// this breaks the running cycle
@@ -1073,9 +1079,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op) {
 		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases);
+		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op);
 		auto ptr = command in this.commands;
 		(*ptr).add!func(del, params);
 	}

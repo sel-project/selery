@@ -20,7 +20,7 @@
 module main;
 
 import std.conv : to;
-import std.string : replace;
+import std.string : replace, toLower;
 
 import sel.server;
 import sel.settings;
@@ -33,7 +33,9 @@ void main(string[] args) {
 
 	} else {
 
-		if(args.length >= 2 && args[1] == "about") {
+		immutable action = args.length >= 2 ? args[1].toLower : "";
+
+		if(action == "about") {
 
 			import std.json : JSONValue;
 			import std.stdio : writeln;
@@ -49,6 +51,10 @@ void main(string[] args) {
 			]);
 
 			writeln(json.toString());
+
+		} else if(action == "init") {
+
+			Settings.reload();
 
 		} else {
 

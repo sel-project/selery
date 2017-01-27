@@ -15,11 +15,12 @@
 module sel.util.langfromip;
 
 import std.algorithm : canFind;
+import std.bitmanip : peek, nativeToBigEndian;
 import std.conv : to;
 import std.csv;
-import std.file : read;
+import std.file : read, write;
 import std.typecons;
-import std.socket : Address, InternetAddress, Internet6Address;
+import std.socket : Address, InternetAddress, Internet6Address, getAddress;
 import std.string : split, indexOf;
 
 import common.path : Paths;
@@ -39,20 +40,89 @@ class LangSearcher {
 
 	alias Slice = Tuple!(uint, "min", uint, "max");
 
+	private immutable string language;
+	private immutable string[] accepted;
+
 	private string[Slice] register;
 
-	public this(string def, string[] accepted) {
+	public this(string language, string[] accepted) {
+		this.language = language;
+		this.accepted = accepted.idup;
+	}
+
+	public void fromCSV() {
 		foreach(record ; csvReader!(Tuple!(string, "from", string, "to", string, "code"))(cast(string)read(Paths.res ~ "dbip-country.csv"))) {
 			if(record.from.indexOf(".") != -1) {
 				// ipv4
-				string lang = this.languageFor(def, accepted, record.code);
-				if(lang != server.settings.language) {
+				string lang = this.languageFor(record.code);
+				if(lang != this.language) {
 					this.register[Slice(this.ipcode(record.from), this.ipcode(record.to))] = lang;
 				}
 			} else {
 				//TODO ipv6
 			}
 		}
+	}
+
+	public void fromBin() {
+		ubyte[] data = cast(ubyte[])read(Paths.res ~ "dbip-country.bin");
+		size_t index = 0;
+		while(index < data.length) {
+			string lang = this.languageFor(cast(string)data[index..index+2].dup);
+			Slice[] slices;
+			index += 2;
+			foreach(i ; 0..peek!ushort(data, &index)) {
+				slices ~= Slice(peek!uint(data, &index), peek!uint(data, &index));
+			}
+			foreach(i ; 0..peek!ushort(data, &index)) {
+				//TODO read 32 bytes
+				index += 32;
+			}
+			if(lang != this.language) {
+				foreach(slice ; slices) this.register[slice] = lang;
+			}
+		}
+	}
+
+	/**
+	 * Format:
+	 * 		[
+	 * 			country (char[2])
+ 	 * 			ipv4 length (ushort-be) [
+ 	 * 				from (uint-be)
+ 	 * 				to (uint-be)
+ 	 * 			]
+ 	 * 			ipv6 length (ushort-be) [
+ 	 * 				from (ubyte[16])
+ 	 * 				to (ubyte[16])
+ 	 * 			]
+	 * 		]
+	 * 		eof
+	 */
+	public void convert() {
+		Tuple!(uint[], "v4", ubyte[16][], "v6")[string] addresses;
+		foreach(record ; csvReader!(Tuple!(string, "from", string, "to", string, "code"))(cast(string)read(Paths.res ~ "dbip-country.csv"))) {
+			if(record.code !in addresses) addresses[record.code] = typeof(addresses[""]).init;
+			if(record.from.indexOf(".") != -1) {
+				// ipv4
+				addresses[record.code].v4 ~= [InternetAddress.parse(record.from), InternetAddress.parse(record.to)];
+			} else {
+				//TODO ipv6
+			}
+		}
+		ubyte[] data;
+		foreach(string country, addr; addresses) {
+			data ~= cast(ubyte[])country;
+			data ~= nativeToBigEndian(cast(ushort)(addr.v4.length / 2));
+			foreach(v4 ; addr.v4) {
+				data ~= nativeToBigEndian(v4);
+			}
+			data ~= nativeToBigEndian(cast(ushort)(addr.v6.length / 2));
+			foreach(v6 ; addr.v6) {
+				data ~= v6;
+			}
+		}
+		write(Paths.res ~ "dbip-country.bin", data);
 	}
 
 	private @safe uint ipcode(string ip) {
@@ -90,117 +160,117 @@ class LangSearcher {
 		}
 	}
 
-	private @safe string languageFor(string def, string[] accepted, string country) {
+	private @safe string languageFor(string country) {
 		switch(country) {
 
 			// italian
 			case "IT":
 			case "SM":
-				if(accepted.canFind("it_IT")) return "it_IT";
+				if(this.accepted.canFind("it_IT")) return "it_IT";
 				else goto default;
 
 			// spanish
 			case "ES":
-				if(accepted.canFind("es_ES")) return "es_ES";
+				if(this.accepted.canFind("es_ES")) return "es_ES";
 				else goto default;
 			case "AR":
-				if(accepted.canFind("es_AR")) return "es_AR";
+				if(this.accepted.canFind("es_AR")) return "es_AR";
 				else goto case "ES";
 			case "BO":
-				if(accepted.canFind("es_BO")) return "es_BO";
+				if(this.accepted.canFind("es_BO")) return "es_BO";
 				else goto case "ES";
 			case "CL":
-				if(accepted.canFind("es_CL")) return "es_CL";
+				if(this.accepted.canFind("es_CL")) return "es_CL";
 				else goto case "ES";
 			case "CO":
-				if(accepted.canFind("es_CO")) return "es_CO";
+				if(this.accepted.canFind("es_CO")) return "es_CO";
 				else goto case "ES";
 			case "CR":
-				if(accepted.canFind("es_CR")) return "es_CR";
+				if(this.accepted.canFind("es_CR")) return "es_CR";
 				else goto case "ES";
 			case "DO":
-				if(accepted.canFind("es_DO")) return "es_DO";
+				if(this.accepted.canFind("es_DO")) return "es_DO";
 				else goto case "ES";
 			case "EC":
-				if(accepted.canFind("es_EC")) return "es_EC";
+				if(this.accepted.canFind("es_EC")) return "es_EC";
 				else goto case "ES";
 			case "SV":
-				if(accepted.canFind("es_SV")) return "es_SV";
+				if(this.accepted.canFind("es_SV")) return "es_SV";
 				else goto case "ES";
 			case "GT":
-				if(accepted.canFind("es_GT")) return "es_GT";
+				if(this.accepted.canFind("es_GT")) return "es_GT";
 				else goto case "ES";
 			case "HN":
-				if(accepted.canFind("es_HN")) return "es_HN";
+				if(this.accepted.canFind("es_HN")) return "es_HN";
 				else goto case "ES";
 			case "MX":
-				if(accepted.canFind("es_MX")) return "es_MX";
+				if(this.accepted.canFind("es_MX")) return "es_MX";
 				else goto case "ES";
 			case "NI":
-				if(accepted.canFind("es_NI")) return "es_NI";
+				if(this.accepted.canFind("es_NI")) return "es_NI";
 				else goto case "ES";
 			case "PA":
-				if(accepted.canFind("es_PA")) return "es_PA";
+				if(this.accepted.canFind("es_PA")) return "es_PA";
 				else goto case "ES";
 			case "PY":
-				if(accepted.canFind("es_PY")) return "es_PY";
+				if(this.accepted.canFind("es_PY")) return "es_PY";
 				else goto case "ES";
 			case "PE":
-				if(accepted.canFind("es_PE")) return "es_PE";
+				if(this.accepted.canFind("es_PE")) return "es_PE";
 				else goto case "ES";
 			case "PR":
-				if(accepted.canFind("es_PR")) return "es_PR";
+				if(this.accepted.canFind("es_PR")) return "es_PR";
 				else goto case "ES";
 			case "UY":
-				if(accepted.canFind("es_UY")) return "es_UY";
+				if(this.accepted.canFind("es_UY")) return "es_UY";
 				else goto case "ES";
 			case "VE":
-				if(accepted.canFind("es_VE")) return "es_VE";
+				if(this.accepted.canFind("es_VE")) return "es_VE";
 				else goto case "ES";
 
 			// english
 			case "GB":
-				if(accepted.canFind("en_GB")) return "en_GB";
+				if(this.accepted.canFind("en_GB")) return "en_GB";
 				else goto default;
 			case "AU":
-				if(accepted.canFind("es_AU")) return "en_AU";
+				if(this.accepted.canFind("es_AU")) return "en_AU";
 				else goto case "GB";
 			case "BZ":
-				if(accepted.canFind("en_BZ")) return "en_BZ";
+				if(this.accepted.canFind("en_BZ")) return "en_BZ";
 				else goto case "GB";
 			case "BW":
-				if(accepted.canFind("en_BW")) return "en_BW";
+				if(this.accepted.canFind("en_BW")) return "en_BW";
 				else goto case "GB";
 			case "CA":
-				if(accepted.canFind("en_CA")) return "en_CA";
+				if(this.accepted.canFind("en_CA")) return "en_CA";
 				else goto case "GB";
 			case "CB":
-				if(accepted.canFind("en_CB")) return "en_CB";
+				if(this.accepted.canFind("en_CB")) return "en_CB";
 				else goto case "GB";
 			case "IE":
-				if(accepted.canFind("en_IE")) return "en_IE";
+				if(this.accepted.canFind("en_IE")) return "en_IE";
 				else goto case "GB";
 			case "JM":
-				if(accepted.canFind("en_JM")) return "en_JM";
+				if(this.accepted.canFind("en_JM")) return "en_JM";
 				else goto case "GB";
 			case "NZ":
-				if(accepted.canFind("en_NZ")) return "en_NZ";
+				if(this.accepted.canFind("en_NZ")) return "en_NZ";
 				else goto case "GB";
 			case "ZA":
-				if(accepted.canFind("en_ZA")) return "en_ZA";
+				if(this.accepted.canFind("en_ZA")) return "en_ZA";
 				else goto case "GB";
 			case "TT":
-				if(accepted.canFind("en_TT")) return "en_TT";
+				if(this.accepted.canFind("en_TT")) return "en_TT";
 				else goto case "GB";
 			case "US":
-				if(accepted.canFind("en_US")) return "en_US";
+				if(this.accepted.canFind("en_US")) return "en_US";
 				else goto case "GB";
 			case "ZW":
-				if(accepted.canFind("en_ZW")) return "en_ZW";
+				if(this.accepted.canFind("en_ZW")) return "en_ZW";
 				else goto case "GB";
 
 			default:
-				return def;
+				return this.language;
 		}
 	}
 

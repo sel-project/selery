@@ -128,20 +128,28 @@ abstract class PocketPlayerBase : Player {
 
 	protected abstract void sendTitles();
 
+	alias operator = super.operator;
+
+	public override @property bool operator(bool op) {
+		if(super.operator(op) == op && this.send_commands) {
+			this.sendCommands();
+		}
+		return op;
+	}
+
 	public override @trusted Command registerCommand(Command command) {
-		command = super.registerCommand(command);
+		super.registerCommand(command);
 		if(this.send_commands) {
 			this.sendCommands();
 		}
 		return command;
 	}
 
-	public override @trusted bool unregisterCommand(Command command) {
-		bool ret = super.unregisterCommand(command);
-		if(ret && this.send_commands) {
+	public override @trusted void unregisterCommand(Command command) {
+		super.unregisterCommand(command);
+		if(this.send_commands) {
 			this.sendCommands();
 		}
-		return ret;
 	}
 
 	protected void sendCommands();
@@ -741,7 +749,7 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 		this.sent_commands.clear();
 		JSONValue[string] json;
 		foreach(command ; this.commands_not_aliases) {
-			if(command.command != "*") {
+			if(command.command != "*" && (!command.op || this.op)) {
 				JSONValue[string] current;
 				current["permission"] = "any";
 				if(command.aliases.length) {
