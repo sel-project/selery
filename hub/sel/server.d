@@ -33,6 +33,7 @@ import std.string : join, split, toLower, strip, indexOf;
 import std.system : endian;
 import std.typecons;
 import std.uuid : parseUUID, UUID;
+import std.utf : UTFException;
 
 import common.path : Paths;
 import common.sel;
@@ -239,10 +240,14 @@ class Server {
 		}
 
 		// listen for commands
-		auto reader = new SafeThread({
+		auto reader = new Thread({
 			import std.stdio : readln;
 			while(true) {
-				handleCommand(readln().strip);
+				try {
+					handleCommand(readln().strip);
+				} catch(UTFException e) {
+					log(Text.red, e.msg);
+				}
 			}
 		});
 		reader.name = "reader";

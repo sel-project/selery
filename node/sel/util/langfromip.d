@@ -15,21 +15,23 @@
 module sel.util.langfromip;
 
 import std.algorithm : canFind;
-import std.bitmanip : peek, nativeToBigEndian;
 import std.conv : to;
 import std.csv;
 import std.file : read, write;
 import std.typecons;
-import std.socket : Address, InternetAddress, Internet6Address, getAddress;
+import std.socket : Address, InternetAddress, Internet6Address;
 import std.string : split, indexOf;
+import std.zlib : Compress, UnCompress, HeaderFormat;
 
 import common.path : Paths;
 
 import sel.server : server;
 
+import sul.utils.var : varuint;
+
 /**
  * Class containing informations about IP's location to
- * set a player's language from its position.
+ * set a player's language from its country.
  * Only the langauges indicated as available in the SEL's
  * configuration file are loaded.
  * The csv file that contains the IPs is taken from https://db-ip.com/db/download/country
@@ -38,90 +40,78 @@ import sel.server : server;
  */
 class LangSearcher {
 
-	alias Slice = Tuple!(uint, "min", uint, "max");
+	alias Slice = Tuple!(uint, "min", uint, "max", string, "lang");
 
 	private immutable string language;
 	private immutable string[] accepted;
 
-	private string[Slice] register;
+	private Slice[] ipv4;
 
 	public this(string language, string[] accepted) {
 		this.language = language;
 		this.accepted = accepted.idup;
 	}
 
-	public void fromCSV() {
-		foreach(record ; csvReader!(Tuple!(string, "from", string, "to", string, "code"))(cast(string)read(Paths.res ~ "dbip-country.csv"))) {
-			if(record.from.indexOf(".") != -1) {
-				// ipv4
-				string lang = this.languageFor(record.code);
-				if(lang != this.language) {
-					this.register[Slice(this.ipcode(record.from), this.ipcode(record.to))] = lang;
-				}
-			} else {
-				//TODO ipv6
-			}
-		}
-	}
-
-	public void fromBin() {
-		ubyte[] data = cast(ubyte[])read(Paths.res ~ "dbip-country.bin");
+	public void load() {
+		auto uncompress = new UnCompress();
+		ubyte[] data = cast(ubyte[])uncompress.uncompress(read(Paths.res ~ "dbip-country.bin"));
+		data ~= cast(ubyte[])uncompress.flush();
 		size_t index = 0;
-		while(index < data.length) {
-			string lang = this.languageFor(cast(string)data[index..index+2].dup);
-			Slice[] slices;
+		string[] cs = new string[varuint.decode(data, &index)];
+		foreach(ref country ; cs) {
+			country = cast(string)data[index..index+2];
 			index += 2;
-			foreach(i ; 0..peek!ushort(data, &index)) {
-				slices ~= Slice(peek!uint(data, &index), peek!uint(data, &index));
-			}
-			foreach(i ; 0..peek!ushort(data, &index)) {
-				//TODO read 32 bytes
-				index += 32;
-			}
-			if(lang != this.language) {
-				foreach(slice ; slices) this.register[slice] = lang;
+		}
+		uint count = 0;
+		Slice[] ipv4;
+		while(index < data.length) {
+			auto slice = Slice(count, count + varuint.decode(data, &index), this.languageFor(cs[data[index++]]));
+			count = slice.max + 1;
+			ipv4 ~= slice;
+		}
+		// merge them
+		this.ipv4 ~= ipv4[0];
+		foreach(i, slice; ipv4[1..$]) {
+			if(slice.lang == this.ipv4[$-1].lang && slice.min == this.ipv4[$-1].max + 1) {
+				this.ipv4[$-1].max = slice.max;
+			} else {
+				this.ipv4 ~= slice;
 			}
 		}
 	}
 
-	/**
-	 * Format:
-	 * 		[
-	 * 			country (char[2])
- 	 * 			ipv4 length (ushort-be) [
- 	 * 				from (uint-be)
- 	 * 				to (uint-be)
- 	 * 			]
- 	 * 			ipv6 length (ushort-be) [
- 	 * 				from (ubyte[16])
- 	 * 				to (ubyte[16])
- 	 * 			]
-	 * 		]
-	 * 		eof
-	 */
 	public void convert() {
-		Tuple!(uint[], "v4", ubyte[16][], "v6")[string] addresses;
+		string[] cs;
+		ubyte[] data;
 		foreach(record ; csvReader!(Tuple!(string, "from", string, "to", string, "code"))(cast(string)read(Paths.res ~ "dbip-country.csv"))) {
-			if(record.code !in addresses) addresses[record.code] = typeof(addresses[""]).init;
+			ubyte index = 255;
+			foreach(i, c; cs) {
+				if(c == record.code) {
+					index = to!ubyte(i);
+					break;
+				}
+			}
+			if(index == 255) {
+				index = cs.length.to!ubyte;
+				cs ~= record.code;
+			}
 			if(record.from.indexOf(".") != -1) {
 				// ipv4
-				addresses[record.code].v4 ~= [InternetAddress.parse(record.from), InternetAddress.parse(record.to)];
+				data ~= varuint.encode(InternetAddress.parse(record.to) - InternetAddress.parse(record.from));
+				data ~= index;
 			} else {
-				//TODO ipv6
+				// ipv6 is currently unsupported by mcpe
 			}
 		}
-		ubyte[] data;
-		foreach(string country, addr; addresses) {
-			data ~= cast(ubyte[])country;
-			data ~= nativeToBigEndian(cast(ushort)(addr.v4.length / 2));
-			foreach(v4 ; addr.v4) {
-				data ~= nativeToBigEndian(v4);
-			}
-			data ~= nativeToBigEndian(cast(ushort)(addr.v6.length / 2));
-			foreach(v6 ; addr.v6) {
-				data ~= v6;
-			}
+		// map the countries
+		assert(cs.length < 255);
+		ubyte[] pre = varuint.encode(cs.length);
+		foreach(country ; cs) {
+			pre ~= cast(ubyte[])country;
 		}
+		auto compress = new Compress(6, HeaderFormat.gzip);
+		data = cast(ubyte[])compress.compress(pre ~ data.dup);
+		data ~= cast(ubyte[])compress.flush();
 		write(Paths.res ~ "dbip-country.bin", data);
 	}
 
@@ -135,18 +125,24 @@ class LangSearcher {
 	 * 		sip = an IP address encoded as xxx.xxx.xxx.xxx
 	 * Returns: the language for the IP's country or the default one is the region's country isn't available
 	 */
-	public @safe string langFor(int ip) {
-		foreach(Slice slice, string code; this.register) {
-			if(ip >= slice.min && ip <= slice.max) {
-				return code;
+	public @safe string langFor(uint ip) {
+		string search(Slice[] range) {
+			auto slice = range[$/2];
+			immutable higher = ip >= slice.min;
+			if(higher && ip <= slice.max) {
+				return slice.lang;
+			} else if(higher) {
+				return search(range[$/2+1..$]);
+			} else {
+				return search(range[0..$/2]);
 			}
 		}
-		return server.settings.language;
+		return search(this.ipv4);
 	}
-	
+
 	//TODO ip v6
 	public @safe string langFor(ubyte[16] ip) {
-		return server.settings.language;
+		return this.language;
 	}
 
 	/// ditto
@@ -156,7 +152,7 @@ class LangSearcher {
 		} else if(cast(Internet6Address)address) {
 			return this.langFor((cast(Internet6Address)address).addr);
 		} else {
-			return server.settings.language;
+			return this.language;
 		}
 	}
 

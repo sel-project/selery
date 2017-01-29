@@ -423,13 +423,13 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			send(collector, thisTid);
 		}
 
-		if(this.n_settings.acceptedLanguages.length > 1) {
-			this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
-			version(UpdateLang) {
-				this.lang_searcher.fromCSV();
-				this.lang_searcher.convert();
-			} else {
-				this.lang_searcher.fromBin();
+		static if(__pocket) {
+			if(this.n_settings.acceptedLanguages.length > 1) {
+				this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
+				version(UpdateLang) {
+					this.lang_searcher.convert();
+				}
+				this.lang_searcher.load();
 			}
 		}
 
@@ -1245,8 +1245,8 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 				this.sendPacket(new HncomPlayer.UpdateDisplayName(packet.hubId, pple.player.displayName).encode());
 			}
 
-			//TODO this takes too much time (from 5 to 500 microseconds)
-			if(packet.language == "") {
+			// this is fast as lightning (~1 microsecond)
+			if(packet.language == "" && packet.type == PE) {
 				packet.language = this.n_settings.acceptedLanguages.length > 1 ? this.lang_searcher.langFor(address) : this.n_settings.language;
 				this.sendPacket(new HncomPlayer.UpdateLanguage(packet.hubId, packet.language).encode());
 			}

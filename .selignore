@@ -36,3 +36,6 @@ utils/
 website/
 worlds/
 .hidden/
+.latest
+LICENSE
+README.md
