@@ -168,6 +168,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private Map[int][int][ubyte] maps;
 	private Map[ushort] id_maps;
 
+	public bool updateBlocks = false;
+
 	private PlacedBlock[] updated_blocks;
 	private Tile[size_t] updated_tiles;
 	
@@ -220,6 +222,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.init();
 		this.updated_blocks.length = 0;
 		sort!"a.x.abs + a.z.abs < b.x.abs + b.z.abs"(this.defaultChunks);
+		this.updateBlocks = true;
 	}
 
 	protected void init() {
@@ -1078,7 +1081,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world[12, 55, 789] = Blocks.CHEST; // not a tile!
 	 * ---
 	 */
-	public Block** opIndexAssign(T:BlockData)(T block, BlockPosition position) {
+	public Block** opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == BlockData) || is(T == Block*)) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 
@@ -1089,19 +1092,20 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			Block** nb = ((*chunk)[position.x & 15, position.y, position.z & 15] = block);
 
-			//set as to update
-			//TODO only if it's not an explosion
-			this.updated_blocks ~= PlacedBlock(position, block);
+			// set as to update
+			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb && *nb ? (**nb).data : Blocks.AIR);
 
-			//call the update function
-			if(nb && *nb) (**nb).onUpdate(this, position, Update.PLACED);
-			with(position) {
-				this.updateBlock(x, y + 1, z);
-				this.updateBlock(x + 1, y, z);
-				this.updateBlock(x, y, z + 1);
-				this.updateBlock(x - 1, y, z);
-				this.updateBlock(x, y, z - 1);
-				if(y != 0) this.updateBlock(x, y - 1, z);
+			// call the update function
+			if(this.updateBlocks) {
+				if(nb && *nb) (**nb).onUpdate(this, position, Update.PLACED);
+				with(position) {
+					this.updateBlock(x, y + 1, z);
+					this.updateBlock(x + 1, y, z);
+					this.updateBlock(x, y, z + 1);
+					this.updateBlock(x - 1, y, z);
+					this.updateBlock(x, y, z - 1);
+					if(y != 0) this.updateBlock(x, y - 1, z);
+				}
 			}
 
 			return nb;
@@ -1111,7 +1115,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public void opIndexAssign(T:BlockData)(T block, int x, uint y, int z) {
+	public void opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == BlockData) || is(T == Block*)) {
 		this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 
@@ -1138,8 +1142,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/**
 	 * Sets the same block in a rectangualar area.
-	 * This function should be used instead of a loop, as
-	 * it's done internally by this function.
+	 * This method is optimised for building as it uses a cached pointer
+	 * instead of getting it every time and it doesn't call any block
+	 * update.
 	 * Example:
 	 * ---
 	 * // sets a chunk to stone
@@ -1153,13 +1158,16 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * ---
 	 */
 	public final void opIndexAssign(BlockData b, Slice x, Slice y, Slice z) {
+		auto block = b.id in this.blocks;
+		this.updateBlocks = false;
 		foreach(px ; x.min..x.max) {
 			foreach(py ; y.min..y.max) {
 				foreach(pz ; z.min..z.max) {
-					this[px, py, pz] = b; //TODO optimise using pointers
+					this[px, py, pz] = block;
 				}
 			}
 		}
+		this.updateBlocks = true;
 	}
 
 	/// ditto
