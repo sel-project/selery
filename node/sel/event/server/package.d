@@ -15,4 +15,5 @@
 /// DDOC_EXCLUDE
 module sel.event.server;
 
-public import sel.event.server.server;
+public import sel.event.server.player : PlayerLoginEvent, PlayerJoinEvent, PlayerLeftEvent, PlayerChangeLanguageEvent;
+public import sel.event.server.server : ServerCommandEvent;

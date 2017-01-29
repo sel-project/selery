@@ -49,6 +49,7 @@ import sel.entity.effect;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;
 import sel.event.server;
+import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.item.item : Items, ItemsStorageHolder, ItemsStorage;
 import sel.math.vector : entityPosition;
@@ -1234,7 +1235,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		//create playersoul and call the event
 		PlayerSoul soul = PlayerSoul(packet.type, packet.protocol, packet.username, packet.uuid, address, packet.displayName);
-		PlayerPreLoginEvent pple = new PlayerPreLoginEvent(soul, packet.reason);
+		PlayerLoginEvent pple = new PlayerLoginEvent(soul, packet.reason);
 		this.callEvent(pple);
 
 		if(pple.disconnect) {
