@@ -64,18 +64,24 @@ class HttpHandler : HandlerThread {
 
 	protected override void listen(shared Socket sharedSocket) {
 		Socket socket = cast()sharedSocket;
-		char[] buffer = new char[WEB_BUFFER_SIZE];
 		while(true) {
 			Socket client = socket.accept();
 			client.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(WEB_TIMEOUT));
-			auto recv = client.receive(buffer);
+			this.handleClient(client);
+		}
+	}
+
+	private void handleClient(Socket socket) {
+		new SafeThread({
+			char[] buffer = new char[WEB_BUFFER_SIZE];
+			auto recv = socket.receive(buffer);
 			if(recv > 0) {
 				this.receive(recv);
-				auto sent = client.send(this.handleConnection(client, Request.parse(buffer[0..recv].idup)).toString());
+				auto sent = socket.send(this.handleConnection(socket, Request.parse(buffer[0..recv].idup)).toString());
 				if(sent > 0) this.send(sent);
 			}
-			client.close();
-		}
+			socket.close();
+		}).start();
 	}
 
 	public override shared void reload() {
@@ -88,11 +94,6 @@ class HttpHandler : HandlerThread {
 		auto settings = this.server.settings;
 		JSONValue[string] json, software, protocols;
 		with(Software) {
-			/*JSONValue[] array(uint[] values) {
-				JSONValue[] ret;
-				foreach(uint value ; values) ret ~= JSONValue(value);
-				return ret;
-			}*/
 			software["name"] = JSONValue(name);
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);

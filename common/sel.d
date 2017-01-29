@@ -105,11 +105,11 @@ const struct Software {
 
 	enum ubyte[3] versions = [major, minor, revision];
 
-	enum bool stable = false;
+	enum bool stable = true;
 
 	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
 
-	enum string fullVersion = "v" ~ displayVersion ~ (stable ? "" : " dev");
+	enum string fullVersion = "v" ~ displayVersion ~ (stable ? "" : "-dev");
 
 	enum string display = name ~ "/" ~ displayVersion;
 

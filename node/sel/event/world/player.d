@@ -51,40 +51,6 @@ interface PlayerEvent : WorldEvent {
 
 }
 
-/** 
- * Called when a player join the world but it's not spawned yet
- * Params:
- * 		chunk = chunks that will be sent to the player
- * 		position = spawn point for the player
- */
-final class PlayerLoginEvent : PlayerEvent {
-
-	mixin PlayerEvent.Implementation;
-	
-	private ChunkPosition[] m_chunks = null;
-	public EntityPosition position;
-	
-	public @safe @nogc this(Player player) {
-		this.n_player = player;
-	}
-	
-	public pure nothrow @property @safe @nogc ChunkPosition[] chunks() {
-		return this.m_chunks;
-	}
-	
-	public pure nothrow @property @safe @nogc ChunkPosition[] chunks(ChunkPosition[] chunks) {
-		return this.m_chunks = chunks;
-	}
-	
-	public @safe void addChunk(int x, int z) {
-		if(this.m_chunks is null) {
-			this.m_chunks = [];
-		}
-		this.m_chunks ~= ChunkPosition(x, z);
-	}
-	
-}
-
 /** General announce event */
 abstract class PlayerAnnounceEvent : PlayerEvent {
 
