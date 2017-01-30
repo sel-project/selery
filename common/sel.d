@@ -101,7 +101,7 @@ const struct Software {
 
 	enum ubyte minor = 0;
 
-	enum ubyte revision = 1;
+	enum ubyte revision = 2;
 
 	enum ubyte[3] versions = [major, minor, revision];
 

@@ -783,12 +783,7 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 		this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
 	}
 
-
-
-	public override void handle(ubyte id, ubyte[] data) {
-		mixin(generateHandlers!("Play", Play.Packets));
-		//static assert(0, generateHandlers!("Play", Play.Packets));
-	}
+	mixin generateHandlers!(Play.Packets);
 
 	protected void handleResourcePackClientResponsePacket(ubyte status, ushort resourcePackVersion) {}
 

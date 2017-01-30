@@ -15,7 +15,7 @@
 module sel.entity.metadata;
 
 import std.conv : to;
-import std.string : join;
+import std.string : join, startsWith;
 import std.typetuple : TypeTuple;
 
 import sel.settings;
@@ -58,15 +58,21 @@ class Metadata {
 		return T.init;
 	}
 
-	T set(string m, T)(T value) {
+	T set(string m, string filter, T)(T value) {
 		foreach(immutable game ; Games) {
-			mixin("alias T = sul.metadata." ~ game ~ ".Metadata;");
-			static if(__traits(hasMember, T, m)) {
-				this.changed = true;
-				mixin("this." ~ game ~ "." ~ m ~ " = value;");
+			static if(!filter.length || game.startsWith(filter)) {
+				mixin("alias T = sul.metadata." ~ game ~ ".Metadata;");
+				static if(__traits(hasMember, T, m)) {
+					this.changed = true;
+					mixin("this." ~ game ~ "." ~ m ~ " = value;");
+				}
 			}
 		}
 		return value;
+	}
+
+	T set(string m, T)(T value) {
+		return this.set!(m, "")(value);
 	}
 
 }

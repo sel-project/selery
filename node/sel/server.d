@@ -1167,20 +1167,15 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		return !closed;
 	}
 
-	private bool handleHncomPacket(ubyte id, ubyte[] data) {
-		mixin((){
-			string ret = "switch(id){";
-			foreach(immutable namespace ; TypeTuple!("Status", "Generic", "Player")) {
-				foreach(T ; mixin("Hncom" ~ namespace ~ ".Packets")) {
-					static if(is(typeof(T.CLIENTBOUND)) && T.CLIENTBOUND) {
-						ret ~= "case " ~ to!string(T.ID) ~ ":";
-						ret ~= "this.handle" ~ T.stringof ~ "Packet(Hncom" ~ namespace ~ "." ~ T.stringof ~ ".fromBuffer!false(data));break;";
-					}
+	private void handleHncomPacket(ubyte id, ubyte[] data) {
+		switch(id) {
+			foreach(P ; TypeTuple!(HncomStatus.Packets, HncomGeneric.Packets, HncomPlayer.Packets)) {
+				static if(P.CLIENTBOUND) {
+					case P.ID: mixin("return this.handle" ~ P.stringof ~ "Packet(P.fromBuffer!false(data));");
 				}
 			}
-			return ret ~ "default:error_log(\"unknown packet \", id, \" \", data);}";
-		}());
-		return true;
+			default: error_log("Unknown packet received from the hub with id ", id, " and ", data.length, " bytes of data");
+		}
 	}
 
 	/*

@@ -21,7 +21,7 @@ import std.conv : to;
 import std.json : JSONValue;
 import std.math : abs, log2, ceil;
 import std.socket : Address;
-import std.string : split;
+import std.string : split, join;
 import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
@@ -653,9 +653,7 @@ class MinecraftPlayer(uint __protocol) : MinecraftPlayerBase {
 
 
 
-	public override void handle(ubyte id, ubyte[] data) {
-		mixin(generateHandlers!("Serverbound", Serverbound.Packets));
-	}
+	mixin generateHandlers!(Serverbound.Packets);
 
 	protected void handleTeleportConfirmPacket(uint id) {}
 

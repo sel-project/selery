@@ -1507,40 +1507,45 @@ public @safe @nogc bool isPlayerInstance(Entity entity) {
 	return cast(Player)entity && !cast(Puppet)entity;
 }
 
-string generateHandlers(string section, E...)() if(E.length % 2 == 0) {
-	string fullret = "switch(id){";
-	foreach(P ; E) {
-		static if(P.SERVERBOUND) {
-			immutable location = section ~ "." ~ P.stringof;
-			immutable name = P.stringof.toLower;
-			string ret = "case " ~ to!string(P.ID) ~ ":auto " ~ name ~ " = " ~ location ~ ".fromBuffer!false(data);";
-			string handler = "handle" ~ P.stringof ~ "Packet(";
-			foreach(immutable field ; P.FIELDS) {
-				handler ~= name ~ "." ~ field ~ ",";
-			}
-			handler ~= ");";
-			static if(is(typeof(P.variantField))) {
-				ret ~= "switch(" ~ name ~ "." ~ P.variantField ~ "){";
-				foreach(V ; P.Variants) {
-					ret ~= "static if(is(typeof(handle" ~ P.stringof ~ V.stringof ~ "Packet))){";
-					ret ~= "case " ~ location ~ "." ~ V.stringof ~ "." ~ P.variantField.toUpper ~ ":"; //TODO camel case to snake case
-					ret ~= "auto pkv = " ~ name ~ ".new " ~ V.stringof ~ "();";
-					ret ~= "pkv.decode();";
-					ret ~= "handle" ~ P.stringof ~ V.stringof ~ "Packet(";
-					foreach(immutable field ; V.FIELDS) {
-						if(field != P.variantField) ret ~= "pkv." ~ field ~ ",";
+mixin template generateHandlers(E...) {
+
+	public override void handle(ubyte _id, ubyte[] _data) {
+		switch(_id) {
+			foreach(P ; E) {
+				static if(P.SERVERBOUND && (is(typeof(mixin("handle" ~ P.stringof ~ "Packet"))) || is(typeof(P.variantField)))) {
+					case P.ID:
+					{
+						P _packet = P.fromBuffer!false(_data);
+						static if(!is(typeof(P.variantField))) {
+							with(_packet) mixin("this.handle" ~ P.stringof ~ "Packet(" ~ P.FIELDS.join(",") ~ ");");
+						} else {
+							switch(mixin("_packet." ~ P.variantField)) {
+								foreach(V ; P.Variants) {
+									static if(is(typeof(mixin("handle" ~ P.stringof ~ V.stringof ~ "Packet")))) {
+										mixin((){ import std.string:toUpper;return "case V." ~ P.variantField.toUpper ~ ":"; }()); //TODO convert to upper snake case
+										{
+											V _variant = _packet.new V();
+											_variant.decode();
+											with(_variant) mixin("this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");");
+										}
+										break;
+									}
+								}
+								default: break;
+							}
+						}
 					}
-					ret ~= ");break;}else version(ShowUnhandled){pragma(msg, stringof ~ \".handle" ~ P.stringof ~ V.stringof ~ "Packet is not implemented\");}";
+					break;
+				} else version(ShowUnhandled) {
+					static if(P.SERVERBOUND) pragma(msg, "Packet " ~ P.stringof ~ " is not handled");
 				}
-				ret ~= "default:static if(is(typeof(handle" ~ P.stringof ~ "Packet))){" ~ handler ~ "}break;}";
-				fullret ~= ret ~ "break;";
-			} else {
-				fullret ~= "static if(is(typeof(handle" ~ P.stringof ~ "Packet))){" ~ ret ~ handler ~ "break;}";
-				fullret ~= "else version(ShowUnhandled){pragma(msg, stringof ~ \".handle" ~ P.stringof ~ "Packet is not implemented\");}";
 			}
+			default:
+				version(ShowUnhandled) error_log("Unknown packet '", _id, "' with ", _data.length, " bytes");
+				break;
 		}
 	}
-	return fullret ~= "default:version(ShowUnhandled){error_log(\"unknown packet \", id, \" \", data);}}";
+
 }
 
 /**

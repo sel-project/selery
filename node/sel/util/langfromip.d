@@ -17,7 +17,7 @@ module sel.util.langfromip;
 import std.algorithm : canFind;
 import std.conv : to;
 import std.csv;
-import std.file : read, write;
+import std.file : exists, read, write;
 import std.typecons;
 import std.socket : Address, InternetAddress, Internet6Address;
 import std.string : split, indexOf;
@@ -53,9 +53,15 @@ class LangSearcher {
 	}
 
 	public void load() {
-		auto uncompress = new UnCompress();
-		ubyte[] data = cast(ubyte[])uncompress.uncompress(read(Paths.res ~ "dbip-country.bin"));
-		data ~= cast(ubyte[])uncompress.flush();
+		ubyte[] data;
+		if(exists(Paths.res ~ "dbip-country-uncompressed.bin")) {
+			data = cast(ubyte[])read(Paths.res ~ "dbip-country-uncompressed.bin");
+		} else {
+			auto uncompress = new UnCompress();
+			data = cast(ubyte[])uncompress.uncompress(read(Paths.res ~ "dbip-country.bin"));
+			data ~= cast(ubyte[])uncompress.flush();
+			write(Paths.res ~ "dbip-country-uncompressed.bin", data);
+		}
 		size_t index = 0;
 		string[] cs = new string[varuint.decode(data, &index)];
 		foreach(ref country ; cs) {
@@ -105,11 +111,11 @@ class LangSearcher {
 		}
 		// map the countries
 		assert(cs.length < 255);
-		ubyte[] pre = varuint.encode(cs.length);
+		ubyte[] pre = varuint.encode(cs.length.to!uint);
 		foreach(country ; cs) {
 			pre ~= cast(ubyte[])country;
 		}
-		auto compress = new Compress(6, HeaderFormat.gzip);
+		auto compress = new Compress(9, HeaderFormat.gzip);
 		data = cast(ubyte[])compress.compress(pre ~ data.dup);
 		data ~= cast(ubyte[])compress.flush();
 		write(Paths.res ~ "dbip-country.bin", data);

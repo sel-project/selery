@@ -637,7 +637,7 @@ abstract class Entity : EventListener!WorldEvent {
 
 	protected @trusted void doFallDamage(float distance) {
 		if(distance > 3.5) {
-			uint damage = to!uint(round(this.highestPoint - this.position.y - 3));
+			uint damage = to!uint(round(distance - 3));
 			if(this.last_puncher is null) {
 				this.attack(new EntityFallDamageEvent(this, damage));
 			} else {

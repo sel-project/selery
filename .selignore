@@ -32,6 +32,7 @@ hub/sel-hub.sln
 hub/sel-hub.userprefs
 hub/.config
 res/dbip-country.csv
+res/dbip-country-uncompressed.bin
 utils/
 website/
 worlds/

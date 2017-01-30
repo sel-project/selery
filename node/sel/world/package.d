@@ -17,4 +17,4 @@ module sel.world;
 
 public import sel.world.chunk : Chunk;
 public import sel.world.map : Map;
-public import sel.world.world : World, Rules;
+public import sel.world.world : World, Time, Difficulty, Rules;
