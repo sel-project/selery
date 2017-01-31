@@ -124,7 +124,7 @@ class Queries : Thread {
 		/* new (since 1.4) */ {
 			ubyte[] payload = [0, 167, 0, 49, 0, 0];
 			with(this.server.settings) {
-				foreach(string status ; [to!string(minecraftProtocols[$-1]), supportedMinecraftProtocols[minecraftProtocols[$-1]][$-1], minecraftMotd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
+				foreach(string status ; [to!string(minecraftProtocols[$-1]), supportedMinecraftProtocols[minecraftProtocols[$-1]][0], minecraftMotd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
 					foreach(wchar wc ; to!wstring(status)) {
 						ushort s = cast(ushort)wc;
 						payload ~= [(s >> 8) & 255, s & 255];
@@ -202,11 +202,11 @@ class Queries : Thread {
 			add("whitelist", whitelist ? "on" : "off");
 			if(pocket) {
 				addTo(pe, "game_id", "MINECRAFTPE");
-				addTo(pe, "version", supportedPocketProtocols[pocketProtocols[$-1]][$-1]);
+				addTo(pe, "version", supportedPocketProtocols[pocketProtocols[$-1]][0]);
 			}
 			if(minecraft) {
 				addTo(pc, "game_id", "MINECRAFT");
-				addTo(pc, "version", supportedMinecraftProtocols[minecraftProtocols[$-1]][$-1]);
+				addTo(pc, "version", supportedMinecraftProtocols[minecraftProtocols[$-1]][0]);
 			}
 			string[] plugins = this.server.plugins;
 			add("plugins", Software.name ~ " " ~ Software.displayVersion ~ (plugins.length ? ": " ~ plugins.join("; ") : ""));
