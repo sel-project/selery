@@ -33,12 +33,12 @@ import sel.world.world : World;
 abstract class Living : Entity {
 
 	protected Health m_health;
-	private Effect[ubyte] effects;
+	protected Effect[ubyte] effects;
 
 	public bool immortal = false;
 
-	private tick_t last_received_attack = 0;
-	private tick_t last_void_damage = 0;
+	protected tick_t last_received_attack = 0;
+	protected tick_t last_void_damage = 0;
 
 	protected float m_body_yaw = Rotation.WEST;
 

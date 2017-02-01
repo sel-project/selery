@@ -49,9 +49,9 @@ class ItemEntity : Entity, Collectable {
 		this.m_motion = motion;
 		this.n_item = item;
 		static if(__minecraft) {
-			import sel.player.minecraft : MinecraftPlayer;
+			import sel.player.minecraft : MinecraftPlayerImpl;
 			foreach(immutable i ; __minecraftProtocolsTuple) {
-				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = MinecraftPlayer!" ~ to!string(i) ~ ".toSlot(item);");
+				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = MinecraftPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
 			}
 		}
 		if(noai) {

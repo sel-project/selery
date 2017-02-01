@@ -38,7 +38,7 @@ import common.path : Paths;
 import common.sel;
 import common.util.format : Text, writeln;
 
-enum size_t __GENERATOR__ = 1;
+enum size_t __GENERATOR__ = 2;
 
 void main(string[] args) {
 
@@ -236,9 +236,16 @@ void main(string[] args) {
 
 		foreach(Info value ; ordered) {
 			if(value.active) {
-				immutable lang = value.path ~ "lang" ~ dirSeparator;
+				auto lang = value.path ~ "lang" ~ dirSeparator;
 				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
-					paths ~= "`" ~ lang ~ "`, ";
+					// use full path
+					version(Windows) {
+						lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
+					} else {
+						lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
+					}
+					if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
+					if(exists(lang)) paths ~= "`" ~ lang ~ "`, ";
 				}
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";" ~ newline;

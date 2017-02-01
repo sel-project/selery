@@ -38,7 +38,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 
 	private bool n_spawned;
 
-	private Hunger m_hunger;
+	protected Hunger m_hunger;
 
 	private float m_experience;
 	private uint m_level;

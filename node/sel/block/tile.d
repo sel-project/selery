@@ -420,8 +420,8 @@ abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E)
 		return SIGN;
 	}
 
-	public override @safe Slot[] drops(Player player, Item item) {
-		return [Slot(player.world.items.get(Items.SIGN), 1)];
+	public override @safe Slot[] drops(World world, Player player, Item item) {
+		return [Slot(world.items.get(Items.SIGN), 1)];
 	}
 
 }
@@ -435,7 +435,7 @@ class SignBlock(BlockData blockdata, E...) : GenericSign!(blockdata, E) {
 	public override void onUpdate(World world, BlockPosition position, Update update) {
 		if(update != Update.REMOVED) {
 			if(world[position - [0, 1, 0]] == Blocks.AIR) {
-				world.drops(this, position);
+				world.drop(this, position);
 				world[position] = Blocks.AIR;
 			}
 		}
@@ -463,7 +463,7 @@ class WallSignBlock(BlockData blockdata, E...) : GenericSign!(blockdata, E) {
 				return;
 			}
 			if(world[pc] == Blocks.AIR) {
-				world.drops(this, position);
+				world.drop(this, position);
 				world[pc] = Blocks.AIR;
 			}
 		}

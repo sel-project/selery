@@ -163,9 +163,9 @@ class MinecraftHandler : HandlerThread {
 					if(this.acceptIp(handshake.serverAddress)) {
 						shared IMinecraftSession session;
 						if(handshake.next == Status.Handshake.STATUS) {
-							session = new shared MinecraftStatusSession(this.server, cast(shared)client, this, handshake.protocol);
+							session = new shared MinecraftStatusSession(this.server, cast(shared)client, this, handshake);
 						} else if(handshake.next == Status.Handshake.LOGIN) {
-							session = new shared MinecraftSession(this.server, cast(shared)client, this, handshake.protocol);
+							session = new shared MinecraftSession(this.server, cast(shared)client, this, handshake);
 						}
 						if(session !is null) {
 							this.sessions ~= session;
@@ -307,11 +307,11 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 
 	private shared bool ping;
 
-	public shared this(shared Server server, shared Socket socket, MinecraftHandler handler, uint protocol) {
+	public shared this(shared Server server, shared Socket socket, MinecraftHandler handler, Status.Handshake handshake) {
 		super(server);
 		this.sharedSocket = socket;
 		this.handler = cast(shared)handler;
-		this.protocol = protocol;
+		this.protocol = handshake.protocol;
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) sessionId() {
@@ -401,12 +401,14 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 
 	private shared Receiver!varuint receiver;
 
-	public shared this(shared Server server, shared Socket socket, MinecraftHandler handler, uint protocol) {
+	public shared this(shared Server server, shared Socket socket, MinecraftHandler handler, Status.Handshake handshake) {
 		super(server);
 		this.sharedSocket = socket;
-		this.n_address = cast(shared)(cast()socket).remoteAddress;
 		this.handler = cast(shared)handler;
-		this.n_protocol = protocol;
+		this.n_address = cast(shared)(cast()socket).remoteAddress;
+		this.n_server_address = handshake.serverAddress;
+		this.n_server_port = handshake.serverPort;
+		this.n_protocol = handshake.protocol;
 		this.receiver = cast(shared)new Receiver!varuint();
 		this.functionHandler = &this.handleLogin;
 	}

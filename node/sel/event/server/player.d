@@ -20,88 +20,10 @@ import common.sel : Software;
 
 import sel.event.event : Cancellable;
 import sel.event.server.server : ServerEvent;
-import sel.player.player : Player, PlayerSoul;
+import sel.player.player : Player;
 import sel.world.world : World;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : Add, Remove;");
-
-/**
- * Event called when the player successfully logs in passing the
- * controls in the network layer.
- * This packet is commonly used to load data saved on files or in
- * the database by the plugins, only if the player will not be 
- * disconnected after this packet.
- * Example:
- * ---
- * @event prelogin(PlayerPreLoginEvent pple) {
- *    if(!pple.disconnect) {
- *       loadSomething(pple.iname);
- *    }
- * }
- * ---
- */
-final class PlayerLoginEvent : ServerEvent {
-	
-	enum Reason : ubyte {
-		
-		firstJoin = Add.FIRST_JOIN,
-		transferred = Add.TRANSFERRED,
-		forciblyTransferred = Add.FORCIBLY_TRANSFERRED
-		
-	}
-	
-	private PlayerSoul n_player;
-	private ubyte n_reason;
-	private World m_world;
-	
-	private bool m_disconnect;
-	private string m_disconnect_reason;
-	
-	public @safe @nogc this(PlayerSoul player, ubyte reason) {
-		this.n_player = player;
-		this.n_reason = reason;
-	}
-	
-	public pure nothrow @property @safe @nogc ref PlayerSoul player() {
-		return this.n_player;
-	}
-	
-	public pure nothrow @property @safe @nogc ubyte reason() {
-		return this.n_reason;
-	}
-	
-	public pure nothrow @property @safe @nogc World world() {
-		return this.m_world;
-	}
-	
-	public pure nothrow @property @safe @nogc World world(World world) {
-		return this.m_world = world;
-	}
-	
-	public pure nothrow @property @safe @nogc bool disconnect() {
-		return this.m_disconnect;
-	}
-	
-	public pure nothrow @property @safe @nogc bool disconnect(string reason) {
-		this.m_disconnect_reason = reason;
-		return this.m_disconnect = true;
-	}
-	
-	public pure nothrow @property @safe bool disconnect(bool disconnect) {
-		this.m_disconnect = disconnect;
-		if(disconnect) {
-			this.m_disconnect_reason = "disconnectionScreen.noReason";
-		}
-		return this.m_disconnect;
-	}
-	
-	public pure nothrow @property @safe @nogc string disconnectReason() {
-		return this.m_disconnect_reason;
-	}
-	
-}
-
-deprecated("Use PlayerLoginEvent instead") alias PlayerPreLoginEvent = PlayerLoginEvent;
 
 /**
  * Event called after the Player class for the now logged in player is created.

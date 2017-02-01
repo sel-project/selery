@@ -44,7 +44,7 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.nbt;
-import sel.player.player : Player, generateHandlers, Message;
+import sel.player.player : Player, PlayerOS, generateHandlers, Message;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.command : Command;
 import sel.util.lang;
@@ -56,7 +56,12 @@ import sel.world.world : World;
 
 import sul.utils.var : varuint;
 
-abstract class PocketPlayerBase : Player {
+abstract class PocketPlayer : Player {
+
+	private bool n_edu;
+	private long n_xuid;
+	private ubyte n_os;
+	private string n_device_model;
 	
 	private uint title_duration;
 	private uint subtitle_duration;
@@ -67,17 +72,65 @@ abstract class PocketPlayerBase : Player {
 
 	protected bool send_commands;
 	
-	public this(uint hubId, World world, EntityPosition position, Address address, uint protocol, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu) {
-		super(hubId, world, position, address, protocol, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, null, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
 		this.n_packet_loss = packetLoss;
-		//TODO save the xuid
-		//TODO save edu
+		this.n_edu = edu;
+		this.n_xuid = xuid;
+		this.n_os = deviceOs;
+		this.n_device_model = deviceModel;
 	}
 	
 	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
 		return PE;
 	}
-	
+
+	/**
+	 * Indicates whether or not the player is using Minecraft: Education
+	 * Edition.
+	 */
+	public final pure nothrow @property @safe @nogc bool edu() {
+		return this.n_edu;
+	}
+
+	/**
+	 * Gets the player's XBOX user id.
+	 * It's always the same value for the same user, if authenticated.
+	 * It's 0 if the server is not in online mode.
+	 * This value can be used to retrieve more informations about the
+	 * player using the XBOX live services.
+	 */
+	public final pure nothrow @property @safe @nogc long xuid() {
+		return this.n_xuid;
+	}
+
+	/**
+	 * Gets the player's operative system, as indicated by the client
+	 * in the login packet.
+	 * Example:
+	 * ---
+	 * if(player.os != PlayerOS.android) {
+	 *    player.kick("Only android players are allowed");
+	 * }
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc ubyte os() {
+		return this.n_os;
+	}
+
+	/**
+	 * Gets the player's device model (name and identifier) as indicated
+	 * by the client in the login packet.
+	 * Example:
+	 * ---
+	 * if(!player.deviceModel.toLower.startsWith("oneplus")) {
+	 *    player.kick("This server is reserved for oneplus users");
+	 * }
+	 */
+	public final pure nothrow @property @safe @nogc string deviceModel() {
+		return this.n_device_model;
+	}
+
 	public override void tick() {
 		super.tick();
 		//send tips and popups
@@ -175,7 +228,7 @@ abstract class PocketPlayerBase : Player {
 
 // send function are overwritten with static ifs
 // handle functions are created for every version using static ifs
-class PocketPlayer(uint __protocol) : PocketPlayerBase {
+class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	mixin("import Types = sul.protocol.pocket" ~ __protocol.to!string ~ ".types;");
 	mixin("import Play = sul.protocol.pocket" ~ __protocol.to!string ~ ".play;");
@@ -286,10 +339,14 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
 	
-	public this(uint hubId, World world, EntityPosition position, Address address, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu) {
-		super(hubId, world, position, address, __protocol, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu);
+	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft: " ~ (edu ? "Education": "Pocket") ~ " Edition " ~ supportedPocketProtocols[__protocol][$-1];
+		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ supportedPocketProtocols[__protocol][$-1];
+	}
+
+	public final override pure nothrow @property @safe @nogc uint protocol() {
+		return __protocol;
 	}
 
 	public final override pure nothrow @property @safe @nogc string gameFullVersion() {
@@ -351,11 +408,14 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 	alias world = super.world;
 
 	public override @property World world(World world) {
-		if(world.dimension.pe != this.world.dimension.pe) {
-			this.sendPacket(new Play.ChangeDimension(world.dimension.pe, tuple!(typeof(Play.ChangeDimension.position))(world.spawnPoint), true));
-		}
 		this.send_commands = false; // world-related commands and removed but no packet is needed as they are updated at respawn
 		return super.world(world);
+	}
+
+	static if(__protocol >= 101) {
+		public override void transfer(string ip, ushort port) {
+			this.sendPacket(new Play.Transfer(ip, port));
+		}
 	}
 
 	public override void firstspawn() {
@@ -643,7 +703,7 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 	public override void sendJoinPacket() {
 		// the time is set by SetTime packet, sent after this one
 		// send thunders if enabled
-		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, __edu, this.world.downfall?this.world.weather.intensity:0, 0, !__realm, false, Software.display, this.world.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, this.edu, this.world.downfall?this.world.weather.intensity:0, 0, !__realm, false, Software.display, this.world.name));
 	}
 	
 	public override void sendTimePacket() {

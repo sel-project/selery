@@ -604,7 +604,7 @@ class Node : Session {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.username, player.displayName, player.dimension, hncomAddress(player.address), cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
+		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
 		this.send(player.encodeHncomAddPacket(packet));
 	}
 	

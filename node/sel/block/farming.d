@@ -100,15 +100,15 @@ class CropBlock(BlockData blockdata, BlockData next, string[string] dropped_item
 		}
 	}
 
-	public override Slot[] drops(Player player, Item item) {
+	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] items;
 		foreach(string item, byte m; this.min) {
-			if(player.world.items.has(item)) {
+			if(world.items.has(item)) {
 				//TODO apply fortune enchantment?
-				byte amount = m == this.max[item] ? m : player.world.random.range!byte(m, this.max[item]);
+				byte amount = m == this.max[item] ? m : world.random.range!byte(m, this.max[item]);
 				if(amount > 0) {
 					foreach(uint i ; 0..amount) {
-						items ~= Slot(player.world.items.get(item), 1);
+						items ~= Slot(world.items.get(item), 1);
 					}
 				}
 			}
@@ -176,7 +176,7 @@ class CropBlock(BlockData blockdata, BlockData next, string[string] dropped_item
 		if(update == Update.PLACED || update == Update.NEAREST_CHANGED) {
 			if(world[position - [0, 1, 0]] != Blocks.FARMLAND) {
 				//end my existance
-				world.drops(this, position);
+				world.drop(this, position);
 				world[position] = Blocks.AIR;
 			}
 		}

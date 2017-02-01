@@ -165,7 +165,7 @@ abstract class Entity : EventListener!WorldEvent {
 		this.id = reserve();
 		this.n_uuid = server.nextUUID;
 		this.n_world = world;
-		this.rules = this.world.rules.dup;
+		if(world !is null) this.rules = this.world.rules.dup;
 		this.m_position = this.m_last = this.oldposition = position;
 		this.m_motion = EntityPosition(0, 0, 0);
 		this.highestPoint = this.position.y;

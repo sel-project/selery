@@ -21,7 +21,7 @@ public import common.util.format : Text;
 public import sel.settings;
 
 public import sel.server : server;
-public import sel.player.player : Player, Gamemode;
+public import sel.player;
 
 public import sel.plugin.config : Config, _, Value, value;
 public import sel.plugin.file : exists, isDir, isFile, read, write, remove;

@@ -52,6 +52,8 @@ abstract class PlayerSession : Session {
 	protected shared byte n_dimension;
 	
 	protected shared Address n_address;
+	protected shared string n_server_address;
+	protected shared ushort n_server_port;
 	protected shared string n_language;
 	protected shared Skin n_skin = null;
 	
@@ -181,6 +183,21 @@ abstract class PlayerSession : Session {
 	 */
 	public final shared nothrow @property @trusted @nogc Address address() {
 		return cast()this.n_address;
+	}
+
+	/**
+	 * Address used by the client to connect to the server.
+	 * It's a string and can either be a numerical ip or a full url.
+	 */
+	public final shared nothrow @property @safe @nogc string serverAddress() {
+		return this.n_server_address;
+	}
+
+	/**
+	 * Port used by the client to connect to the server.
+	 */
+	public final shared nothrow @property @safe @nogc ushort serverPort() {
+		return this.n_server_port;
 	}
 	
 	/**

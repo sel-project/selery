@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,11 +12,24 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/// DDOC_EXCLUDE
-module sel.player;
+module sel.world.file;
 
-import sel.settings;
+import std.system : Endian, endian;
 
-public import sel.player.player : Player, isPlayer, isPlayerInstance, Gamemode, PlayerOS, Puppet, Message;
-static if(__pocket) public import sel.player.pocket : PocketPlayer;
-static if(__minecraft) public import sel.player.minecraft : MinecraftPlayer;
+import sel.world.generator;
+import sel.world.io;
+import sel.world.world : World;
+
+class RegionWorld(T) : World {
+
+	protected ubyte[][int][int] cached_regions;
+
+	public this(string name, uint seed, Generator generator=null) {
+		super(name, generator, seed);
+	}
+
+}
+
+alias SelWorld(Endian endianness) = RegionWorld!(Sel!endianness);
+
+alias DefaultSelWorld = SelWorld!endian;

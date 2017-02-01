@@ -53,7 +53,9 @@ import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.item.item : Items, ItemsStorageHolder, ItemsStorage;
 import sel.math.vector : entityPosition;
-import sel.player.player : Player, PlayerSoul;
+import sel.player.player : Player;
+import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
+import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
 import sel.plugin.plugin : Plugin;
 import sel.util.command : areValidCommandArgs, Command, Commands;
 import sel.util.concurrency : thread;
@@ -64,9 +66,7 @@ import sel.util.log;
 import sel.util.memory;
 import sel.util.task;
 import sel.world.world : World;
-
-static if(__minecraft) import sel.player.minecraft : MinecraftPlayerBase, MinecraftPlayer;
-static if(__pocket) import sel.player.pocket : PocketPlayerBase, PocketPlayer;
+//import sel.world.vanilla.world : Overworld;
 
 static if(!__realm) private import plugins;
 
@@ -442,7 +442,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		// load creative inventories
 		foreach(immutable protocol ; __pocketProtocolsTuple) {
-			mixin("PocketPlayer!" ~ protocol.to!string ~ ".loadCreativeInventory();");
+			mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory();");
 		}
 
 		this.n_node_max = reloadSettings();
@@ -484,10 +484,11 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		}
 
 		if(!this.m_worlds.length) {
+			//this.addWorld!Overworld();
 			this.addWorld!World();
 		}
 
-		get_and_clear_logged_messages();
+		getAndClearLoggedMessages();
 
 		HncomTypes.Plugin[] plugins;
 		foreach(plugin ; this.n_plugins) {
@@ -632,7 +633,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		}
 
 		// sends the logs to the hub
-		auto logs = get_and_clear_logged_messages();
+		auto logs = getAndClearLoggedMessages();
 		if(logs.length) {
 			this.sendPacket(new HncomGeneric.Logs(logs).encode());
 		}
@@ -1145,7 +1146,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	// removes with a reason a player spawned in the server
 	private bool removePlayer(Player player, ubyte reason) {
 		if(player.hubId in this.players_hubid) {
-			player.world.despawnPlayer(player);
+			if(player.world !is null) player.world.despawnPlayer(player);
 			this.players_hubid.remove(player.hubId);
 			player.close();
 			this.callEventIfExists!PlayerLeftEvent(player, reason);
@@ -1225,84 +1226,74 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 */
 	private void handleAddPacket(HncomPlayer.Add packet) {
 
-		Address address = this.convertAddress(packet.address);
+		Address address = this.convertAddress(packet.clientAddress);
 		Skin skin = Skin(packet.skin.name, packet.skin.data);
 
-		//create playersoul and call the event
-		PlayerSoul soul = PlayerSoul(packet.type, packet.protocol, packet.username, packet.uuid, address, packet.displayName);
-		PlayerLoginEvent pple = new PlayerLoginEvent(soul, packet.reason);
-		this.callEvent(pple);
-
-		if(pple.disconnect) {
-			this.sendPacket(new HncomPlayer.Kick(packet.hubId, pple.disconnectReason, false).encode());
-		} else {
-
-			if(pple.player.displayName != packet.displayName) {
-				this.sendPacket(new HncomPlayer.UpdateDisplayName(packet.hubId, pple.player.displayName).encode());
-			}
-
-			// this is fast as lightning (~1 microsecond)
-			if(packet.language == "" && packet.type == PE) {
-				packet.language = this.n_settings.acceptedLanguages.length > 1 ? this.lang_searcher.langFor(address) : this.n_settings.language;
-				this.sendPacket(new HncomPlayer.UpdateLanguage(packet.hubId, packet.language).encode());
-			}
-
-			if(!skin.valid) {
-				// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
-				ubyte a = packet.uuid.data[7] ^ packet.uuid.data[15];
-				ubyte b = (packet.uuid.data[3] ^ packet.uuid.data[11]) ^ a;
-				skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
-			}
-
-			World world = pple.world is null ? this.world : pple.world;
-			Player player;
-			static if(__pocketProtocols.length + __minecraftProtocols.length) {
-				player = (){
-					final switch(packet.type) {
-						static if(__pocket) {
-							case PE:
-								auto pocket = packet.new Pocket();
-								pocket.decode();
-								foreach(immutable p ; __pocketProtocolsTuple) {
-									if(packet.protocol == p)
-										return cast(Player)new PocketPlayer!p(packet.hubId, world, world.spawnPoint.entityPosition, address, packet.username, pple.player.displayName, skin, packet.uuid, packet.language, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu);
-								}
-								assert(0);
-						}
-						static if(__minecraft) {
-							case PC:
-								auto minecraft = packet.new Minecraft();
-								minecraft.decode();
-								foreach(immutable p ; __minecraftProtocolsTuple) {
-									if(packet.protocol == p)
-										return cast(Player)new MinecraftPlayer!p(packet.hubId, world, world.spawnPoint.entityPosition, address, packet.username, pple.player.displayName, skin, packet.uuid, packet.language, packet.latency);
-								}
-								assert(0);
-						}
-					}
-				}();
-			}
-
-			// register the server's commands
-			foreach(Command command ; this.commands) {
-				player.registerCommand(command);
-			}
-
-			// add to the lists
-			this.players_hubid[player.hubId] = player;
-
-			server.callEventIfExists!PlayerJoinEvent(player, packet.reason);
-
-			// do not spawn if it has been disconnected during the event
-			if(player.hubId in this.players_hubid) {
-				if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
-					player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
-				}
-				player.world.spawnPlayer(player);
-				this.sendPacket(new HncomPlayer.UpdateWorld(player.hubId, world.name, player.dimension).encode());
-			}
-
+		// this is fast as lightning (~1 microsecond)
+		if(packet.language == "") {
+			packet.language = this.n_settings.acceptedLanguages.length > 1 ? this.lang_searcher.langFor(address) : this.n_settings.language;
+			this.sendPacket(new HncomPlayer.UpdateLanguage(packet.hubId, packet.language).encode());
 		}
+
+		if(!skin.valid) {
+			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
+			ubyte a = packet.uuid.data[7] ^ packet.uuid.data[15];
+			ubyte b = (packet.uuid.data[3] ^ packet.uuid.data[11]) ^ a;
+			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
+		}
+
+		Player player;
+		static if(__pocketProtocols.length + __minecraftProtocols.length) {
+			player = (){
+				final switch(packet.type) {
+					static if(__pocket) {
+						case PE:
+							auto pocket = packet.new Pocket();
+							pocket.decode();
+							foreach(immutable p ; __pocketProtocolsTuple) {
+								if(packet.protocol == p)
+									return cast(Player)new PocketPlayerImpl!p(packet.hubId, world.spawnPoint.entityPosition, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
+							}
+							assert(0);
+					}
+					static if(__minecraft) {
+						case PC:
+							auto minecraft = packet.new Minecraft();
+							minecraft.decode();
+							foreach(immutable p ; __minecraftProtocolsTuple) {
+								if(packet.protocol == p)
+									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, world.spawnPoint.entityPosition, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency);
+							}
+							assert(0);
+					}
+				}
+			}();
+		}
+
+		// register the server's commands
+		foreach(Command command ; this.commands) {
+			player.registerCommand(command);
+		}
+
+		// add to the lists
+		this.players_hubid[player.hubId] = player;
+
+		server.callEventIfExists!PlayerJoinEvent(player, packet.reason);
+
+		player.joined = true;
+
+		// use the default world if plugins didn't set one
+		if(player.world is null) player.world = this.world;
+		else player.world.spawnPlayer(player);
+
+		// do not spawn if it has been disconnected during the event
+		/*if(player.hubId in this.players_hubid) {
+			if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
+				player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
+			}
+			player.world.spawnPlayer(player);
+		}*/
+
 	}
 
 	/*

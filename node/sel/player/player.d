@@ -98,8 +98,6 @@ abstract class Player : Human {
 	public immutable bool pc;
 	
 	private immutable ulong connection_time;
-	
-	public immutable uint protocol;
 
 	public immutable uint hubId;
 	
@@ -115,8 +113,8 @@ abstract class Player : Human {
 	private Address n_address;
 	private string address_ip;
 	private ushort address_port;
-	
-	public string n_minecraft_version;
+	private string server_address_ip;
+	private ushort server_address_port;
 	
 	protected uint n_latency;
 	protected float n_packet_loss = 0;
@@ -156,11 +154,12 @@ abstract class Player : Human {
 	private bool do_movement = false;
 	private EntityPosition last_position;
 	private float last_yaw, last_body_yaw, last_pitch;
+
+	public bool joined = false;
 	
-	public this(uint hubId, World world, EntityPosition position, Address address, uint protocol, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
+	public this(uint hubId, World world, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
 		this.hubId = hubId;
 		super(world, position, skin);
-		this.protocol = protocol;
 		this.n_name = name;
 		this.n_iname = this.n_name.toLower();
 		this.n_cname = this.n_cname.replace(" ", "-");
@@ -169,6 +168,8 @@ abstract class Player : Human {
 		this.n_address = address;
 		this.address_ip = address.toAddrString();
 		this.address_port = to!ushort(address.toPortString());
+		this.server_address_ip = serverAddress;
+		this.server_address_port = serverPort;
 		this.showNametag = true;
 		this.nametag = name;
 		this.m_lang = language;
@@ -176,7 +177,6 @@ abstract class Player : Human {
 		this.viewDistance = this.rules.viewDistance;
 		this.pe = this.gameVersion == PE;
 		this.pc = this.gameVersion == PC;
-		this.m_gamemode = world.rules.gamemode;
 		this.connection_time = milliseconds;
 		this.n_variables = PlayerVariables(&this.n_name, &this.n_iname, &this.n_display_name, &this.chatName, &this.address_ip, &this.address_port, &this.n_latency, &this.n_latency, &this.n_packet_loss, &this.n_world.n_name, &this.m_position);
 		this.last_chunk_position = this.chunk;
@@ -217,6 +217,24 @@ abstract class Player : Human {
 	/// ditto
 	public final pure nothrow @property @safe @nogc const ushort port() {
 		return this.address_port;
+	}
+
+	/**
+	 * Gets the ip and the port the player has used to join the server.
+	 * Example:
+	 * ---
+	 * if(player.usedIp != "example.com") {
+	 *    player.sendMessage("Hey! Use the right ip: example.com");
+	 * }
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc const string usedIp() {
+		return this.server_address_ip;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc const ushort usedPort() {
+		return this.server_address_port;
 	}
 	
 	/**
@@ -274,6 +292,11 @@ abstract class Player : Human {
 	public pure nothrow @property @safe @nogc string gameFullVersion() {
 		return "Unknwon";
 	}
+
+	/**
+	 * Gets the player's game protocol.
+	 */
+	public abstract pure nothrow @property @safe @nogc uint protocol();
 
 	/**
 	 * Indicates whether or not the player is still connected to
@@ -397,38 +420,55 @@ abstract class Player : Human {
 		}
 	}
 	
+	alias world = super.world;
+	
 	/**
 	 * Teleports the player to another world.
 	 * Bugs: chunks are not unloaded, this means that the old-world's chunks that
 	 * 		are not re-sent by the new world will be visible and usable by the client.
 	 */
 	public @property World world(World world) {
-		// reset titles (title, subtitle, tip)
-		this.m_title = Message.init;
-		this.m_subtitle = Message.init;
-		this.m_tip = Message.init;
-		this.sendResetTitles();
-
+		
 		this.rules = world.rules.dup;
 
-		auto old = this.n_world.dimension;
-		this.world.despawnPlayer(this);
+		if(this.joined && (this.n_world is null || !world.hasChild(this.n_world) && !this.n_world.hasChild(world))) {
+
+			// reset titles (title, subtitle, tip)
+			this.m_title = Message.init;
+			this.m_subtitle = Message.init;
+			this.m_tip = Message.init;
+			this.sendResetTitles();
+
+			this.m_gamemode = world.rules.gamemode;
+
+			if(this.level != 0) this.level = 0;
+			if(this.experience != 0) this.experience = 0;
+			this.m_health.reset();
+			this.m_hunger.reset();
+			//TODO remove effects
+
+		}
+
+		if(this.n_world !is null) {
+			this.world.despawnPlayer(this);
+			this.sendChangeDimension(this.n_world.dimension, world.dimension);
+		}
+
 		this.last_chunk_update = 0;
 		this.loaded_chunks.length = 0;
 		this.last_chunk_update = 0;
 		this.last_chunk_position = ChunkPosition(int.max, int.max);
-		//TODO if not switching to child/parent remove effects, update gamemode, reset health, hunger
+
 		this.n_world = world;
-		this.m_gamemode = world.rules.gamemode; //TODO only if not a child
 
-		Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
-		this.sendChangeDimension(old, world.dimension);
-		this.world.spawnPlayer(this);
+		if(this.joined) {
+			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
+			this.world.spawnPlayer(this);
+		}
 
-		return this.world;
+		return world;
+
 	}
-
-	alias world = super.world;
 
 	public abstract pure nothrow @property @safe @nogc byte dimension();
 	
@@ -696,9 +736,27 @@ abstract class Player : Human {
 	 * "End of Stream" message.
 	 * Params:
 	 * 		node = the name of the node the player will be transferred to
+	 * 
+	 * If the player should be transferred to another server using Pocket
+	 * Edition's functionality the other transfer function should be used
+	 * instead, using ip and port as parameters and not a node name.
 	 */
 	public void transfer(string node) {
 		server.transfer(this, node);
+	}
+
+	/**
+	 * Transfers a player to given server and port if the client has
+	 * the functionality to do so.
+	 * Calling this method will not disconnect the player immediately.
+	 * Params:
+	 * 		ip = ip of the server, it could be either numeric of an hostname
+	 * 		port = port of the server
+	 * Throws:
+	 * 		Exception if the client doesn't support the transfer functionality
+	 */
+	public void transfer(string ip, ushort port) {
+		throw new Exception("The player's client doesn't support the transfer between servers");
 	}
 	
 	// opens a container and sets the player as a viewer of it.
@@ -1210,7 +1268,7 @@ abstract class Player : Human {
 					cancelitem = true;
 				}
 				if(event.drop) {
-					foreach(Slot slot ; this.world[this.breaking].drops(this, this.inventory.held.item)) {
+					foreach(Slot slot ; this.world[this.breaking].drops(this.world, this, this.inventory.held.item)) {
 						this.world.drop(slot, this.breaking.entityPosition + .5);
 					}
 				}
@@ -1476,6 +1534,15 @@ abstract class Player : Human {
 
 }
 
+enum PlayerOS : ubyte {
+
+	unknown = HncomPlayer.Add.Pocket.UNKNOWN,
+	iOS = /*HncomPlayer.Add.Pocket.IOS*/1,
+	android = HncomPlayer.Add.Pocket.ANDROID,
+	windows10 = /*HncomPlayer.Add.Pocket.WINDOWS10*/3,
+
+}
+
 /**
  * Checks whether or not the given symbol is of a connected player class.
  * Returns:
@@ -1517,7 +1584,7 @@ mixin template generateHandlers(E...) {
 					{
 						P _packet = P.fromBuffer!false(_data);
 						static if(!is(typeof(P.variantField))) {
-							with(_packet) mixin("this.handle" ~ P.stringof ~ "Packet(" ~ P.FIELDS.join(",") ~ ");");
+							with(_packet) mixin("return this.handle" ~ P.stringof ~ "Packet(" ~ P.FIELDS.join(",") ~ ");");
 						} else {
 							switch(mixin("_packet." ~ P.variantField)) {
 								foreach(V ; P.Variants) {
@@ -1526,7 +1593,7 @@ mixin template generateHandlers(E...) {
 										{
 											V _variant = _packet.new V();
 											_variant.decode();
-											with(_variant) mixin("this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");");
+											with(_variant) mixin("return this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");");
 										}
 										break;
 									}
@@ -1591,7 +1658,7 @@ mixin template generateHandlers(E...) {
 class Puppet : Player {
 	
 	public this(World world, EntityPosition position, string name, Skin skin, UUID uuid=server.nextUUID) {
-		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), 0, name, name, skin, uuid, "", 0);
+		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), "", 0, name, name, skin, uuid, "", 0);
 	}
 	
 	public this(World world, EntityPosition position, string name) {
@@ -1600,6 +1667,10 @@ class Puppet : Player {
 	
 	public this(World world, Player from) {
 		this(world, from.position, from.name, from.skin, from.uuid);
+	}
+
+	public final override pure nothrow @property @safe @nogc uint protocol() {
+		return 0;
 	}
 	
 	protected override @safe @nogc void sendMovementUpdates(Entity[] entities) {}
@@ -1687,46 +1758,6 @@ class Puppet : Player {
 	public override @safe @nogc void sendMap(Map map) {}
 	
 	public override @safe @nogc void handle(ubyte id, ubyte[] buffer) {}
-	
-}
-
-struct PlayerSoul {
-
-	public immutable ubyte type;
-	public immutable uint protocol;
-
-	private string n_name;
-	private string n_iname;
-	private Address n_address;
-	private UUID n_uuid;
-	
-	public string displayName;
-	
-	public @safe this(ubyte type, uint protocol, string name, UUID uuid, Address address, string displayName) {
-		this.type = type;
-		this.protocol = protocol;
-		this.n_name = name;
-		this.n_iname = name.toLower;
-		this.n_address = address;
-		this.n_uuid = uuid;
-		this.displayName = displayName;
-	}
-	
-	public pure nothrow @property @safe @nogc string name() {
-		return this.n_name;
-	}
-	
-	public pure nothrow @property @safe @nogc string iname() {
-		return this.n_iname;
-	}
-	
-	public pure nothrow @property @safe @nogc Address address() {
-		return this.n_address;
-	}
-	
-	public pure nothrow @property @safe @nogc UUID uuid() {
-		return this.n_uuid;
-	}
 	
 }
 

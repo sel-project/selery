@@ -26,7 +26,7 @@ mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".types : Log;")
 
 private shared(Log)[] last_logged_messages;
 
-public Log[] get_and_clear_logged_messages() {
+public Log[] getAndClearLoggedMessages() {
 	auto ret = cast(Log[])last_logged_messages;
 	last_logged_messages.length = 0;
 	return ret;

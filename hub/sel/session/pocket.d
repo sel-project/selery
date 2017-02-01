@@ -25,9 +25,9 @@ import std.algorithm : canFind, min;
 static import std.array;
 import std.base64 : Base64, Base64URL;
 import std.bitmanip : read;
-import std.conv : to;
+import std.conv : to, ConvException;
 import std.datetime : dur;
-import std.json : JSONValue, parseJSON;
+import std.json;
 import std.math : ceil;
 import std.path : dirSeparator;
 import std.random : uniform;
@@ -113,6 +113,7 @@ class PocketHandler : UnconnectedHandler {
 	protected override void onReceived(Socket socket, Address address, ubyte[] payload) {
 		session_t code = Session.code(address);
 		shared PocketSession* session = code in this.sessions;
+		//log(payload);
 		if(session) {
 			(*session).handle(payload);
 		} else {
@@ -246,6 +247,8 @@ final class PocketSession : PlayerSession {
 	private void delegate(ubyte[]) shared functionHandler;
 
 	private bool edu = false;
+	private ubyte device = 0;
+	private string model = "";
 
 	private shared ubyte nextUpdate;
 
@@ -289,7 +292,7 @@ final class PocketSession : PlayerSession {
 	}
 
 	public override shared nothrow @property @safe const(string) game() {
-		return (this.edu ? "Minecraft: Education Edition " : "Minecraft: Pocket Edition ") ~ supportedPocketProtocols[this.protocol][0];
+		return "Minecraft: " ~ (this.edu ? "Education" : (this.device == /*HncomAdd.Pocket.WINDOWS10*/3 ? "Windows 10" : "Pocket")) ~ " Edition " ~ supportedPocketProtocols[this.protocol][0];
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {
@@ -308,7 +311,7 @@ final class PocketSession : PlayerSession {
 	}
 
 	public override shared nothrow @safe ubyte[] encodeHncomAddPacket(HncomAdd packet) {
-		return packet.new Pocket(0, edu, this.packetLoss).encode(); //TODO xuid from verified jwt
+		return packet.new Pocket(0, edu, this.packetLoss, this.device, this.model).encode(); //TODO xuid from verified jwt
 	}
 
 	public shared void checkTimeout() {
@@ -633,6 +636,8 @@ final class PocketSession : PlayerSession {
 						throw new Exception("disconnect.loginFailed");
 					}
 
+						foreach(c ; chain) log(decodeJwt(c.str.split(".")[1]));
+
 					// basic info
 					string username = info.object["extraData"].object["displayName"].str;
 					UUID uuid = UUID(info.object["extraData"].object["identity"].str);
@@ -646,6 +651,22 @@ final class PocketSession : PlayerSession {
 					ubyte[] skinData = Base64.decode(cd["SkinData"].str);
 					if(!skinName.length || (skinData.length != 8192 && skinData.length != 16384)) throw new Exception("disconnectionScreen.invalidSkin");
 					this.n_skin = cast(shared)new Skin(skinName, skinData);
+
+					auto serverAddress = "ServerAddress" in cd;
+					auto os = "DeviceOS" in cd;
+					auto model = "DeviceModel" in cd;
+
+					if(serverAddress && serverAddress.type == JSON_TYPE.STRING) {
+						auto spl = serverAddress.str.split(":");
+						if(spl.length >= 2) {
+							try {
+								this.n_server_address = spl[0..$-1].join(":");
+								this.n_server_port = to!ushort(spl[$-1]);
+							} catch(ConvException) {}
+						}
+					}
+					if(os && os.type == JSON_TYPE.INTEGER) this.device = (os.integer + 1) & 255;
+					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.settings.whitelist) {

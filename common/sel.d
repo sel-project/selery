@@ -101,11 +101,11 @@ const struct Software {
 
 	enum ubyte minor = 0;
 
-	enum ubyte revision = 3;
+	enum ubyte revision = 4;
 
 	enum ubyte[3] versions = [major, minor, revision];
 
-	enum bool stable = true;
+	enum bool stable = false;
 
 	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
 

@@ -1706,7 +1706,7 @@ abstract class Block {
 	 * 		item = item used to break the block, is null if player is null or the player broke the block with his hand
 	 * Returns: a slot array with the dropped items
 	 */
-	public Slot[] drops(Player player, Item item) {
+	public Slot[] drops(World world, Player player, Item item) {
 		return [];
 	}
 
@@ -1717,7 +1717,7 @@ abstract class Block {
 	 * 		item = item used to break the block, is null if player is null or the player broke the block with his hand
 	 * Returns: an integer, indicating the amount of xp that will be spawned
 	 */
-	public uint xp(Player player, Item item) {
+	public uint xp(World world, Player player, Item item) {
 		return 0;
 	}
 
@@ -1949,7 +1949,7 @@ class SimpleBlock(BlockData blockdata, E...) : Block {
  */
 class MineableBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E) if(isValidMineableBlock!E) {
 
-	public override @safe Slot[] drops(Player player, Item item) {
+	public override @safe Slot[] drops(World world, Player player, Item item) {
 		// tool
 		static if(staticInstanceIndex!(ToolFlag, E) >= 0) {
 			// validate the tool
@@ -1968,24 +1968,24 @@ class MineableBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E) if(i
 		// normal drop
 		foreach(uint index, F; E) {
 			static if((is(typeof(F) == string) || is(typeof(F) == immutable string)) && (index == 0 || staticInstanceIndex!(ToolFlag, E) != index - 1)) {
-				if(player.world.items.has(F)) {
+				if(world.items.has(F)) {
 					static if(index < E.length - 1 && (is(typeof(E[index + 1]) == int) || is(typeof(E[index + 1]) == uint) || ((is(typeof(E[index + 1]) == string) || is(typeof(E[index + 1]) == immutable string)) && isValidRange!(E[index + 1], int)))) {
 						Slot[] ret;
 						static if(is(typeof(E[index + 1]) == int) || is(typeof(E[index + 1]) == uint) || E[index + 1].split("..").length == 1) {
 							foreach(uint i ; 0..E[index + 1].to!int) {
-								ret ~= Slot(player.world.items.get(F), 1);
+								ret ~= Slot(world.items.get(F), 1);
 							}
 						} else {
-							int amount = player.world.random.next(E[index + 1].split("..")[0].to!int, E[index + 1].split("..")[1].to!int);
+							int amount = world.random.next(E[index + 1].split("..")[0].to!int, E[index + 1].split("..")[1].to!int);
 							if(amount > 0) {
 								foreach(uint i ; 0..amount) {
-									ret ~= Slot(player.world.items.get(F), 1);
+									ret ~= Slot(world.items.get(F), 1);
 								}
 							}
 						}
 						return ret;
 					} else {
-						return [Slot(player.world.items.get(F), 1)];
+						return [Slot(world.items.get(F), 1)];
 					}
 				}
 			}

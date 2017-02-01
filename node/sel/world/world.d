@@ -28,7 +28,7 @@ import common.sel;
 import sel.player;
 import sel.plugin;
 import sel.server : server;
-import sel.block.block : BlockData, Block, Blocks, PlacedBlock, Update;
+import sel.block.block : BlockData, Block, Blocks, PlacedBlock, Update, blockInto;
 import sel.block.tile : Tile;
 import sel.entity.entity : Entity;
 import sel.entity.living : Living;
@@ -328,7 +328,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Example:
 	 * ---
 	 * if(world.parent !is null) {
-	 *    assert(world.isChild(world.parent));
+	 *    assert(world.parent.canFind(world));
 	 * }
 	 * ---
 	 */
@@ -351,8 +351,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/**
-	 * Checks whether or not the given world is a child of
-	 * this one.
+	 * Checks whether or not the given world is a child of this one.
 	 * Example:
 	 * ---
 	 * if(!overworld.hasChild(nether)) {
@@ -846,11 +845,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public final void drops(Block from, BlockPosition position) {
-		if(from !is null) {
-			foreach(Slot slot ; from.drops(null, null)) {
-				this.drop(slot, position.entityPosition + .5);
-			}
+	public final void drop(Block from, BlockPosition position) {
+		foreach(Slot slot ; from.drops(this, null, null)) {
+			this.drop(slot, position.entityPosition + .5);
 		}
 	}
 
@@ -868,6 +865,50 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/// ditto
 	public final void strike(Entity entity) {
 		this.strike(entity.position);
+	}
+
+	public void explode(bool breakBlocks=true)(EntityPosition position, float power) {
+
+		enum float rays = 16;
+		enum float length = .3;
+
+		BlockPosition[] explodedBlocks;
+
+		foreach(x ; 0..rays) {
+			foreach(y ; 0..rays) {
+				foreach(z ; 0..rays) {
+					if(x == 0 || x == rays - 1 || y == 0 || y == rays - 1 || z == 0 || z == rays - 1) {
+
+						auto vector = EntityPosition(x, y, z) / ((rays - 1) / 2) - 1;
+						vector.length = length;
+						auto pointer = position.dup;
+
+						for(double blastForce=(.7+this.random.range(.0, .6))*power; blastForce>0; blastForce-=length*.75) {
+							auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
+							//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
+							auto block = this[pos];
+							if(block != Blocks.AIR) {
+								blastForce -= (block.blastResistance / 5 + length) * length;
+								if(blastForce <= 0) break;
+								static if(breakBlocks) {
+									this.opIndexAssign!true(Blocks.AIR, pos); //TODO use packet's fields
+									if(this.random.range(0f, power) <= 1) {
+										this.drop(block, pos);
+										//TODO drop experience
+									}
+								}
+							}
+							pointer += vector;
+						}
+
+					}
+				}
+			}
+		}
+
+		// send packets
+		this.players.call!"sendExplosion"(position, power, new Vector3!byte[0]);
+
 	}
 
 	/**
