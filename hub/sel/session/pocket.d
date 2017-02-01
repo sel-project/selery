@@ -113,7 +113,6 @@ class PocketHandler : UnconnectedHandler {
 	protected override void onReceived(Socket socket, Address address, ubyte[] payload) {
 		session_t code = Session.code(address);
 		shared PocketSession* session = code in this.sessions;
-		//log(payload);
 		if(session) {
 			(*session).handle(payload);
 		} else {
@@ -635,8 +634,6 @@ final class PocketSession : PlayerSession {
 						//TODO validate JWTs using Mojang's public key and kick if invalid
 						throw new Exception("disconnect.loginFailed");
 					}
-
-						foreach(c ; chain) log(decodeJwt(c.str.split(".")[1]));
 
 					// basic info
 					string username = info.object["extraData"].object["displayName"].str;
