@@ -368,7 +368,7 @@ class PocketPlayer(uint __protocol) : PocketPlayerBase {
 	}
 	
 	public override void sendChatMessage(string message) {
-		this.glue_messages ~= message; // CLIENT BUG IN 1.0.{0 - 2} -- CHANGE BACK WHEN FIXED
+		this.glue_messages ~= message; // CLIENT BUG IN 1.0.{0 - 3} -- CHANGE BACK WHEN FIXED
 		//this.sendPacket(new Play.Text().new Raw(message));
 	}
 

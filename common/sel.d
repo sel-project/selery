@@ -105,7 +105,7 @@ const struct Software {
 
 	enum ubyte[3] versions = [major, minor, revision];
 
-	enum bool stable = false;
+	enum bool stable = true;
 
 	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
 
@@ -123,6 +123,7 @@ const struct Software {
 
 enum supportedPocketProtocols = cast(string[][uint])[
 	100: ["1.0.0", "1.0.1", "1.0.2"],
+	101: ["1.0.3"],
 ];
 
 enum supportedMinecraftProtocols = cast(string[][uint])[
@@ -141,7 +142,7 @@ private uint[] latest(string[][uint] protocols) {
 	sort!"a > b"(keys);
 	string start = protocols[keys[0]][0].split(".")[0..2].join(".");
 	size_t i = 1;
-	while(protocols[keys[i]][0].startsWith(start)) i++;
+	while(i < keys.length && protocols[keys[i]][0].startsWith(start)) i++;
 	keys = keys[0..i];
 	reverse(keys);
 	return keys;
