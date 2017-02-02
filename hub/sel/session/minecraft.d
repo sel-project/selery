@@ -411,14 +411,13 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		this.n_protocol = handshake.protocol;
 		this.receiver = cast(shared)new Receiver!varuint();
 		this.functionHandler = &this.handleLogin;
+		auto p = handshake.protocol in supportedMinecraftProtocols;
+		if(p) this.n_version = (*p)[0];
+		this.n_game_name = "Minecraft";
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {
 		return PC;
-	}
-
-	public override shared nothrow @property @safe const(string) game() {
-		return "Minecraft " ~ supportedMinecraftProtocols[this.protocol][0];
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {

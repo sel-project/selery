@@ -290,10 +290,6 @@ final class PocketSession : PlayerSession {
 		return PE;
 	}
 
-	public override shared nothrow @property @safe const(string) game() {
-		return "Minecraft: " ~ (this.edu ? "Education" : (this.device == /*HncomAdd.Pocket.WINDOWS10*/3 ? "Windows 10" : "Pocket")) ~ " Edition " ~ supportedPocketProtocols[this.protocol][0];
-	}
-
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {
 		uint num = 0;
 		if(this.pings.length) {
@@ -597,6 +593,7 @@ final class PocketSession : PlayerSession {
 		if(login.protocol > protocols[$-1]) this.encapsulate(new Play.PlayStatus(Play.PlayStatus.OUTDATED_SERVER));
 		else if(!protocols.canFind(login.protocol)) this.encapsulate(new Play.PlayStatus(Play.PlayStatus.OUTDATED_CLIENT));
 		else {
+			this.n_version = supportedPocketProtocols[login.protocol][0];
 			this.functionHandler = &this.handleFail;
 			this.acceptSplit = false;
 			// kick if the server is edu and the client is not
@@ -650,8 +647,11 @@ final class PocketSession : PlayerSession {
 					this.n_skin = cast(shared)new Skin(skinName, skinData);
 
 					auto serverAddress = "ServerAddress" in cd;
+					auto vers = "GameVersion" in cd;
 					auto os = "DeviceOS" in cd;
 					auto model = "DeviceModel" in cd;
+					auto input = "CurrentInputMode" in cd; // 0: keyboard, 1: controller, 2: touch
+					// TenantId for edu
 
 					if(serverAddress && serverAddress.type == JSON_TYPE.STRING) {
 						auto spl = serverAddress.str.split(":");
@@ -659,6 +659,24 @@ final class PocketSession : PlayerSession {
 							try {
 								this.n_server_address = spl[0..$-1].join(":");
 								this.n_server_port = to!ushort(spl[$-1]);
+							} catch(ConvException) {}
+						}
+					}
+					if(vers && vers.type == JSON_TYPE.STRING) {
+						// verify major.minor.path[.build]
+						auto spl = vers.str.split(".");
+						if(spl.length >= 3) {
+							spl.length = 3;
+							try {
+								foreach(num ; spl) to!ubyte(num);
+								// verify that the client's version exists
+								immutable playerVersion = spl.join(".");
+								foreach(v ; supportedPocketProtocols[this.protocol]) {
+									if(v.startsWith(playerVersion) || playerVersion.startsWith(v)) {
+										this.n_version = playerVersion;
+										break;
+									}
+								}
 							} catch(ConvException) {}
 						}
 					}
@@ -702,6 +720,16 @@ final class PocketSession : PlayerSession {
 					static if(__pocketEncryption) {
 						//TODO send encryption packet, wait for response and start encrypt encapsulated body
 					}
+
+					this.n_game_name = "Minecraft: " ~ (){
+						if(this.edu) {
+							return "Education";
+						} else if(this.device == 3) { //TODO windows 10 constant
+							return "Windows 10";
+						} else {
+							return "Pocket";
+						}
+					}() ~ " Edition";
 
 					// try to connect a node
 					valid = true;

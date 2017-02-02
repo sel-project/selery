@@ -44,7 +44,7 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.nbt;
-import sel.player.player : Player, PlayerOS, generateHandlers, Message;
+import sel.player.player;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.command : Command;
 import sel.util.lang;
@@ -72,8 +72,8 @@ abstract class PocketPlayer : Player {
 
 	protected bool send_commands;
 	
-	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
-		super(hubId, null, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
 		this.n_packet_loss = packetLoss;
 		this.n_edu = edu;
 		this.n_xuid = xuid;
@@ -328,7 +328,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		mixin("return metadata.pocket" ~ __protocol.to!string ~ ";");
 	}
 
-	private string full_version;
+	private immutable string full_version;
 
 	private string[] glue_messages;
 
@@ -339,10 +339,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
 	
-	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
-		super(hubId, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
+	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ supportedPocketProtocols[__protocol][$-1];
+		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(hubVersion, supportedPocketProtocols[__protocol]);
 	}
 
 	public final override pure nothrow @property @safe @nogc uint protocol() {
@@ -703,7 +703,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public override void sendJoinPacket() {
 		// the time is set by SetTime packet, sent after this one
 		// send thunders if enabled
-		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, this.edu, this.world.downfall?this.world.weather.intensity:0, 0, !__realm, false, Software.display, this.world.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, Software.display, this.world.name));
 	}
 	
 	public override void sendTimePacket() {

@@ -488,7 +488,7 @@ struct Settings {
 		static if(!__oneNode) add("hncom-port", this.hncomPort);
 		static if(!__oneNode) version(Posix) add("hncom-use-unix-sockets", this.hncomUseUnixSockets);
 		static if(!__oneNode) version(Posix) add("hncom-unix-socket-address", this.hncomUnixSocketAddress);
-		//add("google-analytics", this.googleAnalytics); //TODO implementation
+		add("google-analytics", this.googleAnalytics);
 		static if(!__edu && !__realm) {
 			file ~= newline ~ "# social" ~ newline;
 			add("website", this.website);

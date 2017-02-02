@@ -42,7 +42,7 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.nbt;
-import sel.player.player : Player, generateHandlers;
+import sel.player.player;
 import sel.util;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.lang : translate;
@@ -66,8 +66,8 @@ abstract class MinecraftPlayer : Player {
 	
 	private ushort[] loaded_maps;
 	
-	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
-		super(hubId, null, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
+		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
 	}
 	
 	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
@@ -194,17 +194,17 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		mixin("return metadata.minecraft" ~ __protocol.to!string ~ ";");
 	}
 
-	private string full_version;
+	private immutable string full_version;
 
 	private Slot picked_up_item;
 	
 	private bool dragging;
 	private size_t[] dragged_slots;
 
-	public this(uint hubId, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
-		super(hubId, position, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
+		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft " ~ supportedMinecraftProtocols[__protocol][$-1];
+		this.full_version = "Minecraft " ~ verifyVersion(hubVersion, supportedMinecraftProtocols[__protocol]);
 	}
 
 	public final override pure nothrow @property @safe @nogc uint protocol() {

@@ -48,6 +48,7 @@ import sel.session.externalconsole : ExternalConsoleSession;
 import sel.session.hncom : Node;
 import sel.session.player : PlayerSession;
 import sel.session.rcon : RconSession;
+import sel.util.analytics : GoogleAnalytics;
 import sel.util.block : Blocks;
 import sel.util.ip;
 import sel.util.log;
@@ -122,6 +123,8 @@ class Server {
 	private shared RconSession[immutable(uint)] rcons;
 	
 	private shared PlayerSession[immutable(uint)] n_players;
+
+	private shared GoogleAnalytics analytics;
 
 	public shared this() {
 
@@ -277,8 +280,13 @@ class Server {
 
 		Thread.getThis().name = "main";
 
+		if(this.n_settings.googleAnalytics.length) {
+			this.analytics = new shared GoogleAnalytics(this.n_settings.googleAnalytics);
+		}
+
 		this.started = milliseconds;
 		uint last_online, last_max = this.n_settings.maxPlayers;
+		size_t next_analytics = 0;
 		while(true) {
 			uint online = this.onlinePlayers.to!uint;
 			if(online != last_online || this.maxPlayers != last_max) {
@@ -301,7 +309,13 @@ class Server {
 			this.n_download = recv;
 			log("up ", sent.round / 1000, " kB/s | down ", recv.round / 1000, " kB/s | ", Thread.getAll().length, " threads | ", this.onlinePlayers, " player(s)");
 			this.n_traffic.reset();
-			//TODO update google analytics
+			if(this.analytics !is null) {
+				if(++next_analytics == 12) {
+					next_analytics = 0;
+					this.analytics.updatePlayers(this.players);
+				}
+				this.analytics.sendRequests();
+			}
 			Thread.sleep(dur!"msecs"(5000));
 			this.blocks.remove(5);
 		}
@@ -598,13 +612,30 @@ class Server {
 		return null;
 	}
 
+	public shared nothrow @property @safe shared(Node)[] mainNodes() {
+		shared Node[] nodes;
+		foreach(node ; this.main_nodes) {
+			if(node.main && (node.max == NodeInfo.UNLIMITED || node.online < node.max)) nodes ~= node;
+		}
+		return nodes;
+	}
+	
 	public shared nothrow shared(Node) nodeByName(string name) {
 		auto ptr = name in this.nodesNames;
+		return ptr ? *ptr : null;
+	}
+	
+	public shared nothrow shared(Node) nodeById(uint id) {
+		auto ptr = id in this.nodes;
 		return ptr ? *ptr : null;
 	}
 
 	public shared @property string[] nodeNames() {
 		return this.nodesNames.keys;
+	}
+
+	public shared @property shared(Node[]) nodesList() {
+		return this.nodes.values;
 	}
 
 	public synchronized shared void add(shared Node node) {
@@ -698,10 +729,12 @@ class Server {
 
 	public synchronized shared void add(shared PlayerSession player) {
 		this.n_players[player.id] = player;
+		if(this.analytics !is null) this.analytics.addPlayer(player);
 	}
 
 	public synchronized shared void remove(shared PlayerSession player) {
 		this.n_players.remove(player.id);
+		if(this.analytics !is null) this.analytics.removePlayer(player);
 	}
 
 	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {

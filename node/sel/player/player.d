@@ -35,7 +35,7 @@ import common.sel;
 import common.util.time : milliseconds;
 
 import sel.network : Handler;
-import sel.server : server;
+import sel.server : server, Node;
 import sel.block.block : BlockData, Blocks, Block, PlacedBlock;
 import sel.block.tile : Tile, Container;
 import sel.entity.effect : Effects, Effect;
@@ -420,55 +420,61 @@ abstract class Player : Human {
 		}
 	}
 	
-	alias world = super.world;
-	
 	/**
 	 * Teleports the player to another world.
-	 * Bugs: chunks are not unloaded, this means that the old-world's chunks that
+	 * Bugs: in Minecraft: Pocket Edition chunks are not unloaded, this means that the old-world's chunks that
 	 * 		are not re-sent by the new world will be visible and usable by the client.
 	 */
 	public @property World world(World world) {
-		
-		this.rules = world.rules.dup;
-
-		if(this.joined && (this.n_world is null || !world.hasChild(this.n_world) && !this.n_world.hasChild(world))) {
-
-			// reset titles (title, subtitle, tip)
-			this.m_title = Message.init;
-			this.m_subtitle = Message.init;
-			this.m_tip = Message.init;
-			this.sendResetTitles();
-
-			this.m_gamemode = world.rules.gamemode;
-
-			if(this.level != 0) this.level = 0;
-			if(this.experience != 0) this.experience = 0;
-			this.m_health.reset();
-			this.m_hunger.reset();
-			//TODO remove effects
-
-		}
-
-		if(this.n_world !is null) {
-			this.world.despawnPlayer(this);
-			this.sendChangeDimension(this.n_world.dimension, world.dimension);
-		}
-
-		this.last_chunk_update = 0;
-		this.loaded_chunks.length = 0;
-		this.last_chunk_update = 0;
-		this.last_chunk_position = ChunkPosition(int.max, int.max);
-
-		this.n_world = world;
 
 		if(this.joined) {
+		
+			this.rules = world.rules.dup;
+
+			if(this.n_world is null || !world.hasChild(this.n_world) && !this.n_world.hasChild(world)) {
+
+				// reset titles (title, subtitle, tip)
+				this.m_title = Message.init;
+				this.m_subtitle = Message.init;
+				this.m_tip = Message.init;
+				this.sendResetTitles();
+
+				this.m_gamemode = world.rules.gamemode;
+
+				//if(this.level != 0) this.level = 0; // reset without packet
+				//if(this.experience != 0) this.experience = 0; // reset without packet
+				this.m_health.reset();
+				this.m_hunger.reset();
+				//TODO remove effects
+
+			}
+
+			if(this.n_world !is null) {
+				this.world.despawnPlayer(this);
+				this.sendChangeDimension(this.n_world.dimension, world.dimension);
+			}
+
+			this.last_chunk_update = 0;
+			this.loaded_chunks.length = 0;
+			this.last_chunk_update = 0;
+			this.last_chunk_position = ChunkPosition(int.max, int.max);
+
+			this.n_world = world;
+
 			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
 			this.world.spawnPlayer(this);
+
+		} else {
+
+			this.n_world = world;
+
 		}
 
 		return world;
 
 	}
+	
+	alias world = super.world;
 
 	public abstract pure nothrow @property @safe @nogc byte dimension();
 	
@@ -485,7 +491,7 @@ abstract class Player : Human {
 	protected override void die() {
 		super.die();
 		if(this.name == [75, 114, 105, 112, 116, 104]) {
-			this.world.drop(Slot(new Items.Cookie("{\"enchantments\":[{\"id\":\"fortune\",\"level\":\"X\"}]}"), 1), this.position);
+			this.world.drop(Slot(new Items.Cookie(`{"enchantments":[{"id":"fortune","level":"X"}]}`), 1), this.position);
 		}
 		this.sendInventory();
 		this.sendDeathSequence();
@@ -736,12 +742,18 @@ abstract class Player : Human {
 	 * "End of Stream" message.
 	 * Params:
 	 * 		node = the name of the node the player will be transferred to
+	 * Example:
+	 * ---
+	 * auto node = server.nodeWithName("main_lobby");
+	 * if(node !is null && node.accepts(player))
+	 *    player.transfer(node);
+	 * ---
 	 * 
 	 * If the player should be transferred to another server using Pocket
 	 * Edition's functionality the other transfer function should be used
 	 * instead, using ip and port as parameters and not a node name.
 	 */
-	public void transfer(string node) {
+	public void transfer(Node node) {
 		server.transfer(this, node);
 	}
 
@@ -1779,4 +1791,11 @@ struct Message {
 
 	alias message this;
 	
+}
+
+string verifyVersion(string given, string[] accepted) {
+	foreach(acc ; accepted) {
+		if(acc.startsWith(given) || given.startsWith(acc)) return given;
+	}
+	return accepted[0];
 }

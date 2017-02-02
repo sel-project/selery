@@ -68,7 +68,7 @@ import sel.util.task;
 import sel.world.world : World;
 //import sel.world.vanilla.world : Overworld;
 
-static if(!__realm) private import plugins;
+private import plugins;
 
 /*mixin("import HncomTypes = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".types;");
 mixin("import HncomLogin = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;");
@@ -162,7 +162,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	private uint n_node_max;
 	private size_t n_online;
 	private size_t n_max;
-	private string[] n_nodes;
+
+	private Node[uint] nodes_hubid;
+	private Node[string] nodes_names;
 
 	private Tuple!(string, "website", string, "facebook", string, "twitter", string, "youtube", string, "instagram", string, "googlePlus") n_social;
 
@@ -311,7 +313,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 			this.n_online = info.online;
 			this.n_max = info.max;
-			this.n_nodes = info.nodes;
 
 			try {
 				auto social = parseJSON(info.socialJson).object;
@@ -324,7 +325,13 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			} catch(JSONException) {}
 			try {
 				auto additional = parseJSON(info.additionalJson).object;
-				//TODO built-in analytics
+				auto minecraft = "minecraft" in additional;
+				if(minecraft && (*minecraft).type == JSON_TYPE.OBJECT) {
+					auto edu = "edu" in *minecraft;
+					auto realm = "realm" in *minecraft;
+					this.n_settings.edu = edu && (*edu).type == JSON_TYPE.TRUE;
+					this.n_settings.realm = realm && (*realm).type == JSON_TYPE.TRUE;
+				}
 			} catch(JSONException) {}
 
 			version(Windows) {
@@ -333,45 +340,45 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 			// reload languages and save cache
 			string[] paths;
-			static if(!__realm) {
+			if(!this.n_settings.realm) {
 				paths = __plugin_lang_paths;
 			}
 			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.lang);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
 			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
 
-			foreach(game ; info.games) {
-				if(!this.handleGameInfo(game)) return;
+			foreach(game ; info.gamesInfo) {
+				this.handleGameInfo(game);
 			}
+			
+			// save for the next building
+			saveProtocols(PE, this.n_settings.pocket.protocols);
+			saveProtocols(PC, this.n_settings.minecraft.protocols);
 
-			// match versions and protocols
-			if(this.n_settings.pocket.protocols == __pocketProtocols && this.n_settings.minecraft.protocols == __minecraftProtocols) {
-				// protocols are ok, start the server and loop until interruption
-				this.finishConstruction();
-			} else {
-				bool valid = true;
-				// check if protocols are supported by SEL
-				void check(ubyte t, uint[] prt, string[][uint] accepted) {
-					foreach(uint protocol ; prt) {
-						if(protocol !in accepted) {
-							error_log(translate("{warning.invalidProtocol}", this.n_settings.language, [to!string(protocol), fullGameName(t), Software.name]));
-							valid = false;
+			bool conflict = false;
+
+			// filter protocols and print warnings if necessary
+			void check(ubyte type, string name, uint[] requested, uint[] compiled, uint[] supported) {
+				foreach(req ; requested) {
+					if(!compiled.canFind(req)) {
+						if(supported.canFind(req)) {
+							conflict = true;
+							warning_log(translate("{warning.differentProtocol}", this.n_settings.language, [to!string(req), name]));
+						} else {
+							warning_log(translate("{warning.invalidProtocol}", this.n_settings.language, [to!string(req), name]));
 						}
 					}
 				}
-				if(this.n_settings.pocket) {
-					check(PE, this.n_settings.pocket.protocols, supportedPocketProtocols);
-				}
-				if(this.n_settings.minecraft) {
-					check(PC, this.n_settings.minecraft.protocols, supportedMinecraftProtocols);
-				}
-				if(valid) {
-					saveProtocols(PE, this.n_settings.pocket.protocols);
-					saveProtocols(PC, this.n_settings.minecraft.protocols);
-					std.file.write(Paths.hidden ~ "rebuild", "rebuild dis shit LMAO");
-					warning_log(translate("{warning.rebuild}", this.n_settings.language, []));
-				}
 			}
+
+			check(PE, "Minecraft: Pocket Edition", this.n_settings.pocket.protocols, __pocketProtocols, supportedPocketProtocols.keys);
+			check(PC, "Minecraft", this.n_settings.minecraft.protocols, __minecraftProtocols, supportedMinecraftProtocols.keys);
+
+			if(conflict) {
+				warning_log(translate("{warning.rebuild}", this.n_settings.language, []));
+			}
+
+			this.finishConstruction();
 
 		} else {
 			error_log(translate("{warning.closed}", this.n_settings.language, []));
@@ -379,22 +386,20 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 	}
 
-	private bool handleGameInfo(HncomTypes.Game info) {
+	private void handleGameInfo(HncomTypes.GameInfo info) {
 		void set(ref bool accepted, ref uint[] r_protocols, ref string r_motd, ref ushort r_port) {
 			accepted = true;
-			r_protocols = info.protocols;
+			r_protocols = info.game.protocols;
 			r_motd = info.motd;
 			r_port = info.port;
 		}
-		if(info.type == PE) {
+		if(info.game.type == HncomTypes.Game.POCKET) {
 			set(this.n_settings.pocket.accepted, this.n_settings.pocket.protocols, this.n_settings.pocket.motd, this.n_settings.pocket.port);
-		} else if(info.type == PC) {
+		} else if(info.game.type == HncomTypes.Game.MINECRAFT) {
 			set(this.n_settings.minecraft.accepted, this.n_settings.minecraft.protocols, this.n_settings.minecraft.motd, this.n_settings.minecraft.port);
 		} else {
-			error_log(translate("{warning.invalidGame}", this.n_settings.language, [fullGameName(info.type), to!string(info.type), Software.name]));
-			return false;
+			error_log(translate("{warning.invalidGame}", this.n_settings.language, [to!string(info.game.type), Software.name]));
 		}
-		return true;
 	}
 
 	private void finishConstruction() {
@@ -449,7 +454,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		this.start_time = milliseconds;
 
-		static if(!__realm) {
+		if(!this.n_settings.realm) {
 			this.n_plugins = __plugin_load();
 			string plugs = Software.name ~ " " ~ Software.displayVersion ~ (this.n_plugins.length > 0 ? ": " : "");
 			foreach(size_t i, Plugin plugin; this.n_plugins) {
@@ -490,11 +495,14 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		getAndClearLoggedMessages();
 
+		HncomTypes.Game[] games;
+		static if(__pocket) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, __pocketProtocols);
+		static if(__minecraft) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, __minecraftProtocols);
 		HncomTypes.Plugin[] plugins;
 		foreach(plugin ; this.n_plugins) {
 			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
 		}
-		this.sendPacket(new HncomLogin.NodeInfo(microseconds, this.n_node_max, plugins).encode()); //TODO max players of the node
+		this.sendPacket(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode()); //TODO max players of the node
 		
 		this.start();
 
@@ -749,20 +757,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/**
-	 * Gets a list with the names of all nodes connected to 
-	 * the hub (this excluded).
-	 * The array is empty if there is only one node connected
-	 * to the hub.
-	 * Example:
-	 * ---
-	 * assert(!server.nodes.canFind(server.nodeName));
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc string[] nodes() {
-		return this.n_nodes;
-	}
-
-	/**
 	 * Gets the server's social informations like website and social
 	 * networks names.
 	 * Example:
@@ -898,6 +892,42 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 */
 	public pure nothrow @property @safe @nogc float cpu() {
 		return this.last_cpu;
+	}
+
+	/**
+	 * Gets a list with the nodes connected to the hub, this excluded.
+	 * Example:
+	 * ---
+	 * foreach(node ; server.nodes) {
+	 *    assert(node.name != server.nodeName);
+	 * }
+	 * ---
+	 */
+	public pure nothrow @property @trusted const(Node)[] nodes() {
+		return this.nodes_hubid.values;
+	}
+
+	/**
+	 * Gets a node by its name. It can be used to transfer players
+	 * to it.
+	 * Example:
+	 * ---
+	 * auto lobby = server.nodeWithName("lobby");
+	 * if(lobby !is null) lobby.transfer(player);
+	 * ---
+	 */
+	public pure nothrow @safe const(Node) nodeWithName(string name) {
+		auto ret = name in this.nodes_names;
+		return ret ? *ret : null;
+	}
+
+	/**
+	 * Gets a node by its hub id, which is given by the hub and
+	 * unique for every session.
+	 */
+	public pure nothrow @safe const(Node) nodeWithHubId(uint hubId) {
+		auto ret = hubId in this.nodes_hubid;
+		return ret ? *ret : null;
 	}
 
 	/**
@@ -1137,9 +1167,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 * }
 	 * ---
 	 */
-	public void transfer(Player player, string new_server) {
-		if(this.removePlayer(player, PlayerLeftEvent.Reason.transferred)) {
-			this.sendPacket(new HncomPlayer.Transfer(player.hubId, new_server).encode());
+	public void transfer(Player player, Node node) {
+		if(node.hubId in this.nodes_hubid && this.removePlayer(player, PlayerLeftEvent.Reason.transferred)) {
+			this.sendPacket(new HncomPlayer.Transfer(player.hubId, node.hubId).encode());
 		}
 	}
 
@@ -1189,19 +1219,23 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/*
-	 * Adds or remove a node by its name by the node's list
-	 * of known nodes.
+	 * Adds (or update) a node.
 	 */
-	private void handleNodesPacket(HncomStatus.Nodes packet) {
-		if(packet.action == HncomStatus.Nodes.ADD) {
-			this.n_nodes ~= packet.node;
-		} else { // remove
-			foreach(i, n; this.n_nodes) {
-				if(packet.node == n) {
-					this.n_nodes = this.n_nodes[0..i] ~ this.n_nodes[i+1..$];
-					break;
-				}
-			}
+	private void handleAddNodePacket(HncomStatus.AddNode packet) {
+		auto node = new Node(packet.hubId, packet.name, packet.main);
+		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = accepted.protocols;
+		this.nodes_hubid[node.hubId] = node;
+		this.nodes_names[node.name] = node;
+	}
+
+	/**
+	 * Removes a node.
+	 */
+	public void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
+		auto node = packet.hubId in this.nodes_hubid;
+		if(node) {
+			this.nodes_hubid.remove((*node).hubId);
+			this.nodes_names.remove((*node).name);
 		}
 	}
 
@@ -1252,7 +1286,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 							pocket.decode();
 							foreach(immutable p ; __pocketProtocolsTuple) {
 								if(packet.protocol == p)
-									return cast(Player)new PocketPlayerImpl!p(packet.hubId, world.spawnPoint.entityPosition, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
+									return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
 							}
 							assert(0);
 					}
@@ -1262,7 +1296,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 							minecraft.decode();
 							foreach(immutable p ; __minecraftProtocolsTuple) {
 								if(packet.protocol == p)
-									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, world.spawnPoint.entityPosition, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency);
+									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency);
 							}
 							assert(0);
 					}
@@ -1280,11 +1314,20 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		server.callEventIfExists!PlayerJoinEvent(player, packet.reason);
 
-		player.joined = true;
+		// do not spawn if it has been disconnected during the event
+		if(player.hubId in this.players_hubid) {
 
-		// use the default world if plugins didn't set one
-		if(player.world is null) player.world = this.world;
-		else player.world.spawnPlayer(player);
+			// use the default world if plugins didn't set one
+			if(player.world is null) player.world = this.world;
+			World world = player.world;
+			if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
+				player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
+			}
+			player.world = null;
+			player.joined = true;
+			player.world = world;
+
+		}
 
 		// do not spawn if it has been disconnected during the event
 		/*if(player.hubId in this.players_hubid) {
@@ -1450,8 +1493,75 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 }
 
-@property string fullGameName(ubyte game) {
-	if(game == PE) return "Minecraft: Pocket Edition";
-	else if(game == PC) return "Minecraft";
-	else return "Unknown";
+/**
+ * A node connected to the hub where players can be transferred to.
+ */
+class Node {
+
+	/**
+	 * Id of the node, given by the hub.
+	 */
+	uint hubId;
+
+	/**
+	 * Name of the node. It can only be one node with the same name
+	 * online at the same time.
+	 */
+	string name;
+
+	/**
+	 * Indicates whether the can receive player when they first
+	 * connect or only when they are transferred.
+	 */
+	bool main;
+
+	/**
+	 * Indicates which games and which protocols the node does accept.
+	 * Example:
+	 * ---
+	 * auto pocket = PE in node.acceptedGames;
+	 * if(pocket && (*pocket).canFind(100)) {
+	 *    log(node.name, " supports MCPE 1.0");
+	 * }
+	 * ---
+	 */
+	uint[][ubyte] acceptedGames;
+
+	public this(uint hubId, string name, bool main) {
+		this.hubId = hubId;
+		this.name = name;
+		this.main = main;
+	}
+
+	/**
+	 * Indicates whether or not the node is still connected to
+	 * the hub.
+	 * Example:
+	 * ---
+	 * auto node = server.nodeWithName("node");
+	 * assert(node.online);
+	 * ---
+	 */
+	public inout @property @safe bool online() {
+		return server.nodeWithHubId(this.hubId) !is null;
+	}
+
+	/**
+	 * Indicates whether the node can accept the given player.
+	 * If a player is transferred to a node that cannot accept it
+	 * it is kicked with the "End of Stream" message by the hub.
+	 */
+	public inout @safe bool accepts(Player player) {
+		auto a = player.gameVersion in this.acceptedGames;
+		return a && (*a).canFind(player.protocol);
+	}
+
+	/**
+	 * Transfers a player to the node.
+	 * This methos does the same as player.transfer(Node).
+	 */
+	public void transfer(Player player) {
+		server.transfer(player, this);
+	}
+
 }

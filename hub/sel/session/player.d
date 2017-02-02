@@ -42,6 +42,9 @@ abstract class PlayerSession : Session {
 	private shared ubyte[][size_t] unordered_payloads;
 	
 	protected shared uint n_protocol;
+
+	protected shared string n_game_name;
+	protected shared string n_version;
 	
 	protected shared UUID n_uuid;
 	
@@ -72,7 +75,40 @@ abstract class PlayerSession : Session {
 	 * }
 	 * ---
 	 */
-	public abstract shared nothrow @property @safe @nogc immutable(ubyte) type();
+	public abstract shared nothrow @property @safe @nogc ubyte type();
+	
+	/**
+	 * Gets the protocol number used by the client.
+	 * It may be 0 if the packet with the protocol number didn't
+	 * come yet.
+	 */
+	public final shared nothrow @property @safe @nogc uint protocol() {
+		return this.n_protocol;
+	}
+
+	/**
+	 * Gets the client's game name.
+	 * Examples:
+	 * "Minecraft"
+	 * "Minecraft: Pocket Edition"
+	 * "Minecraft: Gear VR Edition"
+	 */
+	public final shared nothrow @property @safe @nogc string gameName() {
+		return this.n_game_name;
+	}
+
+	/**
+	 * Gets the client's game version, which could either be calculated
+	 * from the protocol number or given by the client.
+	 * Example:
+	 * ---
+	 * if(player.type == PC)
+	 *    assert(supportedMinecraftProtocols[player.protocol].canFind(player.gameVersion));
+	 * ---
+	 */
+	public final shared nothrow @property @safe @nogc string gameVersion() {
+		return this.n_version;
+	}
 	
 	/**
 	 * Gets the game type and version as a human-readable string.
@@ -81,15 +117,8 @@ abstract class PlayerSession : Session {
 	 * "Minecraft: Pocket Edition 0.16.1"
 	 * "Minecraft: Education Edition 1.0.2"
 	 */
-	public abstract shared nothrow @property @safe const(string) game();
-	
-	/**
-	 * Gets the protocol number used by the client.
-	 * It may be 0 if the packet with the protocol number didn't
-	 * come yet.
-	 */
-	public final shared nothrow @property @safe @nogc immutable(uint) protocol() {
-		return this.n_protocol;
+	public final shared nothrow @property @safe string game() {
+		return this.gameName ~ " " ~ this.gameVersion;
 	}
 	
 	/**
@@ -245,17 +274,25 @@ abstract class PlayerSession : Session {
 	 * This function does not notify the old node of the change,
 	 * as the old node should have called the function.
 	 */
-	public shared bool connect(ubyte reason, string nodeName=null) {
-		this.n_node = nodeName is null ? this.server.mainNode : this.server.nodeByName(nodeName);
-		if(this.n_node is null) {
-			this.endOfStream();
-			return false;
+	public shared bool connect(ubyte reason, int nodeId=-1) {
+		shared Node[] nodes;
+		if(nodeId < 0) {
+			nodes = this.server.mainNodes;
 		} else {
-			this.n_node.addPlayer(this, reason);
-			this.expected = 0;
-			this.unordered_payloads.clear();
-			return true;
+			auto node = this.server.nodeById(nodeId);
+			if(node !is null) nodes = [node];
 		}
+		foreach(node ; nodes) {
+			if(node.accepts(this.type, this.protocol)) {
+				this.n_node = node;
+				this.expected = 0;
+				this.unordered_payloads.clear();
+				node.addPlayer(this, reason);
+				return true;
+			}
+		}
+		this.endOfStream();
+		return false;
 	}
 	
 	/**
@@ -273,7 +310,7 @@ abstract class PlayerSession : Session {
 	 * Function called when the player is manually
 	 * transferred by the hub to a node.
 	 */
-	public shared void transfer(string node) {
+	public shared void transfer(uint node) {
 		if(this.n_node !is null) {
 			this.n_node.onPlayerTransferred(this);
 		}

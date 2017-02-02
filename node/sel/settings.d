@@ -24,26 +24,6 @@ import std.typetuple : TypeTuple;
 import common.path : Paths;
 import common.sel;
 
-version(Realm) {
-
-	enum bool __realm = true;
-
-} else {
-
-	enum bool __realm = false;
-
-}
-
-version(Edu) {
-
-	enum bool __edu = true;
-
-} else {
-
-	enum bool __edu = false;
-
-}
-
 version(OneNode) {
 
 	// try to read supported protocols from hub.txt
@@ -165,6 +145,8 @@ struct Settings {
 	
 	public GameInfo pocket;
 	public GameInfo minecraft;
+
+	public bool edu, realm;
 	
 	public string language;
 	public string[] acceptedLanguages;

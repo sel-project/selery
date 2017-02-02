@@ -28,6 +28,7 @@ import std.algorithm : canFind;
 import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : dur;
+import std.json : JSONValue;
 import std.math : round;
 import std.regex : ctRegex, matchFirst;
 import std.socket;
@@ -53,9 +54,6 @@ mixin("import Login = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;"
 mixin("import Status = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status;");
 mixin("import Generic = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic;");
 mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
-
-static assert(Types.Game.POCKET == PE && Player.Add.Pocket.TYPE == PE);
-static assert(Types.Game.MINECRAFT == PC && Player.Add.Minecraft.TYPE == PC);
 
 class HncomHandler : HandlerThread {
 	
@@ -194,6 +192,8 @@ class Node : Session {
 	private shared bool n_main;
 	private shared string n_name;
 
+	private shared uint[][ubyte] accepted;
+
 	private shared uint n_max;
 	public shared Types.Plugin[] plugins;
 	
@@ -238,10 +238,14 @@ class Node : Session {
 				if(response.status == Login.ConnectionResponse.OK) {
 					// send info packets
 					with(cast()server.settings) {
-						Types.Game[] games;
-						if(pocket) games ~= Types.Game(Types.Game.POCKET, pocketProtocols, pocketMotd, pocket_port);
-						if(minecraft) games ~= Types.Game(Types.Game.MINECRAFT, minecraftProtocols, minecraftMotd, minecraft_port);
-						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, maxPlayers, language, acceptedLanguages, server.nodeNames, social, "{}").encode());
+						Types.GameInfo[] games;
+						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocketProtocols), pocketMotd, pocket_port);
+						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraftProtocols), minecraftMotd, minecraft_port);
+						JSONValue[string] additionalJson;
+						additionalJson["software"] = ["name": Software.name, "version": Software.displayVersion];
+						additionalJson["minecraft"] = ["edu": __edu, "realm": __realm];
+						//TODO system info
+						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, maxPlayers, language, acceptedLanguages, social, JSONValue(additionalJson).toString()).encode());
 					}
 					socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
 					while(true) {
@@ -251,8 +255,10 @@ class Node : Session {
 								auto info = Login.NodeInfo.fromBuffer(payload);
 								this.n_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
 								this.n_max = info.max;
+								foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
 								this.plugins = cast(shared)info.plugins;
 								server.add(this);
+								foreach(node ; server.nodesList) this.send(node.addPacket.encode());
 								this.loop(receiver);
 								server.remove(this);
 								this.onClosed();
@@ -339,6 +345,17 @@ class Node : Session {
 	public shared nothrow @property @safe @nogc const float cpu() {
 		return this.n_cpu;
 	}
+
+	public shared nothrow @property @safe bool accepts(ubyte game, uint protocol) {
+		auto p = game in this.accepted;
+		return p && (*p).canFind(protocol);
+	}
+
+	public shared @property Status.AddNode addPacket() {
+		auto packet = new Status.AddNode(this.id, this.name);
+		foreach(game, protocols; this.accepted) packet.acceptedGames ~= Types.Game(game, cast(uint[])protocols);
+		return packet;
+	}
 	
 	protected shared void loop(Receiver!(uint, Endian.littleEndian) receiver) {
 		Socket socket = cast()this.socket;
@@ -394,7 +411,7 @@ class Node : Session {
 						auto uw = Player.UpdateWorld.fromBuffer(payload);
 						auto player = uw.hubId in this.players;
 						if(player) {
-							(*player).world = uw.name;
+							(*player).world = uw.world;
 							(*player).dimension = uw.dimension;
 						}
 						break;
@@ -569,7 +586,7 @@ class Node : Session {
 	 * to the hub.
 	 */
 	public shared void addNode(shared Node node) {
-		this.send(new Status.Nodes(Status.Nodes.ADD, node.name).encode());
+		this.send(node.addPacket.encode());
 	}
 	
 	/**
@@ -577,7 +594,7 @@ class Node : Session {
 	 * disconnected from the hub.
 	 */
 	public shared void removeNode(shared Node node) {
-		this.send(new Status.Nodes(Status.Nodes.REMOVE, node.name).encode());
+		this.send(new Status.RemoveNode(node.id).encode());
 	}
 	
 	/**
@@ -604,7 +621,7 @@ class Node : Session {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
+		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
 		this.send(player.encodeHncomAddPacket(packet));
 	}
 	
