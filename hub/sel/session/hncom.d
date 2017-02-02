@@ -352,7 +352,7 @@ class Node : Session {
 	}
 
 	public shared @property Status.AddNode addPacket() {
-		auto packet = new Status.AddNode(this.id, this.name);
+		auto packet = new Status.AddNode(this.id, this.name, this.main);
 		foreach(game, protocols; this.accepted) packet.acceptedGames ~= Types.Game(game, cast(uint[])protocols);
 		return packet;
 	}
