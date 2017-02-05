@@ -14,7 +14,8 @@
  */
 module sel.item.miscellaneous;
 
-import std.conv;
+import std.conv : to, ConvException;
+import std.traits : isIntegral;
 
 import common.sel;
 
@@ -80,9 +81,9 @@ class MapItem(string name, shortgroup ids) : SimpleItem!(name, ids, META!0) {
 	private ushort m_map_id;
 
 	public this(F...)(F args) {
-		static if(F.length > 0 && is(typeof(F[0]) : int)) {
-			super(args[1..$]);
-			this.mapId = to!ushort(args[0]);
+		static if(F.length > 0 && isIntegral!(F[0])) {
+			static if(F.length > 1) super(args[1..$]);
+			this.mapId = args[0] & ushort.max;
 		} else {
 			super(args);
 		}

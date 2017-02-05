@@ -55,7 +55,7 @@ import sel.util.log;
 import sel.util.thread;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : NodeInfo;");
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic : RemoteCommand;");
+mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".types : NodeStats;");
 

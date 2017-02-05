@@ -26,7 +26,7 @@ import common.sel : Software;
 
 import sel.event.event : Event, Cancellable;
 
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic : RemoteCommand;");
+mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 interface ServerEvent : Event {}
 
@@ -57,10 +57,10 @@ final class ServerCommandEvent : ServerEvent, Cancellable {
 
 	enum Origin : ubyte {
 
-		prompt = 0,
-		hub = RemoteCommand.HUB + 1,
-		externalConsole = RemoteCommand.EXTERNAL_CONSOLE + 1,
-		rcon = RemoteCommand.RCON + 1
+		prompt = ubyte.max,
+		hub = RemoteCommand.HUB,
+		externalConsole = RemoteCommand.EXTERNAL_CONSOLE,
+		rcon = RemoteCommand.RCON
 
 	}
 
@@ -71,7 +71,7 @@ final class ServerCommandEvent : ServerEvent, Cancellable {
 	private string n_command;
 	private immutable(string)[] n_args;
 
-	public @safe @nogc this(ubyte origin, Address address, string command, immutable(string)[] args) {
+	public pure nothrow @safe @nogc this(ubyte origin, Address address, string command, immutable(string)[] args) {
 		this.n_origin = origin;
 		this.n_address = address;
 		this.n_command = command;

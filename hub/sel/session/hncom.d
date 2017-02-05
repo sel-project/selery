@@ -52,7 +52,6 @@ import sel.util.thread : SafeThread;
 mixin("import Types = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".types;");
 mixin("import Login = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;");
 mixin("import Status = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status;");
-mixin("import Generic = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic;");
 mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 
 class HncomHandler : HandlerThread {
@@ -375,17 +374,20 @@ class Node : Session {
 				}
 				ubyte[] payload = receiver.next;
 				switch(payload[0]) {
+					case Status.MessageServerbound.ID:
+						this.handleMessage(Status.MessageServerbound.fromBuffer(payload));
+						break;
 					case Status.ResourcesUsage.ID:
 						auto packet = Status.ResourcesUsage.fromBuffer(payload);
 						this.n_tps = packet.tps;
 						this.n_ram = packet.ram;
 						this.n_cpu = packet.cpu;
 						break;
-					case Generic.Logs.ID:
-						this.handleLogs(Generic.Logs.fromBuffer(payload));
+					case Status.Logs.ID:
+						this.handleLogs(Status.Logs.fromBuffer(payload));
 						break;
-					case Generic.UpdateList.ID:
-						this.handleUpdateList(Generic.UpdateList.fromBuffer(payload));
+					case Status.UpdateList.ID:
+						this.handleUpdateList(Status.UpdateList.fromBuffer(payload));
 						break;
 					case Player.Kick.ID:
 						this.handleKickPlayer(Player.Kick.fromBuffer(payload));
@@ -428,12 +430,26 @@ class Node : Session {
 			}
 		}
 	}
+
+	/**
+	 * Sends or broadcast a message received from the node.
+	 */
+	private shared void handleMessage(Status.MessageServerbound message) {
+		if(message.addressees.length) {
+			foreach(addressee ; message.addressees) {
+				auto node = this.server.nodeById(addressee);
+				if(node !is null) node.sendMessage(this.id, message.payload);
+			}
+		} else {
+			foreach(node ; this.server.nodesList) node.sendMessage(this.id, message.payload);
+		}
+	}
 	
 	/**
 	 * Logs some messages to the server and the connected
 	 * external consoles.
 	 */
-	private shared void handleLogs(Generic.Logs logs) {
+	private shared void handleLogs(Status.Logs logs) {
 		foreach(l ; logs.messages) {
 			this.server.message(this.name, l.timestamp, l.logger, l.message);
 		}
@@ -443,18 +459,18 @@ class Node : Session {
 	 * Updates a list (whitelist or blacklist), adding or removing
 	 * a player by hubId, name or suuid.
 	 */
-	private shared void handleUpdateList(Generic.UpdateList packet) {
+	private shared void handleUpdateList(Status.UpdateList packet) {
 		shared List list = (){
 			final switch(packet.list) {
-				case Generic.UpdateList.WHITELIST:
+				case Status.UpdateList.WHITELIST:
 					return this.server.whitelist;
-				case Generic.UpdateList.BLACKLIST:
+				case Status.UpdateList.BLACKLIST:
 					return this.server.blacklist;
 			}
 		}();
 		List.Player player;
 		switch(packet.type) {
-			case Generic.UpdateList.ByHubId.TYPE:
+			case Status.UpdateList.ByHubId.TYPE:
 				auto pk = packet.new ByHubId();
 				pk.decode();
 				auto ptr = pk.hubId in this.players;
@@ -463,12 +479,12 @@ class Node : Session {
 					else player = new List.NamedPlayer((*ptr).username);
 				}
 				break;
-			case Generic.UpdateList.ByName.TYPE:
+			case Status.UpdateList.ByName.TYPE:
 				auto pk = packet.new ByName();
 				pk.decode();
 				player = new List.NamedPlayer(pk.username);
 				break;
-			case Generic.UpdateList.ByUuid.TYPE:
+			case Status.UpdateList.ByUuid.TYPE:
 				auto data = packet.new ByUuid();
 				data.decode();
 				player = new List.UniquePlayer(data.game, data.uuid);
@@ -478,10 +494,10 @@ class Node : Session {
 		}
 		if(player !is null) {
 			switch(packet.action) {
-				case Generic.UpdateList.ADD:
+				case Status.UpdateList.ADD:
 					list.add(player);
 					break;
-				case Generic.UpdateList.REMOVE:
+				case Status.UpdateList.REMOVE:
 					list.remove(player);
 					break;
 				default:
@@ -596,19 +612,26 @@ class Node : Session {
 	public shared void removeNode(shared Node node) {
 		this.send(new Status.RemoveNode(node.id).encode());
 	}
+
+	/**
+	 * Sends a message to the node.
+	 */
+	public shared void sendMessage(uint sender, ubyte[] payload) {
+		this.send(new Status.MessageClientbound(sender, payload).encode());
+	}
 	
 	/**
 	 * Executes a remote command.
 	 */
 	public shared void remoteCommand(string command, ubyte origin, Address address) {
-		this.send(new Generic.RemoteCommand(origin, hncomAddress(address !is null ? address : (cast()this.socket).localAddress), command).encode());
+		this.send(new Status.RemoteCommand(origin, hncomAddress(address !is null ? address : (cast()this.socket).localAddress), command).encode());
 	}
 
 	/**
 	 * Tells the node to reload its configurations.
 	 */
 	public shared void reload() {
-		this.send(new Generic.Reload().encode());
+		this.send(new Status.Reload().encode());
 	}
 	
 	/**

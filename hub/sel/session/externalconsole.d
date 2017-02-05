@@ -47,7 +47,7 @@ mixin("import Login = sul.protocol.externalconsole" ~ Software.externalConsole.t
 mixin("import Status = sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".status;");
 mixin("import Connected = sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".connected;");
 
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic : RemoteCommand;");
+mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 static assert(Types.Game.POCKET == PE);
 static assert(Types.Game.MINECRAFT == PC);

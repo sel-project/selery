@@ -175,8 +175,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	private Entity[size_t] w_entities;
 	private Player[size_t] w_players;
-	private uint peplayers = 0;
-	private uint pcplayers = 0;
 	private Player[] players_list;
 	
 	private tick_t m_time;
@@ -701,12 +699,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Spawns a player using an existing instance.
 	 */
 	public final void spawnPlayer(Player player) {
-		player.rules = this.rules.dup;
-		if(player.pe) {
-			this.peplayers++;
-		} else if(player.pc) {
-			this.pcplayers++;
-		}
+		//player.rules = this.rules.dup;
 		
 		player.m_spawn = this.spawnPoint.entityPosition;
 		player.sendJoinPacket();
@@ -870,36 +863,52 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public void explode(bool breakBlocks=true)(EntityPosition position, float power) {
 
 		enum float rays = 16;
+		enum float half_rays = (rays - 1) / 2;
+
 		enum float length = .3;
+		enum float attenuation = length * .75;
+		
+		Tuple!(BlockPosition, Block**)[] explodedBlocks;
 
-		BlockPosition[] explodedBlocks;
+		void explodeImpl(EntityPosition ray) {
 
-		foreach(x ; 0..rays) {
-			foreach(y ; 0..rays) {
-				foreach(z ; 0..rays) {
-					if(x == 0 || x == rays - 1 || y == 0 || y == rays - 1 || z == 0 || z == rays - 1) {
+			auto pointer = position.dup;
+		
+			for(double blastForce=this.random.range(.7, 1.3)*power; blastForce>0; blastForce-=attenuation) {
+				auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
+				//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
+				auto block = pos in this;
+				if(block && *block && **block != Blocks.AIR) {
+					blastForce -= ((**block).blastResistance / 5 + length) * length;
+					if(blastForce <= 0) break;
+					static if(breakBlocks) {
+						import std.typecons : tuple;
+						explodedBlocks ~= tuple(pos, block);
+					}
+				}
+				pointer += ray;
+			}
 
-						auto vector = EntityPosition(x, y, z) / ((rays - 1) / 2) - 1;
-						vector.length = length;
-						auto pointer = position.dup;
+		}
 
-						for(double blastForce=(.7+this.random.range(.0, .6))*power; blastForce>0; blastForce-=length*.75) {
-							auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
-							//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
-							auto block = this[pos];
-							if(block != Blocks.AIR) {
-								blastForce -= (block.blastResistance / 5 + length) * length;
-								if(blastForce <= 0) break;
-								static if(breakBlocks) {
-									this.opIndexAssign!true(Blocks.AIR, pos); //TODO use packet's fields
-									if(this.random.range(0f, power) <= 1) {
-										this.drop(block, pos);
-										//TODO drop experience
-									}
-								}
-							}
-							pointer += vector;
-						}
+		template Range(float max, E...) {
+			static if(E.length >= max) {
+				alias Range = E;
+			} else {
+				alias Range = Range!(max, E, E[$-1] + 1);
+			}
+		}
+
+		foreach(x ; Range!(rays, 0)) {
+			foreach(y ; Range!(rays, 0)) {
+				foreach(z ; Range!(rays, 0)) {
+					static if(x == 0 || x == rays - 1 || y == 0 || y == rays - 1 || z == 0 || z == rays - 1) {
+
+						explodeImpl((){
+							auto ret = EntityPosition(x, y, z) / half_rays - 1;
+							ret.length = length;
+							return ret;
+						}());
 
 					}
 				}
@@ -908,6 +917,17 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		// send packets
 		this.players.call!"sendExplosion"(position, power, new Vector3!byte[0]);
+
+		foreach(exploded ; explodedBlocks) {
+			auto block = this[exploded[0]];
+			if(block != Blocks.AIR) {
+				this.opIndexAssign!true(Blocks.AIR, exploded[0]); //TODO use packet's fields
+				if(this.random.range(0f, power) <= 1) {
+					this.drop(block, exploded[0]);
+					//TODO drop experience
+				}
+			}
+		}
 
 	}
 

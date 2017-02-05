@@ -183,6 +183,7 @@ abstract class Player : Human {
 	}
 
 	public void close() {
+		this.joined = false; // prevent messy stuff to happen when the world is changed in the event
 		this.stopCompression();
 	}
 
@@ -431,7 +432,7 @@ abstract class Player : Human {
 		
 			this.rules = world.rules.dup;
 
-			if(this.n_world is null || !world.hasChild(this.n_world) && !this.n_world.hasChild(world)) {
+			if(this.n_world !is null && !world.hasChild(this.n_world) && !this.n_world.hasChild(world)) {
 
 				// reset titles (title, subtitle, tip)
 				this.m_title = Message.init;
@@ -450,7 +451,7 @@ abstract class Player : Human {
 			}
 
 			if(this.n_world !is null) {
-				this.world.despawnPlayer(this);
+				this.n_world.despawnPlayer(this);
 				this.sendChangeDimension(this.n_world.dimension, world.dimension);
 			}
 
@@ -462,7 +463,7 @@ abstract class Player : Human {
 			this.n_world = world;
 
 			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
-			this.world.spawnPlayer(this);
+			world.spawnPlayer(this);
 
 		} else {
 

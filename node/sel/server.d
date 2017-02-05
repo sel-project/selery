@@ -73,14 +73,12 @@ private import plugins;
 /*mixin("import HncomTypes = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".types;");
 mixin("import HncomLogin = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;");
 mixin("import HncomStatus = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status;");
-mixin("import HncomGeneric = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic;");
 mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");*/
 
 // mixins cause errors!
 import HncomTypes = sul.protocol.hncom1.types;
 import HncomLogin = sul.protocol.hncom1.login;
 import HncomStatus = sul.protocol.hncom1.status;
-import HncomGeneric = sul.protocol.hncom1.generic;
 import HncomPlayer = sul.protocol.hncom1.player;
 
 static assert(HncomTypes.Game.POCKET == PE);
@@ -643,7 +641,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		// sends the logs to the hub
 		auto logs = getAndClearLoggedMessages();
 		if(logs.length) {
-			this.sendPacket(new HncomGeneric.Logs(logs).encode());
+			this.sendPacket(new HncomStatus.Logs(logs).encode());
 		}
 	}
 
@@ -931,6 +929,29 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/**
+	 * Sends a message to a node.
+	 */
+	public void sendMessage(Node[] nodes, ubyte[] payload) {
+		uint[] addressees;
+		foreach(node ; nodes) {
+			if(node !is null) addressees ~= node.hubId;
+		}
+		this.sendPacket(new HncomStatus.MessageServerbound(addressees, payload).encode());
+	}
+
+	/// ditto
+	public void sendMessage(Node node, ubyte[] payload) {
+		this.sendMessage([node], payload);
+	}
+
+	/**
+	 * Broadcasts a message to every node connected to the hub.
+	 */
+	public void broadcast(ubyte[] payload) {
+		this.sendMessage([], payload);
+	}
+
+	/**
 	 * Gets the plugins actived on the server.
 	 * Example:
 	 * ---
@@ -1097,12 +1118,18 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/**
-	 * Broadcasts a message in every registered world calling
-	 * the world's broadcast method.
+	 * Broadcasts a message in every registered world and their children
+	 * calling the world's broadcast method.
 	 */
 	public void broadcast(string message, string[] params=[]) {
-		foreach(world ; this.m_worlds) {
+		void broadcastImpl(World world) {
 			world.broadcast(message, params);
+			foreach(child ; world.children) {
+				broadcastImpl(child);
+			}
+		}
+		foreach(world ; this.m_worlds) {
+			broadcastImpl(world);
 		}
 	}
 
@@ -1200,7 +1227,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 	private void handleHncomPacket(ubyte id, ubyte[] data) {
 		switch(id) {
-			foreach(P ; TypeTuple!(HncomStatus.Packets, HncomGeneric.Packets, HncomPlayer.Packets)) {
+			foreach(P ; TypeTuple!(HncomStatus.Packets, HncomPlayer.Packets)) {
 				static if(P.CLIENTBOUND) {
 					case P.ID: mixin("return this.handle" ~ P.stringof ~ "Packet(P.fromBuffer!false(data));");
 				}
@@ -1226,30 +1253,43 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = accepted.protocols;
 		this.nodes_hubid[node.hubId] = node;
 		this.nodes_names[node.name] = node;
+		this.callEventIfExists!NodeAddedEvent(node);
 	}
 
 	/**
 	 * Removes a node.
 	 */
-	public void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
+	private void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
 		auto node = packet.hubId in this.nodes_hubid;
 		if(node) {
 			this.nodes_hubid.remove((*node).hubId);
 			this.nodes_names.remove((*node).name);
+			this.callEventIfExists!NodeRemovedEvent(*node);
+		}
+	}
+
+	/*
+	 * Handles a message sent or broadcasted from another node.
+	 */
+	private void handleMessageClientboundPacket(HncomStatus.MessageClientbound packet) {
+		auto node = this.nodeWithHubId(packet.sender);
+		// only accept message from nodes that didn't disconnect
+		if(node !is null) {
+			this.callEventIfExists!NodeMessageEvent(node, packet.payload);
 		}
 	}
 
 	/*
 	 * Handles a command sent by the hub or an external application.
 	 */
-	private void handleRemoteCommandPacket(HncomGeneric.RemoteCommand packet) {
-		with(packet) this.handleCommand(cast(ubyte)(origin + 1), this.convertAddress(sender), command);
+	private void handleRemoteCommandPacket(HncomStatus.RemoteCommand packet) {
+		with(packet) this.handleCommand(origin, this.convertAddress(sender), command);
 	}
 
 	/**
 	 * Reloads the configurations.
 	 */
-	private void handleReloadPacket(HncomGeneric.Reload packet) {
+	private void handleReloadPacket(HncomStatus.Reload packet) {
 		foreach(plugin ; this.n_plugins) {
 			foreach(del ; plugin.onreload) del();
 		}

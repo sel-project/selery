@@ -47,7 +47,7 @@ import sel.network.session : Session;
 import sel.util.log : log;
 import sel.util.thread : SafeThread;
 
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".generic : RemoteCommand;");
+mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 /**
  * The handler thread only accepts connections on a blocking

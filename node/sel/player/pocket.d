@@ -638,9 +638,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void sendSpawnEntity(Entity entity) {
-		if(cast(Player)entity) this.sendAddPlayer(cast(Player)entity);
-		else if(cast(ItemEntity)entity) this.sendAddItemEntity(cast(ItemEntity)entity);
-		else this.sendAddEntity(entity);
+		if(entity.type.pe) {
+			if(cast(Player)entity) this.sendAddPlayer(cast(Player)entity);
+			else if(cast(ItemEntity)entity) this.sendAddItemEntity(cast(ItemEntity)entity);
+			else this.sendAddEntity(entity);
+		}
 	}
 
 	public override void sendDespawnEntity(Entity entity) {

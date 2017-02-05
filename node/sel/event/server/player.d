@@ -25,6 +25,20 @@ import sel.world.world : World;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : Add, Remove;");
 
+class PlayerEvent : ServerEvent {
+
+	private Player n_player;
+
+	public pure nothrow @safe @nogc this(Player player) {
+		this.n_player = player;
+	}
+
+	public final pure nothrow @property @safe @nogc Player player() {
+		return this.n_player;
+	}
+
+}
+
 /**
  * Event called after the Player class for the now logged in player is created.
  * It's the first event called after the creation of the player, before PlayerPreSpawnEvent.
@@ -34,15 +48,14 @@ mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : Add, R
  * will be called only once per player-session.
  * Example:
  * ---
- * @event joinevent(PlayerJoinEvent pje) {
- *    assert(!pje.player.spawned);
- *    assert(pje.player.world !is null);
- *    assert(pje.player.online);
- *    assert(!in_array(pje.player, pje.player.world));
+ * @event joinevent(PlayerJoinEvent event) {
+ *    assert(!event.player.spawned);
+ *    assert(event.player.online);
+ *    if(event.player.world !is null) assert(!event.player.world.canFind(event.player));
  * }
  * ---
  */
-final class PlayerJoinEvent : ServerEvent {
+final class PlayerJoinEvent : PlayerEvent {
 	
 	enum Reason : ubyte {
 		
@@ -51,17 +64,12 @@ final class PlayerJoinEvent : ServerEvent {
 		forciblyTransferred = Add.FORCIBLY_TRANSFERRED
 		
 	}
-	
-	private Player n_player;
+
 	private ubyte n_reason;
 	
-	public @safe @nogc this(Player player, ubyte reason) {
-		this.n_player = player;
+	public pure nothrow @safe @nogc this(Player player, ubyte reason) {
+		super(player);
 		this.n_reason = reason;
-	}
-	
-	public pure nothrow @property @safe @nogc Player player() {
-		return this.n_player;
 	}
 	
 	public pure nothrow @property @safe @nogc ubyte reason() {
@@ -76,12 +84,12 @@ final class PlayerJoinEvent : ServerEvent {
  * is only called once, like PlayerJoinEvent.
  * Example:
  * ---
- * @effect playerleft(PlayerLeftEvent ple) {
- *    assert(!ple.player.online);
+ * @effect playerleft(PlayerLeftEvent event) {
+ *    assert(!event.player.online);
  * }
  * ---
  */
-final class PlayerLeftEvent : ServerEvent {
+final class PlayerLeftEvent : PlayerEvent {
 	
 	enum Reason : ubyte {
 		
@@ -91,17 +99,12 @@ final class PlayerLeftEvent : ServerEvent {
 		transferred = Remove.TRANSFERRED
 		
 	}
-	
-	private Player n_player;
+
 	private ubyte n_reason;
 	
-	public @safe @nogc this(Player player, ubyte reason) {
-		this.n_player = player;
+	public pure nothrow @safe @nogc this(Player player, ubyte reason) {
+		super(player);
 		this.n_reason = reason;
-	}
-	
-	public pure nothrow @property @safe @nogc Player player() {
-		return this.n_player;
 	}
 	
 	public pure nothrow @property @safe @nogc ubyte reason() {
@@ -116,27 +119,22 @@ final class PlayerLeftEvent : ServerEvent {
  * ones, as indicated in the hub's configuration file (accepted-languages field).
  * Example:
  * ---
- * @event changelanguage(PlayerChangeLanguageEvent pcle) {
- *    d(pcls.player.name, " is changing language from ", pcle.currentLanguage, " to ", pcle.newLanguage);
+ * @event changelanguage(PlayerChangeLanguageEvent event) {
+ *    log(event.player.name, " is changing language from ", event.currentLanguage, " to ", event.newLanguage);
  * }
  * ---
  */
-final class PlayerChangeLanguageEvent : ServerEvent, Cancellable {
+final class PlayerChangeLanguageEvent : PlayerEvent, Cancellable {
 	
 	mixin Cancellable.Implementation;
-	
-	private Player n_player;
+
 	public immutable string currentLanguage;
 	public immutable string newLanguage;
 	
-	public @safe @nogc this(Player player, string lang) {
-		this.n_player = player;
+	public pure nothrow @safe @nogc this(Player player, string lang) {
+		super(player);
 		this.currentLanguage = player.lang;
 		this.newLanguage = lang;
-	}
-	
-	public @property @safe @nogc Player player() {
-		return this.n_player;
 	}
 	
 }
