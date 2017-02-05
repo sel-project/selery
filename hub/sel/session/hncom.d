@@ -441,7 +441,9 @@ class Node : Session {
 				if(node !is null) node.sendMessage(this.id, message.payload);
 			}
 		} else {
-			foreach(node ; this.server.nodesList) node.sendMessage(this.id, message.payload);
+			foreach(node ; this.server.nodesList) {
+				if(node.id != this.id) node.sendMessage(this.id, message.payload);
+			}
 		}
 	}
 	
