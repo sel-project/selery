@@ -562,7 +562,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		foreach(player ; this.w_players) {
 			player.sendMessage(message, params);
 		}
-		log_m!true(this.name, translate(message, server.settings.language, params, server.variables));
+		world_log(this.name, translate(message, server.settings.language, params, server.variables));
 	}
 
 	/**
@@ -860,7 +860,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.strike(entity.position);
 	}
 
-	public void explode(bool breakBlocks=true)(EntityPosition position, float power) {
+	public void explode(bool breakBlocks=true)(EntityPosition position, float power, Living damager=null) {
 
 		enum float rays = 16;
 		enum float half_rays = (rays - 1) / 2;

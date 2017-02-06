@@ -15,7 +15,7 @@
 module sel.event.server.node;
 
 import sel.event.server : ServerEvent;
-import sel.server : Node;
+import sel.util.node : Node;
 
 abstract class NodeEvent : ServerEvent {
 

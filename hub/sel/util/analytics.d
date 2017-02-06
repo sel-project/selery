@@ -80,7 +80,7 @@ class GoogleAnalytics {
 	private shared void sendRequestsImpl(string type, string data) {
 		if(!this.sending) {
 			sending = true;
-			new SafeThread({
+			new SafeThread("googleAnalytics", {
 				post("www.google-analytics.com/" ~ type, data);
 				while(this.postRequestQueue.length) {
 					auto next = this.postRequestQueue[0];

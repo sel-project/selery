@@ -64,6 +64,7 @@ import sel.util.lang : Lang, translate, Variables;
 import sel.util.langfromip : LangSearcher;
 import sel.util.log;
 import sel.util.memory;
+import sel.util.node : Node;
 import sel.util.task;
 import sel.world.world : World;
 //import sel.world.vanilla.world : Overworld;
@@ -1194,7 +1195,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 * }
 	 * ---
 	 */
-	public void transfer(Player player, Node node) {
+	public void transfer(Player player, inout Node node) {
 		if(node.hubId in this.nodes_hubid && this.removePlayer(player, PlayerLeftEvent.Reason.transferred)) {
 			this.sendPacket(new HncomPlayer.Transfer(player.hubId, node.hubId).encode());
 		}
@@ -1237,15 +1238,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/*
-	 * Updates the number of online and max players in the whole
-	 * server (not the current node).
-	 */
-	private void handlePlayersPacket(HncomStatus.Players packet) {
-		this.n_online = packet.online;
-		this.n_max = packet.max;
-	}
-
-	/*
 	 * Adds (or update) a node.
 	 */
 	private void handleAddNodePacket(HncomStatus.AddNode packet) {
@@ -1278,12 +1270,21 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			this.callEventIfExists!NodeMessageEvent(node, packet.payload);
 		}
 	}
+	
+	/*
+	 * Updates the number of online and max players in the whole
+	 * server (not the current node).
+	 */
+	private void handlePlayersPacket(HncomStatus.Players packet) {
+		this.n_online = packet.online;
+		this.n_max = packet.max;
+	}
 
 	/*
 	 * Handles a command sent by the hub or an external application.
 	 */
 	private void handleRemoteCommandPacket(HncomStatus.RemoteCommand packet) {
-		with(packet) this.handleCommand(origin, this.convertAddress(sender), command);
+		with(packet) this.handleCommand(origin, this.convertAddress(sender), command, commandId);
 	}
 
 	/**
@@ -1437,7 +1438,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 	// handles a command from various sources.
 	// also calls the event.
-	private void handleCommand(ubyte origin, Address address, string command) {
+	private void handleCommand(ubyte origin, Address address, string command, int id=-1) {
 		command = command.strip;
 		if(command.length == 0) return;
 		if(origin == ServerCommandEvent.Origin.hub) address = this.hubAddress;
@@ -1451,20 +1452,27 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 					foreach(world ; this.m_worlds) {
 						chunks ~= world.name ~ ": " ~ to!string(world.loadedChunks);
 					}
-					log("Chunks (children are included): ", chunks.join(", "));
+					command_log(id, "Chunks (children are included): ", chunks.join(", "));
 					break;
 				case "effect":
-					Commands.console(&Commands.effect, args);
+					Commands.console(&Commands.effect, args, id);
 					break;
 				case "gm":
 				case "gamemode":
-					Commands.console(&Commands.gamemode, args);
+					Commands.console(&Commands.gamemode, args, id);
 					break;
 				case "kick":
-					Commands.console(&Commands.kick, args);
+					Commands.console(&Commands.kick, args, id);
 					break;
 				case "kill":
-					Commands.console(&Commands.kill, args);
+					Commands.console(&Commands.kill, args, id);
+					break;
+				case "nodes":
+					string[] nodes;
+					foreach(node ; this.nodes_hubid) {
+						nodes ~= node.name ~ " (" ~ node.hubId.to!string ~ ")";
+					}
+					command_log(id, "Nodes: ", nodes.join(", "));
 					break;
 				case "say":
 					this.broadcast("{lightpurple}" ~ args.join(" "));
@@ -1474,13 +1482,13 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 					this.shutdown();
 					break;
 				case "toggledownfall":
-					Commands.console(&Commands.toggledownfall, args);
+					Commands.console(&Commands.toggledownfall, args, id);
 					break;
 				case "transfer":
-
+					Commands.console(&Commands.transfer, args, id);
 					break;
 				case "worlds":
-					log("Worlds: ", to!string(this.m_worlds));
+					command_log(id, "Worlds: ", to!string(this.m_worlds));
 					break;
 				default:
 					break;
@@ -1529,79 +1537,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	/// ditto
 	public @safe void removeTask(size_t tid) {
 		this.tasks.remove(tid);
-	}
-
-}
-
-/**
- * A node connected to the hub where players can be transferred to.
- */
-class Node {
-
-	/**
-	 * Id of the node, given by the hub.
-	 */
-	uint hubId;
-
-	/**
-	 * Name of the node. It can only be one node with the same name
-	 * online at the same time.
-	 */
-	string name;
-
-	/**
-	 * Indicates whether the can receive player when they first
-	 * connect or only when they are transferred.
-	 */
-	bool main;
-
-	/**
-	 * Indicates which games and which protocols the node does accept.
-	 * Example:
-	 * ---
-	 * auto pocket = PE in node.acceptedGames;
-	 * if(pocket && (*pocket).canFind(100)) {
-	 *    log(node.name, " supports MCPE 1.0");
-	 * }
-	 * ---
-	 */
-	uint[][ubyte] acceptedGames;
-
-	public this(uint hubId, string name, bool main) {
-		this.hubId = hubId;
-		this.name = name;
-		this.main = main;
-	}
-
-	/**
-	 * Indicates whether or not the node is still connected to
-	 * the hub.
-	 * Example:
-	 * ---
-	 * auto node = server.nodeWithName("node");
-	 * assert(node.online);
-	 * ---
-	 */
-	public inout @property @safe bool online() {
-		return server.nodeWithHubId(this.hubId) !is null;
-	}
-
-	/**
-	 * Indicates whether the node can accept the given player.
-	 * If a player is transferred to a node that cannot accept it
-	 * it is kicked with the "End of Stream" message by the hub.
-	 */
-	public inout @safe bool accepts(Player player) {
-		auto a = player.gameVersion in this.acceptedGames;
-		return a && (*a).canFind(player.protocol);
-	}
-
-	/**
-	 * Transfers a player to the node.
-	 * This methos does the same as player.transfer(Node).
-	 */
-	public void transfer(Player player) {
-		server.transfer(player, this);
 	}
 
 }

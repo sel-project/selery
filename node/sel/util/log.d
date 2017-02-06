@@ -32,7 +32,7 @@ public Log[] getAndClearLoggedMessages() {
 	return ret;
 }
 
-public void log_m(bool hub, E...)(string logger, E logs) {
+public void log_m(bool hub, E...)(string logger, int id, E logs) {
 	string message = "";
 	foreach(immutable l ; logs) {
 		static if(is(typeof(l) : string)) {
@@ -41,8 +41,16 @@ public void log_m(bool hub, E...)(string logger, E logs) {
 			message ~= to!string(l);
 		}
 	}
-	static if(hub) last_logged_messages ~= Log(milliseconds, logger, message);
+	static if(hub) last_logged_messages ~= Log(milliseconds, logger, message, id);
 	writeln("[" ~ logger ~ "] " ~ message);
+}
+
+public void world_log(E...)(string world, E logs) {
+	log_m!true(world, -1, logs);
+}
+
+public void command_log(E...)(int commandId, E logs) {
+	log_m!true("command", commandId, logs);
 }
 
 /**
@@ -70,7 +78,7 @@ public void log(bool hub=true, string mod=__MODULE__, E...)(E logs) {
 			enum mm = "plugin" ~ dirSeparator ~ m;
 		}
 	}
-	log_m!hub(mm, logs);
+	log_m!hub(mm, -1, logs);
 }
 
 public void debug_log(string m=__MODULE__, E...)(E logs) {

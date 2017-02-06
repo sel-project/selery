@@ -238,10 +238,10 @@ final class Commands {
 	 * Commands.console(&Commands.kickall);
 	 * ---
 	 */
-	public static void console(Message function(arguments args) command, arguments args=[]) {
+	public static void console(Message function(arguments args) command, arguments args=[], int id=-1) {
 		Message mx = command(args);
 		if(mx.message != "") {
-			log(mx.message.translate(server.settings.language, mx.args));
+			command_log(id, mx.message.translate(server.settings.language, mx.args));
 		}
 	}
 
@@ -500,6 +500,21 @@ final class Commands {
 		if(!worlds.length) return Message("{red}{commands.noworld}", []);
 		foreach(world ; worlds) world.downfall = !world.downfall;
 		return Message("{green}{commands.toggledownfall.success}", []);
+	}
+
+	/**
+	 * Transfers a player to another node.
+	 */
+	public static Message transfer(arguments args) {
+		if(args.length < 2) return Message("{red}{commands.transfer.usage}", []);
+		auto node = server.nodeWithName(args[1]);
+		if(node is null) return Message("{red}{commands.transfer.nonode}", [args[1]]);
+		auto players = server.playersWithName(args[0]);
+		if(!players.length) return Message("{red}{commands.notonline}", []);
+		foreach(player ; players) {
+			player.transfer(node);
+		}
+		return Message("{green}{commands.transfer.success}", []);
 	}
 
 	/**

@@ -256,8 +256,8 @@ class Node : Session {
 								this.n_max = info.max;
 								foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
 								this.plugins = cast(shared)info.plugins;
-								server.add(this);
 								foreach(node ; server.nodesList) this.send(node.addPacket.encode());
+								server.add(this);
 								this.loop(receiver);
 								server.remove(this);
 								this.onClosed();
@@ -453,7 +453,7 @@ class Node : Session {
 	 */
 	private shared void handleLogs(Status.Logs logs) {
 		foreach(l ; logs.messages) {
-			this.server.message(this.name, l.timestamp, l.logger, l.message);
+			this.server.message(this.name, l.timestamp, l.logger, l.message, l.commandId);
 		}
 	}
 	
@@ -590,14 +590,6 @@ class Node : Session {
 	public shared void sendTo(shared PlayerSession player, ubyte[] data) {
 		this.send(new Player.GamePacket(player.id, data).encode());
 	}
-
-	/**
-	 * Sends the number of online players and maximum number of
-	 * players to the node.
-	 */
-	public shared void updatePlayers(inout uint online, inout uint max) {
-		this.send(new Status.Players(online, max).encode());
-	}
 	
 	/**
 	 * Notifies the node that another node has connected
@@ -623,10 +615,18 @@ class Node : Session {
 	}
 	
 	/**
+	 * Sends the number of online players and maximum number of
+	 * players to the node.
+	 */
+	public shared void updatePlayers(inout uint online, inout uint max) {
+		this.send(new Status.Players(online, max).encode());
+	}
+	
+	/**
 	 * Executes a remote command.
 	 */
-	public shared void remoteCommand(string command, ubyte origin, Address address) {
-		this.send(new Status.RemoteCommand(origin, hncomAddress(address !is null ? address : (cast()this.socket).localAddress), command).encode());
+	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
+		this.send(new Status.RemoteCommand(origin, hncomAddress(address !is null ? address : (cast()this.socket).localAddress), command, commandId).encode());
 	}
 
 	/**

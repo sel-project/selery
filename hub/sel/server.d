@@ -437,11 +437,12 @@ class Server {
 		return ret;
 	}
 
-	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null) {
+	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=0) {
 		// console, external console, rcon
 		string[] spl = str.split(" ");
 		if(spl.length) {
 			string cmd = spl[0].toLower.idup;
+			if(!cmd.length) return;
 			string[] args = spl[1..$];
 			switch(cmd) {
 				case "about":
@@ -464,7 +465,7 @@ class Server {
 							//TODO disconnect rcon
 							break;
 						default:
-							log("Usage: 'disconnect <node|externalconsole|rcon> <identifier>'");
+							log("Usage: 'disconnect <node|externalconsole|rcon> <id>'");
 							break;
 					}
 					break;
@@ -477,21 +478,21 @@ class Server {
 					foreach(node ; this.nodes) {
 						list ~= node.name ~ ": " ~ to!string(node.latency) ~ " ms";
 					}
-					this.message("", milliseconds, "latency", list.join(", "));
+					this.command(list.join(", "), commandId);
 					break;
 				case "nodes":
 					string[] nodes;
 					foreach(shared Node node ; this.nodes) {
 						nodes ~= node.toString();
 					}
-					this.message("", milliseconds, "commands", "Nodes: " ~ nodes.join(", "));
+					this.command("Nodes: " ~ nodes.join(", "), commandId);
 					break;
 				case "players":
 					string[] list;
 					foreach(shared PlayerSession player ; this.n_players) {
 						list ~= player.username ~ " (" ~ player.game ~ ")";
 					}
-					this.message("", milliseconds, "commands", "Players (" ~ to!string(list.length) ~ "): " ~ list.join(", "));
+					this.command("Players (" ~ to!string(list.length) ~ "): " ~ list.join(", "), commandId);
 					break;
 				case "reload":
 					this.n_max = 0;
@@ -508,12 +509,12 @@ class Server {
 					}
 					this.handler.reload();
 					foreach(node ; this.nodes) node.reload();
-					log("reloaded");
+					this.command(Text.green ~ "Server's settings have been reloaded", commandId);
 					break;
 				case "say":
 					string command = "say " ~ args.join(" ");
 					foreach(shared Node node ; this.nodes) {
-						node.remoteCommand(command, origin, source);
+						node.remoteCommand(command, origin, source, commandId);
 					}
 					break;
 				case "stop":
@@ -525,39 +526,48 @@ class Server {
 						names ~= thread.name;
 					}
 					sort(names);
-					this.message("", 0, "commands", "Threads (" ~ to!string(names.length) ~ "): " ~ names.join(", "));
+					this.command("Threads (" ~ to!string(names.length) ~ "): " ~ names.join(", "), commandId);
 					break;
 				case "transfer":
 					//TODO transfer the player to args[0]
 					break;
 				default:
-					if(args.length) {
-						shared Node node;
-						version(OneNode) {
-							if(this.nodes.length) node = this.nodes[0];
-							args = cmd ~ args;
-						} else {
-							node = this.nodeByName(cmd.idup);
-						}
-						if(node !is null) {
-							node.remoteCommand(args.join(" "), origin, source);
-						}
+					shared Node node;
+					static if(__oneNode) {
+						if(this.nodes.length) node = this.nodes[0];
+						args = cmd ~ args;
+					} else {
+						node = this.nodeByName(cmd.idup);
+					}
+					if(node !is null) {
+						if(args.length) node.remoteCommand(args.join(" "), origin, source, commandId);
+					} else {
+						static if(!__oneNode) this.command("Node '" ~ cmd ~ "' is not connected", commandId);
 					}
 					break;
 			}
 		}
 	}
 
-	public shared void message(string node, ulong timestamp, string logger, string message) {
+	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
 		version(OneNode) {
 			log("[" ~ logger ~ "] " ~ message);
 			node = "";
 		} else {
 			log("[" ~ node ~ "][" ~ logger ~ "] " ~ message);
 		}
-		foreach(externalConsole ; externalConsoles) {
+		foreach(externalConsole ; this.externalConsoles) {
 			externalConsole.consoleMessage(node, timestamp, logger, message);
 		}
+		if(id != -1) {
+			foreach(rcon ; this.rcons) {
+				rcon.consoleMessage(message, commandId);
+			}
+		}
+	}
+
+	private shared void command(string message, int commandId) {
+		this.message("", milliseconds, "command", message, commandId);
 	}
 
 	public shared nothrow @safe @nogc bool isBlocked(Address address) {

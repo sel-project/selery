@@ -48,6 +48,11 @@ class SafeThread : Thread {
 		});
 	}
 
+	public this(T)(string name, T fn) if(is(T == function) || is(T == delegate)) {
+		this(fn);
+		this.name = name;
+	}
+
 }
 
 /**

@@ -754,7 +754,7 @@ abstract class Player : Human {
 	 * Edition's functionality the other transfer function should be used
 	 * instead, using ip and port as parameters and not a node name.
 	 */
-	public void transfer(Node node) {
+	public void transfer(inout Node node) {
 		server.transfer(this, node);
 	}
 

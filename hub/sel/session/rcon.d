@@ -30,9 +30,10 @@
  */
 module sel.session.rcon;
 
+import core.atomic : atomicOp;
 import core.thread : Thread;
 
-import std.bitmanip : write;
+import std.bitmanip : write, peek, nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : dur;
 import std.socket;
@@ -96,9 +97,13 @@ final class RconHandler : HandlerThread {
  * format is received.
  */
 final class RconSession : Session {
+
+	private static shared int commandsCount = 1;
 	
 	private shared Socket socket;
 	private immutable string remoteAddress;
+
+	private shared int[int] commandTable;
 	
 	public shared this(shared Server server, Socket socket) {
 		super(server);
@@ -138,9 +143,11 @@ final class RconSession : Session {
 			auto recv = socket.receive(buffer);
 			if(recv < 14 || buffer[8] != 2) return; // connection closed, invalid packet format or invalid packet id
 			this.server.traffic.receive(recv);
-			if(recv >= 15) {
+			if(recv >= 15 && peek!(int, Endian.littleEndian)(buffer, 8) == 2) {
 				// only handle commands that are at least 1-character long
-				this.server.handleCommand(cast(string)buffer[12..recv-2], RemoteCommand.RCON, socket.remoteAddress);
+				this.commandTable[commandsCount] = peek!(int, Endian.littleEndian)(buffer, 4);
+				this.server.handleCommand(cast(string)buffer[12..recv-2], RemoteCommand.RCON, socket.remoteAddress, commandsCount);
+				atomicOp!"+="(commandsCount, 1);
 			}
 		}
 	}
@@ -149,16 +156,21 @@ final class RconSession : Session {
 	 * Sends a packet back using the given request id.
 	 */
 	public shared ptrdiff_t send(ubyte[4] request_id, int id, ubyte[] payload=[]) {
-		ubyte[] p_id = new ubyte[4];
-		write!(int, Endian.littleEndian)(p_id, id, 0);
-		return this.send(request_id ~ p_id ~ payload ~ cast(ubyte[])[0, 0]);
+		return this.send(request_id ~ nativeToLittleEndian(id) ~ payload ~ cast(ubyte[])[0, 0]);
 	}
 	
 	public override shared ptrdiff_t send(const(void)[] data) {
-		ubyte[] length = new ubyte[4];
-		write!(uint, Endian.littleEndian)(length, data.length.to!uint, 0);
-		this.server.traffic.send(data.length + 4);
-		return (cast()this.socket).send(length ~ data);
+		data = nativeToLittleEndian(data.length.to!uint) ~ data;
+		this.server.traffic.send(data.length);
+		return (cast()this.socket).send(data);
+	}
+
+	public shared void consoleMessage(string message, int id) {
+		auto ptr = id in this.commandTable;
+		if(ptr) {
+			this.send(nativeToLittleEndian(*ptr), 0, cast(ubyte[])message);
+			this.commandTable.remove(id);
+		}
 	}
 
 	/**
