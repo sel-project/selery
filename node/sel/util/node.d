@@ -89,5 +89,32 @@ class Node {
 	public void transfer(Player player) {
 		server.transfer(player, this);
 	}
+
+	/**
+	 * Sends a message to the node.
+	 * Example:
+	 * ---
+	 * // if the other node uses the same JSON protocol
+	 * node.sendMessage(`{"reply_with":12}`);
+	 * server += (NodeMessageEvent event) {
+	 *    if(node == event.node) {
+	 *       assert(parseJSON(cast(string)event.payload)["reply"].integer == 12);
+	 *    }
+	 * }
+	 * ---
+	 */
+	public void sendMessage(ubyte[] payload) {
+		server.sendMessage(this, payload);
+	}
+
+	/// ditto
+	public void sendMessage(string message) {
+		this.sendMessage(cast(ubyte[])message);
+	}
+
+	public override bool opEquals(Object o) {
+		auto node = cast(Node)o;
+		return node !is null && node.hubId == this.hubId;
+	}
 	
 }

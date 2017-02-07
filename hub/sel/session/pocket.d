@@ -66,9 +66,8 @@ enum ubyte[16] magic = [0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0x
 	auto ret = Types.Address(4);
 	if(cast(InternetAddress)address) {
 		auto v4 = cast(InternetAddress)address;
-		auto rev = ~v4.addr;
 		ret.type = 4;
-		ret.ipv4 = cast(ubyte[])[(rev >> 24) & 255, (rev >> 16) & 255, (rev >> 8) & 255, rev & 255];
+		ret.ipv4 = v4.addr ^ uint.max;
 		ret.port = v4.port;
 	} else if(cast(Internet6Address)address) {
 		// not yet supported by the client

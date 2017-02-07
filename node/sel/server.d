@@ -82,9 +82,6 @@ import HncomLogin = sul.protocol.hncom1.login;
 import HncomStatus = sul.protocol.hncom1.status;
 import HncomPlayer = sul.protocol.hncom1.player;
 
-static assert(HncomTypes.Game.POCKET == PE);
-static assert(HncomTypes.Game.MINECRAFT == PC);
-
 alias ServerVariables = Variables!("server", string, "name", size_t, "ticks", size_t, "online", size_t, "max");
 
 // Server's instance
@@ -640,9 +637,8 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		}
 
 		// sends the logs to the hub
-		auto logs = getAndClearLoggedMessages();
-		if(logs.length) {
-			this.sendPacket(new HncomStatus.Logs(logs).encode());
+		foreach(log ; getAndClearLoggedMessages()) {
+			this.sendPacket(log.encode());
 		}
 	}
 
@@ -1322,7 +1318,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			player = (){
 				final switch(packet.type) {
 					static if(__pocket) {
-						case PE:
+						case HncomPlayer.Add.Pocket.TYPE:
 							auto pocket = packet.new Pocket();
 							pocket.decode();
 							foreach(immutable p ; __pocketProtocolsTuple) {
@@ -1332,7 +1328,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 							assert(0);
 					}
 					static if(__minecraft) {
-						case PC:
+						case HncomPlayer.Add.Minecraft.TYPE:
 							auto minecraft = packet.new Minecraft();
 							minecraft.decode();
 							foreach(immutable p ; __minecraftProtocolsTuple) {
@@ -1432,7 +1428,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			ubyte[16] bytes = address.bytes;
 			return new Internet6Address(bytes, address.port);
 		} else {
-			assert(0, "Unknown address length " ~ to!string(address.bytes.length));
+			return new InternetAddress(0, 0);
 		}
 	}
 

@@ -383,8 +383,9 @@ class Node : Session {
 						this.n_ram = packet.ram;
 						this.n_cpu = packet.cpu;
 						break;
-					case Status.Logs.ID:
-						this.handleLogs(Status.Logs.fromBuffer(payload));
+					case Status.Log.ID:
+						auto l = Status.Log.fromBuffer(payload);
+						this.server.message(this.name, l.timestamp, l.logger, l.message, l.commandId);
 						break;
 					case Status.UpdateList.ID:
 						this.handleUpdateList(Status.UpdateList.fromBuffer(payload));
@@ -444,16 +445,6 @@ class Node : Session {
 			foreach(node ; this.server.nodesList) {
 				if(node.id != this.id) node.sendMessage(this.id, message.payload);
 			}
-		}
-	}
-	
-	/**
-	 * Logs some messages to the server and the connected
-	 * external consoles.
-	 */
-	private shared void handleLogs(Status.Logs logs) {
-		foreach(l ; logs.messages) {
-			this.server.message(this.name, l.timestamp, l.logger, l.message, l.commandId);
 		}
 	}
 	
@@ -545,7 +536,7 @@ class Node : Session {
 		auto player = packet.hubId in this.players;
 		if(player) {
 			this.players.remove(packet.hubId);
-			(*player).connect(Player.Add.TRANSFERRED, packet.node);
+			(*player).connect(Player.Add.TRANSFERRED, packet.node, packet.onFail);
 		}
 	}
 	
@@ -626,7 +617,7 @@ class Node : Session {
 	 * Executes a remote command.
 	 */
 	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(new Status.RemoteCommand(origin, hncomAddress(address !is null ? address : (cast()this.socket).localAddress), command, commandId).encode());
+		this.send(new Status.RemoteCommand(origin, address !is null ? hncomAddress(address) : Types.Address.init, command, commandId).encode());
 	}
 
 	/**

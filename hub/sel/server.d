@@ -401,8 +401,8 @@ class Server {
 	/**
 	 * Gets the number of max players.
 	 */
-	public shared nothrow @property @safe @nogc const uint maxPlayers() {
-		return this.n_max;
+	public shared nothrow @property @safe @nogc const int maxPlayers() {
+		return this.unlimited_nodes ? NodeInfo.UNLIMITED : this.n_max;
 	}
 
 	/**
@@ -437,7 +437,7 @@ class Server {
 		return ret;
 	}
 
-	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=0) {
+	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=-1) {
 		// console, external console, rcon
 		string[] spl = str.split(" ");
 		if(spl.length) {

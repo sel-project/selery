@@ -181,7 +181,7 @@ abstract class ExternalConsoleSession : Session {
 	}
 	
 	public shared inout string toString() {
-		return "ExternalConsole(" ~ to!string(this.id) ~ ", " ~ to!string((cast()this.socket).remoteAddress) ~ ")";
+		return "ExternalConsole(" ~ to!string(this.id) ~ ", " ~ to!string(cast()this.address) ~ ")";
 	}
 	
 }

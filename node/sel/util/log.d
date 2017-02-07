@@ -22,7 +22,7 @@ import common.sel;
 import common.util.format : Text, writeln;
 import common.util.time : milliseconds;
 
-mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".types : Log;");
+mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".status : Log;");
 
 private shared(Log)[] last_logged_messages;
 
@@ -41,7 +41,7 @@ public void log_m(bool hub, E...)(string logger, int id, E logs) {
 			message ~= to!string(l);
 		}
 	}
-	static if(hub) last_logged_messages ~= Log(milliseconds, logger, message, id);
+	static if(hub) last_logged_messages ~= cast(shared)new Log(milliseconds, logger, message, id);
 	writeln("[" ~ logger ~ "] " ~ message);
 }
 

@@ -37,6 +37,7 @@ mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".p
 abstract class PlayerSession : Session {
 	
 	protected shared Node n_node;
+	protected shared uint last_node;
 	
 	private shared uint expected;
 	private shared ubyte[][size_t] unordered_payloads;
@@ -274,7 +275,7 @@ abstract class PlayerSession : Session {
 	 * This function does not notify the old node of the change,
 	 * as the old node should have called the function.
 	 */
-	public shared bool connect(ubyte reason, int nodeId=-1) {
+	public shared bool connect(ubyte reason, int nodeId=-1, ubyte onFail=HncomPlayer.Transfer.DISCONNECT) {
 		shared Node[] nodes;
 		if(nodeId < 0) {
 			nodes = this.server.mainNodes;
@@ -285,14 +286,21 @@ abstract class PlayerSession : Session {
 		foreach(node ; nodes) {
 			if(node.accepts(this.type, this.protocol)) {
 				this.n_node = node;
+				this.last_node = node.id;
 				this.expected = 0;
 				this.unordered_payloads.clear();
 				node.addPlayer(this, reason);
 				return true;
 			}
 		}
-		this.endOfStream();
-		return false;
+		if(onFail == HncomPlayer.Transfer.AUTO) {
+			return this.connect(reason);
+		} else if(onFail == HncomPlayer.Transfer.RECONNECT) {
+			return this.connect(reason, this.last_node);
+		} else {
+			this.endOfStream();
+			return false;
+		}
 	}
 	
 	/**
