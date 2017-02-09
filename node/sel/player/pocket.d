@@ -60,7 +60,7 @@ abstract class PocketPlayer : Player {
 
 	private bool n_edu;
 	private long n_xuid;
-	private ubyte n_os;
+	private byte n_os;
 	private string n_device_model;
 	
 	private uint title_duration;
@@ -72,7 +72,7 @@ abstract class PocketPlayer : Player {
 
 	protected bool send_commands;
 	
-	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, byte deviceOs, string deviceModel) {
 		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
 		this.n_packet_loss = packetLoss;
 		this.n_edu = edu;
@@ -114,7 +114,7 @@ abstract class PocketPlayer : Player {
 	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc ubyte os() {
+	public final pure nothrow @property @safe @nogc byte os() {
 		return this.n_os;
 	}
 
@@ -339,7 +339,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
 	
-	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, byte deviceOs, string deviceModel) {
 		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
 		this.startCompression!Compression(hubId);
 		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(hubVersion, supportedPocketProtocols[__protocol]);

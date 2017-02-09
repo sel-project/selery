@@ -245,7 +245,7 @@ final class PocketSession : PlayerSession {
 	private void delegate(ubyte[]) shared functionHandler;
 
 	private bool edu = false;
-	private ubyte device = 0;
+	private byte device = HncomAdd.Pocket.UNKNOWN;
 	private string model = "";
 
 	private shared ubyte nextUpdate;
@@ -679,8 +679,10 @@ final class PocketSession : PlayerSession {
 							} catch(ConvException) {}
 						}
 					}
-					if(os && os.type == JSON_TYPE.INTEGER) this.device = (os.integer + 1) & 255;
+					if(os && os.type == JSON_TYPE.INTEGER) this.device = cast(byte)os.integer;
 					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
+
+						log(*os);
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.settings.whitelist) {
@@ -723,7 +725,7 @@ final class PocketSession : PlayerSession {
 					this.n_game_name = "Minecraft: " ~ (){
 						if(this.edu) {
 							return "Education";
-						} else if(this.device == 3) { //TODO windows 10 constant
+						} else if(this.device == HncomAdd.Pocket.WINDOWS10) {
 							return "Windows 10";
 						} else {
 							return "Pocket";

@@ -1547,12 +1547,12 @@ abstract class Player : Human {
 
 }
 
-enum PlayerOS : ubyte {
+enum PlayerOS : byte {
 
 	unknown = HncomPlayer.Add.Pocket.UNKNOWN,
 	iOS = /*HncomPlayer.Add.Pocket.IOS*/1,
 	android = HncomPlayer.Add.Pocket.ANDROID,
-	windows10 = /*HncomPlayer.Add.Pocket.WINDOWS10*/3,
+	windows10 = HncomPlayer.Add.Pocket.WINDOWS10,
 
 }
 
