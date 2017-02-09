@@ -117,7 +117,7 @@ const struct Software {
 
 	enum ubyte hncom = 1;
 
-	enum ubyte externalConsole = 1;
+	enum ubyte externalConsole = 2;
 
 }
 

@@ -557,7 +557,7 @@ class Server {
 			log("[" ~ node ~ "][" ~ logger ~ "] " ~ message);
 		}
 		foreach(externalConsole ; this.externalConsoles) {
-			externalConsole.consoleMessage(node, timestamp, logger, message);
+			externalConsole.consoleMessage(node, timestamp, logger, message, commandId);
 		}
 		if(id != -1) {
 			foreach(rcon ; this.rcons) {

@@ -27,7 +27,7 @@ import std.file : exists, mkdirRecurse, append;
 import std.json;
 import std.random : uniform;
 import std.socket;
-import std.system : endian;
+import std.system : Endian, endian;
 
 import common.path : Paths;
 import common.sel;
@@ -158,7 +158,7 @@ abstract class ExternalConsoleSession : Session {
 		return nativeToAuto(uniform!ulong) ~ nativeToAuto(uniform!ulong);
 	}
 	
-	public abstract shared void consoleMessage(string node, ulong timestamp, string logger, string message);
+	public abstract shared void consoleMessage(string node, ulong timestamp, string logger, string message, int commandId);
 	
 	public abstract shared void updateNodes(bool add, string name);
 
@@ -194,25 +194,29 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 		ubyte[16] payload = this.generatePayload();
 		with(server.settings) this.send(new Login.AuthCredentials(Software.externalConsole, externalConsoleHash != "", externalConsoleHash, payload).encode());
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(EXTERNAL_CONSOLE_AUTH_TIMEOUT));
-		ubyte[] buffer = new ubyte[256];
+		auto receiver = new Receiver!(ushort, Endian.littleEndian)();
+		ubyte[] buffer = new ubyte[512];
 		auto recv = socket.receive(buffer);
-		if(recv > 0 && buffer[0] == Login.Auth.ID) { // min => (ubyte id, ubyte[20] sha1), max => (ubyte id, ubyte[64] sha512)
+		if(recv > 2) {
 			this.server.traffic.receive(recv);
-			auto pk = Login.Auth.fromBuffer(buffer);
-			if(auth(pk.hash, payload)) {
-				Types.Game[] games;
-				with(server.settings) {
-					if(pocket) games ~= Types.Game(Types.Game.POCKET, cast(uint[])pocketProtocols);
-					if(minecraft) games ~= Types.Game(Types.Game.MINECRAFT, cast(uint[])minecraftProtocols);
-					with(Software) this.send(new Login.Welcome().new Accepted(this.commands, name, versions, displayName, games, server.nodeNames).encode());
+			receiver.add(buffer[0..recv]);
+			if(receiver.has) {
+				auto pk = Login.Auth.fromBuffer(receiver.next);
+				if(auth(pk.hash, payload)) {
+					Types.Game[] games;
+					with(server.settings) {
+						if(pocket) games ~= Types.Game(Types.Game.POCKET, cast(uint[])pocketProtocols);
+						if(minecraft) games ~= Types.Game(Types.Game.MINECRAFT, cast(uint[])minecraftProtocols);
+						with(Software) this.send(new Login.Welcome().new Accepted(this.commands, name, versions, displayName, games, server.nodeNames).encode());
+					}
+					server.add(this);
+					this.loop(receiver);
+					server.remove(this);
+				} else {
+					this.send(new Login.Welcome().new WrongHash().encode());
+					this.logAttemp();
+					//TODO block after some attempts
 				}
-				server.add(this);
-				this.loop();
-				server.remove(this);
-			} else {
-				this.send(new Login.Welcome().new WrongHash().encode());
-				this.logAttemp();
-				//TODO block after some attempts
 			}
 		} else if(recv == Socket.ERROR) {
 			// timed out
@@ -221,41 +225,44 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 		socket.close();
 	}
 	
-	private shared void loop() {
+	private shared void loop(Receiver!(ushort, Endian.littleEndian) receiver) {
 		Socket socket = cast()this.socket;
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(EXTERNAL_CONSOLE_TIMEOUT));
 		ubyte[] buffer = new ubyte[EXTERNAL_CONSOLE_CONNECTED_BUFFER_LENGTH];
 		while(true) {
 			auto recv = socket.receive(buffer);
-			if(recv < 1) return; // connection closed or timed out
+			if(recv <= 0) return; // connection closed or timed out
 			this.server.traffic.receive(recv);
-			ubyte[] payload = buffer[0..recv];
-			switch(payload[0]) {
-				case Status.KeepAlive.ID:
-					this.send(new Status.KeepAlive(Status.KeepAlive.fromBuffer(payload).count).encode());
-					break;
-				case Status.RequestStats.ID:
-					this.autoUpdateStats();
-					break;
-				case Connected.Command.ID:
-					if(this.commands) {
-						auto pk = Connected.Command.fromBuffer(payload);
-						if(pk.command.length) {
-							this.server.handleCommand(pk.command, RemoteCommand.EXTERNAL_CONSOLE, socket.remoteAddress);
+			receiver.add(buffer[0..recv]);
+			if(receiver.has) {
+				ubyte[] payload = receiver.next;
+				switch(payload[0]) {
+					case Status.KeepAlive.ID:
+						this.send(new Status.KeepAlive(Status.KeepAlive.fromBuffer(payload).count).encode());
+						break;
+					case Status.RequestStats.ID:
+						this.autoUpdateStats();
+						break;
+					case Connected.Command.ID:
+						if(this.commands) {
+							auto pk = Connected.Command.fromBuffer(payload);
+							if(pk.command.length) {
+								this.server.handleCommand(pk.command, RemoteCommand.EXTERNAL_CONSOLE, socket.remoteAddress, pk.commandId);
+							}
+						} else {
+							this.send(new Connected.PermissionDenied().encode());
 						}
-					} else {
-						this.send(new Connected.PermissionDenied().encode());
-					}
-					break;
-				default:
-					// unknown packet, disconnect
-					return;
+						break;
+					default:
+						// unknown packet, disconnect
+						return;
+				}
 			}
 		}
 	}
 	
-	public override shared void consoleMessage(string node, ulong timestamp, string logger, string message) {
-		this.send(new Connected.ConsoleMessage(node, timestamp, logger, message).encode());
+	public override shared void consoleMessage(string node, ulong timestamp, string logger, string message, int commandId) {
+		this.send(new Connected.ConsoleMessage(node, timestamp, logger, message, commandId).encode());
 	}
 	
 	public override shared void updateNodes(bool add, string name) {
@@ -267,6 +274,7 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 	}
 
 	public override shared ptrdiff_t send(const(void)[] data) {
+		data = nativeToLittleEndian(cast(ushort)data.length) ~ data;
 		return super.send(data);
 	}
 	
@@ -353,8 +361,9 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 						case Connected.Command.ID:
 							if(this.commands) {
 								auto command = "command" in json;
-								if(command && (*command).type == JSON_TYPE.STRING) {
-									this.server.handleCommand((*command).str, RemoteCommand.EXTERNAL_CONSOLE, socket.remoteAddress);
+								auto commandId = "command_id" in json;
+								if(command && (*command).type == JSON_TYPE.STRING && (commandId is null || (*commandId).type == JSON_TYPE.INTEGER)) {
+									this.server.handleCommand((*command).str, RemoteCommand.EXTERNAL_CONSOLE, socket.remoteAddress, commandId ? cast(uint)(*commandId).integer : -1);
 								}
 							} else {
 								this.send(Connected.PermissionDenied.ID, (JSONValue[string]).init);
@@ -372,12 +381,13 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 		}
 	}
 	
-	public override shared void consoleMessage(string node, ulong timestamp, string logger, string message) {
+	public override shared void consoleMessage(string node, ulong timestamp, string logger, string message, int commandId) {
 		this.send(Connected.ConsoleMessage.ID, [
 			"node": JSONValue(node),
 			"timestamp": JSONValue(timestamp),
 			"logger": JSONValue(logger),
-			"message": JSONValue(message)
+			"message": JSONValue(message),
+			"command_id": JSONValue(commandId)
 		]);
 	}
 	
