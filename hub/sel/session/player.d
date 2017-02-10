@@ -60,6 +60,7 @@ abstract class PlayerSession : Session {
 	protected shared ushort n_server_port;
 	protected shared string n_language;
 	protected shared Skin n_skin = null;
+	protected shared ubyte n_input_mode;
 	
 	public shared this(shared Server server) {
 		super(server);
@@ -266,6 +267,14 @@ abstract class PlayerSession : Session {
 	 */
 	public final shared nothrow @property @trusted @nogc Skin skin() {
 		return cast()this.n_skin;
+	}
+
+	/**
+	 * Gets the player's input mode, ore whether it is using keyboard
+	 * and mouse, a controller or touchscreen.
+	 */
+	public final shared nothrow @property @safe @nogc ubyte inputMode() {
+		return this.n_input_mode;
 	}
 
 	public abstract shared nothrow @safe ubyte[] encodeHncomAddPacket(HncomPlayer.Add packet);

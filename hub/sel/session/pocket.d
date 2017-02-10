@@ -105,7 +105,7 @@ class PocketHandler : UnconnectedHandler {
 	protected override void run() {
 		this.condition = new Condition(this.mutex = new Mutex());
 		new SafeThread(&this.timeout).start();
-		new SafeThread(&this.decompression).start();
+		//new SafeThread(&this.decompression).start();
 		super.run();
 	}
 	
@@ -245,7 +245,7 @@ final class PocketSession : PlayerSession {
 	private void delegate(ubyte[]) shared functionHandler;
 
 	private bool edu = false;
-	private byte device = HncomAdd.Pocket.UNKNOWN;
+	private ubyte device = HncomAdd.Pocket.UNKNOWN;
 	private string model = "";
 
 	private shared ubyte nextUpdate;
@@ -649,7 +649,7 @@ final class PocketSession : PlayerSession {
 					auto vers = "GameVersion" in cd;
 					auto os = "DeviceOS" in cd;
 					auto model = "DeviceModel" in cd;
-					auto input = "CurrentInputMode" in cd; // 0: keyboard, 1: controller, 2: touch
+					auto input = "CurrentInputMode" in cd;
 					// TenantId for edu
 
 					if(serverAddress && serverAddress.type == JSON_TYPE.STRING) {
@@ -679,10 +679,21 @@ final class PocketSession : PlayerSession {
 							} catch(ConvException) {}
 						}
 					}
-					if(os && os.type == JSON_TYPE.INTEGER) this.device = cast(byte)os.integer;
+					if(os && os.type == JSON_TYPE.INTEGER) this.device = cast(ubyte)os.integer;
 					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
+					if(input && input.type == JSON_TYPE.INTEGER) {
+						this.n_input_mode = (){
+							switch(input.integer) {
+								case 0: return HncomAdd.CONTROLLER;
+								case 1: return HncomAdd.KEYBOARD;
+								default: return HncomAdd.TOUCH;
+							}
+						}();
+					} else {
+						this.n_input_mode = HncomAdd.TOUCH;
+					}
 
-						log(*os);
+					if(os && input) log(username, " ", *os, " ", *input);
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.settings.whitelist) {

@@ -119,22 +119,81 @@ final class PlayerLeftEvent : PlayerEvent {
  * ones, as indicated in the hub's configuration file (accepted-languages field).
  * Example:
  * ---
- * @event changelanguage(PlayerChangeLanguageEvent event) {
+ * @event changeLanguage(PlayerLanguageUpdatedEvent event) {
  *    log(event.player.name, " is changing language from ", event.currentLanguage, " to ", event.newLanguage);
  * }
  * ---
  */
-final class PlayerChangeLanguageEvent : PlayerEvent, Cancellable {
+final class PlayerLanguageUpdatedEvent : PlayerEvent, Cancellable {
 	
 	mixin Cancellable.Implementation;
 
-	public immutable string currentLanguage;
+	public immutable string oldLanguage;
 	public immutable string newLanguage;
 	
 	public pure nothrow @safe @nogc this(Player player, string lang) {
 		super(player);
-		this.currentLanguage = player.lang;
+		this.oldLanguage = player.lang;
 		this.newLanguage = lang;
 	}
 	
+}
+
+/**
+ * Event called when the player's latency is updated from the hub.
+ * Example:
+ * ---
+ * @event updateLatency(PlayerLatencyUpdatedEvent event) {
+ *    event.player.title = event.latency.to!string ~ " ms";
+ * }
+ * ---
+ */
+final class PlayerLatencyUpdatedEvent : PlayerEvent {
+
+	public pure nothrow @safe @nogc this(Player player) {
+		super(player);
+	}
+
+	/**
+	 * Gets the player's latency.
+	 * Example:
+	 * ---
+	 * assert(event.latency == event.player.latency);
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc uint latency() {
+		return this.player.latency;
+	}
+
+}
+
+/**
+ * Event called when the player's packet loss is updated from the hub.
+ * The packet loss is only calculated for players that use a connectionless
+ * protocol like UDP (only Minecraft: Pocket Edition).
+ * Example:
+ * ---
+ * @event updatePacketLoss(PlayerPacketLossUpdatedEvent event) {
+ *    event.player.title = event.packetLoss.to!string ~ "%";
+ *    assert(event.player.pe);
+ * }
+ * ---
+ */
+final class PlayerPacketLossUpdatedEvent : PlayerEvent {
+
+	public pure nothrow @safe @nogc this(Player player) {
+		super(player);
+	}
+
+	/**
+	 * Gets the player's packet loss.
+	 * Example:
+	 * ---
+	 * assert(event.packetLoss == event.player.packetLoss);
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc float packetLoss() {
+		return this.player.packetLoss;
+	}
+
 }

@@ -34,8 +34,6 @@ import std.uuid : UUID, randomUUID;
 import common.sel;
 import common.util.time : milliseconds;
 
-import sel.network : Handler;
-import sel.server : server, Node;
 import sel.block.block : BlockData, Blocks, Block, PlacedBlock;
 import sel.block.tile : Tile, Container;
 import sel.entity.effect : Effects, Effect;
@@ -44,17 +42,21 @@ import sel.entity.human : Human, Skin, Exhaustion;
 import sel.entity.interfaces : Collectable;
 import sel.entity.metadata;
 import sel.entity.noai : ItemEntity, Painting, Lightning;
+import sel.event.server : PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
 import sel.event.world;
 import sel.item.inventory;
 import sel.item.item : Item, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.network : Handler;
+import sel.server : server;
 import sel.util;
 import sel.util.command : Command;
 import sel.util.concurrency : thread, Thread;
 import sel.util.format : centre;
 import sel.util.lang;
 import sel.util.log;
+import sel.util.node : Node;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.particle : Particle, Particles;
@@ -116,10 +118,12 @@ abstract class Player : Human {
 	private string server_address_ip;
 	private ushort server_address_port;
 	
+	private string m_lang;
+	
+	private InputMode n_input_mode;
+	
 	protected uint n_latency;
 	protected float n_packet_loss = 0;
-	
-	private string m_lang;
 	
 	public Rules rules;
 	
@@ -157,7 +161,7 @@ abstract class Player : Human {
 
 	public bool joined = false;
 	
-	public this(uint hubId, World world, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
+	public this(uint hubId, World world, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
 		this.hubId = hubId;
 		super(world, position, skin);
 		this.n_name = name;
@@ -173,6 +177,7 @@ abstract class Player : Human {
 		this.showNametag = true;
 		this.nametag = name;
 		this.m_lang = language;
+		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
 		this.n_latency = latency;
 		this.viewDistance = this.rules.viewDistance;
 		this.pe = this.gameVersion == PE;
@@ -349,6 +354,13 @@ abstract class Player : Human {
 		}
 		return this.m_lang;
 	}
+
+	/**
+	 * Gets the player's input mode.
+	 */
+	public final pure nothrow @property @safe @nogc InputMode inputMode() {
+		return this.n_input_mode;
+	}
 	
 	/**
 	 * Gets the player's latency (in milliseconds), calculated adding the latency from
@@ -374,12 +386,22 @@ abstract class Player : Human {
 
 	// handlers for hncom stats
 	
-	public nothrow @safe @nogc void handleHncom(HncomPlayer.UpdateLatency packet) {
+	public void handleUpdateLatency(HncomPlayer.UpdateLatency packet) {
+		immutable old = this.n_latency;
 		this.n_latency = packet.latency + server.hubLatency;
+		if(old != this.n_latency) {
+			server.callEventIfExists!PlayerLatencyUpdatedEvent(this);
+			this.sendUpdateLatency([this]);
+			foreach(player ; this.world.playersList) player.sendUpdateLatency([this]);
+		}
 	}
 	
-	public nothrow @safe @nogc void handleHncom(HncomPlayer.UpdatePacketLoss packet) {
+	public void handleUpdatePacketLoss(HncomPlayer.UpdatePacketLoss packet) {
+		immutable old = this.n_packet_loss;
 		this.n_packet_loss = packet.packetLoss;
+		if(old != this.n_packet_loss) {
+			server.callEventIfExists!PlayerPacketLossUpdatedEvent(this);
+		}
 	}
 
 	// *** ENTITY-RELATED PROPERTIES/METHODS ***
@@ -554,7 +576,7 @@ abstract class Player : Human {
 	/// ditto
 	public @property Message title(Message title, string[] args=[]) {
 		if(title.message !is null && title.message.length) {
-			title.message = translate(title.message, this.lang, args);
+			title.message = translate(title.message, this.lang, args, server.variables, this.variables);
 			this.m_title = title;
 		} else {
 			this.m_title = Message.init;
@@ -578,7 +600,7 @@ abstract class Player : Human {
 	/// ditto
 	public @property Message subtitle(Message subtitle, string[] args=[]) {
 		if(subtitle.message !is null && subtitle.message.length) {
-			subtitle.message = translate(subtitle.message, this.lang, args);
+			subtitle.message = translate(subtitle.message, this.lang, args, server.variables, this.variables);
 			this.m_subtitle = subtitle;
 		} else {
 			this.m_subtitle = Message.init;
@@ -602,7 +624,7 @@ abstract class Player : Human {
 	/// ditto
 	public @property Message tip(Message tip, string[] args=[]) {
 		if(tip.message !is null && tip.message.length) {
-			tip.message = translate(tip.message, this.lang, args);
+			tip.message = translate(tip.message, this.lang, args, server.variables, this.variables);
 			this.m_tip = tip;
 		} else {
 			this.m_tip = Message.init;
@@ -725,7 +747,7 @@ abstract class Player : Human {
 	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
 	public void disconnect(string reason="disconnect.closed", string[] args=[], bool translation=true) {
-		server.disconnect(this, reason.translate(this.lang, args));
+		server.disconnect(this, reason.translate(this.lang, args, server.variables, this.variables));
 	}
 
 	/// ditto
@@ -1015,6 +1037,8 @@ abstract class Player : Human {
 	public abstract void sendOpenContainer(ubyte type, ushort slots, BlockPosition position);
 
 	public abstract void sendAddList(Player[] players);
+
+	public abstract void sendUpdateLatency(Player[] players);
 
 	public abstract void sendRemoveList(Player[] players);
 
@@ -1547,11 +1571,19 @@ abstract class Player : Human {
 
 }
 
-enum PlayerOS : byte {
+enum InputMode : ubyte {
+
+	keyboard = HncomPlayer.UpdateInputMode.KEYBOARD,
+	controller = HncomPlayer.UpdateInputMode.CONTROLLER,
+	touch = HncomPlayer.UpdateInputMode.TOUCH,
+
+}
+
+enum PlayerOS : ubyte {
 
 	unknown = HncomPlayer.Add.Pocket.UNKNOWN,
-	iOS = /*HncomPlayer.Add.Pocket.IOS*/1,
 	android = HncomPlayer.Add.Pocket.ANDROID,
+	ios = HncomPlayer.Add.Pocket.IOS,
 	windows10 = HncomPlayer.Add.Pocket.WINDOWS10,
 
 }
@@ -1671,7 +1703,7 @@ mixin template generateHandlers(E...) {
 class Puppet : Player {
 	
 	public this(World world, EntityPosition position, string name, Skin skin, UUID uuid=server.nextUUID) {
-		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), "", 0, name, name, skin, uuid, "", 0);
+		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), "", 0, name, name, skin, uuid, "", 0, 0);
 	}
 	
 	public this(World world, EntityPosition position, string name) {

@@ -232,7 +232,7 @@ class Node : Session {
 				else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
 				else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 				else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-				else if(["about", "disconnect", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+				else if(["about", "disconnect", "help", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
 				this.send(response.encode());
 				if(response.status == Login.ConnectionResponse.OK) {
 					// send info packets
@@ -396,13 +396,6 @@ class Node : Session {
 					case Player.Transfer.ID:
 						this.handleTransferPlayer(Player.Transfer.fromBuffer(payload));
 						break;
-					case Player.UpdateLanguage.ID:
-						auto ul = Player.UpdateLanguage.fromBuffer(payload);
-						auto player = ul.hubId in this.players;
-						if(player) {
-							(*player).language = ul.language;
-						}
-						break;
 					case Player.UpdateDisplayName.ID:
 						auto udn = Player.UpdateDisplayName.fromBuffer(payload);
 						auto player = udn.hubId in this.players;
@@ -418,6 +411,13 @@ class Node : Session {
 							(*player).dimension = uw.dimension;
 						}
 						break;
+					case Player.UpdateLanguage.ID:
+						auto ul = Player.UpdateLanguage.fromBuffer(payload);
+						auto player = ul.hubId in this.players;
+						if(player) {
+							(*player).language = ul.language;
+						}
+						break;
 					case Player.GamePacket.ID:
 						this.handleGamePacket(Player.GamePacket.fromBuffer(payload));
 						break;
@@ -425,7 +425,7 @@ class Node : Session {
 						this.handleOrderedGamePacket(Player.OrderedGamePacket.fromBuffer(payload));
 						break;
 					default:
-						log("unknown packet by ", this.toString(), " with id ", payload[0], " (", payload.length, " bytes)");
+						log("Unknown packet by ", this.toString(), " with id ", payload[0], " (", payload.length, " bytes)");
 						return; // closes connection
 				}
 			}
@@ -637,7 +637,7 @@ class Node : Session {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.latency, player.language);
+		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.language, player.inputMode, player.latency);
 		this.send(player.encodeHncomAddPacket(packet));
 	}
 	

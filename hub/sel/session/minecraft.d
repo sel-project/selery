@@ -414,6 +414,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		auto p = handshake.protocol in supportedMinecraftProtocols;
 		if(p) this.n_version = (*p)[0];
 		this.n_game_name = "Minecraft";
+		this.n_input_mode = HncomAdd.KEYBOARD; // default
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {

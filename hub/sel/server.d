@@ -307,7 +307,6 @@ class Server {
 			}
 			this.n_upload = sent;
 			this.n_download = recv;
-			log("up ", sent.round / 1000, " kB/s | down ", recv.round / 1000, " kB/s | ", Thread.getAll().length, " threads | ", this.onlinePlayers, " player(s)");
 			this.n_traffic.reset();
 			if(this.analytics !is null) {
 				if(++next_analytics == 12) {
@@ -469,6 +468,23 @@ class Server {
 							break;
 					}
 					break;
+				case "help":
+					this.command(join([
+							"about <player>",
+							"disconnect <node|externalconsole|rcon> <id>",
+							"kick <player> [reason]",
+							"latency",
+							"nodes",
+							"players",
+							"reload",
+							"say <message>",
+							"stop",
+							"threads",
+							"transfer <player> <node>",
+							"usage [node]",
+							"<node> <command> [args]"
+						], "\n"), commandId);
+					break;
 				case "kick":
 					//TODO kicks a player
 					// Player::onKicked(args.join(" "));
@@ -531,6 +547,18 @@ class Server {
 				case "transfer":
 					//TODO transfer the player to args[0]
 					break;
+				case "usage":
+					if(args.length) {
+						auto node = this.nodeByName(args[0]);
+						if(node !is null) {
+							this.command(args[0] ~ ": " ~ to!string(node.tps) ~ " TPS", commandId);
+						} else {
+							this.command("Use 'usage <node>'", commandId);
+						}
+					} else {
+						this.command("Upload: " ~ to!string(this.n_upload.to!float / 1000) ~ " kB/s, Download: " ~ to!string(this.n_download.to!float / 1000) ~ " kb/s", commandId);
+					}
+					break;
 				default:
 					shared Node node;
 					static if(__oneNode) {
@@ -551,10 +579,14 @@ class Server {
 
 	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
 		version(OneNode) {
-			log("[" ~ logger ~ "] " ~ message);
+			log("[", logger, "] ", message);
 			node = "";
 		} else {
-			log("[" ~ node ~ "][" ~ logger ~ "] " ~ message);
+			if(node.length) {
+				log("[", node, "][", logger, "] ", message);
+			} else {
+				log("[", logger, "] ", message);
+			}
 		}
 		foreach(externalConsole ; this.externalConsoles) {
 			externalConsole.consoleMessage(node, timestamp, logger, message, commandId);

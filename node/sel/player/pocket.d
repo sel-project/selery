@@ -60,7 +60,7 @@ abstract class PocketPlayer : Player {
 
 	private bool n_edu;
 	private long n_xuid;
-	private byte n_os;
+	private ubyte n_os;
 	private string n_device_model;
 	
 	private uint title_duration;
@@ -72,8 +72,8 @@ abstract class PocketPlayer : Player {
 
 	protected bool send_commands;
 	
-	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, byte deviceOs, string deviceModel) {
-		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
 		this.n_packet_loss = packetLoss;
 		this.n_edu = edu;
 		this.n_xuid = xuid;
@@ -114,7 +114,7 @@ abstract class PocketPlayer : Player {
 	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc byte os() {
+	public final pure nothrow @property @safe @nogc ubyte os() {
 		return this.n_os;
 	}
 
@@ -302,7 +302,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		} else {
 			auto item = this.world.items.peget(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
 			if(slot.nbt.length) {
-				item.petag = NbtBuffer!(Endian.littleEndian).instance.readCompound("", slot.nbt);
+				item.petag = NbtBuffer!(Endian.littleEndian).instance.readCompound("", slot.nbt); // is that right? Or readTag should be used instead?
 			}
 			return Slot(item, slot.metaAndCount & 255);
 		}
@@ -339,8 +339,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
 	
-	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency, float packetLoss, long xuid, bool edu, byte deviceOs, string deviceModel) {
-		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
+	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
+		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
 		this.startCompression!Compression(hubId);
 		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(hubVersion, supportedPocketProtocols[__protocol]);
 	}
@@ -493,6 +493,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		}
 		if(list.length) this.sendPacket(new Play.PlayerList().new Add(list));
 	}
+
+	public override void sendUpdateLatency(Player[] players) {}
 
 	public override void sendRemoveList(Player[] players) {
 		UUID[] uuids;
@@ -734,7 +736,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public override void setAsReadyToSpawn() {
 		this.sendPacket(new Play.PlayStatus(Play.PlayStatus.SPAWNED));
 		this.sendPacket(new Play.ResourcePacksInfo(false, new Types.Pack[0], new Types.Pack[0])); //TODO custom texture packs
-		this.sendPacket(new Play.SetHealth(20)); //TODO does this prevent the client-side death on windows 10?
 		this.send_commands = true;
 		this.sendCommands();
 	}
@@ -1011,6 +1012,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	//protected void handleReplaceSelectedItemPacket(Types.Slot slot) {}
+
+	//protected void handleShowCreditsPacket(ubyte[] payload) {}
 
 	protected void handleCommandStepPacket(string command, string overload_str, uint u1, uint u2, bool isOutput, ulong u3, string input, string output) {
 		auto cmd = command in this.sent_commands;

@@ -32,7 +32,7 @@ alias Cache = Tuple!(uint, "time", string, "ip");
 
 public @property string publicImpl(string file, uint v)() {
 	auto cache = cache(file);
-	if(cache.time < seconds - 60 * 30) {
+	if(cache.time < seconds - 60 * 60) {
 		cache.time = seconds;
 		cache.ip = parseJSON(get("http://v" ~ to!string(v) ~ ".ifconfig.co/json")).object["ip"].str;
 		save(file, cache);
@@ -51,7 +51,7 @@ public @property string localImpl(string file, string v, string def, string pubf
 		mixin("pub = " ~ pubf ~ ";");
 	} catch(Exception) {}
 	auto cache = cache(file);
-	if(cache.time < seconds - 60 * 5) {
+	if(cache.time < seconds - 60 * 10) {
 		version(linux) {
 			foreach(p ; executeShell("ifconfig").output.split("inet" ~ v ~ " addr:")[1..$]) {
 				p = p.strip;

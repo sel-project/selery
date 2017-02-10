@@ -62,12 +62,10 @@ abstract class MinecraftPlayer : Player {
 	
 	private bool first_spawned;
 	
-	private uint send_pings = 0;
-	
 	private ushort[] loaded_maps;
 	
-	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
-		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
+		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
 	}
 	
 	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
@@ -84,13 +82,7 @@ abstract class MinecraftPlayer : Player {
 				}
 			}
 		}
-		if(++this.send_pings == 300) {
-			this.send_pings = 0;
-			this.sendPings();
-		}
 	}
-
-	protected abstract void sendPings();
 	
 	alias world = super.world;
 	
@@ -201,8 +193,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	private bool dragging;
 	private size_t[] dragged_slots;
 
-	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, uint latency) {
-		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, latency);
+	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
+		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
 		this.startCompression!Compression(hubId);
 		this.full_version = "Minecraft " ~ verifyVersion(hubVersion, supportedMinecraftProtocols[__protocol]);
 	}
@@ -239,15 +231,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			sort!"a.toLower < b.toLower"(messages);
 		}
 		this.sendPacket(new Clientbound.TabComplete(messages));
-	}
-
-	protected override void sendPings() {
-		Types.ListUpdateLatency[] list;
-		foreach(Player player ; this.world.playersList) {
-			list ~= Types.ListUpdateLatency(player.uuid, player.ping);
-		}
-		this.sendPacket(new Clientbound.PlayerListItem().new UpdateLatency(list));
-		
 	}
 	
 	public override void sendChatMessage(string message) {
@@ -329,6 +312,14 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 	private Types.ListAddPlayer encodePlayer(Player player) {
 		return Types.ListAddPlayer(player.uuid, player.name, new Types.Property[0], player.gamemode, player.ping, player.name != player.displayName, JSONValue(["text": player.displayName]).toString());
+	}
+
+	public override void sendUpdateLatency(Player[] players) {
+		Types.ListUpdateLatency[] list;
+		foreach(player ; players) {
+			list ~= Types.ListUpdateLatency(player.uuid, player.latency);
+		}
+		this.sendPacket(new Clientbound.PlayerListItem().new UpdateLatency(list));
 	}
 	
 	public override void sendRemoveList(Player[] players) {

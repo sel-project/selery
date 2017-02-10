@@ -1090,6 +1090,13 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	/**
+	 * Gets a list with all the players in the server.
+	 */
+	public pure nothrow @property @trusted Player[] players() {
+		return this.players_hubid.values;
+	}
+
+	/**
 	 * Gets a player by name.
 	 * The search is done case-insensitive and the minus sign (-) is
 	 * replaced with the space character (so commands can use it to
@@ -1151,7 +1158,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	}
 
 	public bool changePlayerLanguage(Player player, string language) {
-		if(language == player.lang || !this.n_settings.acceptedLanguages.canFind(language) || this.callCancellableIfExists!PlayerChangeLanguageEvent(player, language)) return false;
+		if(language == player.lang || !this.n_settings.acceptedLanguages.canFind(language) || this.callCancellableIfExists!PlayerLanguageUpdatedEvent(player, language)) return false;
 		this.sendPacket(new HncomPlayer.UpdateLanguage(player.hubId, language).encode());
 		return true;
 	}
@@ -1316,6 +1323,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		Player player;
 		static if(__pocketProtocols.length + __minecraftProtocols.length) {
 			player = (){
+
 				final switch(packet.type) {
 					static if(__pocket) {
 						case HncomPlayer.Add.Pocket.TYPE:
@@ -1323,7 +1331,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 							pocket.decode();
 							foreach(immutable p ; __pocketProtocolsTuple) {
 								if(packet.protocol == p)
-									return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
+									return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
 							}
 							assert(0);
 					}
@@ -1333,7 +1341,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 							minecraft.decode();
 							foreach(immutable p ; __minecraftProtocolsTuple) {
 								if(packet.protocol == p)
-									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.latency);
+									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency);
 							}
 							assert(0);
 					}
@@ -1386,6 +1394,16 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			this.removePlayer(*p, packet.reason);
 		}
 	}
+	
+	/*
+	 * Updates a player's input mode.
+	 */
+	private void handleUpdateInputModePacket(HncomPlayer.UpdateInputMode packet) {
+		auto player = packet.hubId in this.players_hubid;
+		if(player) {
+			//TODO call event
+		}
+	}
 
 	/*
 	 * Updates a player's latency.
@@ -1396,7 +1414,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	private void handleUpdateLatencyPacket(HncomPlayer.UpdateLatency packet) {
 		auto player = packet.hubId in this.players_hubid;
 		if(player) {
-			(*player).handleHncom(packet);
+			(*player).handleUpdateLatency(packet);
 		}
 	}
 
@@ -1406,7 +1424,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	private void handleUpdatePacketLossPacket(HncomPlayer.UpdatePacketLoss packet) {
 		auto player = packet.hubId in this.players_hubid;
 		if(player) {
-			(*player).handleHncom(packet);
+			(*player).handleUpdatePacketLoss(packet);
 		}
 	}
 	
