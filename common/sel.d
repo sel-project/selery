@@ -123,13 +123,14 @@ const struct Software {
 
 enum supportedPocketProtocols = cast(string[][uint])[
 	100: ["1.0.0", "1.0.1", "1.0.2"],
-	101: ["1.0.3"],
+	101: ["1.0.3", "1.0.4"],
 ];
 
 enum supportedMinecraftProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
+	//317: ["1.12"],
 ];
 
 enum latestPocketProtocols = latest(supportedPocketProtocols);

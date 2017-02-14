@@ -693,8 +693,6 @@ final class PocketSession : PlayerSession {
 						this.n_input_mode = HncomAdd.TOUCH;
 					}
 
-					if(os && input) log(username, " ", *os, " ", *input);
-
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.settings.whitelist) {
 						with(this.server.whitelist) {
@@ -726,7 +724,7 @@ final class PocketSession : PlayerSession {
 						throw new Exception("disconnectionScreen.loggedinOtherLocation");
 					}
 
-					this.n_username = this.n_display_name = username.idup;
+					this.n_username = this.m_display_name = username.idup;
 					cast()this.n_uuid = uuid;
 
 					static if(__pocketEncryption) {

@@ -87,7 +87,7 @@
 						}
 						var players = players.sort(function(a,b){ return unformat(a.name.toLowerCase()).localeCompare(unformat(b.name.toLowerCase())); });
 						for(var i in players) {
-							document.getElementById("players_list").innerHTML += "<a href='javascript:show_player(" + players[i].id + ");'>" + format(players[i].name.replace(/ /g, "&nbsp;")) + "</a>" + (i != players.length - 1 ? ", " : "");
+							document.getElementById("players_list").innerHTML += "<a href='#" + players[i].id + "'>" + format(players[i].name.replace(/ /g, "&nbsp;")) + "</a>" + (i != players.length - 1 ? ", " : "");
 						}
 					}
 					var online = status != null;
@@ -129,13 +129,20 @@
 				document.body.innerHTML = document.body.innerHTML.replace(/{IP}/gm, location.hostname);
 				fetch_json();
 			});
+			window.addEventListener("hashchange", function(){
+				if(location.hash.length >= 1) {
+					show_player(location.hash.substr(1));
+				} else {
+					hide_player();
+				}
+			});
 			function show_player(player) {
 				var request = new XMLHttpRequest();
 				request.overrideMimeType("application/json");
 				request.open("GET", "/player/" + player + ".json");
 				request.onload = function(){
 					showed_player = player;
-					var json = JSON.parse(request.responseText.replace(/\n/g, ""));
+					var json = JSON.parse(request.responseText/*.replace(/\n/g, "")*/);
 					document.getElementById("server").style.display = "none";
 					document.getElementById("player").style.display = "";
 					document.getElementById("icon").style.display = "none";
@@ -159,6 +166,12 @@
 					}
 				};
 				request.send();
+			}
+			function hide_player() {
+				document.getElementById("server").style.display = "";
+				document.getElementById("player").style.display = "none";
+				document.getElementById("icon").style.display = "";
+				document.getElementById("player_pic").style.display = "none";
 			}
 			function unformat(str) {
 				return str.replace(/\u00A7[a-z0-9]/gmi, "");

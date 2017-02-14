@@ -467,7 +467,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 	}
 
 	private shared void handleLogin(ubyte[] payload) {
-		this.n_username = this.n_display_name = Login.LoginStart.fromBuffer(payload).username.idup;
+		this.n_username = this.m_display_name = Login.LoginStart.fromBuffer(payload).username.idup;
 		this.send(new Login.SetCompression(1024).encode());
 		// disconnect if wrong protocol or name
 		auto protocols = this.server.settings.minecraftProtocols;

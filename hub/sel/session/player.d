@@ -50,10 +50,11 @@ abstract class PlayerSession : Session {
 	protected shared UUID n_uuid;
 	
 	protected shared string n_username;
-	protected shared string n_display_name;
+	protected shared string m_display_name;
 
-	protected shared string n_world;
-	protected shared byte n_dimension;
+	protected shared string m_world;
+	protected shared byte m_dimension;
+	protected shared uint m_view_distance;
 	
 	protected shared Address n_address;
 	protected shared string n_server_address;
@@ -152,7 +153,7 @@ abstract class PlayerSession : Session {
 	 * by the login packet.
 	 * It doesn't change during the life of the session.
 	 */
-	public final shared nothrow @property @safe @nogc const(string) username() {
+	public final shared nothrow @property @safe @nogc string username() {
 		return this.n_username;
 	}
 	
@@ -163,7 +164,7 @@ abstract class PlayerSession : Session {
 	 * assert(session.username.toLower == session.iusername);
 	 * ---
 	 */
-	public final shared @property @safe const(string) iusername() {
+	public final shared @property @safe string iusername() {
 		return this.n_username.toLower;
 	}
 	
@@ -173,33 +174,41 @@ abstract class PlayerSession : Session {
 	 * the session's lifetime (if modified by a node).
 	 * It's usually displayed in the nametag and in the players list.
 	 */
-	public final shared nothrow @property @safe @nogc const(string) displayName() {
-		return this.n_display_name;
+	public final shared nothrow @property @safe @nogc string displayName() {
+		return this.m_display_name;
 	}
 
-	public final shared nothrow @property @safe @nogc const(string) displayName(string displayName) {
-		return this.n_display_name = displayName;
+	public final shared nothrow @property @safe @nogc string displayName(string displayName) {
+		return this.m_display_name = displayName;
 	}
 
 	/**
 	 * Gets the player's world, which is updated by the node every
 	 * time the client changes dimension.
 	 */
-	public final shared nothrow @property @safe @nogc const(string) world() {
-		return this.n_world;
+	public final shared nothrow @property @safe @nogc string world() {
+		return this.m_world;
 	}
 	
-	public final shared nothrow @property @safe @nogc const(string) world(string world) {
-		return this.n_world = world;
+	public final shared nothrow @property @safe @nogc string world(string world) {
+		return this.m_world = world;
 	}
 
 	/// ditto
-	public final shared nothrow @property @safe @nogc const(byte) dimension() {
-		return this.n_dimension;
+	public final shared nothrow @property @safe @nogc byte dimension() {
+		return this.m_dimension;
 	}
 
-	public final shared nothrow @property @safe @nogc const(byte) dimension(byte dimension) {
-		return this.n_dimension = dimension;
+	public final shared nothrow @property @safe @nogc byte dimension(byte dimension) {
+		return this.m_dimension = dimension;
+	}
+
+	public final shared nothrow @property @safe @nogc uint viewDistance() {
+		return this.m_view_distance;
+	}
+
+	public final shared nothrow @property @safe @nogc uint viewDistance(uint viewDistance) {
+		return this.m_view_distance = viewDistance;
 	}
 
 	/**
@@ -236,7 +245,7 @@ abstract class PlayerSession : Session {
 	 * Not being calculated using an ICMP protocol the value may not be
 	 * completely accurate.
 	 */
-	public abstract shared nothrow @property @safe @nogc immutable(uint) latency();
+	public abstract shared nothrow @property @safe @nogc uint latency();
 	
 	/**
 	 * Gets the player's latency.
@@ -246,18 +255,18 @@ abstract class PlayerSession : Session {
 	 * If the client uses a stream-oriented connection the value
 	 * will always be 0.
 	 */
-	public shared nothrow @property @safe @nogc immutable(float) packetLoss() {
+	public shared nothrow @property @safe @nogc float packetLoss() {
 		return 0f;
 	}
 	
 	/**
 	 * Gets/sets the player's language, indicated as code_COUNTRY.
 	 */
-	public final shared nothrow @property @safe @nogc const(string) language() {
+	public final shared nothrow @property @safe @nogc string language() {
 		return this.n_language;
 	}
 
-	public final shared nothrow @property @safe @nogc const(string) language(string language) {
+	public final shared nothrow @property @safe @nogc string language(string language) {
 		return this.n_language = language;
 	}
 	
