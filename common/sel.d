@@ -115,15 +115,24 @@ const struct Software {
 
 	enum ubyte api = 1;
 
+	enum sul = 4;
+
 	enum ubyte hncom = 1;
 
 	enum ubyte externalConsole = 2;
 
 }
 
+static if(!is(typeof(__sul))) {
+	enum __sul = Software.sul;
+}
+
+static assert(__sul >= Software.sul, "sul is outdated. Update it with 'sel update utils' and try again");
+
 enum supportedPocketProtocols = cast(string[][uint])[
 	100: ["1.0.0", "1.0.1", "1.0.2"],
-	101: ["1.0.3", "1.0.4"],
+	101: ["1.0.3"],
+	//102: ["1.0.4"],
 ];
 
 enum supportedMinecraftProtocols = cast(string[][uint])[

@@ -444,29 +444,10 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 	
 	/**
-	 * Gets the entity's position, as a vector or direclty with coordinates.
-	 * Example:
-	 * ---
-	 * assert(entity.position.x == entity.x);
-	 * ---
+	 * Gets the entity's position.
 	 */
 	public pure nothrow @property @safe @nogc EntityPosition position() {
 		return this.m_position;
-	}
-
-	/// ditto
-	public final pure nothrow @property @safe @nogc float x() {
-		return this.m_position.x;
-	}
-
-	/// ditto
-	public final pure nothrow @property @safe @nogc float y() {
-		return this.m_position.y;
-	}
-
-	/// ditto
-	public final pure nothrow @property @safe @nogc float z() {
-		return this.m_position.z;
 	}
 
 	/**
@@ -568,13 +549,6 @@ abstract class Entity : EventListener!WorldEvent {
 		float x = -xz * sin(this.yaw * PI / 180f);
 		float z = xz * cos(this.yaw * PI / 180f);
 		return EntityPosition(x, y, z);
-	}
-
-	/**
-	 * Performs a knockback on the entity changing its motion.
-	 */
-	public @safe void knockback(EntityPosition direction, float power) {
-		this.motion = direction * [power, 0f, power] + [0f, .4f, 0f];
 	}
 
 	/**

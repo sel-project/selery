@@ -14,14 +14,21 @@
  */
 module sel.event.world.world;
 
+import common.sel;
+
 import sel.entity.entity : Entity;
 import sel.event.event : Event, Cancellable;
 import sel.math.vector : EntityPosition;
 import sel.world.world : World;
 
-/** Base world event */
+/**
+ * Generic event related to the world.
+ */
 interface WorldEvent : Event {
 
+	/**
+	 * Gets the world where the event has happened.
+	 */
 	public pure nothrow @property @safe @nogc World world();
 
 	public static mixin template Implementation() {
@@ -36,120 +43,120 @@ interface WorldEvent : Event {
 
 }
 
-/** Generic weather event that can be cancelled with event.cancel() */
-abstract class WeatherEvent : WorldEvent, Cancellable {
-	
+/**
+ * Called it starts to rain or snow in the world.
+ */
+final class StartRainEvent : WorldEvent, Cancellable {
+
 	mixin Cancellable.Implementation;
-	
+
 	mixin WorldEvent.Implementation;
 
-	public @safe @nogc this(World world) {
+	private tick_t m_duration;
+
+	public pure nothrow @safe @nogc this(World world, tick_t duration) {
+		this.n_world = world;
+		this.m_duration = duration;
+	}
+
+	/**
+	 * Gets the duration of the precipitations is ticks.
+	 */
+	public pure nothrow @property @safe @nogc tick_t duration() {
+		return this.m_duration;
+	}
+
+	/**
+	 * Sets the duration of the precipitation in ticks.
+	 * Example:
+	 * ---
+	 * event.duration = 1;
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc tick_t duration(tick_t duration) {
+		return this.m_duration = duration;
+	}
+
+}
+
+/// ditto
+alias StartSnowEvent = StartRainEvent;
+
+/**
+ * Event called when it stops to rain or snow in the world.
+ */
+final class StopRainEvent : WorldEvent {
+
+	mixin WorldEvent.Implementation;
+
+	public pure nothrow @safe @nogc this(World world) {
 		this.n_world = world;
 	}
 
 }
 
-/** 
- * Generic atmospheric event
- * Params:
- * 		active: true if the atmospheric event is starting, false otherwise
- * 		time: if the event is starting, the duration in ticks of the atmospheric event
- */
-abstract class AtmosphericEvent : WeatherEvent {
-	
-	public immutable bool active;
-	public uint time;
-	
-	public @safe @nogc this(World world, bool active, uint time) {
-		super(world);
-		this.active = active;
-		this.time = time;
-	}
-	
-}
-
-/** Generic precipitation event (rain and snow) */
-abstract class PrecipitationEvent : AtmosphericEvent {
-
-	public @safe @nogc this(World world, bool active, uint time) {
-		super(world, active, time);
-	}
-
-	alias raining = this.active;
-	alias snowing = this.active;
-
-}
-
-/** Called when precipitations start */
-final class PrecipitationStartEvent : PrecipitationEvent {
-
-	public @safe @nogc this(World world, uint time) {
-		super(world, true, time);
-	}
-
-}
-
-/** Called when precipitations end */
-final class PrecipitationEndEvent : PrecipitationEvent {
-
-	public @safe @nogc this(World world) {
-		super(world, false, 0);
-	}
-
-}
-
-/** Generic storm event (if raining/snowing lighting can randmly strike) */
-abstract class StormEvent : AtmosphericEvent {
-
-	public @safe @nogc this(World world, bool active, uint time) {
-		super(world, active, time);
-	}
-
-}
-
-/** Called when a strom starts */
-final class StormStartEvent : StormEvent {
-
-	public @safe @nogc this(World world, uint time) {
-		super(world, true, time);
-	}
-
-}
-
-/** Called when a strom ends */
-final class StormEndEvent : StormEvent {
-
-	public @safe @nogc this(World world) {
-		super(world, false, 0);
-	}
-
-}
+/// ditto
+alias StopSnowEvent = StopRainEvent;
 
 /**
- * Called when a lighting strike in the world
- * if the lightning strikes an entity, target will contains it
+ * Event called when a lighting strikes in the world.
  */
-final class LightningStrikeEvent : WeatherEvent {
+final class LightningStrikeEvent : WorldEvent, Cancellable {
+
+	mixin Cancellable.Implementation;
+
+	mixin WorldEvent.Implementation;
 
 	private EntityPosition n_position;
 	private Entity n_target;
 
-	public @safe @nogc this(World world, EntityPosition position) {
-		super(world);
+	public pure nothrow @safe @nogc this(World world, EntityPosition position) {
+		this.n_world = world;
 		this.n_position = position;
 	}
 
-	public @safe @nogc this(World world, Entity target) {
+	public pure nothrow @safe @nogc this(World world, Entity target) {
 		this(world, target.position);
 		this.n_target = target;
 	}
 
-	public @property @safe @nogc EntityPosition position() {
+	/**
+	 * Gets the position where the lightning has struck.
+	 */
+	public pure nothrow @property @safe @nogc EntityPosition position() {
 		return this.n_position;
 	}
 
-	public @property @safe @nogc Entity target() {
+	/**
+	 * Gets the target of the lightning, it may be null if the lightning
+	 * struck randomly.
+	 */
+	public pure nothrow @property @safe @nogc Entity target() {
 		return this.n_target;
+	}
+
+}
+
+interface ExplosionEvent : WorldEvent, Cancellable {
+
+	public pure nothrow @property @safe @nogc float power();
+
+	public pure nothrow @property @safe @nogc float power(float power);
+
+	mixin template Implementation() {
+
+		mixin Cancellable.Implementation;
+
+		private float m_power;
+
+		public override pure nothrow @property @safe @nogc float power() {
+			return this.m_power;
+		}
+
+		public override pure nothrow @property @safe @nogc float power(float power) {
+			return this.m_power = power;
+		}
+
 	}
 
 }

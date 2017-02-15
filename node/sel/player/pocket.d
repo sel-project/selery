@@ -465,8 +465,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void sendGamemode() {
-		this.sendPacket(new Play.SetPlayerGametype(this.gamemode & 1));
-		//this.sendPacket(new Play.SetPlayerGametype(this.creative ? Play.SetPlayerGametype.CREATIVE : Play.SetPlayerGametype.SURVIVAL));
+		this.sendPacket(new Play.SetPlayerGameType(this.gamemode & 1));
 		if(this.creative) {
 			if(!this.has_creative_inventory) {
 				this.sendPacketPayload(creative_inventory);
@@ -840,6 +839,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					overloads[to!string(i)] = JSONValue(["input": ["parameters": JSONValue(params)], "output": (JSONValue[string]).init]);
 				}
 				current["overloads"] = overloads;
+				if(command.hidden) {
+					current["is_hidden"] = true;
+				}
 				json[command.command] = JSONValue(["versions": [JSONValue(current)]]);
 			}
 		}
@@ -995,7 +997,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	//protected void handlePlayerInputPacket(typeof(Play.PlayerInput.motion) motion, ushort flags, bool unknown) {}
 
-	protected void handleSetPlayerGametypePacket(int gamemode) {
+	protected void handleSetPlayerGameTypePacket(int gamemode) {
 		if(this.op) {
 			this.gamemode = gamemode & 1;
 		} else {

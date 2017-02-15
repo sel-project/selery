@@ -285,7 +285,7 @@ class EntityDamageByCommandEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 10000, "{death.attack.generic}");
+		this.entityDamage(entity, 0xFFFF, "{death.attack.generic}");
 	}
 
 	public final override pure nothrow @property @safe @nogc bool imminent() {
@@ -296,7 +296,7 @@ class EntityDamageByCommandEvent : EntityDamageEvent {
 
 // attack (contact)
 
-class EntityAttackedByEntityEvent : EntityDamageByEntityEvent {
+class EntityDamageByEntityAttackEvent : EntityDamageByEntityEvent {
 
 	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.RESISTANCE | Modifiers.ARMOR);
 	
@@ -311,7 +311,9 @@ class EntityAttackedByEntityEvent : EntityDamageByEntityEvent {
 
 }
 
-class EntityAttackedByPlayerEvent : EntityAttackedByEntityEvent, PlayerEvent {
+deprecated alias EntityAttackedByEntityEvent = EntityDamageByEntityAttackEvent;
+
+class EntityDamageByPlayerAttackEvent : EntityDamageByEntityAttackEvent, PlayerEvent {
 	
 	private Item n_item;
 	
@@ -364,7 +366,9 @@ class EntityAttackedByPlayerEvent : EntityAttackedByEntityEvent, PlayerEvent {
 
 }
 
-final class PlayerAttackedByPlayerEvent : EntityAttackedByPlayerEvent {
+deprecated alias EntityAttackedByPlayerEvent = EntityDamageByPlayerAttackEvent;
+
+final class PlayerDamageByPlayerAttackEvent : EntityDamageByPlayerAttackEvent {
 
 	public @safe this(Player victim, Player damager) {
 		super(victim, damager);
@@ -375,6 +379,8 @@ final class PlayerAttackedByPlayerEvent : EntityAttackedByPlayerEvent {
 	}
 
 }
+
+deprecated alias PlayerAttackedByPlayerEvent = PlayerDamageByPlayerAttackEvent;
 
 // projectile
 /*
@@ -713,4 +719,22 @@ final class EntityDoomedToFallEvent : EntityFallDamageEvent, EntityDamageByEntit
 	mixin Cancellable.FinalImplementation;
 
 }
-
+/+
+/**
+ * Example:
+ * ---
+ * assert(is(GetDamageEvent!("void", Entity) == EntityDamageByVoidEvent));
+ * ---
+ */
+template GetDamageEvent(string type, V:Entity=Entity, A=Object) {
+	static if(type == "void") {
+		static if(is(A : Entity)) {
+			alias GetDamageEvent = EntityPushedIntoVoidEvent;
+		} else {
+			alias GetDamageEvent = EntityDamageByVoidEvent;
+		}
+	} else {
+		static assert(0, "Cannot get a damage event");
+	}
+}
++/

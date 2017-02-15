@@ -18,6 +18,8 @@ import sel.player : Player;
 import sel.block.block : Block;
 import sel.entity : Entity, ItemEntity;
 import sel.event.event : Cancellable;
+import sel.event.world.damage : EntityDamageEvent;
+import sel.event.world.entity : EntityDeathEvent;
 import sel.event.world.world;
 import sel.item : Slot, Item;
 import sel.math.vector : BlockPosition, EntityPosition, ChunkPosition;
@@ -280,6 +282,22 @@ final class PlayerStopSneakingEvent : PlayerSneakingEvent {
 		super(player);
 	}
 	
+}
+
+final class PlayerDeathEvent : EntityDeathEvent, PlayerEvent {
+
+	private Player n_player;
+
+	public @safe @nogc this(Player player, EntityDamageEvent cause) {
+		super(player, cause);
+		this.message = true;
+		this.n_player = player;
+	}
+
+	public override pure nothrow @property @safe @nogc Player player() {
+		return this.n_player;
+	}
+
 }
 
 final class PlayerAnimationEvent : PlayerEvent, Cancellable {

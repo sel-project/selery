@@ -889,6 +889,13 @@ abstract class Player : Human {
 		super.broadcastMetadata();
 		this.sendMetadata(this);
 	}
+
+	protected override EntityDeathEvent callDeathEvent(EntityDamageEvent last) {
+		auto event = new PlayerDeathEvent(this, last);
+		this.world.callEvent(event);
+		//TODO reset inventory, etc
+		return event;
+	}
 	
 	/**
 	 * Checks if this player has a specific command.
@@ -1130,12 +1137,8 @@ abstract class Player : Human {
 			string filter = spl.length ? spl[$-1].toLower : "";
 			if(spl.length <= 1) {
 				// send a command
-				if(this.operator) {
-					entries = this.commands_not_aliases.keys;
-				} else {
-					foreach(name, command; this.commands_not_aliases) {
-						if(!command.op) entries ~= name;
-					}
+				foreach(name, command; this.commands_not_aliases) {
+					if(!command.hidden && (!command.op || this.operator)) entries ~= name;
 				}
 			} else {
 				auto cmd = spl[0].toLower in this.commands;

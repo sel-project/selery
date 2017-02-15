@@ -128,7 +128,7 @@ struct Plugin {
 						} else {
 							enum p = new string[0];
 						}
-						server.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op));
+						server.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op), hasUDA!(func, hidden));
 					}
 					// tasks
 					static if(hasUDA!(func, task)) {
@@ -206,6 +206,8 @@ struct params {
 }
 
 enum op;
+
+enum hidden;
 
 struct task {
 

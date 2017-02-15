@@ -85,7 +85,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					} else {
 						enum p = new string[0];
 					}
-					world.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op));
+					world.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op), hasUDA!(func, hidden));
 				}
 				static if(hasUDA!(func, task)) {
 					mixin("auto del = &world." ~ fname ~ ";");
@@ -1285,9 +1285,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
 		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op);
+		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
 		(*ptr).add!func(del, params);
 	}

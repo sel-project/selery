@@ -58,6 +58,10 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
 	private Delegate[][class_t] delegates;
 
+	/**
+	 * Adds an event through a delegate.
+	 * Returns: an id that can be used to unregister the event
+	 */
 	public @trusted size_t addEventListener(T)(void delegate(T) listener) if(is(T == class) && is(T : O) || is(T == interface)) {
 		this.delegates[hash!T] ~= Delegate(cast(void delegate(void*))listener, count);
 		return count++;
@@ -78,6 +82,15 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
 	/**
 	 * Removes an event listener using its delegate pointer.
+	 * Returns: true if one or more event have been removed, false otherwise
+	 * Example:
+	 * ---
+	 * // add
+	 * example.addEventListener(&event);
+	 * 
+	 * // remove
+	 * assert(example.removeEventListener(&event));
+	 * ---
 	 */
 	public @trusted bool removeEventListener(T)(void delegate(T) listener) {
 		bool removed = false;
@@ -100,6 +113,15 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
 	/**
 	 * Removes an event listener using its assigned id.
+	 * Returns: true if the event has been removed, false otherwise
+	 * Example:
+	 * ---
+	 * // add
+	 * auto id = example.addEventListener(&event);
+	 * 
+	 * // remove
+	 * assert(example.removeEventListener(id));
+	 * ---
 	 */
 	public @safe bool removeEventListener(size_t count) {
 		foreach(i, delegates; this.delegates) {
@@ -119,7 +141,9 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	}
 	
 	/**
-	 * Returns: the instance of the event
+	 * Calls an event.
+	 * Events are always called in the order they are registered, even 
+	 * in the inheritance.
 	 */
 	public void callEvent(T:O)(ref T event) if(is(T == class) && !isAbstractClass!T) {
 		Callable[] callables = this.callablesOf(event);
@@ -134,8 +158,7 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 		}
 	}
 
-	public Callable[] callablesOf(T:O)(ref T event) if(is(T == class) && !isAbstractClass!T) {
-		import sel.util.log;
+	protected Callable[] callablesOf(T:O)(ref T event) if(is(T == class) && !isAbstractClass!T) {
 		Callable[] callables;
 		foreach_reverse(E ; TypeTuple!(T, BaseClassesTuple!T[0..$-1], InterfacesTuple!T)) {
 			auto ptr = hash!E in this.delegates;
@@ -159,6 +182,12 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 		return Callable((){(cast(void delegate(E))del)(event);}, count);
 	}
 
+	/**
+	 * Calls an event only if it exists.
+	 * This should be used when a event is used only to notify
+	 * the plugin of it.
+	 * Returns: the instance of the event or null if the event hasn't been called
+	 */
 	public T callEventIfExists(T:O, E...)(E args) if(is(T == class) && !isAbstractClass!T && __traits(compiles, new T(args))) {
 		T event = new T(args);
 		this.callEvent(event);
@@ -166,6 +195,7 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	}
 
 	/**
+	 * Calls a cancellable event using `callEventIfExists`.
 	 * Returns: true if the event has been cancelled, false otherwise
 	 */
 	public bool callCancellableIfExists(T:O, E...)(E args) if(is(T == class) && !isAbstractClass!T && __traits(compiles, new T(args)) && is(T : Cancellable)) {
@@ -187,13 +217,44 @@ private bool areValidChildren(T, C...)() {
 	return true;
 }
 
+/**
+ * Base interface of the event. Every valid event instance (that is not an interface)
+ * must implement this interface.
+ */
 interface Event {}
 
+/**
+ * Indicates that the event is cancellable and its propagation
+ * can be stopped by plugins.
+ */
 interface Cancellable {
 
+	/**
+	 * Cancels the event.
+	 * A cancelled event is not propagated further to the next listeners,
+	 * if there's any.
+	 * Example:
+	 * ---
+	 * example += (Canc event){ log("1"); };
+	 * example += (Canc event){ log("2"); event.cancel(); };
+	 * example += (Canc event){ log("3"); };
+	 * assert(event.callCancellableIfExists!Canc());
+	 * ---
+	 * The example will print
+	 * ---
+	 * 1
+	 * 2
+	 * ---
+	 */
 	public pure nothrow @safe @nogc void cancel();
 
+	/**
+	 * Indicates whether the event has been cancelled.
+	 * A cancelled event cannot be uncancelled.
+	 */
 	public pure nothrow @property @safe @nogc bool cancelled();
+
+	alias canceled = cancelled;
 
 	public static mixin template Implementation() {
 
@@ -222,3 +283,5 @@ interface Cancellable {
 	}
 
 }
+
+alias Cancelable = Cancellable;

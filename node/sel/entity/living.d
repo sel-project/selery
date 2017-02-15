@@ -49,13 +49,12 @@ abstract class Living : Entity {
 	public this(World world, EntityPosition position, uint health, uint max) {
 		super(world, position);
 		this.m_health = Health(health, max);
-		//this.metadata[DATA_AIR] = to!ushort(300);
 	}
 
 	public override void tick() {
 		super.tick();
 		//void
-		if(this.y < 0 && this.last_void_damage + 10 > this.ticks) {
+		if(this.position.y < -4 && this.last_void_damage + 10 < this.ticks) {
 			this.last_void_damage = this.ticks;
 			if(this.last_puncher is null) {
 				this.attack(new EntityDamageByVoidEvent(this));
@@ -172,11 +171,9 @@ abstract class Living : Entity {
 
 		//update the viewers if dead
 		if(this.dead) {
-			//TODO add the rules to the event (keep inventory, drop inventory, kep xp, etc)
-			EntityDeathEvent death = new EntityDeathEvent(this, event);
-			this.world.callEvent(death);
+			auto death = this.callDeathEvent(event);
 			if(death.message != "") {
-				this.world.broadcast(event.message, event.args);
+				this.world.broadcast(death.message, death.args);
 			}
 			this.die();
 		} else if(cast(EntityAttackedByEntityEvent)event) {
@@ -187,6 +184,12 @@ abstract class Living : Entity {
 			}
 			this.last_puncher = casted.damager;
 		}
+	}
+
+	protected EntityDeathEvent callDeathEvent(EntityDamageEvent last) {
+		auto event = new EntityDeathEvent(this, last);
+		this.world.callEvent(event);
+		return event;
 	}
 
 	public @trusted void heal(EntityHealEvent event) {
@@ -216,10 +219,6 @@ abstract class Living : Entity {
 	 * Die and send the packets to the viewers
 	 */
 	protected void die() {
-		/*EntityEvent packet = new EntityEvent(this, EntityEvent.DEATH_ANIMATION);
-		foreach(Player player ; this.viewers!Player) {
-			player.sendPacket(packet);
-		}*/
 		this.viewers!Player.call!"sendDeathAnimation"(this);
 		if((this.despawn_after = this.despawnAfter) == 0) {
 			this.despawn();

@@ -411,6 +411,13 @@ class Node : Session {
 							(*player).dimension = uw.dimension;
 						}
 						break;
+					case Player.UpdateViewDistance.ID:
+						auto uvd = Player.UpdateViewDistance.fromBuffer(payload);
+						auto player = uvd.hubId in this.players;
+						if(player) {
+							(*player).viewDistance = uvd.viewDistance;
+						}
+						break;
 					case Player.UpdateLanguage.ID:
 						auto ul = Player.UpdateLanguage.fromBuffer(payload);
 						auto player = ul.hubId in this.players;
@@ -637,7 +644,7 @@ class Node : Session {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.username, player.displayName, player.dimension, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.language, player.inputMode, player.latency);
+		auto packet = new Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.username, player.displayName, player.dimension, player.viewDistance, hncomAddress(player.address), player.serverAddress, player.serverPort, cast()player.uuid, hncomSkin(player.skin), player.language, player.inputMode, player.latency);
 		this.send(player.encodeHncomAddPacket(packet));
 	}
 	

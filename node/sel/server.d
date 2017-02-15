@@ -1140,9 +1140,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
 		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op);
+		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
 		(*ptr).add!func(del, params);
 	}
@@ -1487,6 +1487,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 						nodes ~= node.name ~ " (" ~ node.hubId.to!string ~ ")";
 					}
 					command_log(id, "Nodes: ", nodes.join(", "));
+					break;
+				case "op":
+					Commands.console(&Commands.op, args, id);
 					break;
 				case "say":
 					this.broadcast("{lightpurple}" ~ args.join(" "));

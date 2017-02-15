@@ -179,15 +179,17 @@ class Command {
 	immutable string[] aliases;
 
 	immutable bool op;
+	immutable bool hidden;
 	
 	Cmd[] overloads;
 	
-	this(string command, string description="", string[] aliases=[], bool op=false) {
+	this(string command, string description="", string[] aliases=[], bool op=false, bool hidden=false) {
 		this.id = count++;
 		this.command = command.toLower;
 		this.description = description;
 		this.aliases = aliases.idup;
 		this.op = op;
+		this.hidden = hidden;
 	}
 
 	void add(alias func)(void delegate(Parameters!func) del, string[] params) if(Parameters!func.length >= 1 && is(Parameters!func[0] == Player)) {
@@ -427,6 +429,14 @@ final class Commands {
 		if(!players.length) return Message("{red}{commands.notonline}", []);
 		foreach(player ; players) player.attack(new EntityDamageByCommandEvent(player));
 		return Message("{green}{commands.kill.killed}", []);
+	}
+
+	public static Message op(arguments args) {
+		if(args.length < 1) return Message("{red}{commands.op.usage}", []);
+		auto players = server.playersWithName(args[0]);
+		if(!players.length) return Message("{red}{commands.notonline}", []);
+		foreach(player ; players) player.operator = true;
+		return Message("{green}{commands.op.success}", []);
 	}
 
 	/**

@@ -79,7 +79,7 @@ final class EntityHealEvent : EntityEvent, Cancellable {
 
 }
 
-final class EntityDeathEvent : EntityEvent {
+class EntityDeathEvent : EntityEvent {
 
 	mixin EntityEvent.Implementation;
 
@@ -88,10 +88,9 @@ final class EntityDeathEvent : EntityEvent {
 	private string m_message;
 	private string[] m_args;
 
-	public @safe this(Living entity, EntityDamageEvent damage) {
+	public @safe @nogc this(Living entity, EntityDamageEvent damage) {
 		this.n_entity = entity;
 		this.n_damage = damage;
-		if(cast(Player)entity) this.message = true;
 	}
 
 	public pure nothrow @property @safe @nogc EntityDamageEvent damageEvent() {
@@ -102,17 +101,17 @@ final class EntityDeathEvent : EntityEvent {
 		return this.m_message;
 	}
 
-	public pure nothrow @property @safe string message(string message) {
-		return this.m_message = message is null ? "" : message;
+	public pure nothrow @property @safe @nogc string message(string message) {
+		return this.m_message = message;
 	}
 
-	public pure nothrow @property @safe string message(bool display) {
+	public pure nothrow @property @safe @nogc string message(bool display) {
 		if(display) {
 			this.m_message = this.damageEvent.message;
 			this.m_args = this.damageEvent.args;
 		} else {
 			this.m_message = "";
-			this.m_args.length = 0;
+			this.m_args = [];
 		}
 		return this.message;
 	}
