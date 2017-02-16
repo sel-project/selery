@@ -279,7 +279,9 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 					}
 				}();
 				error_log(translate("{status." ~ reason ~ "}", this.n_settings.language, []));
-				if(response.protocol != Software.hncom) error_log(translate("{warning.protocolRequired}", this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
+				if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
+					error_log(translate("{warning.protocolRequired}", this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
+				}
 			}
 		} else {
 			error_log(translate("{warning.refused}", this.n_settings.language, []));
@@ -311,22 +313,22 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			this.n_max = info.max;
 
 			try {
-				auto social = parseJSON(info.socialJson).object;
-				if("website" in social) this.n_social.website = social["website"].str;
-				if("facebook" in social) this.n_social.facebook = social["facebook"].str;
-				if("twitter" in social) this.n_social.twitter = social["twitter"].str;
-				if("youtube" in social) this.n_social.youtube = social["youtube"].str;
-				if("instagram" in social) this.n_social.instagram = social["instagram"].str;
-				if("google_plus" in social) this.n_social.googlePlus = social["google_plus"].str;
-			} catch(JSONException) {}
-			try {
 				auto additional = parseJSON(info.additionalJson).object;
 				auto minecraft = "minecraft" in additional;
+				auto social = "social" in additional;
 				if(minecraft && (*minecraft).type == JSON_TYPE.OBJECT) {
 					auto edu = "edu" in *minecraft;
 					auto realm = "realm" in *minecraft;
 					this.n_settings.edu = edu && (*edu).type == JSON_TYPE.TRUE;
 					this.n_settings.realm = realm && (*realm).type == JSON_TYPE.TRUE;
+				}
+				if(social && (*social).type == JSON_TYPE.OBJECT) {
+					if("website" in *social) this.n_social.website = (*social)["website"].str;
+					if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
+					if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
+					if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
+					if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
+					if("google_plus" in *social) this.n_social.googlePlus = (*social)["google_plus"].str;
 				}
 			} catch(JSONException) {}
 

@@ -18,7 +18,7 @@ version(Realm) { void main(string[] args) {} } else:
 
 version(Windows) import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
 
-import std.algorithm : sort, canFind;
+import std.algorithm : sort, canFind, clamp;
 import std.array : join, split, replace;
 import std.ascii : newline;
 static import std.bitmanip;
@@ -185,14 +185,14 @@ void main(string[] args) {
 	write(active, rewrite.join(newline) ~ newline);
 
 
-	//order
+	// order
 	Info[] ordered = info.values;
 	foreach(ref inf ; ordered) {
-		inf.prior = inf.priority == "high" ? 10 : (inf.priority == "medium" ? 5 : inf.prior);
+		inf.prior = inf.priority == "high" ? 10 : (inf.priority == "medium" ? 5 : clamp(inf.prior, 0, 10));
 	}
 	sort!"a.prior == b.prior ? a.id < b.id : a.prior > b.prior"(ordered);
 
-	//control api version
+	// control api version
 	foreach(ref Info inf ; ordered) {
 		if(inf.active) {
 			long[] api;
@@ -203,6 +203,14 @@ void main(string[] args) {
 				} else if((*ptr).type == JSON_TYPE.ARRAY) {
 					foreach(v ; (*ptr).array) {
 						if(v.type == JSON_TYPE.INTEGER) api ~= v.integer;
+					}
+				} else if((*ptr).type == JSON_TYPE.OBJECT) {
+					auto from = "from" in *ptr;
+					auto to = "to" in *ptr;
+					if(from && (*from).type == JSON_TYPE.INTEGER && to && (*to).type == JSON_TYPE.INTEGER) {
+						foreach(a ; (*from).integer..(*to).integer+1) {
+							api ~= a;
+						}
 					}
 				}
 			}

@@ -509,54 +509,55 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendChunk(Chunk chunk) {
 
-		auto writer = Writer(BigEndianBuffer.instance);
+		Types.ChunkData data;
 
 		auto sections = chunk.sections;
 		size_t[] keys = sections.keys;
 		sort(keys);
-		ubyte top = /*keys.length ? to!ubyte(keys[$-1] + 1) : 0*/8;
-		writer.write(top);
+		static if(__protocol <= 101) {
+			// https://bugs.mojang.com/browse/MCPE-19818
+			ubyte top = 16;
+		} else {
+			ubyte top = keys.length ? to!ubyte(keys[$-1] + 1) : 0;
+		}
 		foreach(size_t i ; 0..top) {
-			writer.write!ubyte(0); // storage version
+			Types.Section section;
 			auto section_ptr = i in sections;
 			if(section_ptr) {
-				writer.reserve(16*16*16 + 16*16*8 + 16*16*8 + 16*16*8);
-				ubyte[] meta = new ubyte[16*16*8];
-				auto section = *section_ptr;
+				auto s = *section_ptr;
 				foreach(ubyte x ; 0..16) {
 					foreach(ubyte z ; 0..16) {
 						foreach(ubyte y ; 0..16) {
-							auto ptr = section[x, y, z];
+							auto ptr = s[x, y, z];
 							if(ptr && *ptr) {
 								Block block = **ptr;
-								writer.write!ubyte(block.ids.pe);
-								meta[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.metas.pe << (y % 2 == 1 ? 4 : 0));
-							} else {
-								writer.write!ubyte(0);
+								section.blockIds[x << 8 | z << 4 | y] = block.ids.pe;
+								if(block.metas.pe) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.metas.pe << (y % 2 == 1 ? 4 : 0));
 							}
 						}
 					}
 				}
-				writer ~= meta;
-				writer ~= section.skyLight;
-				writer ~= section.blocksLight;
+				section.skyLight = s.skyLight;
+				section.blockLight = s.blocksLight;
 			} else {
-				ubyte[] data = new ubyte[16*16*16 + 16*16*8*3];
-				data[$-16*16*16..$] = 255;
-				writer ~= data;
+				section.skyLight = 255;
+				section.blockLight = 255;
 			}
+			data.sections ~= section;
 		}
-		writer ~= chunk.lights;
-		writer ~= chunk.biomes;
-		writer ~= varuint.encode(0); // extra data
+		//data.heights = chunk.lights;
+		data.biomes = chunk.biomes;
+		//TODO extra data
 
-		this.sendPacket(new Play.FullChunkData(tuple!(typeof(Play.FullChunkData.position))(chunk.position), writer));
+		//TODO tiles
 
-		if(chunk.translatable_tiles.length > 0) {
+		this.sendPacket(new Play.FullChunkData(tuple!(typeof(Play.FullChunkData.position))(chunk.position), data));
+
+		/*if(chunk.translatable_tiles.length > 0) {
 			foreach(Tile tile ; chunk.translatable_tiles) {
 				if(tile.tags) this.sendTile(tile, true);
 			}
-		}
+		}*/
 	}
 	
 	public override void unloadChunk(ChunkPosition pos) {

@@ -142,7 +142,7 @@
 				request.open("GET", "/player/" + player + ".json");
 				request.onload = function(){
 					showed_player = player;
-					var json = JSON.parse(request.responseText/*.replace(/\n/g, "")*/);
+					var json = JSON.parse(request.responseText.replace(/\n/g, ""));
 					document.getElementById("server").style.display = "none";
 					document.getElementById("player").style.display = "";
 					document.getElementById("icon").style.display = "none";
@@ -172,9 +172,10 @@
 				document.getElementById("player").style.display = "none";
 				document.getElementById("icon").style.display = "";
 				document.getElementById("player_pic").style.display = "none";
+				document.getElementById("player_name").innerHTML = "";
 			}
 			function unformat(str) {
-				return str.replace(/\u00A7[a-z0-9]/gmi, "");
+				return str.replace(/\u00A7[a-fA-F0-9k-or]/gmi, "");
 			}
 			function format(str) {
 				var f = str;
