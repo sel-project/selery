@@ -50,6 +50,7 @@ class Handler {
 
 	private shared Queries queries;
 
+	private shared string additionalJson;
 	private shared string socialJson;
 
 	private shared Address n_hncom_address;
@@ -83,7 +84,7 @@ class Handler {
 			}
 
 			if(shncom) {
-				this.n_hncom_address = this.startThread!HncomHandler(server, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort).localAddress;
+				this.n_hncom_address = this.startThread!HncomHandler(server, &this.additionalJson, this.queries.pocketPort, this.queries.minecraftPort).localAddress;
 			}
 
 			if(pocket) {
@@ -151,16 +152,21 @@ class Handler {
 	 * for each social field that is not empty in the settings.
 	 */
 	private shared void regenerateSocialJson() {
-		JSONValue[string] json;
+		JSONValue[string] social;
 		with(this.server.settings) {
-			if(website.length) json["website"] = website;
-			if(facebook.length) json["facebook"] = facebook;
-			if(twitter.length) json["twitter"] = twitter;
-			if(youtube.length) json["youtube"] = youtube;
-			if(instagram.length) json["instagram"] = instagram;
-			if(googlePlus.length) json["google_plus"] = googlePlus;
+			if(website.length) social["website"] = website;
+			if(facebook.length) social["facebook"] = facebook;
+			if(twitter.length) social["twitter"] = twitter;
+			if(youtube.length) social["youtube"] = youtube;
+			if(instagram.length) social["instagram"] = instagram;
+			if(googlePlus.length) social["google_plus"] = googlePlus;
 		}
-		this.socialJson = cast(shared)JSONValue(json).toString();
+		this.socialJson = cast(shared)JSONValue(social).toString();
+		JSONValue[string] additional;
+		additional["social"] = social;
+		additional["minecraft"] = ["edu": __edu, "realm": __realm];
+		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
+		this.additionalJson = cast(shared)JSONValue(additional).toString();
 	}
 
 	/**

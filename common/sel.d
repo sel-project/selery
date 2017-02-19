@@ -115,7 +115,7 @@ const struct Software {
 
 	enum ubyte api = 1;
 
-	enum sul = 4;
+	enum sul = 54;
 
 	enum ubyte hncom = 1;
 
@@ -124,6 +124,7 @@ const struct Software {
 }
 
 static if(!is(typeof(__sul))) {
+	// do not print an error message if sul cannot be found
 	enum __sul = Software.sul;
 }
 

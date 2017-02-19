@@ -548,8 +548,17 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		//data.heights = chunk.lights;
 		data.biomes = chunk.biomes;
 		//TODO extra data
-
-		//TODO tiles
+		
+		foreach(tile ; chunk.tiles) {
+			if(tile.compound.pe !is null) {
+				auto compound = tile.compound.pe.dup;
+				compound["id"] = new String(tile.spawnId.pe);
+				compound["x"] = new Int(tile.position.x);
+				compound["y"] = new Int(tile.position.y);
+				compound["z"] = new Int(tile.position.z);
+				VarintNbtBuffer!(Endian.littleEndian).instance.writeTag(compound, data.blockEntities);
+			}
+		}
 
 		this.sendPacket(new Play.FullChunkData(tuple!(typeof(Play.FullChunkData.position))(chunk.position), data));
 
@@ -778,13 +787,19 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendTile(Tile tile, bool translatable) {
 		if(translatable) {
-			tile.to!ITranslatable.translateStrings(this.lang);
+			//TODO
+			//tile.to!ITranslatable.translateStrings(this.lang);
 		}
-		//TODO nbt
-		//this.sendPacket(Play.BlockEntityData(toBlockPosition(tile.position), tile.alwayspetag));
-		if(translatable) {
+		auto packet = new Play.BlockEntityData(toBlockPosition(tile.position));
+		if(tile.compound.pe !is null) {
+			VarintNbtBuffer!(Endian.littleEndian).instance.writeTag(tile.compound.pe, packet.nbt);
+		} else {
+			packet.nbt ~= 0;
+		}
+		this.sendPacket(packet);
+		/*if(translatable) {
 			tile.to!ITranslatable.untranslateStrings();
-		}
+		}*/
 	}
 	
 	public override void sendPickupItem(Entity picker, Entity picked) {

@@ -184,9 +184,9 @@ class Chunk {
 
 	/// Gets a tile.
 	public @safe T tileAt(T)(BlockPosition position) {
-		ushort s = shortBlockPosition(position);
-		if(s in this.tiles) {
-			return cast(T)this.tiles[s];
+		auto s = shortBlockPosition(position) in this.tiles;
+		if(s) {
+			return cast(T)*s;
 		} else {
 			return null;
 		}

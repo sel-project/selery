@@ -16,4 +16,5 @@
 module sel.block;
 
 public import sel.block.block : BlockData, Block, Blocks, blockInto;
+public import sel.block.tile : Tile, Sign, FlowerPot;
 

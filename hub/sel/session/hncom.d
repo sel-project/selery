@@ -56,7 +56,7 @@ mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player
 
 class HncomHandler : HandlerThread {
 	
-	private shared string* socialJson;
+	private shared string* additionalJson;
 
 	private immutable ushort pocketPort, minecraftPort;
 
@@ -64,7 +64,7 @@ class HncomHandler : HandlerThread {
 
 	version(Posix) private shared string unixSocketAddress;
 	
-	public this(shared Server server, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
+	public this(shared Server server, shared string* additionalJson, ushort pocketPort, ushort minecraftPort) {
 		version(OneNode) {
 			string ip = "::1";
 		} else {
@@ -97,7 +97,7 @@ class HncomHandler : HandlerThread {
 		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
 		this.address = cast(shared)socket.localAddress;
 		super(server, [cast(shared)socket]);
-		this.socialJson = socialJson;
+		this.additionalJson = additionalJson;
 		this.pocketPort = pocketPort;
 		this.minecraftPort = minecraftPort;
 	}
@@ -119,7 +119,7 @@ class HncomHandler : HandlerThread {
 			}
 			if(this.server.acceptNode(address)) {
 				new SafeThread({
-					shared Node node = new shared Node(this.server, client, *this.socialJson, this.pocketPort, this.minecraftPort);
+					shared Node node = new shared Node(this.server, client, *this.additionalJson, this.pocketPort, this.minecraftPort);
 					delete node;
 				}).start();
 			} else {
@@ -204,7 +204,7 @@ class Node : Session {
 	private shared ulong n_ram;
 	private shared float n_cpu;
 	
-	public shared this(shared Server server, Socket socket, string social, ushort pocket_port, ushort minecraft_port) {
+	public shared this(shared Server server, Socket socket, string additionalJson, ushort pocket_port, ushort minecraft_port) {
 		super(server);
 		if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
 		this.socket = cast(shared)socket;
@@ -224,7 +224,7 @@ class Node : Session {
 				auto request = Login.ConnectionRequest.fromBuffer(payload);
 				this.n_name = request.name.idup;
 				this.n_main = request.main;
-				auto response = new Login.ConnectionResponse(Software.hncom, Login.ConnectionResponse.OK);
+				auto response = new Login.ConnectionResponse(Login.ConnectionResponse.OK, Software.hncom);
 				if(request.protocol > Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_HUB;
 				else if(request.protocol < Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_NODE;
 				else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
@@ -240,11 +240,7 @@ class Node : Session {
 						Types.GameInfo[] games;
 						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocketProtocols), pocketMotd, pocket_port);
 						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraftProtocols), minecraftMotd, minecraft_port);
-						JSONValue[string] additionalJson;
-						additionalJson["software"] = ["name": Software.name, "version": Software.displayVersion];
-						additionalJson["minecraft"] = ["edu": __edu, "realm": __realm];
-						//TODO system info
-						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, maxPlayers, language, acceptedLanguages, social, JSONValue(additionalJson).toString()).encode());
+						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, maxPlayers, language, acceptedLanguages, additionalJson).encode());
 					}
 					socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
 					while(true) {

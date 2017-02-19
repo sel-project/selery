@@ -394,14 +394,27 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 		writer ~= chunk.biomes;
 
-		this.sendPacket(new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, writer, [0]));
+		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, writer);
 
-
-		if(chunk.translatable_tiles.length > 0) {
-			foreach(Tile tile ; chunk.translatable_tiles) {
-				if(tile.tags) this.sendTile(tile, true);
+		foreach(tile ; chunk.tiles) {
+			if(tile.compound.pc !is null) {
+				packet.tilesCount++;
+				auto compound = tile.compound.pc.dup;
+				compound["x"] = new Int(tile.position.x);
+				compound["y"] = new Int(tile.position.y);
+				compound["z"] = new Int(tile.position.z);
+				NbtBuffer!(Endian.bigEndian).instance.writeTag(compound, packet.tiles);
 			}
 		}
+
+		this.sendPacket(packet);
+
+
+		/*if(chunk.translatable_tiles.length > 0) {
+			foreach(Tile tile ; chunk.translatable_tiles) {
+				if(tile.hasCompound) this.sendTile(tile, true);
+			}
+		}*/
 	}
 	
 	public override void unloadChunk(ChunkPosition pos) {
@@ -595,7 +608,18 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	public override void sendTile(Tile tile, bool translatable) {
-		//TODO
+		auto packet = new Clientbound.UpdateBlockEntity(ulongPosition(tile.position), tile.action);
+		if(tile.compound.pc !is null) {
+			auto compound = tile.compound.pc.dup;
+			// signs become invisible without the coordinates
+			compound["x"] = new Int(tile.position.x);
+			compound["y"] = new Int(tile.position.y);
+			compound["z"] = new Int(tile.position.z);
+			NbtBuffer!(Endian.bigEndian).instance.writeTag(compound, packet.nbt);
+		} else {
+			packet.nbt ~= 0;
+		}
+		this.sendPacket(packet);
 		/*if(translatable) {
 			tile.to!ITranslatable.translateStrings(this.lang);
 		}

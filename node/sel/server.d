@@ -427,14 +427,12 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			send(collector, thisTid);
 		}
 
-		static if(__pocket) {
-			if(this.n_settings.acceptedLanguages.length > 1) {
-				this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
-				version(UpdateLang) {
-					this.lang_searcher.convert();
-				}
-				this.lang_searcher.load();
+		if(this.n_settings.acceptedLanguages.length > 1) {
+			this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
+			version(UpdateLang) {
+				this.lang_searcher.convert();
 			}
+			this.lang_searcher.load();
 		}
 
 		// this breaks the running cycle
@@ -1325,7 +1323,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		Player player;
 		static if(__pocketProtocols.length + __minecraftProtocols.length) {
 			player = (){
-
 				final switch(packet.type) {
 					static if(__pocket) {
 						case HncomPlayer.Add.Pocket.TYPE:

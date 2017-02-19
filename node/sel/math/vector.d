@@ -267,7 +267,11 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	 * Converts the vector into a string for logging and debugging purposes.
 	 */
 	public string toString() {
-		return "Vector!" ~ coordinates.idup ~ "(" ~ coordinates.idup.split("").join(",") ~ ")";
+		string[] cs;
+		foreach(i, coord; coords) {
+			mixin("cs ~= to!string(this." ~ coord ~ ");");
+		}
+		return "Vector!" ~ coordinates.idup ~ "(" ~ cs.join(",") ~ ")";
 	}
 	
 }

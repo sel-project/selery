@@ -1143,6 +1143,9 @@ public class Blocks {
 	public static BlockData MYCELIUM = BlockData(102, ID!110, META!0);
 	public alias Mycelium = SpreadingBlock!(MYCELIUM, [Blocks.DIRT, Blocks.GRASS, Blocks.PODZOL], 1, 1, 3, 1, Blocks.DIRT, SOLID!3, Items.DIRT, SILK_TOUCH, Items.MYCELIUM);
 
+	public static BlockData FLOWER_POT = BlockData(379, ID!140, META!0);
+	public alias FlowerPot = FlowerPotTile!(FLOWER_POT);
+
 	public static BlockDataArray CARROT_BLOCK = [CARROT_BLOCK_0, CARROT_BLOCK_1, CARROT_BLOCK_2, CARROT_BLOCK_3, CARROT_BLOCK_4, CARROT_BLOCK_5, CARROT_BLOCK_6, CARROT_BLOCK_7];
 
 	public static BlockData CARROT_BLOCK_0 = BlockData(103, ID!141, META!0);

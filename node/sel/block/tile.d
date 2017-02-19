@@ -19,8 +19,12 @@
 module sel.block.tile;
 
 import std.conv : to;
+import std.json : JSONValue;
 import std.traits : isAbstractClass;
 import std.typecons : Tuple;
+import std.typetuple : TypeTuple;
+
+import common.sel;
 
 import sel.player : Player;
 import sel.block.block;
@@ -31,83 +35,76 @@ import sel.item.inventory : Inventory, NotifiedInventory, InventoryHolder;
 import sel.item.item : Item, Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
-import sel.nbt.tags : Byte, Compound, Int, Short, String;
+import sel.nbt.tags;
+import sel.settings;
 import sel.util.color : Color, Colors;
 import sel.util.lang : GenericTranslatable = Translatable;
 import sel.world.particle : Particles;
 import sel.world.world : World;
 
+static if(__minecraft) {
+	mixin("import sul.protocol.minecraft" ~ __minecraftProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
+}
+
 /**
  * Tile's interface implemented by a class that extends Block.
  * Example:
  * ---
- * if(block.tags) {
- *   player.sendTile(block);
+ * if(cast(Tile)block) {
+ *    player.sendTile(block);
  * }
  * ---
  */
 interface Tile {
 
-	/// Gets the server's unique tile id.
-	public @property @safe @nogc uint tid();
+	public pure nothrow @property @safe @nogc uint tid();
 
-	/// Checks if the tile has custom data.
-	public @property @safe bool tags();
+	public pure nothrow @property @safe group!string spawnId();
 
-	/// Gets the tags as Compound tags.
-	public @property @safe Compound petag();
-
-	/// ditto
-	public @property @safe Compound pctag();
-
-	/// Sets the custom data.
-	public @property @safe Compound petag(Compound tag);
-
-	/// ditto
-	public @property @safe Compound pctag(Compound tag);
-
-	/// Gets tags that are never null, even if tags() is false.
-	public @property @safe Compound alwayspetag();
-
-	/// ditto
-	public @property @safe Compound alwayspctag();
+	public @property group!Compound compound();
 
 	public void place(World world, BlockPosition position);
 
 	public @safe void unplace();
 
-	/// Checks whether or not the tile has been placed in a world.
+	/**
+	 * Indicates whether the tile has been placed in a world.
+	 * Example:
+	 * ---
+	 * if(tile.placed) {
+	 *    assert(tile.world !is null);
+	 * }
+	 * ---
+	 */
 	public @property @safe @nogc bool placed();
 
 	/// Gets the world the tile is placed in, if placed is true.
 	public @property @safe @nogc World world();
 
-	/// Gets the tile's position in the world.
+	/**
+	 * Gets the tile's position in the world.
+	 * Example:
+	 * ---
+	 * if(tile.placed) {
+	 *    assert(tile.tid == tile.world.tileAt(tile.position).tid);
+	 * }
+	 * ---
+	 */
 	public @property @safe @nogc BlockPosition position();
 
-	/// Gets the action type of the tile.
+	/**
+	 * Gets the action type of the tile, used in Minecraft's
+	 * UpdateBlockEntity packet.
+	 */
 	public pure nothrow @property @safe @nogc ubyte action();
-
-	public static immutable ubyte MOB = 1;
-	public static immutable ubyte COMMAND = 2;
-	public static immutable ubyte BEACON = 3;
-	public static immutable ubyte SKULL = 4;
-	public static immutable ubyte FLOWER_POT = 5;
-	public static immutable ubyte SIGN = 9;
 
 }
 
-/**
- * Block's implementation of the Tile's interface.
- */
 class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 
 	private static uint count = 0;
 
 	private immutable uint n_tid;
-
-	protected Compound m_pe_tag;
-	protected Compound m_pc_tag;
 
 	private World n_world;
 	private BlockPosition n_position;
@@ -116,37 +113,13 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 		this.n_tid = ++count;
 	}
 
-	public final override @property @safe @nogc uint tid() {
+	public final override pure nothrow @property @safe @nogc uint tid() {
 		return this.n_tid;
 	}
+	
+	public override abstract pure nothrow @property @safe group!string spawnId();
 
-	public override @property @safe bool tags() {
-		return this.petag !is null || this.pctag !is null;
-	}
-
-	public override @property @safe Compound petag() {
-		return this.m_pe_tag;
-	}
-
-	public override @property @safe Compound pctag() {
-		return this.m_pc_tag;
-	}
-
-	public override @property @safe Compound petag(Compound tag) {
-		return this.petag;
-	}
-
-	public override @property @safe Compound pctag(Compound tag) {
-		return this.pctag;
-	}
-
-	public override @property @safe Compound alwayspetag() {
-		return this.petag is null ? new Compound() : this.petag;
-	}
-
-	public override @property @safe Compound alwayspctag() {
-		return this.pctag is null ? new Compound() : this.pctag;
-	}
+	public override abstract @property group!Compound compound();
 
 	public override void place(World world, BlockPosition position) {
 		this.n_world = world;
@@ -154,7 +127,7 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 		this.update();
 	}
 
-	public final override @safe void unplace() {
+	public final override void unplace() {
 		this.n_world = null;
 	}
 
@@ -170,7 +143,7 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 		return this.n_position;
 	}
 
-	public abstract override pure nothrow @property @safe @nogc ubyte action();
+	public override abstract pure nothrow @property @safe @nogc ubyte action();
 
 	/// Function called when the custom data changes and the viewers should be updated.
 	protected void update() {
@@ -182,7 +155,7 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 }
 
 /**
- * Interface for a Sign, should be implemented in a block.
+ * Interface for a Sign with methods to edit the text.
  * Example:
  * ---
  * auto sign = world.tileAt!Sign(10, 44, 90);
@@ -197,20 +170,20 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
  */
 interface Sign {
 
-	/// Lines indicators.
-	public static immutable uint FIRST_LINE = 0;
+	/// Indicates the line.
+	public static immutable size_t FIRST_LINE = 0;
 
 	/// ditto
-	public static immutable uint SECOND_LINE = 1;
+	public static immutable size_t SECOND_LINE = 1;
 
 	/// ditto
-	public static immutable uint THIRD_LINE = 2;
+	public static immutable size_t THIRD_LINE = 2;
 
 	/// ditto
-	public static immutable uint FOURTH_LINE = 3;
+	public static immutable size_t FOURTH_LINE = 3;
 
 	/**
-	 * Gets the array with the four strings.
+	 * Gets the array with the text in the four lines.
 	 * Example:
 	 * ---
 	 * sign[2] = "test";
@@ -220,17 +193,32 @@ interface Sign {
 	public @safe @nogc string[4] opIndex();
 
 	/**
-	 * Gets the string at the given index.
+	 * Gets the text at the given line.
 	 * Params:
 	 * 		index = the line of the sign
 	 * Returns: a string with the text that has been written at the given line
 	 * Throws: RangeError if index is not on the range 0..4
 	 * Example:
 	 * ---
-	 * d("First line of sign is: \"", sign[Sign.FIRST_LINE], "\"");
+	 * d("First line of sign is: ", sign[Sign.FIRST_LINE]);
 	 * ---
 	 */
-	public @safe string opIndex(uint index);
+	public @safe string opIndex(size_t index);
+	
+	/**
+	 * Sets the text at the given line.
+	 * Params:
+	 * 		text = the new text for the given line
+	 * 		index = the line to place the text into
+	 * Throws: RangeError if index is not on the range 0..4
+	 * Example:
+	 * ---
+	 * string text = "New text for line 2";
+	 * sign[Sign.SECOND_LINE] = text;
+	 * assert(sign[Sign.SECOND_LINE] == text);
+	 * ---
+	 */
+	public void opIndexAssign(string text, size_t index);
 
 	/**
 	 * Sets all the four lines of the sign.
@@ -245,48 +233,16 @@ interface Sign {
 	public void opIndexAssign(string[4] texts);
 
 	/**
-	 * Sets the given texts in the first empty line found.
+	 * Sets the given texts in every line of the sign.
 	 * Params:
-	 * 		text = the text to be set in the first empty line
-	 * Returns: the number of the line where the text has been placed, or -1 if it wasn't placed
+	 * 		text = the text to be set in every line
 	 * Example:
 	 * ---
-	 * sign[] = ["first", "second", "third", ""];
-	 * assert((sign[] = "fourth") == Sign.FOURTH_LINE);
-	 * assert((sign[] = "fifth") == -1)
-	 * sign.remove(Sign.FIRST_LINE);
-	 * assert((sign[] = "first") == Sign.FIRST_LINE);
+	 * sign[] = "line";
+	 * assert(sign[] == ["line", "line", "line", "line"]);
 	 * ---
 	 */
-	public int opIndexAssign(string text);
-
-	/**
-	 * Sets the text at the given index.
-	 * Params:
-	 * 		text = the new text for the given line
-	 * 		index = the line to place the text into
-	 * Throws: RangeError if index is not on the range 0..4
-	 * Example:
-	 * ---
-	 * string text = "New text for line 2";
-	 * sign[Sign.SECOND_LINE] = text;
-	 * assert(sign[Sign.SECOND_LINE] == text);
-	 * ---
-	 */
-	public void opIndexAssign(string text, uint index);
-
-	/**
-	 * Sets a line to an empty string.
-	 * Params:
-	 * 		index = the line that will be set as an empty string
-	 * Thrown: RangeError if index is not on the range 0..4
-	 * Example:
-	 * ---
-	 * sign.remove(Sign.FOURTH_LINE);
-	 * assert(sign[Sign.FOURTH_LINE] == "");
-	 * ---
-	 */
-	public void remove(uint index);
+	public void opIndexAssign(string text);
 
 	/**
 	 * Checks whether or not every sign's line is
@@ -304,7 +260,7 @@ interface Sign {
 	public @property @safe bool empty();
 
 }
-
+/+
 /**
  * Implementation of Translable template for sign.
  * The lines will be translted for every player like a message
@@ -322,102 +278,103 @@ interface Sign {
  */
 template Translatable(T:Sign) {
 	alias Translatable = GenericTranslatable!(["this.n_tag.get!(sel.util.nbt.String)(\"Text1\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text2\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text3\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text4\").value"], T);
-}
+}+/
 
-/**
- * Block's implementation of the sign's interface.
- * Example:
- * ---
- * world[10, 10, 10] = new Blocks.Sign([1: "Hello", 2: "World!"]);
- * ---
- */
 abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E), Sign {
 
-	private string[4] texts;
+	private Compound n_compound;
+	private String[4] texts;
 
-	protected Compound n_tag;
+	static if(__minecraft) {
+		private Compound minecraft_compound;
+		private String[4] minecraft_texts;
+	}
+
+	public @safe this(string a, string b, string c, string d) {
+		super();
+		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
+			enum text = "Text" ~ to!string(i + 1);
+			this.texts[i] = new String(text, "");
+			static if(__minecraft) this.minecraft_texts[i] = new String(text, "");
+		}
+		this.n_compound = new Compound("", this.texts[0], this.texts[1], this.texts[2], this.texts[3]);
+		static if(__minecraft) this.minecraft_compound = new Compound("", this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
+		this.setImpl(0, a);
+		this.setImpl(1, b);
+		this.setImpl(2, c);
+		this.setImpl(3, d);
+	}
 
 	public @safe this() {
 		this("", "", "", "");
 	}
 
-	public @safe this(string a, string b, string c, string d) {
-		super();
-		this.n_tag = new Compound("");
-		foreach(uint i, string text; [a, b, c, d]) {
-			this.texts[i] = text;
-			this.n_tag[] = new String("Text" ~ to!string(i + 1), text);
-		}
-	}
-
 	public @safe this(string[uint] texts) {
-		this(0 in texts ? texts[0] : "", 1 in texts ? texts[1] : "", 2 in texts ? texts[2] : "", 3 in texts ? texts[3] : "");
+		auto a = 0 in texts;
+		auto b = 1 in texts;
+		auto c = 2 in texts;
+		auto d = 3 in texts;
+		this(a ? *a : "", b ? *b : "", c ? *c : "", d ? *d : "");
+	}
+	
+	public override pure nothrow @property @safe group!string spawnId() {
+		return group!string("Sign", "sign");
 	}
 
 	public override @safe @nogc string[4] opIndex() {
-		return this.texts;
+		string[4] ret;
+		foreach(i, text; this.texts) {
+			ret[i] = text;
+		}
+		return ret;
 	}
 
-	public override @safe string opIndex(uint index) {
+	public override @safe string opIndex(size_t index) {
 		return this.texts[index];
 	}
 
+	private @trusted void setImpl(size_t index, string data) {
+		this.texts[index] = data;
+		static if(__minecraft) this.minecraft_texts[index] = JSONValue(["text": data]).toString();
+	}
+
 	public override void opIndexAssign(string[4] texts) {
-		foreach(uint i ; 0..4) {
-			this[i] = texts[i];
+		foreach(i ; 0..4) {
+			this.setImpl(i, texts[i]);
 		}
+		this.update();
 	}
 
-	public override int opIndexAssign(string text) {
-		foreach(int i ; 0..4) {
-			if(this.texts[i] == "") {
-				this[i] = text;
-				return i;
-			}
+	public override void opIndexAssign(string text) {
+		foreach(i ; 0..4) {
+			this.setImpl(i, text);
 		}
-		return -1;
+		this.update();
 	}
 
-	public override void opIndexAssign(string text, uint index) {
-		if(text is null) text = "";
-		if(text != this.texts[index]) {
-			this.texts[index] = text;
-			this.n_tag[] = new String("Text" ~ to!string(index + 1), text);
-			this.update();
-		}
+	public override void opIndexAssign(string text, size_t index) {
+		this.setImpl(index, text);
+		this.update();
 	}
 
-	public final override void remove(uint index) {
-		this.opIndexAssign(null, index);
+	public final override void remove(size_t index) {
+		this.opIndexAssign("", index);
 	}
 
 	public final override @property @safe bool empty() {
 		return this[0] == "" && this[1] == "" && this[2] == "" && this[3] == "";
 	}
 
-	public override @property @safe bool tags() {
-		return true;
-	}
-
-	public override @property @safe @nogc Compound petag() {
-		return this.n_tag;
-	}
-
-	public override @property @safe @nogc Compound pctag() {
-		/*Compound tag = new Compound("");
-		foreach(string index ; ["Text1", "Text2", "Text3", "Text4"]) {
-			tag[] = new String(index, "{text:\"" ~ this.n_tag.get!String(index).value ~ "\"}");
-		}
-		tag[] = new String("id", "Sign");
-		tag[] = new Int("x", this.position.x);
-		tag[] = new Int("y", this.position.y);
-		tag[] = new Int("z", this.position.z);
-		return tag;*/
-		return this.n_tag;
+	public override @property group!Compound compound() {
+		return group!Compound(this.n_compound, this.minecraft_compound);
 	}
 	
 	public override @property @safe @nogc ubyte action() {
-		return SIGN;
+		static if(is(typeof(UpdateBlockEntity.SIGN_TEXT))) {
+			return UpdateBlockEntity.SIGN_TEXT;
+		} else {
+			return 0;
+		}
 	}
 
 	public override @safe Slot[] drops(World world, Player player, Item item) {
@@ -472,6 +429,97 @@ class WallSignBlock(BlockData blockdata, E...) : GenericSign!(blockdata, E) {
 }
 
 /**
+ * Interface for a flower pot, which can contain a
+ * plant.
+ */
+interface FlowerPot {
+
+	/**
+	 * Gets the current item placed in the pot.
+	 * It may be null if the pot is empty.
+	 * Example:
+	 * ---
+	 * if(pot.item is null) {
+	 *    pot.item = new Items.OxeyeDaisy();
+	 * }
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc Item item();
+
+	/**
+	 * Places or removes an item from the pot.
+	 * Example:
+	 * ---
+	 * pot.item = new Items.OxeyeDaisy(); // add
+	 * pot.item = null; // remove
+	 * ---
+	 */
+	public @property Item item(Item item);
+
+	public static string getMinecraftPlantName(ushort item) {
+		return "minecraft:" ~ (){
+			switch(item) {
+				case 6: return "sapling";
+				case 31: return "tallgrass";
+				case 32: return "deadbush";
+				case 37: return "yellow_flower";
+				case 38: return "red_flower";
+				case 39: return "brown_mushroom";
+				case 40: return "red_mushroom";
+				case 81: return "cactus";
+				default: return "?";
+			}
+		}();
+	}
+
+}
+
+final class FlowerPotTile(BlockData blockData, E...) : TileBlock!(blockData, E), FlowerPot {
+
+	private Item m_item;
+
+	private Compound pocket_compound, minecraft_compound;
+
+	public @trusted this(Item item=null) {
+		super();
+		if(item !is null) this.item = item;
+	}
+	
+	public override pure nothrow @property @safe group!string spawnId() {
+		return group!string("FlowerPot", "flower_pot");
+	}
+
+	public override pure nothrow @property @safe @nogc Item item() {
+		return this.m_item;
+	}
+
+	public override @property Item item(Item item) {
+		if(item !is null) {
+			static if(__pocket) this.pocket_compound = new Compound("", new Short("item", item.ids.pe), new Int("mData", item.metas.pe));
+			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", FlowerPot.getMinecraftPlantName(item.ids.pc)), new Int("Data", item.metas.pc));
+		} else {
+			this.pocket_compound = null;
+			this.minecraft_compound = null;
+		}
+		this.update();
+		return this.m_item = item;
+	}
+
+	public override @property group!Compound compound() {
+		return group!Compound(this.pocket_compound, this.minecraft_compound);
+	}
+
+	public override ubyte action() {
+		static if(is(typeof(UpdateBlockEntity.FLOWER_POT_FLOWER))) {
+			return UpdateBlockEntity.FLOWER_POT_FLOWER;
+		} else {
+			return 0;
+		}
+	}
+
+}
+
+/**
  * Interface for a container that should be implemented in a block.
  */
 interface Container {
@@ -480,8 +528,6 @@ interface Container {
 	 * 
 	 */
 	public @property @safe Inventory inventory();
-
-	alias inventory this;
 
 }
 
@@ -506,16 +552,6 @@ class ContainerBlock(BlockData data, E...) : TileBlock!(data, E), Container, Inv
 	}
 
 	alias inventory this;
-
-}
-
-
-
-interface MonsterSpawner {}
-
-class MonsterSpawnerBlock(BlockData data, E...) : TileBlock!(data, E), MonsterSpawner {
-
-
 
 }
 

@@ -193,12 +193,11 @@ class VarintNbtBuffer(Endian endianness) : NbtBuffer!endianness {
 	}
 
 	public override void writeLength(size_t length, ref ubyte[] buffer) {
-		buffer ~= varuint(length.to!uint).encode();
+		buffer ~= varuint.encode(length.to!uint);
 	}
 
-	public override void writeString(string str, ref ubyte[] buffer) {
-		if(str.length > 255) str.length = 255;
-		this.write_ubyte(str.length & 255, buffer);
+	public override @trusted void writeString(string str, ref ubyte[] buffer) {
+		buffer ~= varuint.encode(str.length.to!uint);
 		buffer ~= cast(ubyte[])str;
 	}
 
@@ -214,8 +213,8 @@ class VarintNbtBuffer(Endian endianness) : NbtBuffer!endianness {
 		return varuint.fromBuffer(buffer);
 	}
 
-	public override string readString(ref ubyte[] buffer) {
-		return cast(string)this.read_ubyte_array(this.read_ubyte(buffer), buffer);
+	public override @trusted string readString(ref ubyte[] buffer) {
+		return cast(string)this.read_ubyte_array(varuint.fromBuffer(buffer), buffer);
 	}
 
 }

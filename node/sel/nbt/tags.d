@@ -666,7 +666,7 @@ class Compound : SimpleTag!(NamedTag[string], NBT.COMPOUND, "Compound") {
 	 * }
 	 * ---
 	 */
-	public @safe NamedTag* opBinary(string op)(string key) if(op == "in") {
+	public @safe NamedTag* opBinaryRight(string op)(string key) if(op == "in") {
 		return key in this.value;
 	}
 	
@@ -788,6 +788,13 @@ class Compound : SimpleTag!(NamedTag[string], NBT.COMPOUND, "Compound") {
 	public @property @trusted string[] keys() {
 		return this.value.keys;
 	}
+
+	/**
+	 * Creates an exact duplicate of the tag.
+	 */
+	public @property Compound dup() {
+		return new Compound(this.name, this.value.values);
+	}
 	
 	public override bool opEquals(Object object) {
 		if(cast(Compound)object) {
@@ -832,7 +839,7 @@ template DefinedCompound(E...) if(isValidDefinedCompound!E) {
 	
 	class DefinedCompound : Compound {
 		
-		public @safe @nogc this(F...)(F args) {
+		public @safe this(F...)(F args) {
 			super(args);
 		}
 		
