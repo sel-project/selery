@@ -160,10 +160,8 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
  * ---
  * auto sign = world.tileAt!Sign(10, 44, 90);
  * if(sign !is null) {
- *    sign.remove(0);
  *    sign[1] = "Click to go to";
  *    sign[2] = "world";
- *    sign.remove(3);
  *    assert(sign[] == ["", "Click to go to", "world", ""]);
  * }
  * ---
@@ -250,9 +248,7 @@ interface Sign {
 	 * Example:
 	 * ---
 	 * if(!sign.empty) {
-	 *    foreach(uint i ; 0..4) {
-	 *       sign.remove(i);
-	 *    }
+	 *    sign[] = "";
 	 *    assert(sign.empty);
 	 * }
 	 * ---
@@ -355,10 +351,6 @@ abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E)
 	public override void opIndexAssign(string text, size_t index) {
 		this.setImpl(index, text);
 		this.update();
-	}
-
-	public final override void remove(size_t index) {
-		this.opIndexAssign("", index);
 	}
 
 	public final override @property @safe bool empty() {

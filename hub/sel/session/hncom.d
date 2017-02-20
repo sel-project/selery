@@ -240,7 +240,7 @@ class Node : Session {
 						Types.GameInfo[] games;
 						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocketProtocols), pocketMotd, pocket_port);
 						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraftProtocols), minecraftMotd, minecraft_port);
-						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, maxPlayers, language, acceptedLanguages, additionalJson).encode());
+						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
 					}
 					socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
 					while(true) {
@@ -315,6 +315,13 @@ class Node : Session {
 		} else {
 			return this.players.length;
 		}
+	}
+
+	/**
+	 * Indicates whether the node is full.
+	 */
+	public shared nothrow @property @safe @nogc const bool full() {
+		return this.max != Login.NodeInfo.UNLIMITED && this.online >= this.max;
 	}
 
 	/**

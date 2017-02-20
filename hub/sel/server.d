@@ -54,7 +54,7 @@ import sel.util.ip;
 import sel.util.log;
 import sel.util.thread;
 
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : NodeInfo;");
+mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : HubInfo, NodeInfo;");
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".types : NodeStats;");
@@ -142,10 +142,6 @@ class Server {
 		this.n_blacklist = List(this, "blacklist");
 
 		this.n_settings = cast(shared)Settings.reload();
-
-		if(this.n_settings.maxPlayers < Settings.MAX_PLAYERS_AUTO) {
-			this.n_max = this.n_settings.maxPlayers;
-		}
 
 		version(Windows) {
 			import std.process : executeShell;
@@ -262,7 +258,7 @@ class Server {
 					Thread.sleep(dur!"minutes"(1));
 					JSONValue[string] status;
 					status["online"] = this.onlinePlayers;
-					status["max"] = this.settings.maxPlayers;
+					status["max"] = this.maxPlayers;
 					status["nodes"] = this.nodes.length;
 					post("http://snoop." ~ Software.website ~ "/status", JSONValue(status).toString());
 				}
@@ -285,7 +281,7 @@ class Server {
 		}
 
 		this.started = milliseconds;
-		uint last_online, last_max = this.n_settings.maxPlayers;
+		int last_online, last_max = this.maxPlayers;
 		size_t next_analytics = 0;
 		while(true) {
 			uint online = this.onlinePlayers.to!uint;
@@ -302,7 +298,7 @@ class Server {
 				auto uptime = this.uptime;
 				auto nodeStats = this.externalConsoleNodeStats;
 				foreach(externalConsole ; this.externalConsoles) {
-					externalConsole.updateStats(online, cast()this.n_settings.maxPlayers, uptime, sent, recv, nodeStats);
+					externalConsole.updateStats(online, last_max, uptime, sent, recv, nodeStats);
 				}
 			}
 			this.n_upload = sent;
@@ -401,14 +397,18 @@ class Server {
 	 * Gets the number of max players.
 	 */
 	public shared nothrow @property @safe @nogc const int maxPlayers() {
-		return this.unlimited_nodes ? NodeInfo.UNLIMITED : this.n_max;
+		return this.unlimited_nodes ? HubInfo.UNLIMITED : this.n_max;
 	}
 
 	/**
 	 * Indicates whether the server is full.
 	 */
-	public shared nothrow @property @safe @nogc const(bool) full() {
-		return this.n_settings.maxPlayers != Settings.MAX_PLAYERS_UNLIMITED && this.unlimited_nodes == 0 && this.onlinePlayers >= this.maxPlayers;
+	public shared @property @safe @nogc const(bool) full() {
+		if(this.unlimited_nodes) return false;
+		foreach(node ; this.nodes) {
+			if(!node.full) return false;
+		}
+		return true;
 	}
 
 	/**
@@ -513,19 +513,10 @@ class Server {
 				case "reload":
 					this.n_max = 0;
 					this.unlimited_nodes = 0;
-					this.n_settings = cast(shared)Settings.reload();
-					if(this.n_settings.maxPlayers == Settings.MAX_PLAYERS_AUTO) {
-						// recalcualte
-						foreach(node ; this.nodes) {
-							if(node.max == NodeInfo.UNLIMITED) atomicOp!"+="(this.unlimited_nodes, 1);
-							else atomicOp!"+="(this.n_max, node.max);
-						}
-					} else if(this.n_settings.maxPlayers < Settings.MAX_PLAYERS_AUTO) {
-						this.n_max = this.n_settings.maxPlayers;
-					}
+					this.n_settings = cast(shared)Settings.reload(false);
 					this.handler.reload();
 					foreach(node ; this.nodes) node.reload();
-					this.command(Text.green ~ "Server's settings have been reloaded", commandId);
+					this.command(Text.green ~ "Server's configurations have been reloaded", commandId);
 					break;
 				case "say":
 					string command = "say " ~ args.join(" ");

@@ -1320,33 +1320,31 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
 		}
 
-		Player player;
-		static if(__pocketProtocols.length + __minecraftProtocols.length) {
-			player = (){
-				final switch(packet.type) {
-					static if(__pocket) {
-						case HncomPlayer.Add.Pocket.TYPE:
-							auto pocket = packet.new Pocket();
-							pocket.decode();
-							foreach(immutable p ; __pocketProtocolsTuple) {
-								if(packet.protocol == p)
-									return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
-							}
-							assert(0);
-					}
-					static if(__minecraft) {
-						case HncomPlayer.Add.Minecraft.TYPE:
-							auto minecraft = packet.new Minecraft();
-							minecraft.decode();
-							foreach(immutable p ; __minecraftProtocolsTuple) {
-								if(packet.protocol == p)
-									return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency);
-							}
-							assert(0);
-					}
+		Player player = (){
+			switch(packet.type) {
+				static if(__pocket) {
+					case HncomPlayer.Add.Pocket.TYPE:
+						auto pocket = packet.new Pocket();
+						pocket.decode();
+						foreach(immutable p ; __pocketProtocolsTuple) {
+							if(packet.protocol == p)
+								return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
+						}
+						assert(0);
 				}
-			}();
-		}
+				static if(__minecraft) {
+					case HncomPlayer.Add.Minecraft.TYPE:
+						auto minecraft = packet.new Minecraft();
+						minecraft.decode();
+						foreach(immutable p ; __minecraftProtocolsTuple) {
+							if(packet.protocol == p)
+								return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency);
+						}
+						assert(0);
+				}
+				default: assert(0, "Trying to add a player with an unknown type " ~ to!string(packet.type));
+			}
+		}();
 
 		// register the server's commands
 		foreach(Command command ; this.commands) {

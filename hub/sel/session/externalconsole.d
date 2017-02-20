@@ -163,10 +163,10 @@ abstract class ExternalConsoleSession : Session {
 	public abstract shared void updateNodes(bool add, string name);
 
 	public shared void autoUpdateStats() {
-		this.updateStats(this.server.onlinePlayers, cast()this.server.settings.maxPlayers, this.server.uptime, this.server.upload, this.server.download, this.server.externalConsoleNodeStats);
+		this.updateStats(this.server.onlinePlayers, this.server.maxPlayers, this.server.uptime, this.server.upload, this.server.download, this.server.externalConsoleNodeStats);
 	}
 	
-	public abstract shared void updateStats(uint online, uint max, uint uptime, uint upload, uint download, Types.NodeStats[] nodeStats);
+	public abstract shared void updateStats(uint online, int max, uint uptime, uint upload, uint download, Types.NodeStats[] nodeStats);
 	
 	public override shared ptrdiff_t send(const(void)[] data) {
 		this.server.traffic.send(data.length);
@@ -269,7 +269,7 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 		this.send(new Status.UpdateNodes(add ? Status.UpdateNodes.ADD : Status.UpdateNodes.REMOVE, name).encode());
 	}
 	
-	public override shared void updateStats(uint online, uint max, uint uptime, uint sent, uint received, Types.NodeStats[] nodeStats) {
+	public override shared void updateStats(uint online, int max, uint uptime, uint sent, uint received, Types.NodeStats[] nodeStats) {
 		this.send(new Status.UpdateStats(online, max, uptime, sent, received, nodeStats).encode());
 	}
 
@@ -398,7 +398,7 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 		]);
 	}
 	
-	public override shared void updateStats(uint online, uint max, uint uptime, uint sent, uint received, Types.NodeStats[] nodeStats) {
+	public override shared void updateStats(uint online, int max, uint uptime, uint sent, uint received, Types.NodeStats[] nodeStats) {
 		JSONValue[] nodes;
 		foreach(node ; nodeStats) {
 			nodes ~= JSONValue(["name": JSONValue(node.name), "tps": JSONValue(node.tps), "ram": JSONValue(node.ram), "cpu": JSONValue(node.cpu)]);

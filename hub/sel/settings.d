@@ -168,10 +168,6 @@ static if(__doc || !__traits(compiles, import("hub.txt"))) {
  */
 struct Settings {
 
-	enum uint MAX_PLAYERS_UNLIMITED = -1;
-
-	enum uint MAX_PLAYERS_AUTO = -2;
-
 	private static shared(string) n_default_language;
 
 	public static nothrow @property @safe @nogc shared(string) defaultLanguage() {
@@ -199,8 +195,6 @@ struct Settings {
 	uint[] pocketProtocols;
 
 	bool allowMcpePlayers;
-	
-	uint maxPlayers;
 	
 	bool query;
 	
@@ -254,7 +248,7 @@ struct Settings {
 
 	string website, facebook, twitter, youtube, instagram, googlePlus;
 
-	public static const(Settings) reload() {
+	public static const(Settings) reload(bool all=true) {
 
 		Settings settings;
 
@@ -286,16 +280,15 @@ struct Settings {
 
 		with(settings) {
 			set(&displayName, "display-name", "A Minecraft Server", false);
-			set(&minecraft, "minecraft", true);
+			if(all) set(&minecraft, "minecraft", true);
 			set(&minecraftMotd, "minecraft-motd", "A Minecraft Server", false);
 			set(&minecraftAddresses, "minecraft-addresses", ["0.0.0.0:25565", ":::25565"], false);
-			set(&minecraftProtocols, "minecraft-accepted-protocols", latestMinecraftProtocols, false);
-			set(&pocket, "pocket", true);
+			if(all) set(&minecraftProtocols, "minecraft-accepted-protocols", latestMinecraftProtocols, false);
+			if(all) set(&pocket, "pocket", true);
 			set(&pocketMotd, __pocketPrefix ~ "motd", "A Minecraft: " ~ (__edu ? "Education" : "Pocket") ~ " Edition Server", false);
 			set(&pocketAddresses, __pocketPrefix ~ "addresses", ["0.0.0.0:19132"], false);
-			set(&pocketProtocols, __pocketPrefix ~ "accepted-protocols", latestPocketProtocols, false);
+			if(all) set(&pocketProtocols, __pocketPrefix ~ "accepted-protocols", latestPocketProtocols, false);
 			set(&allowMcpePlayers, "allow-not-edu-players", false);
-			set(&maxPlayers, "max-players", MAX_PLAYERS_AUTO);
 			set(&query, "query-enabled", !__edu && !__realm);
 			set(&whitelist, "whitelist", __edu || __realm);
 			set(&blacklist, "blacklist", !whitelist);
@@ -339,15 +332,6 @@ struct Settings {
 
 		if(!settings.minecraftProtocols.length) settings.minecraftProtocols = latestMinecraftProtocols;
 		if(!settings.pocketProtocols.length) settings.pocketProtocols = latestPocketProtocols;
-
-		if("max-players" in values) {
-			auto mp = values["max-players"].toLower;
-			if(["inf", "infinity", "infinite", "unlimited", "∞"].canFind(mp)) {
-				settings.maxPlayers = MAX_PLAYERS_UNLIMITED;
-			} else if(mp == "auto") {
-				settings.maxPlayers = MAX_PLAYERS_AUTO;
-			}
-		}
 
 		static if(__realm) {
 			settings.whitelist = true;
@@ -464,7 +448,6 @@ struct Settings {
 		add(__pocketPrefix ~ "accepted-protocols", this.pocketProtocols);
 		//add(__pocketPrefix ~ "use-encryption", __pocketEncryption);
 		static if(__edu) add("allow-not-edu-players", allowMcpePlayers);
-		add("max-players", this.maxPlayers == MAX_PLAYERS_UNLIMITED ? "unlimited" : (this.maxPlayers == MAX_PLAYERS_AUTO ? "auto" : to!string(this.maxPlayers)));
 		static if(!__realm) add("query-enabled", this.query);
 		static if(!__realm) add("whitelist", this.whitelist);
 		static if(!__realm) if(!__edu || this.whitelist) add("blacklist", this.blacklist);

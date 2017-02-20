@@ -115,7 +115,7 @@ const struct Software {
 
 	enum ubyte api = 1;
 
-	enum sul = 54;
+	enum sul = 76;
 
 	enum ubyte hncom = 1;
 
