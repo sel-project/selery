@@ -76,7 +76,7 @@ private uint[] parse(string str, uint[] check, uint[] def=[]) {
 
 static if(!is(typeof(__minecraftProtocols))) {
 
-	enum uint[] __minecraftProtocols = !__edu ? latestMinecraftProtocols : [];
+	enum uint[] __minecraftProtocols = latestMinecraftProtocols;
 
 }
 

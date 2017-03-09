@@ -744,7 +744,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void setAsReadyToSpawn() {
 		this.sendPacket(new Play.PlayStatus(Play.PlayStatus.SPAWNED));
-		this.sendPacket(new Play.ResourcePacksInfo(false, new Types.Pack[0], new Types.Pack[0])); //TODO custom texture packs
+		this.sendPacket(new Play.ResourcePacksInfo(false)); //TODO custom texture packs
 		this.send_commands = true;
 		this.sendCommands();
 	}
@@ -866,7 +866,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	mixin generateHandlers!(Play.Packets);
 
-	protected void handleResourcePackClientResponsePacket(ubyte status, ushort resourcePackVersion) {}
+	protected void handleResourcePackClientResponsePacket(ubyte status, string[] ids) {}
 
 	protected void handleTextChatPacket(string sender, string message) {
 		this.handleTextMessage(message);

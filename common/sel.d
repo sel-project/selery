@@ -105,7 +105,7 @@ const struct Software {
 
 	enum ubyte[3] versions = [major, minor, revision];
 
-	enum bool stable = false;
+	enum bool stable = true;
 
 	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
 
@@ -115,32 +115,22 @@ const struct Software {
 
 	enum ubyte api = 1;
 
-	enum sul = 76;
-
 	enum ubyte hncom = 1;
 
 	enum ubyte externalConsole = 2;
 
 }
 
-static if(!is(typeof(__sul))) {
-	// do not print an error message if sul cannot be found
-	enum __sul = Software.sul;
-}
-
-static assert(__sul >= Software.sul, "sul is outdated. Update it with 'sel update utils' and try again");
-
 enum supportedPocketProtocols = cast(string[][uint])[
 	100: ["1.0.0", "1.0.1", "1.0.2"],
 	101: ["1.0.3"],
-	//102: ["1.0.4"],
+	102: ["1.0.4"],
 ];
 
 enum supportedMinecraftProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
-	//317: ["1.12"],
 ];
 
 enum latestPocketProtocols = latest(supportedPocketProtocols);
