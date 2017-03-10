@@ -1,6 +1,7 @@
 website/
 .gitignore
 .git/
+.editorconfig
 install.sh
 install.bat
 copy.d

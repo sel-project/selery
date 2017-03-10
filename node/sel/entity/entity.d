@@ -105,7 +105,7 @@ enum Entities : bytegroup {
  */
 abstract class Entity : EventListener!WorldEvent {
 
-	private static uint count = 0;
+	private static uint count = 1;
 
 	public static @safe @nogc uint reserve() {
 		return count++;
