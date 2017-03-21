@@ -21,7 +21,7 @@ module sel.util.util;
 import std.algorithm : canFind;
 import std.array : split;
 import std.conv : to, ConvException;
-import std.string : toUpper;
+import std.string : toUpper, capitalize;
 import std.traits : isArray, isAssociativeArray, isSafe;
 
 /**

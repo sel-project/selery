@@ -114,7 +114,7 @@ class Command {
 		public override string[] enumMembers(size_t i) {
 			foreach(immutable j, T; E) {
 				if(i == j) {
-					static if(is(T == enum)) return [__traits(allMembers, T)];
+					static if(is(T == enum)) return [__traits(allMembers, T)]; //TODO this should be converted into snake case (which minecraft uses)
 					else break;
 				}
 			}
@@ -134,6 +134,7 @@ class Command {
 						static if(is(T == enum)) {
 							bool found = false;
 							foreach(immutable member ; __traits(allMembers, T)) {
+								//TODO convert member to snake case
 								if(!found && member == args[j]) {
 									mixin("cargs[i] = T." ~ member ~ ";");
 									found = true;
@@ -142,14 +143,37 @@ class Command {
 							}
 							if(!found) return false;
 						} else static if(is(T == Player)) {
-							// first player with the given name
-							auto list = server.playersWithName(args[j]);
-							if(list.length) cargs[i] = list[0];
+							switch(args[j]) {
+								case "@p":
+									auto players = sender.watchlist!Player;
+									if(players.length) {
+										Player player;
+										double distance = double.infinity;
+										foreach(p ; players) {
+											double d = distance(sender.position, p.position);
+											if(d < distance) {
+												distance = d;
+												player = p;
+											}
+										}
+										cargs[j] = player;
+									}
+									break;
+								case "@r":
+									auto players = sender.world.players;
+									if(players.length) cargs[i] = players[sender.world.random($)];
+									break;
+								default:
+									// first player with the given name
+									auto list = server.playersWithName(args[j]);
+									if(list.length) cargs[i] = list[0];
+									break;
+							}
 						} else {
 							try {
 								static if(is(T == BlockPosition) || is(T == EntityPosition)) {
 									if(j + 3 > args.length) return false;
-									cargs[i] = T(to!(T.Type)(args[j++]), to!(T.Type)(args[j++]), to!(T.Type)(args[j]));
+									cargs[i] = sender.commandPosition(args[j++], args[j++], args[j]);
 								} else {
 									cargs[i] = to!T(args[j]);
 								}
@@ -268,10 +292,15 @@ final class Commands {
 		if(args.length < 2) return Message("{red}{commands.effect.usage}", []);
 		auto players = server.playersWithName(args[0]);
 		if(!players.length) return Message("{red}{commands.notonline}", []);
-		ubyte effect = to!ubyte(args[1]); //TODO handle error and convert string (e.g. "speed" to 1)
-		uint duration = args.length > 2 ? to!uint(args[2]) : 60;
+		ubyte id = 255;
+		try {
+			id = to!ubyte(args[1]);
+		} catch(ConvException) {
+			//TODO
+		}
+		uint duration = args.length > 2 ? to!uint(args[2]) : 30;
 		ubyte level = args.length > 3 ? to!ubyte(args[3]) : 0;
-		foreach(player ; players) player.addEffect(new Effect(effect, duration, level));
+		//TODO
 		return Message("{green}{commands.effect.success}", []);
 	}
 
@@ -377,11 +406,11 @@ final class Commands {
 		}
 		Slot given;
 		foreach(player ; players) {
-			Item item = player.world.items.get(itemstr, itemmeta);
+			Item item = player.world.items.fromString(itemstr, itemmeta);
 			if(item is null) return Message("{red}{commands.give.noitem}", [itemstr]);
 			if(args.length > 3) {
 				try {
-					item.elaborateJSON(parseJSON(args[3..$].join(" ")));
+					item.parseJSON(parseJSON(args[3..$].join(" ")));
 				} catch(Throwable t) {}
 			}
 			given = count == 0 ? Slot(item) : Slot(item, count);

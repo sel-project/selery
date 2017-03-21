@@ -18,9 +18,12 @@
  */
 module sel.block.fluid;
 
+import common.sel;
+
 import sel.block.block;
-import sel.block.flags;
 import sel.math.vector : BlockPosition;
+
+static import sul.blocks;
 
 /**
  * Class for fluids.
@@ -30,9 +33,9 @@ import sel.math.vector : BlockPosition;
  * 		per_level = number of levels to add to curr_level when fluid expands
  * 		time = number of ticks used by the fluid to expand
  */
-class FluidBlock(BlockData blockdata, BlockData next, ubyte per_level=0, uint time=0) : SimpleBlock!(blockdata, REPLACEABLE) {
+class FluidBlock(sul.blocks.Block sb, block_t next, ubyte per_level=0, uint time=0) : SimpleBlock!(sb) {
 
-	public final override @property bool fluid() {
+	public final override pure nothrow @property @safe @nogc bool fluid() {
 		return true;
 	}
 

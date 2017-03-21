@@ -17,7 +17,7 @@ module sel.world.generator;
 import std.algorithm : min;
 import std.conv : to;
 
-import sel.block.block : BlockData, Block, Blocks;
+import sel.block.block : Block, Blocks;
 import sel.math.vector : ChunkPosition, BlockPosition, distance;
 import sel.util.random : Random;
 import sel.world.chunk : Chunk;
@@ -70,10 +70,10 @@ class Empty : Generator {
 
 class Flat : Generator {
 
-	private BlockData[] layers;
+	private ushort[] layers;
 	protected bool trees;
 
-	public @safe this(World world, BlockData[] layers=[Blocks.BEDROCK, Blocks.DIRT, Blocks.DIRT, Blocks.DIRT, Blocks.GRASS], bool trees=true) {
+	public @safe this(World world, ushort[] layers=[Blocks.bedrock, Blocks.dirt, Blocks.dirt, Blocks.dirt, Blocks.grass], bool trees=true) {
 		super(world);
 		this.layers = layers;
 		this.trees = trees;
@@ -99,7 +99,7 @@ class Flat : Generator {
 			ubyte foliage = this.world.random.range!ubyte(3, min(height, cast(ubyte)7));
 			//logs
 			foreach(size_t y ; this.layers.length..this.layers.length+height) {
-				chunk[7, y, 7] = Blocks.WOOD_UP_DOWN[tree];
+				chunk[7, y, 7] = Blocks.woodUpDown[tree];
 			}
 			//leaves
 			BlockPosition center = BlockPosition(7, this.layers.length.to!int + height, 7);
@@ -110,7 +110,7 @@ class Flat : Generator {
 						if(pos.distance(center) <= foliage) {
 							auto current = chunk[xx, yy, zz];
 							if(current is null || *current is null) {
-								chunk[xx, yy, zz] = Blocks.LEAVES_DECAY[tree];
+								chunk[xx, yy, zz] = Blocks.leavesDecay[tree];
 							}
 						}
 					}

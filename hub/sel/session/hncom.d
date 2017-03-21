@@ -34,6 +34,7 @@ import std.regex : ctRegex, matchFirst;
 import std.socket;
 import std.string;
 import std.system : Endian;
+import std.zlib;
 
 import common.sel;
 import common.util.lang : translate;
@@ -48,15 +49,18 @@ import sel.network.socket;
 import sel.session.player : PlayerSession, Skin;
 import sel.util.log : log;
 import sel.util.thread : SafeThread;
+import sel.util.world : WorldSession = World;
 
+mixin("import Util = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".util;");
 mixin("import Types = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".types;");
 mixin("import Login = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;");
 mixin("import Status = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status;");
 mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
+mixin("import World = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".world;");
 
 class HncomHandler : HandlerThread {
 	
-	private shared string* additionalJson;
+	private shared string* additionalJson, socialJson;
 
 	private immutable ushort pocketPort, minecraftPort;
 
@@ -64,7 +68,7 @@ class HncomHandler : HandlerThread {
 
 	version(Posix) private shared string unixSocketAddress;
 	
-	public this(shared Server server, shared string* additionalJson, ushort pocketPort, ushort minecraftPort) {
+	public this(shared Server server, shared string* additionalJson, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
 		version(OneNode) {
 			string ip = "::1";
 		} else {
@@ -119,7 +123,7 @@ class HncomHandler : HandlerThread {
 			}
 			if(this.server.acceptNode(address)) {
 				new SafeThread({
-					shared Node node = new shared Node(this.server, client, *this.additionalJson, this.pocketPort, this.minecraftPort);
+					shared Node node = new shared Node(this.server, client, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
 					delete node;
 				}).start();
 			} else {
@@ -188,6 +192,8 @@ class Node : Session {
 	private shared Socket socket;
 	private immutable string remoteAddress;
 
+	private shared string* socialJson;
+
 	private shared bool n_main;
 	private shared string n_name;
 
@@ -197,6 +203,7 @@ class Node : Session {
 	public shared Types.Plugin[] plugins;
 	
 	private shared PlayerSession[immutable(uint)] players;
+	private shared WorldSession[immutable(uint)] worlds;
 
 	private uint n_latency;
 
@@ -204,11 +211,12 @@ class Node : Session {
 	private shared ulong n_ram;
 	private shared float n_cpu;
 	
-	public shared this(shared Server server, Socket socket, string additionalJson, ushort pocket_port, ushort minecraft_port) {
+	public shared this(shared Server server, Socket socket, string additionalJson, shared string* socialJson, ushort pocket_port, ushort minecraft_port) {
 		super(server);
 		if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
 		this.socket = cast(shared)socket;
 		this.remoteAddress = socket.remoteAddress.toString();
+		this.socialJson = socialJson;
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
 		auto receiver = new Receiver!(uint, Endian.littleEndian)();
 		ubyte[] buffer = new ubyte[256];
@@ -375,70 +383,113 @@ class Node : Session {
 					log("receiver length is 0 in ", this.toString());
 					return;
 				}
-				ubyte[] payload = receiver.next;
-				switch(payload[0]) {
-					case Status.MessageServerbound.ID:
-						this.handleMessage(Status.MessageServerbound.fromBuffer(payload));
-						break;
-					case Status.ResourcesUsage.ID:
-						auto packet = Status.ResourcesUsage.fromBuffer(payload);
-						this.n_tps = packet.tps;
-						this.n_ram = packet.ram;
-						this.n_cpu = packet.cpu;
-						break;
-					case Status.Log.ID:
-						auto l = Status.Log.fromBuffer(payload);
-						this.server.message(this.name, l.timestamp, l.logger, l.message, l.commandId);
-						break;
-					case Status.UpdateList.ID:
-						this.handleUpdateList(Status.UpdateList.fromBuffer(payload));
-						break;
-					case Player.Kick.ID:
-						this.handleKickPlayer(Player.Kick.fromBuffer(payload));
-						break;
-					case Player.Transfer.ID:
-						this.handleTransferPlayer(Player.Transfer.fromBuffer(payload));
-						break;
-					case Player.UpdateDisplayName.ID:
-						auto udn = Player.UpdateDisplayName.fromBuffer(payload);
-						auto player = udn.hubId in this.players;
-						if(player) {
-							(*player).displayName = udn.displayName;
-						}
-						break;
-					case Player.UpdateWorld.ID:
-						auto uw = Player.UpdateWorld.fromBuffer(payload);
-						auto player = uw.hubId in this.players;
-						if(player) {
-							(*player).world = uw.world;
-							(*player).dimension = uw.dimension;
-						}
-						break;
-					case Player.UpdateViewDistance.ID:
-						auto uvd = Player.UpdateViewDistance.fromBuffer(payload);
-						auto player = uvd.hubId in this.players;
-						if(player) {
-							(*player).viewDistance = uvd.viewDistance;
-						}
-						break;
-					case Player.UpdateLanguage.ID:
-						auto ul = Player.UpdateLanguage.fromBuffer(payload);
-						auto player = ul.hubId in this.players;
-						if(player) {
-							(*player).language = ul.language;
-						}
-						break;
-					case Player.GamePacket.ID:
-						this.handleGamePacket(Player.GamePacket.fromBuffer(payload));
-						break;
-					case Player.OrderedGamePacket.ID:
-						this.handleOrderedGamePacket(Player.OrderedGamePacket.fromBuffer(payload));
-						break;
-					default:
-						log("Unknown packet by ", this.toString(), " with id ", payload[0], " (", payload.length, " bytes)");
-						return; // closes connection
-				}
+				this.handlePacket(receiver.next);
 			}
+		}
+	}
+
+	private shared void handlePacket(ubyte[] payload) {
+		switch(payload[0]) {
+			case Util.Uncompressed.ID:
+				this.handleUncompressed(Util.Uncompressed.fromBuffer(payload).packets);
+				break;
+			case Util.Compressed.ID:
+				auto compressed = Util.Compressed.fromBuffer(payload);
+				auto uc = new UnCompress(compressed.size);
+				auto data = cast(ubyte[])uc.uncompress(compressed.payload);
+				data ~= cast(ubyte[])uc.flush();
+				this.handleUncompressed(Util.Uncompressed.fromBuffer!false(data).packets);
+				break;
+			case Status.MessageServerbound.ID:
+				this.handleMessage(Status.MessageServerbound.fromBuffer(payload));
+				break;
+			case Status.ResourcesUsage.ID:
+				auto packet = Status.ResourcesUsage.fromBuffer(payload);
+				this.n_tps = packet.tps;
+				this.n_ram = packet.ram;
+				this.n_cpu = packet.cpu;
+				break;
+			case Status.Log.ID:
+				auto l = Status.Log.fromBuffer(payload);
+				string name = l.logger;
+				if(l.world != Status.Log.NO_WORLD) {
+					auto world = l.world in this.worlds;
+					if(world) name = (*world).name;
+				}
+				this.server.message(this.name, l.timestamp, name, l.message, l.commandId);
+				break;
+			case Status.UpdateList.ID:
+				this.handleUpdateList(Status.UpdateList.fromBuffer(payload));
+				break;
+			case Player.Kick.ID:
+				this.handleKickPlayer(Player.Kick.fromBuffer(payload));
+				break;
+			case Player.Transfer.ID:
+				this.handleTransferPlayer(Player.Transfer.fromBuffer(payload));
+				break;
+			case Player.UpdateDisplayName.ID:
+				auto udn = Player.UpdateDisplayName.fromBuffer(payload);
+				auto player = udn.hubId in this.players;
+				if(player) {
+					(*player).displayName = udn.displayName;
+				}
+				break;
+			case Player.UpdateWorld.ID:
+				auto uw = Player.UpdateWorld.fromBuffer(payload);
+				auto player = uw.hubId in this.players;
+				auto world = uw.world in this.worlds;
+				if(player && world) {
+					(*player).world = *world;
+				}
+				break;
+			case Player.UpdateViewDistance.ID:
+				auto uvd = Player.UpdateViewDistance.fromBuffer(payload);
+				auto player = uvd.hubId in this.players;
+				if(player) {
+					(*player).viewDistance = uvd.viewDistance;
+				}
+				break;
+			case Player.UpdateLanguage.ID:
+				auto ul = Player.UpdateLanguage.fromBuffer(payload);
+				auto player = ul.hubId in this.players;
+				if(player) {
+					(*player).language = ul.language;
+				}
+				break;
+			case Player.UpdateGamemode.ID:
+				auto ug = Player.UpdateGamemode.fromBuffer(payload);
+				auto player = ug.hubId in this.players;
+				if(player) {
+					(*player).gamemode = ug.gamemode;
+				}
+				break;
+			case Player.GamePacket.ID:
+				this.handleGamePacket(Player.GamePacket.fromBuffer(payload));
+				break;
+			case Player.OrderedGamePacket.ID:
+				this.handleOrderedGamePacket(Player.OrderedGamePacket.fromBuffer(payload));
+				break;
+			case World.Add.ID:
+				this.handleAddWorldPacket(World.Add.fromBuffer(payload));
+				break;
+			case World.Remove.ID:
+				this.handleRemoveWorldPacket(World.Remove.fromBuffer(payload));
+				break;
+			case World.UpdateDifficulty.ID:
+				this.handleUpdateWorldDifficulty(World.UpdateDifficulty.fromBuffer(payload));
+				break;
+			case World.UpdateGamemode.ID:
+				this.handleUpdateWorldGamemode(World.UpdateGamemode.fromBuffer(payload));
+				break;
+			default:
+				log("Unknown packet by ", this.toString(), " with id ", payload[0], " (", payload.length, " bytes)");
+				return; // closes connection
+		}
+	}
+
+	private shared void handleUncompressed(ubyte[][] packets) {
+		foreach(packet ; packets) {
+			if(packet.length) this.handlePacket(packet);
 		}
 	}
 
@@ -567,6 +618,23 @@ class Node : Session {
 			(*player).sendOrderedFromNode(packet.order, packet.packet);
 		}
 	}
+
+	private shared void handleAddWorldPacket(World.Add packet) {
+		auto world = new shared WorldSession(packet.worldId, packet.name, packet.dimension, packet.generator, packet.difficulty, packet.gamemode, packet.spawnPoint, packet.time, packet.seed);
+		if(packet.parent >= 0) {
+			auto parent = packet.parent in this.worlds;
+			if(parent) world.parent = *parent;
+		}
+		this.worlds[packet.worldId] = world;
+	}
+
+	private shared void handleRemoveWorldPacket(World.Remove packet) {
+		this.worlds.remove(packet.worldId);
+	}
+
+	private shared void handleUpdateWorldDifficulty(World.UpdateDifficulty packet) {}
+
+	private shared void handleUpdateWorldGamemode(World.UpdateGamemode packet) {}
 	
 	/**
 	 * Sends a buffer of data, prepending its length as a
@@ -634,7 +702,12 @@ class Node : Session {
 	 * Tells the node to reload its configurations.
 	 */
 	public shared void reload() {
-		this.send(new Status.Reload().encode());
+		with(this.server.settings) {
+			Types.Motd[] motds;
+			if(pocket) motds ~= Types.Motd(Types.Motd.POCKET, pocketMotd);
+			if(minecraft) motds ~= Types.Motd(Types.Motd.MINECRAFT, minecraftMotd);
+			this.send(new Status.Reload(cast(string)displayName, motds, cast(string)language, cast(string[])acceptedLanguages, cast(string)*this.socialJson).encode());
+		}
 	}
 	
 	/**

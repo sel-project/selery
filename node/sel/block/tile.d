@@ -18,8 +18,9 @@
  */
 module sel.block.tile;
 
+import std.algorithm : canFind;
 import std.conv : to;
-import std.json : JSONValue;
+import std.json;
 import std.traits : isAbstractClass;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
@@ -28,7 +29,7 @@ import common.sel;
 
 import sel.player : Player;
 import sel.block.block;
-import sel.block.flags;
+import sel.block.solid : Facing;
 import sel.entity.entity : Entity;
 import sel.entity.human : Human;
 import sel.item.inventory : Inventory, NotifiedInventory, InventoryHolder;
@@ -41,6 +42,8 @@ import sel.util.color : Color, Colors;
 import sel.util.lang : GenericTranslatable = Translatable;
 import sel.world.particle : Particles;
 import sel.world.world : World;
+
+static import sul.blocks;
 
 static if(__minecraft) {
 	mixin("import sul.protocol.minecraft" ~ __minecraftProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
@@ -59,9 +62,33 @@ interface Tile {
 
 	public pure nothrow @property @safe @nogc uint tid();
 
+	/**
+	 * Gets the tile's spawn id for Minecraft and Minecraft: Pocket
+	 * Edition.
+	 * They're usually in snake case in Minecraft (flower_pot) and
+	 * in pascal case in Minecraft: Pocket Edition (FlowerPot).
+	 */
 	public pure nothrow @property @safe group!string spawnId();
 
+	/**
+	 * Gets the named binary tag for Minecraft and Minecraft: Pocket
+	 * Edition as a group.
+	 * The tag may be null if the tile does not exists in the game's
+	 * version or when the tile is in its inital state (or empty).
+	 */
 	public @property group!Compound compound();
+
+	/**
+	 * Parses a non-null compound saved in the Minecraft's Anvil
+	 * format.
+	 */
+	public abstract void parseMinecraftCompound(Compound compound);
+
+	/**
+	 * Parses a non-null compound saved from a Minecraft: Pocket
+	 * Edition's LevelDB format.
+	 */
+	public abstract void parsePocketCompound(Compound compound);
 
 	public void place(World world, BlockPosition position);
 
@@ -76,13 +103,15 @@ interface Tile {
 	 * }
 	 * ---
 	 */
-	public @property @safe @nogc bool placed();
-
-	/// Gets the world the tile is placed in, if placed is true.
-	public @property @safe @nogc World world();
+	public pure nothrow @property @safe @nogc bool placed();
 
 	/**
-	 * Gets the tile's position in the world.
+	 * Gets the world the tile is placed in, if placed is true.
+	 */
+	public pure nothrow @property @safe @nogc World world();
+
+	/**
+	 * Gets the tile's position in the world, if placed.
 	 * Example:
 	 * ---
 	 * if(tile.placed) {
@@ -90,7 +119,7 @@ interface Tile {
 	 * }
 	 * ---
 	 */
-	public @property @safe @nogc BlockPosition position();
+	public pure nothrow @property @safe @nogc BlockPosition position();
 
 	/**
 	 * Gets the action type of the tile, used in Minecraft's
@@ -100,12 +129,13 @@ interface Tile {
 
 }
 
-class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
+abstract class TileBlock(sul.blocks.Block sb) : SimpleBlock!(sb), Tile {
 
 	private static uint count = 0;
 
 	private immutable uint n_tid;
 
+	private bool n_placed = false;
 	private World n_world;
 	private BlockPosition n_position;
 
@@ -120,32 +150,39 @@ class TileBlock(BlockData blockdata, E...) : SimpleBlock!(blockdata, E), Tile {
 	public override abstract pure nothrow @property @safe group!string spawnId();
 
 	public override abstract @property group!Compound compound();
+	
+	public override abstract void parseMinecraftCompound(Compound compound);
+	
+	public override abstract void parsePocketCompound(Compound compound);
 
 	public override void place(World world, BlockPosition position) {
+		this.n_placed = true;
 		this.n_world = world;
 		this.n_position = position;
 		this.update();
 	}
 
 	public final override void unplace() {
+		this.n_placed = false;
 		this.n_world = null;
+		this.n_position = BlockPosition.init;
 	}
 
-	public final override @property @safe @nogc bool placed() {
-		return this.world !is null;
+	public final override pure nothrow @property @safe @nogc bool placed() {
+		return this.n_placed;
 	}
 
-	public final override @property @safe @nogc World world() {
+	public final override pure nothrow @property @safe @nogc World world() {
 		return this.n_world;
 	}
 
-	public final override @property @safe @nogc BlockPosition position() {
+	public final override pure nothrow @property @safe @nogc BlockPosition position() {
 		return this.n_position;
 	}
 
 	public override abstract pure nothrow @property @safe @nogc ubyte action();
 
-	/// Function called when the custom data changes and the viewers should be updated.
+	// function called when the custom data changes and the viewers should be updated.
 	protected void update() {
 		if(this.placed) {
 			this.world.updateTile(this, this.position);
@@ -276,7 +313,7 @@ template Translatable(T:Sign) {
 	alias Translatable = GenericTranslatable!(["this.n_tag.get!(sel.util.nbt.String)(\"Text1\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text2\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text3\").value", "this.n_tag.get!(sel.util.nbt.String)(\"Text4\").value"], T);
 }+/
 
-abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E), Sign {
+abstract class GenericSign(sul.blocks.Block sb) : TileBlock!(sb), Sign {
 
 	private Compound n_compound;
 	private String[4] texts;
@@ -358,7 +395,34 @@ abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E)
 	}
 
 	public override @property group!Compound compound() {
-		return group!Compound(this.n_compound, this.minecraft_compound);
+		static if(__minecraft) {
+			return group!Compound(this.n_compound, this.minecraft_compound);
+		} else {
+			return group!Compound(this.n_compound, null);
+		}
+	}
+
+	public override void parseMinecraftCompound(Compound compound) {
+		void parse(size_t i, string data) {
+			auto json = parseJSON(data);
+			if(json.type == JSON_TYPE.OBJECT) {
+				auto text = "text" in json;
+				if(text && (*text).type == JSON_TYPE.STRING) {
+					this.setImpl(i, (*text).str);
+				}
+			}
+		}
+		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
+			mixin("auto text = \"Text" ~ to!string(i) ~ "\" in compound;");
+			if(text && cast(String)*text) parse(i, cast(String)*text);
+		}
+	}
+
+	public override void parsePocketCompound(Compound compound) {
+		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
+			mixin("auto text = \"Text" ~ to!string(i) ~ "\" in compound;");
+			if(text && cast(String)*text) this.setImpl(i, cast(String)*text);
+		}
 	}
 	
 	public override @property @safe @nogc ubyte action() {
@@ -369,52 +433,50 @@ abstract class GenericSign(BlockData blockdata, E...) : TileBlock!(blockdata, E)
 		}
 	}
 
-	public override @safe Slot[] drops(World world, Player player, Item item) {
-		return [Slot(world.items.get(Items.SIGN), 1)];
+	public override Slot[] drops(World world, Player player, Item item) {
+		return [Slot(world.items.get(Items.sign), 1)];
 	}
 
 }
 
-class SignBlock(BlockData blockdata, E...) : GenericSign!(blockdata, E) {
+class SignBlock(sul.blocks.Block sb) : GenericSign!(sb) {
+
+	mixin Instance;
 	
-	public @safe this(F...)(F args) {
+	public @safe this(E...)(E args) {
 		super(args);
 	}
 
-	public override void onUpdate(World world, BlockPosition position, Update update) {
-		if(update != Update.REMOVED) {
-			if(world[position - [0, 1, 0]] == Blocks.AIR) {
-				world.drop(this, position);
-				world[position] = Blocks.AIR;
-			}
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		if(!world[position - [0, 1, 0]].solid) {
+			world.drop(this, position);
+			world[position] = Blocks.air;
 		}
 	}
 
 }
 
-class WallSignBlock(BlockData blockdata, E...) : GenericSign!(blockdata, E) {
+class WallSignBlock(sul.blocks.Block sb, ubyte facing) : GenericSign!(sb) if(facing < 4) {
+
+	mixin Instance;
 	
-	public @safe this(F...)(F args) {
+	public @safe this(E...)(E args) {
 		super(args);
 	}
 
-	public override void onUpdate(World world, BlockPosition position, Update update) {
-		if(update != Update.REMOVED) {
-			static if(blockdata.id == Blocks.WALL_SIGN_NORTH.id) {
-				BlockPosition pc = position + [0, 0, 1];
-			} else static if(blockdata.id == Blocks.WALL_SIGN_SOUTH.id) {
-				BlockPosition pc = position - [0, 0, 1];
-			} else static if(blockdata.id == Blocks.WALL_SIGN_WEST.id) {
-				BlockPosition pc = position + [1, 0, 0];
-			} else static if(blockdata.id == Blocks.WALL_SIGN_EAST.id) {
-				BlockPosition pc = position - [1, 0, 0];
-			} else {
-				return;
-			}
-			if(world[pc] == Blocks.AIR) {
-				world.drop(this, position);
-				world[pc] = Blocks.AIR;
-			}
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		static if(facing == Facing.north) {
+			BlockPosition pc = position + [0, 0, 1];
+		} else static if(facing == Facing.south) {
+			BlockPosition pc = position - [0, 0, 1];
+		} else static if(facing == Facing.west) {
+			BlockPosition pc = position + [1, 0, 0];
+		} else {
+			BlockPosition pc = position - [1, 0, 0];
+		}
+		if(!world[pc].solid) {
+			world.drop(this, position);
+			world[pc] = Blocks.air;
 		}
 	}
 
@@ -448,25 +510,22 @@ interface FlowerPot {
 	 */
 	public @property Item item(Item item);
 
-	public static string getMinecraftPlantName(ushort item) {
-		return "minecraft:" ~ (){
-			switch(item) {
-				case 6: return "sapling";
-				case 31: return "tallgrass";
-				case 32: return "deadbush";
-				case 37: return "yellow_flower";
-				case 38: return "red_flower";
-				case 39: return "brown_mushroom";
-				case 40: return "red_mushroom";
-				case 81: return "cactus";
-				default: return "?";
-			}
-		}();
-	}
+	protected enum minecraftItems = [
+		6: "sapling",
+		31: "tallgrass",
+		32: "deadbush",
+		37: "yellow_flower",
+		38: "red_flower",
+		39: "brown_mushroom",
+		40: "red_mushroom",
+		81: "cactus",
+	];
 
 }
 
-final class FlowerPotTile(BlockData blockData, E...) : TileBlock!(blockData, E), FlowerPot {
+final class FlowerPotTile(sul.blocks.Block sb) : TileBlock!(sb), FlowerPot {
+
+	mixin Instance;
 
 	private Item m_item;
 
@@ -487,8 +546,9 @@ final class FlowerPotTile(BlockData blockData, E...) : TileBlock!(blockData, E),
 
 	public override @property Item item(Item item) {
 		if(item !is null) {
+			item.clear(); // remove enchantments and custom name
 			static if(__pocket) this.pocket_compound = new Compound("", new Short("item", item.ids.pe), new Int("mData", item.metas.pe));
-			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", FlowerPot.getMinecraftPlantName(item.ids.pc)), new Int("Data", item.metas.pc));
+			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", (){ auto ret=item.ids.pc in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Int("Data", item.metas.pc));
 		} else {
 			this.pocket_compound = null;
 			this.minecraft_compound = null;
@@ -497,8 +557,52 @@ final class FlowerPotTile(BlockData blockData, E...) : TileBlock!(blockData, E),
 		return this.m_item = item;
 	}
 
+	public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
+		if(this.item !is null) {
+			// drop
+			if(player.inventory.held.empty) player.inventory.held = Slot(this.item, ubyte(1));
+			else if(player.inventory.held.item == this.item && !player.inventory.held.full) player.inventory.held = Slot(this.item, cast(ubyte)(player.inventory.held.count + 1));
+			else if(!(player.inventory += Slot(this.item, 1)).empty) player.world.drop(Slot(this.item, 1), position.entityPosition + [.5, .375, .5]);
+			this.item = null;
+			return true;
+		} else if(item !is null && [6, 31, 32, 37, 38, 39, 40, 81].canFind(item.ids.pc)) {
+			// place
+			this.item = item;
+			ubyte c = player.inventory.held.count;
+			player.inventory.held = --c ? Slot(item, c) : Slot(null);
+			return true;
+		}
+		return false;
+	}
+
 	public override @property group!Compound compound() {
 		return group!Compound(this.pocket_compound, this.minecraft_compound);
+	}
+
+	public override void parseMinecraftCompound(Compound compound) {
+		if(this.world !is null) {
+			auto item = "Item" in compound;
+			auto meta = "Data" in compound;
+			if(item && cast(String)*item) {
+				immutable name = (cast(String)*item).value;
+				foreach(id, n; minecraftItems) {
+					if(name == n) {
+						this.item = this.world.items.fromMinecraft(cast(ushort)id, cast(ushort)(meta && cast(Int)*meta ? cast(Int)*meta : 0));
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	public override void parsePocketCompound(Compound compound) {
+		if(this.world !is null) {
+			auto id = "item" in compound;
+			auto meta = "mData" in compound;
+			if(id && cast(Short)*id) {
+				this.item = this.world.items.fromPocket(cast(Short)*id, meta && cast(Int)*meta ? cast(ushort)cast(Int)*meta : 0);
+			}
+		}
 	}
 
 	public override ubyte action() {
@@ -527,7 +631,7 @@ interface Container {
 	alias Translatable = GenericTranslatable!("this.n_tag.get!(sel.util.nbt.String(\"CustomName\").value", T);
 }*/
 
-class ContainerBlock(BlockData data, E...) : TileBlock!(data, E), Container, InventoryHolder {
+/*class ContainerBlock(BlockData data, E...) : TileBlock!(data, E), Container, InventoryHolder {
 
 	private Inventory n_inventory;
 
@@ -545,7 +649,7 @@ class ContainerBlock(BlockData data, E...) : TileBlock!(data, E), Container, Inv
 
 	alias inventory this;
 
-}
+}*/
 
 /*
 

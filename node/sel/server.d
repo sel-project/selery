@@ -37,6 +37,7 @@ import std.typecons : Tuple, tuple;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, Parameters;
 import std.uuid;
+import std.zlib : UnCompress;
 
 import common.path : Paths;
 import common.sel;
@@ -51,7 +52,6 @@ import sel.event.event : Event, EventListener;
 import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
-import sel.item.item : Items, ItemsStorageHolder, ItemsStorage;
 import sel.math.vector : entityPosition;
 import sel.player.player : Player;
 import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
@@ -71,16 +71,21 @@ import sel.world.world : World;
 
 private import plugins;
 
-/*mixin("import HncomTypes = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".types;");
-mixin("import HncomLogin = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login;");
-mixin("import HncomStatus = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status;");
-mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");*/
+/*mixin((){
+	string imports;
+	foreach(mod ; ["util", "types", "login", "status", "player", "world", "tracking"]) {
+		imports ~= "import Hncom" ~ capitalize(mod) ~ " = sul.protocol.hncom" ~ to!string(Software.hncom) ~ "." ~ mod ~ ";";
+	}
+	return imports;
+}());*/
 
-// mixins cause errors!
-import HncomTypes = sul.protocol.hncom1.types;
-import HncomLogin = sul.protocol.hncom1.login;
-import HncomStatus = sul.protocol.hncom1.status;
-import HncomPlayer = sul.protocol.hncom1.player;
+// mixin causes errors!
+import HncomUtil = sul.protocol.hncom2.util;
+import HncomTypes = sul.protocol.hncom2.types;
+import HncomLogin = sul.protocol.hncom2.login;
+import HncomStatus = sul.protocol.hncom2.status;
+import HncomPlayer = sul.protocol.hncom2.player;
+import HncomWorld = sul.protocol.hncom2.world;
 
 alias ServerVariables = Variables!("server", string, "name", size_t, "ticks", size_t, "online", size_t, "max");
 
@@ -133,7 +138,7 @@ version(Windows) {
 }
 
 /** Singleton for the server instance. */
-final class Server : EventListener!ServerEvent, ItemsStorageHolder {
+final class Server : EventListener!ServerEvent {
 
 	private ulong start_time;
 
@@ -186,8 +191,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	public EventListener!WorldEvent globalListener;
 
 	private Command[string] commands;
-
-	private ItemsStorage n_items;
 
 	private LangSearcher lang_searcher;
 
@@ -411,9 +414,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		this.n_variables = ServerVariables(&this.n_settings.name, &this.n_ticks, &this.n_online, &this.n_max);
 
-		// register items and blocks
-		this.n_items = new ItemsStorage().registerAll!Items();
-
 		this.globalListener = new EventListener!WorldEvent();
 
 		//TODO read creative (default) creative items on startup
@@ -443,7 +443,10 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 		// load creative inventories
 		foreach(immutable protocol ; __pocketProtocolsTuple) {
-			mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory();");
+			mixin("alias P = PocketPlayerImpl!" ~ protocol.to!string ~ ";");
+			if(!P.loadCreativeInventory()) {
+				//TODO print a warning
+			}
 		}
 
 		this.n_node_max = reloadSettings();
@@ -1037,7 +1040,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 * Gets a world by its id.
 	 * Returns: The World instance or null if the world is not registered.
 	 */
-	public pure nothrow @safe @nogc World worldWithId(size_t id) {
+	public pure nothrow @safe @nogc World worldWithId(uint id) {
 		foreach(world ; this.m_worlds) {
 			if(world.id == id) return world;
 		}
@@ -1053,10 +1056,19 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 	 * server.addWorld!CustomWorld(42); // custom world where 42 is passed to the constructor
 	 * ---
 	 */
-	public T addWorld(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
+	public T addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
 		T world = new T(args);
 		World.startWorld(world, null);
 		this.m_worlds ~= cast(World)world; // default if there are no worlds
+		this.sendPacket(new HncomWorld.Add(
+			world.id, world.name, world.dimension.pe,
+			world.type=="flat" ? HncomWorld.Add.FLAT : HncomWorld.Add.DEFAULT,
+			world.rules.difficulty, world.rules.gamemode, //TODO use world.difficulty and world.gamemode
+			typeof(HncomWorld.Add.spawnPoint)(world.spawnPoint.x, world.spawnPoint.z),
+			cast(short)(world.rules.daylightCycle ? world.time : -world.time),
+			world.seed,
+			world.parent is null ? -1 : world.parent.id
+		).encode());
 		return world;
 	}
 
@@ -1072,6 +1084,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 					if(world == this.m_worlds[i]) {
 						this.m_worlds = this.m_worlds[0..i] ~ this.m_worlds[i+1..$];
 						World.stopWorld(world, running ? this.m_worlds[0] : null);
+						this.sendPacket(new HncomWorld.Remove(world.id).encode());
 						return true;
 					}
 				}
@@ -1080,13 +1093,6 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * Gets the items' storage.
-	 */
-	public override pure nothrow @property @safe @nogc ItemsStorage items() {
-		return this.n_items;
 	}
 
 	/**
@@ -1231,13 +1237,27 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 
 	private void handleHncomPacket(ubyte id, ubyte[] data) {
 		switch(id) {
-			foreach(P ; TypeTuple!(HncomStatus.Packets, HncomPlayer.Packets)) {
+			foreach(P ; TypeTuple!(HncomUtil.Packets, HncomStatus.Packets, HncomPlayer.Packets, HncomWorld.Packets)) {
 				static if(P.CLIENTBOUND) {
 					case P.ID: mixin("return this.handle" ~ P.stringof ~ "Packet(P.fromBuffer!false(data));");
 				}
 			}
 			default: error_log("Unknown packet received from the hub with id ", id, " and ", data.length, " bytes of data");
 		}
+	}
+
+	private void handleUncompressedPacket(HncomUtil.Uncompressed packet) {
+		foreach(p ; packet.packets) {
+			if(p.length) this.handleHncomPacket(p[0], p[1..$]);
+		}
+	}
+
+	private void handleCompressedPacket(HncomUtil.Compressed packet) {
+		// not supported
+		auto uc = new UnCompress(packet.size);
+		ubyte[] data = cast(ubyte[])uc.uncompress(packet.payload);
+		data ~= cast(ubyte[])uc.flush();
+		this.handleUncompressedPacket(HncomUtil.Uncompressed.fromBuffer!false(data));
 	}
 
 	/*
@@ -1344,6 +1364,7 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 				}
 				default: assert(0, "Trying to add a player with an unknown type " ~ to!string(packet.type));
 			}
+			static if(!__pocket && !__minecraft) return cast(Player)null;
 		}();
 
 		// register the server's commands
@@ -1392,6 +1413,13 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		}
 	}
 	
+	private void handleUpdateGamemodePacket(HncomPlayer.UpdateGamemode packet) {
+		auto player = packet.hubId in this.players_hubid;
+		if(player) {
+			(*player).gamemode = packet.gamemode;
+		}
+	}
+	
 	/*
 	 * Updates a player's input mode.
 	 */
@@ -1432,6 +1460,40 @@ final class Server : EventListener!ServerEvent, ItemsStorageHolder {
 		auto player = packet.hubId in this.players_hubid;
 		if(player && packet.packet.length) {
 			(*player).handle(packet.packet[0], packet.packet[1..$]);
+		}
+	}
+
+	private void handleUpdateDifficultyPacket(HncomWorld.UpdateDifficulty packet) {
+		auto world = this.worldWithId(packet.worldId);
+		if(world !is null) {
+			//TODO update difficulty and send packets
+		}
+	}
+
+	private void handleUpdateGamemodePacket(HncomWorld.UpdateGamemode packet) {
+		auto world = this.worldWithId(packet.worldId);
+		if(world !is null) {
+			//TODO update default gamemode and send packets
+		}
+	}
+
+	private void handleRequestCreationPacket(HncomWorld.RequestCreation packet) {
+		//TODO do construction with rules
+		if(packet.parent < 0) {
+			this.addWorld(packet.name);
+		} else {
+			bool search(World[] worlds) {
+				foreach(world ; worlds) {
+					if(world.id == packet.parent) {
+						world.addChild(packet.name);
+						return true;
+					} else if(search(world.children)) {
+						return true;
+					}
+				}
+				return false;
+			}
+			search(this.worlds);
 		}
 	}
 

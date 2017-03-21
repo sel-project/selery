@@ -22,14 +22,13 @@ import sel.entity.effect : Effects;
 import sel.entity.entity : Entity;
 import sel.entity.interfaces : Undead, Arthropods;
 import sel.entity.human : Human;
-import sel.entity.living : Living, Damage;
+import sel.entity.living : Living;
 import sel.event.event : Cancellable;
 import sel.event.world.damage : EntityDamageEvent;
 import sel.event.world.world;
 import sel.item.enchanting : Enchantments;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
-import sel.item.tool : Tool;
 import sel.math.vector : EntityPosition;
 import sel.world.world : World;
 

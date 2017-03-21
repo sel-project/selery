@@ -28,6 +28,7 @@ import common.sel;
 import sel.server : Server;
 import sel.network.session : Session;
 import sel.session.hncom : Node;
+import sel.util.world : World;
 
 mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 
@@ -52,8 +53,10 @@ abstract class PlayerSession : Session {
 	protected shared string n_username;
 	protected shared string m_display_name;
 
-	protected shared string m_world;
-	protected shared byte m_dimension;
+	protected shared ubyte m_gamemode;
+
+	protected shared World m_world;
+	protected shared ubyte n_dimension;
 	protected shared uint m_view_distance;
 	
 	protected shared Address n_address;
@@ -183,24 +186,32 @@ abstract class PlayerSession : Session {
 	}
 
 	/**
+	 * Gets the player's gamemode that may differ from the world's.
+	 */
+	public final shared nothrow @property @safe @nogc ubyte gamemode() {
+		return this.m_gamemode;
+	}
+
+	public final shared nothrow @property @safe @nogc ubyte gamemode(ubyte gamemode) {
+		return this.m_gamemode = gamemode;
+	}
+
+	/**
 	 * Gets the player's world, which is updated by the node every
 	 * time the client changes dimension.
 	 */
-	public final shared nothrow @property @safe @nogc string world() {
+	public final shared nothrow @property @safe @nogc shared(World) world() {
 		return this.m_world;
 	}
 	
-	public final shared nothrow @property @safe @nogc string world(string world) {
+	public final shared nothrow @property @safe @nogc shared(World) world(shared World world) {
+		this.n_dimension = world.dimension;
 		return this.m_world = world;
 	}
 
 	/// ditto
 	public final shared nothrow @property @safe @nogc byte dimension() {
-		return this.m_dimension;
-	}
-
-	public final shared nothrow @property @safe @nogc byte dimension(byte dimension) {
-		return this.m_dimension = dimension;
+		return this.n_dimension;
 	}
 
 	public final shared nothrow @property @safe @nogc uint viewDistance() {
@@ -452,7 +463,8 @@ class Skin {
 	
 	public immutable string name;
 	public ubyte[] data;
-	public string face;
+	public ubyte[192] face;
+	public string faceBase64;
 	
 	public this(string name, ubyte[] data) {
 		this.name = name;
@@ -470,7 +482,8 @@ class Skin {
 				face[i++] = this.data[layer++];
 			}
 		}
-		this.face = Base64.encode(face);
+		this.face = face;
+		this.faceBase64 = Base64.encode(face);
 	}
 	
 }

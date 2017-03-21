@@ -61,6 +61,7 @@
 		</script>
 		<script>
 			const UPDATE_TIMEOUT = 5000;
+			const UNLIMITED = 4294967296;
 			var showed_player = null;
 			window.addEventListener("load", function(){
 				var max_players = 0;
@@ -71,7 +72,7 @@
 						document.getElementById("players_list").style.display = "none";
 					} else {
 						max_players = status[4] | (status[5] << 8) | (status[6] << 16) | (status[7] << 24);
-						document.getElementById("players").innerHTML = (status[0] | (status[1] << 8) | (status[2] << 16) | (status[3] << 24)) + "/" + max_players;
+						document.getElementById("players").innerHTML = (status[0] | (status[1] << 8) | (status[2] << 16) | (status[3] << 24)) + (max_players != UNLIMITED ? "/" + max_players : "");
 						document.getElementById("players_list").style.display = status.length > 6 ? "" : "none";
 						document.getElementById("players_list").innerHTML = "";
 						status = status.slice(8);

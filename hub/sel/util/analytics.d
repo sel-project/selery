@@ -48,7 +48,7 @@ class GoogleAnalytics {
 
 	public shared void updatePlayers(shared Player[] players) {
 		foreach(player ; players) {
-			this.genericRequest(player, ["t=screenview", "cd=" ~ player.world]);
+			if(player.world !is null) this.genericRequest(player, ["t=screenview", "cd=" ~ player.world.name]);
 		}
 	}
 

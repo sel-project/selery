@@ -26,9 +26,10 @@ import std.path : dirSeparator;
 import std.string : split, join, endsWith;
 
 import common.path : Paths;
+import common.sel;
 
 import sel.block;
-import sel.block.block : Blocks, BlockData;
+import sel.block.block : Blocks;
 import sel.block.tile : Tile;
 import sel.math.vector;
 import sel.util;
@@ -168,8 +169,8 @@ class Chunk {
 	}
 
 	/// ditto
-	public @safe Block** opIndexAssign(BlockData block, ubyte x, size_t y, ubyte z) {
-		return this.opIndexAssign(block.id in this.blocks, x, y, z);
+	public @safe Block** opIndexAssign(block_t block, ubyte x, size_t y, ubyte z) {
+		return this.opIndexAssign(block in this.blocks, x, y, z);
 	}
 
 	/// Registers a tile.
@@ -318,7 +319,7 @@ class Chunk {
 
 }
 
-class UnsavableChunk : Chunk {
+class UnsaveableChunk : Chunk {
 
 	public @safe this(World world, ChunkPosition position, string location=null) {
 		super(world, position, location);
@@ -330,19 +331,14 @@ class UnsavableChunk : Chunk {
 
 class Section {
 
+	public enum order = "yxz".dup;
+
 	private Block*[4096] n_blocks;
 	private ubyte[2048] n_sky_light = 255;
-	private ubyte[2048] n_blocks_light = 255;
+	private ubyte[2048] n_blocks_light = 0;
 
 	private size_t n_amount = 0;
 	private size_t n_random_ticked = 0;
-
-	public @safe this() {
-		/*this.n_sky_light = new ubyte[2048];
-		this.n_blocks_light = new ubyte[2048];
-		this.n_sky_light[] = 255;
-		this.n_blocks_light[] = 255;*/
-	}
 
 	public pure nothrow @property @safe @nogc ref auto blocks() {
 		return this.n_blocks;
@@ -401,19 +397,37 @@ class Section {
 		if(block && (*block).id == 0) block = null;
 		Block* old = *ptr;
 
-		//number of non-air update
+		bool old_air = old is null;
+		bool new_air = block is null;
+
+		// update the number of blocks
+		if(old_air ^ new_air) {
+			if(old_air) this.n_amount++;
+			else this.n_amount--;
+		}
+
+		bool old_rt = !old_air && (*old).doRandomTick;
+		bool new_rt = !new_air && (*block).doRandomTick;
+
+		// update the number of random-ticked blocks
+		if(old_rt ^ new_rt) {
+			if(old_rt) this.n_random_ticked--;
+			else this.n_random_ticked++;
+		}
+
+		/*
 		if(old is null && block !is null) {
 			this.n_amount++;
 		} else if(old !is null && block is null) {
 			this.n_amount--;
 		}
-
-		//number of random ticked udpate
+		
 		if((old is null || !(*old).doRandomTick) && (block !is null && (*block).doRandomTick)) {
 			this.n_random_ticked++;
 		} else if((old !is null && (*old).doRandomTick) && (block is null || !(*block).doRandomTick)) {
 			this.n_random_ticked--;
 		}
+		*/
 
 		*ptr = block;
 

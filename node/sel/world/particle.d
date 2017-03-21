@@ -96,7 +96,7 @@ class SimpleParticle(ushort pe, uint pc) : Particle {
 		this.pedata = this.pcdata = color.rgb;
 	}
 	
-	public @safe this(EntityPosition position, BlockData block, uint count=1) {
+	/*public @safe this(EntityPosition position, BlockData block, uint count=1) {
 		this(position);
 		this.pedata = block.ids.pe | (block.metas.pe << 12);
 		this.pcmoredata = [block.ids.pc | (block.metas.pc << 12)];
@@ -104,7 +104,7 @@ class SimpleParticle(ushort pe, uint pc) : Particle {
 	
 	public @safe this(EntityPosition position, Block block, uint count=1) {
 		this(position, block.data, count);
-	}
+	}*/
 
 	public override @property @safe @nogc ushort peid() {
 		return pe;

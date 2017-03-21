@@ -129,7 +129,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			return Types.Slot(-1);
 		} else {
 			ubyte[] compound;
-			auto tag = slot.item.pctag;
+			auto tag = slot.item.minecraftCompound;
 			if(tag !is null) {
 				NbtBuffer!(Endian.bigEndian).instance.writeTag(tag, compound);
 			} else {
@@ -143,12 +143,10 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		if(slot.id <= 0) {
 			return Slot(null);
 		} else {
-			auto item = this.world.items.pcget(slot.id, slot.damage);
+			auto item = this.world.items.fromMinecraft(slot.id, slot.damage);
 			if(slot.nbt.length) {
 				auto tag = NbtBuffer!(Endian.bigEndian).instance.readTag(slot.nbt);
-				if(cast(Compound)tag) {
-					item.pctag = cast(Compound)tag;
-				}
+				if(cast(Compound)tag) item.parseMinecraftCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.count);
 		}
@@ -518,20 +516,12 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		this.sendPacket(new Clientbound.UpdateHealth(this.healthNoAbs, this.hunger, this.saturation));
 	}
 	
-	public override @trusted bool addEffect(Effect effect, double multiplier=1) {
-		if(super.addEffect(effect, multiplier)) {
-			this.sendPacket(new Clientbound.EntityEffect(this.id, effect.id, effect.level, effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
-			return true;
-		}
-		return false;
+	protected override void onEffectAdded(Effect effect, bool modified) {
+		this.sendPacket(new Clientbound.EntityEffect(this.id, effect.id, effect.level, effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
 	}
 	
-	public override @trusted bool removeEffect(Effect effect) {
-		if(super.removeEffect(effect)) {
-			this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.id));
-			return true;
-		}
-		return false;
+	protected override void onEffectRemoved(Effect effect) {
+		this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.id));
 	}
 	
 	public override @trusted void recalculateSpeed() {

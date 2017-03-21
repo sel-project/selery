@@ -25,7 +25,7 @@ import sel.item.item : Item, Items;
  * If the slot is not empty, an Item instance and the count
  * can be stored.
  * 
- * Conventionally, an empty slot is always constructed using Slot(null)
+ * Conventionally an empty slot is always constructed using Slot(null)
  */
 struct Slot {
 
@@ -75,13 +75,6 @@ struct Slot {
 	 */
 	public @property @safe @nogc shortgroup metas() {
 		return this.empty ? shortgroup(0, 0) : this.item.metas;
-	}
-
-	/**
-	 * Gets the item's names.
-	 */
-	public @property @safe @nogc const(string) name() {
-		return this.empty ? Items.AIR : this.item.name;
 	}
 
 	/**
@@ -154,11 +147,11 @@ struct Slot {
 		this.count = this.item.max;
 	}
 
-	public @trusted bool opEquals(Slot s) {
-		return this.empty && s.empty || !this.empty && !s.empty && this.count == s.count && this.item == s.item;
+	public bool opEquals(Slot slot) {
+		return this.empty == slot.empty && (this.empty || this.count == slot.count && this.item == slot.item);
 	}
 
-	public @safe string toString() {
+	public string toString() {
 		return "Slot(" ~ (this.empty ? "null" : (this.item.toString() ~ " x" ~ this.count.to!string)) ~ ")";
 	}
 

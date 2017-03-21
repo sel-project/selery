@@ -22,6 +22,8 @@ import common.sel;
 import common.util.format : Text, writeln;
 import common.util.time : milliseconds;
 
+import sel.world.world : World;
+
 mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".status : Log;");
 
 private shared(Log)[] last_logged_messages;
@@ -32,7 +34,7 @@ public Log[] getAndClearLoggedMessages() {
 	return ret;
 }
 
-public void log_m(bool hub, E...)(string logger, int id, E logs) {
+public void log_m(bool hub, E...)(int worldId, string logger, int id, E logs) {
 	string message = "";
 	foreach(immutable l ; logs) {
 		static if(is(typeof(l) : string)) {
@@ -41,16 +43,16 @@ public void log_m(bool hub, E...)(string logger, int id, E logs) {
 			message ~= to!string(l);
 		}
 	}
-	static if(hub) last_logged_messages ~= cast(shared)new Log(milliseconds, logger, message, id);
+	static if(hub) last_logged_messages ~= cast(shared)new Log(milliseconds, worldId, logger, message, id);
 	writeln("[" ~ logger ~ "] " ~ message);
 }
 
-public void world_log(E...)(string world, E logs) {
-	log_m!true(world, -1, logs);
+public void world_log(E...)(World world, E logs) {
+	log_m!true(world.id, world.name, -1, logs);
 }
 
 public void command_log(E...)(int commandId, E logs) {
-	log_m!true("command", commandId, logs);
+	log_m!true(Log.NO_WORLD, "command", commandId, logs);
 }
 
 /**
@@ -78,13 +80,11 @@ public void log(bool hub=true, string mod=__MODULE__, E...)(E logs) {
 			enum mm = "plugin" ~ dirSeparator ~ m;
 		}
 	}
-	log_m!hub(mm, -1, logs);
+	log_m!hub(Log.NO_WORLD, mm, -1, logs);
 }
 
 public void debug_log(string m=__MODULE__, E...)(E logs) {
-	//debug {
-		log!(false, m ~ "@debug")(cast(string)Text.blue, logs);
-	//}
+	log!(false, m ~ "@debug")(cast(string)Text.blue, logs);
 }
 
 public void warning_log(string m=__MODULE__, E...)(E logs) {

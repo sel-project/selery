@@ -12,9 +12,33 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/// DDOC_EXCLUDE
-module sel.block;
+module sel.item.recipe;
 
-public import sel.block.block : Blocks, Block, blockInto;
-public import sel.block.tile : Tile, Sign, FlowerPot;
+import common.sel;
 
+class Recipe {}
+
+/**
+ * Example:
+ * ---
+ * // for oak wood planks
+ * new ShapelessRecipe([Items.oakWood: 1], 4);
+ * ---
+ */
+class ShapelessRecipe : Recipe {
+
+	public this(ubyte[item_t] items, ubyte result=1) {}
+
+	public this(item_t items...) {}
+
+}
+
+class ShapedRecipe : Recipe {}
+
+class SmallRecipe : ShapedRecipe {}
+
+class BigRecipe : ShapedRecipe {}
+
+class FurnaceRecipe : Recipe {}
+
+class BrewingRecipe : Recipe {}

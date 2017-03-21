@@ -34,7 +34,7 @@ import std.uuid : UUID, randomUUID;
 import common.sel;
 import common.util.time : milliseconds;
 
-import sel.block.block : BlockData, Blocks, Block, PlacedBlock;
+import sel.block.block : Blocks, Block, PlacedBlock;
 import sel.block.tile : Tile, Container;
 import sel.entity.effect : Effects, Effect;
 import sel.entity.entity : Entity, Rotation;
@@ -484,7 +484,7 @@ abstract class Player : Human {
 
 			this.n_world = world;
 
-			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.name, this.dimension).encode());
+			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.id).encode());
 			world.spawnPlayer(this);
 
 		} else {
@@ -527,26 +527,6 @@ abstract class Player : Human {
 		this.healthUpdated();
 		this.hungerUpdated();
 		this.experienceUpdated();
-	}
-	
-	public override @trusted bool addEffect(Effect effect, double multiplier=1) {
-		if(super.addEffect(effect, multiplier)) {
-			if(effect.id == Effects.INVISIBILITY) {
-				this.sendMetadata(this);
-			}
-			return true;
-		}
-		return false;
-	}
-	
-	public override @trusted bool removeEffect(Effect effect) {
-		if(super.removeEffect(effect)) {
-			if(effect.id == Effects.INVISIBILITY) {
-				this.sendMetadata(this);
-			}
-			return true;
-		}
-		return false;
 	}
 	
 	protected override @trusted void recalculateColors() {
@@ -715,6 +695,7 @@ abstract class Player : Human {
 		if(gamemode != this.m_gamemode && gamemode < 4) {
 			this.m_gamemode = gamemode;
 			this.sendGamemode();
+			Handler.sharedInstance.send(new HncomPlayer.UpdateGamemode(this.hubId, gamemode).encode());
 		}
 		return this.m_gamemode;
 	}
@@ -997,6 +978,25 @@ abstract class Player : Human {
 			return ret;
 		}
 	}
+
+	public Vector3!T commandPosition(T)(string x, string y, string z) {
+		auto ret = Vector3!T(0);
+		foreach(c ; TypeTuple!("x", "y", "z")) {
+			{
+				mixin("alias a = " ~ c ~ ";");
+				T value = 0;
+				if(a.length && a[0] == '~') {
+					mixin("a = this.position." ~ c ~ ";");
+					a = a[1..$];
+				}
+				if(a.length) {
+					value += to!T(a);
+				}
+				mixin("ret." ~ c ~ " = value;");
+			}
+		}
+		return ret;
+	}
 	
 	public override @trusted bool onCollect(Collectable collectable) {
 		Entity entity = cast(Entity)collectable;
@@ -1188,7 +1188,7 @@ abstract class Player : Human {
 	 */
 	public void handleTextMessage(string message) {
 		if(!this.alive) return;
-		message = message.replaceAll(ctRegex!"§[a-fA-F0-9k-or]", "").strip;
+		message = message.replaceAll(ctRegex!"§[a-fA-F0-9k-or]", "");
 		if(message.length == 0) return;
 		if(message[0] == '/') {
 			string[] cmds = message[1..$].split(" ");
@@ -1264,10 +1264,10 @@ abstract class Player : Human {
 	protected bool handleStartBlockBreaking(BlockPosition position) {
 		if(this.alive) {
 			Block b = this.world[position];
-			if(b != Blocks.AIR) {
+			if(!b.indestructible) {
 				this.breaking = position;
 				this.is_breaking = true;
-				if(b.instantBreaking || this.creative || this.hasEffect(Effects.HASTE)) { // TODO remove haste from here and add hardness
+				if(b.instantBreaking || this.creative || Effects.haste in this) { // TODO remove haste from here and add hardness
 					this.handleBlockBreaking();
 				}
 			}
@@ -1291,7 +1291,7 @@ abstract class Player : Human {
 		bool cancelitem = false;
 		bool cancelblock = false;
 		//log(!this.world.rules.immutableWorld, " ", this.alive, " ", this.is_breaking, " ", this.world[breaking] != Blocks.AIR);
-		if(!this.world.rules.immutableWorld && this.alive && this.is_breaking && this.world[this.breaking] != Blocks.AIR) {
+		if(!this.world.rules.immutableWorld && this.alive && this.is_breaking && !this.world[this.breaking].indestructible) {
 			PlayerBreakBlockEvent event = new PlayerBreakBlockEvent(this, this.world[this.breaking], this.breaking);
 			this.world.callEvent(event);
 			if(event.cancelled) {
@@ -1314,7 +1314,7 @@ abstract class Player : Human {
 				}
 				//if(event.particles) this.world.addParticle(new Particles.Destroy(this.breaking.entityPosition, this.world[this.breaking]));
 				if(event.removeBlock) {
-					this.world[this.breaking] = Blocks.AIR;
+					this.world[this.breaking] = Blocks.air;
 				} else {
 					cancelblock = true;
 				}
@@ -1325,7 +1325,7 @@ abstract class Player : Human {
 			cancelblock = true;
 		}
 		if(cancelblock && this.is_breaking && this.world[this.breaking] !is null) {
-			this.sendBlock(PlacedBlock(this.breaking, this.world[this.breaking].data));
+			this.sendBlock(PlacedBlock(this.breaking, this.world[this.breaking]));
 			auto tile = this.world.tileAt(this.breaking);
 			if(tile !is null) {
 				this.sendTile(tile, cast(ITranslatable)tile ? true : false);
@@ -1351,7 +1351,7 @@ abstract class Player : Human {
 		if(this.world.callCancellableIfExists!PlayerPlaceBlockEvent(this, this.inventory.held, tpos, tface) || !this.inventory.held.item.onPlaced(this, tpos, tface)) {
 			//no block placed!
 			//sends the block back
-			this.sendBlock(PlacedBlock(tpos.face(tface), this.world[tpos.face(tface)].data));
+			this.sendBlock(PlacedBlock(tpos.face(tface), this.world[tpos.face(tface)]));
 		}
 	}
 	

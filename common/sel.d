@@ -20,9 +20,13 @@ import std.string : toLower, split, join, startsWith;
 import std.typecons : Tuple;
 
 
-alias size_t tick_t;
+alias tick_t = size_t;
 
-alias immutable(ubyte)[17] suuid_t;
+alias block_t = ushort;
+
+alias item_t = size_t;
+
+alias suuid_t = immutable(ubyte)[17];
 
 alias group(T) = Tuple!(T, "pe", T, "pc");
 alias bytegroup = group!ubyte;
@@ -33,17 +37,7 @@ alias longgroup = group!ulong;
 
 enum ubyte PE = 1;
 
-alias POCKET = PE;
-
-alias MCPE = PE;
-
-alias MINECRAFT_POCKET_EDITION = PE;
-
 enum ubyte PC = 2;
-
-alias MINECRAFT = PC;
-
-alias MC = PC;
 
 
 /**
@@ -89,53 +83,106 @@ const struct Software {
 	 * the group of versions of the software.
 	 * Used only for display purposes.
 	 */
-	enum string codename = "Aubergine";
+	enum string codename = "Banana";
 
 	/// ditto
-	enum string codenameEmoji = "🍆";
+	enum string codenameEmoji = "🍌";
 
 	/// ditto
 	enum string fullCodename = codename ~ " (" ~ codenameEmoji ~ ")";
 
+	/**
+	 * Version of the software.
+	 */
 	enum ubyte major = 1;
 
-	enum ubyte minor = 0;
+	/// ditto
+	enum ubyte minor = 1;
 
-	enum ubyte revision = 5;
+	/// ditto
+	enum ubyte revision = 0;
 
+	/// ditto
 	enum ubyte[3] versions = [major, minor, revision];
 
-	enum bool stable = true;
+	/**
+	 * Indicates whether the current state of the software is stable.
+	 * Unstable versions are not fully tested and may fail to compile
+	 * on some systems.
+	 */
+	enum bool stable = false;
 
+	/**
+	 * Version of the software in format major.minor.revision (for example
+	 * `1.1.0`) for display purposes.
+	 */
 	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
 
+	/**
+	 * Full version of the software prefixed with a `v` and suffixed
+	 * with a `-dev` if stable is false.
+	 */
 	enum string fullVersion = "v" ~ displayVersion ~ (stable ? "" : "-dev");
 
+	/**
+	 * Display name of the software that contains both the software name
+	 * and the version in the format name/version (for example `SEL/1.1.0`).
+	 */
 	enum string display = name ~ "/" ~ displayVersion;
 
-	enum ubyte api = 1;
+	/**
+	 * Version of the api used by the software. It's used to check the
+	 * compatibility with plugins.
+	 */
+	enum ubyte api = 2;
 
-	enum ubyte hncom = 1;
+	/**
+	 * Required version of the sel-utils library.
+	 */
+	enum uint sul = 321;
 
-	enum ubyte externalConsole = 2;
+	/**
+	 * Version of the hub-node communication protocol used by
+	 * the software.
+	 */
+	enum ubyte hncom = 2;
+
+	/**
+	 * Version of the external console protocol used by the software.
+	 */
+	enum ubyte externalConsole = 2; // scheduled to be replaced by the panel protocol after 1.1
+
+	enum ubyte panel = 1;
 
 }
 
-enum supportedPocketProtocols = cast(string[][uint])[
-	100: ["1.0.0", "1.0.1", "1.0.2"],
-	101: ["1.0.3"],
-	102: ["1.0.4"],
-];
-
+/**
+ * Protocols supported by the software.
+ */
 enum supportedMinecraftProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
+	//317: ["1.12"],
 ];
 
-enum latestPocketProtocols = latest(supportedPocketProtocols);
+/// ditto
+enum supportedPocketProtocols = cast(string[][uint])[
+	100: ["1.0.0", "1.0.1", "1.0.2"],
+	101: ["1.0.3"],
+	102: ["1.0.4"],
+	105: ["1.0.5"],
+];
 
+/**
+ * Array with the protocols for the latest game version.
+ * For example 315 and 316 if the latest Minecraft version
+ * is 1.11.
+ */
 enum latestMinecraftProtocols = latest(supportedMinecraftProtocols);
+
+/// ditto
+enum latestPocketProtocols = latest(supportedPocketProtocols);
 
 private uint[] latest(string[][uint] protocols) {
 	uint[] keys = protocols.keys;
@@ -149,6 +196,41 @@ private uint[] latest(string[][uint] protocols) {
 	return keys;
 }
 
+/**
+ * Latest protocol released.
+ */
+enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
+
+/// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];
 
-enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
+version(CommonMain) {
+
+	import std.json;
+	import std.stdio : write;
+
+	void main(string[] args) {
+
+		with(Software) {
+
+			JSONValue json;
+			json["name"] = name;
+			json["lname"] = lname;
+			json["website"] = website;
+			json["codename"] = codename;
+			json["codenameEmoji"] = codenameEmoji;
+			json["fullCodename"] = fullCodename;
+			json["version"] = versions;
+			json["stable"] = stable;
+			json["api"] = api;
+			json["sul"] = sul;
+			json["hncom"] = hncom;
+			json["externalConsole"] = externalConsole;
+
+			write(json.toString());
+
+		}
+
+	}
+
+}

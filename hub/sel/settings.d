@@ -19,11 +19,11 @@ import std.ascii : newline;
 import std.base64 : Base64;
 import std.conv : to, ConvException;
 import std.datetime : Clock;
-import std.file : write, read, exists, mkdir;
+import std.file : write, read, exists, mkdir, tempDir;
 import std.path : dirSeparator;
 import std.process : environment;
 import std.random : uniform;
-import std.socket : Address, InternetAddress, Internet6Address, AddressFamily, getAddress;
+import std.socket;
 import std.string;
 import std.traits : isArray;
 
@@ -163,6 +163,8 @@ static if(__doc || !__traits(compiles, import("hub.txt"))) {
 	
 }
 
+private enum __unixSocket = is(UnixAddress);
+
 /**
  * Runtime settings.
  */
@@ -175,8 +177,6 @@ struct Settings {
 	}
 	
 	string displayName;
-
-	string icon;
 
 	bool minecraft;
 	
@@ -207,6 +207,14 @@ struct Settings {
 	string language;
 	
 	string[] acceptedLanguages;
+	
+	string icon;
+
+	string iconData;
+	
+	bool controlPanel;
+	
+	string[] controlPanelAddresses;
 	
 	bool externalConsole;
 	
@@ -282,7 +290,7 @@ struct Settings {
 			set(&displayName, "display-name", "A Minecraft Server", false);
 			if(all) set(&minecraft, "minecraft", true);
 			set(&minecraftMotd, "minecraft-motd", "A Minecraft Server", false);
-			set(&minecraftAddresses, "minecraft-addresses", ["0.0.0.0:25565", ":::25565"], false);
+			set(&minecraftAddresses, "minecraft-addresses", ["0.0.0.0:25565"], false);
 			if(all) set(&minecraftProtocols, "minecraft-accepted-protocols", latestMinecraftProtocols, false);
 			if(all) set(&pocket, "pocket", true);
 			set(&pocketMotd, __pocketPrefix ~ "motd", "A Minecraft: " ~ (__edu ? "Education" : "Pocket") ~ " Edition Server", false);
@@ -294,22 +302,25 @@ struct Settings {
 			set(&blacklist, "blacklist", !whitelist);
 			set(&forcedIp, "forced-ip", "");
 			set(&language, "language", environment.get("LANGUAGE", "en_GB"), false);
+			set(&icon, "icon", "favicon.png", false);
+			set(&controlPanel, "control-panel", false);
+			set(&controlPanelAddresses, "control-panel-addresses", ["0.0.0.0:8080"], false);
 			set(&externalConsole, "external-console-enabled", false);
-			set(&externalConsolePassword, "external-console-password", randomPassword());
-			set(&externalConsoleAddresses, "external-console-addresses", ["*:19134"], false);
+			set(&externalConsolePassword, "external-console-password", randomPassword);
+			set(&externalConsoleAddresses, "external-console-addresses", ["0.0.0.0:19134"], false);
 			set(&externalConsoleRemoteCommands, "external-console-remote-commands", true);
 			set(&externalConsoleAcceptWebsockets, "external-console-accept-websockets", true);
-			set(&externalConsoleHash, "external-console-hash-algorithm", "sha1");
+			set(&externalConsoleHash, "external-console-hash-algorithm", "sha256");
 			set(&rcon, "rcon-enabled", false);
-			set(&rconPassword, "rcon-password", randomPassword());
-			set(&rconAddresses, "rcon-addresses", ["*:25575"], false);
+			set(&rconPassword, "rcon-password", randomPassword);
+			set(&rconAddresses, "rcon-addresses", ["0.0.0.0:25575"], false);
 			set(&web, "web-enabled", false);
 			set(&webAddresses, "web-addresses", ["*:80"], false);
 			set(&nodesPassword, "nodes-password", "");
 			set(&maxNodes, "max-nodes", 0);
 			set(&hncomPort, "hncom-port", 28232);
-			version(Posix) set(&hncomUseUnixSockets, "hncom-use-unix-sockets", false);
-			version(Posix) set(&hncomUnixSocketAddress, "hncom-unix-socket-address", "/tmp/hub");
+			set(&hncomUseUnixSockets, "hncom-use-unix-sockets", false);
+			set(&hncomUnixSocketAddress, "hncom-unix-socket-address", replace(tempDir() ~ "/sel/" ~ randomPassword, "//", "/"));
 			set(&googleAnalytics, "google-analytics", "");
 			set(&website, "website", "");
 			set(&facebook, "facebook", "");
@@ -340,7 +351,7 @@ struct Settings {
 
 		// icon
 		//TODO check file header to match PNG and size (64x64)
-		if(exists(Paths.resources ~ "icon.png")) settings.icon = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.resources ~ "icon.png")).idup;
+		if(exists(Paths.resources ~ settings.icon)) settings.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.resources ~ settings.icon)).idup;
 
 		string[] available = availableLanguages;
 		if("accepted-languages" in values) {
@@ -454,6 +465,8 @@ struct Settings {
 		add("forced-ip", this.forcedIp);
 		add("language", this.language);
 		add("accepted-languages", sort(this.acceptedLanguages).release());
+		add("control-panel", this.controlPanel);
+		add("control-panel-addresses", this.controlPanelAddresses);
 		add("external-console-enabled", this.externalConsole);
 		add("external-console-password", this.externalConsolePassword);
 		add("external-console-addresses", this.externalConsoleAddresses);
@@ -469,8 +482,8 @@ struct Settings {
 		static if(!__oneNode) add("nodes-password", this.nodesPassword);
 		static if(!__oneNode) add("max-nodes", this.maxNodes == 0 ? "unlimited" : to!string(this.maxNodes));
 		static if(!__oneNode) add("hncom-port", this.hncomPort);
-		static if(!__oneNode) version(Posix) add("hncom-use-unix-sockets", this.hncomUseUnixSockets);
-		static if(!__oneNode) version(Posix) add("hncom-unix-socket-address", this.hncomUnixSocketAddress);
+		static if(!__oneNode && __unixSocket) add("hncom-use-unix-sockets", this.hncomUseUnixSockets);
+		static if(!__oneNode && __unixSocket) add("hncom-unix-socket-address", this.hncomUnixSocketAddress);
 		add("google-analytics", this.googleAnalytics);
 		static if(!__edu && !__realm) {
 			file ~= newline ~ "# social" ~ newline;
@@ -499,7 +512,7 @@ private string pad(string str) {
 	else return str;
 }
 
-private string randomPassword() {
+private @property string randomPassword() {
 	char[] password = new char[8];
 	foreach(ref char c ; password) {
 		c = uniform!"[]"('a', 'z');

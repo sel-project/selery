@@ -14,94 +14,168 @@
  */
 module sel.item.enchanting;
 
+import std.algorithm : min;
 import std.conv : to;
-import std.string : toUpper, toLower, replace;
+import std.regex : ctRegex, replaceAll;
+import std.string : toLower, replace;
 
 import sel.util : roman;
 
-private @property @safe ushort ids(ubyte pe, ubyte pc)() { 
-	return ((pe.to!ushort << 8) | pc) & ushort.max; 
+static import sul.enchantments;
+import sul.enchantments : _ = Enchantments;
+
+/**
+ * Enchantments that can be applied to an item.
+ * Example:
+ * ---
+ * assert(Enchantments.sharpness.pocket.id == 9);
+ * assert(Enchantments.sharpness.minecraft.id == 16);
+ * assert(!Enchantments.curseOfBinding.pocket);
+ * ---
+ */
+enum Enchantments : sul.enchantments.Enchantment {
+
+	// armour
+	protection = _.PROTECTION,
+	fireProtection = _.FIRE_PROTECTION,
+	featherFalling = _.FEATHER_FALLING,
+	blastProtection = _.BLAST_PROTECTION,
+	projectileProtection = _.PROJECTILE_PROTECTION,
+	respiration = _.RESPIRATION,
+	aquaAffinity = _.AQUA_AFFINITY,
+	thorns = _.THORNS,
+	depthStrider = _.DEPTH_STRIDER,
+	frostWalker = _.FROST_WALKER,
+	curseOfBinding = _.CURSE_OF_BINDING,
+
+	// fighting
+	sharpness = _.SHARPNESS,
+	smite = _.SMITE,
+	baneOfArthropods = _.BANE_OF_ARTHROPODS,
+	knockback = _.KNOCKBACK,
+	fireAspect = _.FIRE_ASPECT,
+	looting = _.LOOTING,
+	sweepingEdge = _.SWEEPING_EDGE,
+
+	// mining
+	efficiency = _.EFFICIENCY,
+	silkTouch = _.SILK_TOUCH,
+	unbreaking = _.UNBREAKING,
+	fortune = _.FORTUNE,
+
+	// bow
+	power = _.POWER,
+	punch = _.PUNCH,
+	flame = _.FLAME,
+	infinity = _.INFINITY,
+
+	// fishing
+	luckOfTheSea = _.LUCK_OF_THE_SEA,
+	lure = _.LURE,
+
+	// other
+	mending = _.MENDING,
+	curseOfVanishing = _.CURSE_OF_VANISHING,
+
 }
 
-enum Enchantments : ushort {
+/**
+ * Example:
+ * ---
+ * auto e = new Enchantment(Enchantments.sharpness, "V");
+ * Enchantment.fromString("luck of the sea", 5);
+ * assert(e.pocket && e.pocket.id == 9);
+ * assert(e.minecraft.id == 16);
+ * assert(!Enchantment.fromMinecraft(71).pocket);
+ * ---
+ */
+final class Enchantment {
 
-	PROTECTION = ids!(0, 0),
-	FIRE_PROTECTION = ids!(1, 1),
-	FEATHER_FALLING = ids!(2, 2),
-	BLAST_PROTECTION = ids!(3, 3),
-	PROJECTILE_PROTECTION = ids!(4, 4),
-	THORNS = ids!(5, 7),
-	RESPIRATION = ids!(6, 5),
-	DEPTH_STRIDER = ids!(7, 8),
-	AQUA_AFFINITY = ids!(8, 6),
-	
-	SHARPNESS = ids!(9, 16),
-	SMITE = ids!(10, 17),
-	BANE_OF_ARTHROPODS = ids!(11, 18),
-	KNOCKBACK = ids!(12, 19),
-	FIRE_ASPECT = ids!(13, 20),
-	LOOTING = ids!(14, 21),
-	EFFICENCY = ids!(15, 32),
-	SILK_TOUCH = ids!(16, 33),
-	UNBREAKING = ids!(17, 34),
-	FORTUNE = ids!(18, 35),
-	POWER = ids!(19, 48),
-	PUNCH = ids!(20, 49),
-	FLAME = ids!(21, 50),
-	INFINITY = ids!(22, 51),
-	LUCK_OF_THE_SEA = ids!(23, 61),
-	LURE = ids!(24, 62),
-
-}
-
-public @property @safe ubyte pe(ushort ench) {
-	return (ench >> 8) & 255;
-}
-
-public @property @safe ubyte pc(ushort ench) {
-	return ench & 255;
-}
-
-struct Enchantment {
-
-	private static ushort[string] strings;
-	private static ushort[ubyte] pes;
-	private static ushort[ubyte] pcs;
+	private static const(sul.enchantments.Enchantment)[string] strings;
+	private static const(sul.enchantments.Enchantment)[ubyte] _minecraft, _pocket;
 
 	public static this() {
 		foreach(e ; __traits(allMembers, Enchantments)) {
-			ushort ids = to!ushort(__traits(getMember, Enchantments, e));
-			this.strings[e.toLower] = ids;
-			this.strings[e.toLower.replace("_", "")] = ids;
-			this.pcs[ids & 255] = ids;
-			this.pes[(ids >> 8) & 255] = ids;
+			mixin("alias ench = Enchantments." ~ e ~ ";");
+			strings[ench.name.replace(" ", "_")] = ench;
+			if(ench.minecraft) _minecraft[ench.minecraft.id] = ench;
+			if(ench.pocket) _pocket[ench.pocket.id] = ench;
 		}
 	}
 
-	public static @safe ushort fromString(string ench) {
-		ench = ench.toLower;
-		return ench in strings ? strings[ench] : 0;
+	/**
+	 * Creates an enchantment from a string.
+	 * Example:
+	 * ---
+	 * Enchantment.fromString("sharpness", 1);
+	 * Enchantment.fromString("Fire Protection", 4);
+	 * Enchantment.fromString("silk-touch", 1);
+	 * ---
+	 */
+	public static @safe Enchantment fromString(string name, ubyte level) {
+		auto ret = name.toLower.replaceAll(ctRegex!`[ \-]`, "_") in strings;
+		return ret ? new Enchantment(*ret, level) : null;
 	}
 
-	public static @safe ushort pe(ubyte ench) {
-		return ench in pes ? pes[ench] : 0;
+	/**
+	 * Creates an enchantment using its Minecraft id.
+	 */
+	public static @safe Enchantment fromMinecraft(ubyte id, ubyte level) {
+		auto ret = id in _minecraft;
+		return ret ? new Enchantment(*ret, level) : null;
 	}
 
-	public static @safe ushort pc(ubyte ench) {
-		return ench in pcs ? pcs[ench] : 0;
+	/**
+	 * Creates an enchantment using its Minecraft: Pocket
+	 * Edition id.
+	 */
+	public static @safe Enchantment fromPocket(ubyte id, ubyte level) {
+		auto ret = id in _pocket;
+		return ret ? new Enchantment(*ret, level) : null;
 	}
 
-	public immutable ushort id;
+	public const sul.enchantments.Enchantment enchantment;
 	public immutable ubyte level;
 
-	public @safe this(ushort id, ubyte level) {
-		this.id = id;
-		this.level = level;
+	public @safe this(sul.enchantments.Enchantment enchantment, ubyte level) {
+		this.enchantment = enchantment;
+		this.level = min(level, ubyte(1));
 	}
 
-	public @safe this(ushort id, string level) {
-		this.id = id;
-		this.level = level.roman & 255;
+	public @safe this(sul.enchantments.Enchantment enchantment, string level) {
+		this(enchantment, level.roman & 255);
+	}
+
+	/**
+	 * Gets the enchantment's id. SEL currently uses Minecraft's
+	 * id to uniquely identify an enchantment.
+	 * Example:
+	 * ---
+	 * auto e = Enchantment.fromString("sharpness", 5);
+	 * assert(e.id == e.minecraft.id);
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc ubyte id() {
+		return this.enchantment.minecraft.id;
+	}
+
+	public override bool opEquals(Object o) {
+		auto e = cast(Enchantment)o;
+		return e !is null && this.id == e.id && this.level == e.level;
+	}
+
+	alias enchantment this;
+
+}
+
+/**
+ * Exception thrown when an enchantment does not exist
+ * or is used in the wrong way.
+ */
+class EnchantmentException : Exception {
+
+	public @safe this(string message, string file=__FILE__, size_t line=__LINE__) {
+		super(message, file, line);
 	}
 
 }

@@ -30,6 +30,8 @@ import sel.util;
 import sel.util.color : Color;
 import sel.world.world : World;
 
+static import sul.effects;
+
 abstract class Living : Entity {
 
 	protected Health m_health;
@@ -63,11 +65,9 @@ abstract class Living : Entity {
 			}
 		}
 		//update the effects
-		foreach(Effect effect ; this.effects) {
-			if(effect.repeat && effect.repeat(this.ticks)) {
-				this.tickEffect(effect);
-			}
-			if(effect.durate <= 0) {
+		foreach(effect ; this.effects) {
+			effect.tick();
+			if(effect.finished) {
 				this.removeEffect(effect);
 			}
 		}
@@ -77,23 +77,6 @@ abstract class Living : Entity {
 		if(this.moved) {
 			this.updateGroundStatus();
 		}
-	}
-
-	protected @trusted bool tickEffect(Effect effect) {
-		switch(effect.id) {
-			case Effects.REGENERATION:
-				this.heal(new EntityHealEvent(this, Healing.REGENERATION, 1));
-				break;
-			case Effects.POISON:
-				if(this.healthNoAbs > 1) this.attack(new EntityDamageByPoisonEvent(this));
-				break;
-			case Effects.WITHER:
-				this.attack(new EntityDamageByWitherEffectEvent(this));
-				break;
-			default:
-				return false;
-		}
-		return true;
 	}
 
 	public @property @safe @nogc float bodyYaw() {
@@ -108,11 +91,11 @@ abstract class Living : Entity {
 		return safe!ubyte(this.bodyYaw / 360 * 256);
 	}
 
-	public final @property @safe @nogc float speed() {
+	public final pure nothrow @property @safe @nogc float speed() {
 		return this.n_speed;
 	}
 
-	public final @property @safe uint health() {
+	public final nothrow @property @safe uint health() {
 		return this.healthNoAbs + this.absorption;
 	}
 
@@ -133,25 +116,26 @@ abstract class Living : Entity {
 		return this.maxHealth;
 	}
 
-	public final @property @safe uint healthNoAbs() {
+	public final nothrow @property @safe uint healthNoAbs() {
 		return this.m_health.health;
 	}
 
-	public final @property @safe @nogc uint maxHealthNoAbs() {
+	public final pure nothrow @property @safe @nogc uint maxHealthNoAbs() {
 		return this.m_health.max;
 	}
 
-	public final @property @safe uint absorption() {
+	public final nothrow @property @safe uint absorption() {
 		return this.m_health.absorption;
 	}
 
-	public final @property @safe @nogc uint maxAbsorption() {
+	public final pure nothrow @property @safe @nogc uint maxAbsorption() {
 		return this.m_health.maxAbsorption;
 	}
 
 	protected @trusted void healthUpdated() {}
 
 	protected override bool validateAttack(EntityDamageEvent event) {
+		//TODO the attack is applied if the damage is higher than the last one
 		return this.alive && (!this.immortal || event.imminent) && (!cast(EntityDamageByEntityEvent)event || this.last_received_attack + 10 <= this.ticks);
 	}
 
@@ -162,7 +146,7 @@ abstract class Living : Entity {
 		uint abb = this.absorption;
 		this.m_health.remove(event.damage);
 		if(abb > 0 && this.absorption == 0) {
-			this.removeEffect(Effects.ABSORPTION);
+			this.removeEffect(Effects.absorption);
 		}
 		this.healthUpdated();
 
@@ -230,60 +214,79 @@ abstract class Living : Entity {
 	}
 
 	/**
-	 * Add an effect to the entity
+	 * Adds an effect to the entity.
 	 */
-	public @trusted bool addEffect(Effect effect, double multiplier=1) {
+	public bool addEffect(sul.effects.Effect effect, ubyte level=0, tick_t duration=30, Living thrower=null) {
+		return this.addEffect(Effect.fromId(effect, this, level, duration, thrower));
+	}
 
-		if(effect.id == Effects.HEALING || effect.id == Effects.HARMING) {
+	public bool addEffect(Effect effect) {
+
+		/+if(effect.id == Effects.healing.id || effect.id == Effects.harming.id) {
 			//TODO for undead mobs
-			if(effect.id == Effects.HARMING) {
+			if(effect.id == Effects.harming.id) {
 				uint amount = to!uint(round(3 * effect.levelFromOne * multiplier));
 				//this.attack(effect.thrower is null ? new EntityDamageEvent(this, Damage.MAGIC, amount) : new EntityDamagedByEntityEvent(this, Damage.MAGIC, amount, effect.thrower));
 			}
 			else this.heal(new EntityHealEvent(this, Healing.MAGIC, to!uint(round(3 * effect.levelFromOne * multiplier))));
 			return true;
-		}
+		}+/
 
-		if(effect.id in this.effects) this.removeEffect(effect.id);
+		if(effect.id in this.effects) this.removeEffect(effect); //TODO just edit instead of removing
 
-
-		effect.setStartTick(this.ticks);
 		this.effects[effect.id] = effect;
 
-		if(effect.id == Effects.SPEED || effect.id == Effects.SLOWNESS) {
+		/*if(effect.id == Effects.speed || effect.id == Effects.slowness) {
 			this.recalculateSpeed();
-		} else if(effect.id == Effects.INVISIBILITY) {
+		} else if(effect.id == Effects.invisibility) {
 			this.invisible = true;
 			this.showNametag = false;
-		} else if(effect.id == Effects.HEALTH_BOOST) {
+		} else if(effect.id == Effects.healthBoost) {
 			this.m_health.max = 20 + effect.levelFromOne * 4;
 			this.healthUpdated();
-		} else if(effect.id == Effects.ABSORPTION) {
+		} else if(effect.id == Effects.absorption) {
 			this.m_health.maxAbsorption = effect.levelFromOne * 4;
-		}
+		}*/
 
 		this.recalculateColors();
+		this.onEffectAdded(effect, false);
 		return true;
 	}
 
+	protected void onEffectAdded(Effect effect, bool modified) {}
+
 	/**
-	 * Remove an effect from the entity
+	 * Gets a pointer to an effect.
 	 */
-	public @trusted bool removeEffect(Effect effect) {
-		if(effect.id in this.effects) {
+	public Effect* opBinaryRight(string op : "in")(ubyte id) {
+		return id in this.effects;
+	}
+
+	/// ditto
+	public Effect* opBinaryRight(string op : "in")(sul.effects.Effect effect) {
+		return this.opBinaryRight!"in"(effect.id);
+	}
+
+	/**
+	 * Removes an effect from the entity.
+	 */
+	public @trusted bool removeEffect(sul.effects.Effect effect) {
+		auto e = effect.id in this.effects;
+		if(e) {
 			this.effects.remove(effect.id);
 			this.recalculateColors();
-			if(effect.id == Effects.SPEED || effect.id == Effects.SLOWNESS) {
+			/*if(id == Effects.speed.id || effect.id == Effects.slowness) {
 				this.recalculateSpeed();
-			} else if(effect.id == Effects.INVISIBILITY) {
+			} else if(effect.id == Effects.invisibility) {
 				this.invisible = false;
 				this.showNametag = true;
-			} else if(effect.id == Effects.HEALTH_BOOST) {
+			} else if(effect.id == Effects.healthBoost) {
 				this.m_health.max = 20;
 				this.healthUpdated();
-			} else if(effect.id == Effects.ABSORPTION) {
+			} else if(effect.id == Effects.absorption) {
 				this.m_health.maxAbsorption = 0;
-			}
+			}*/
+			this.onEffectRemoved(*e);
 			return true;
 		}
 		return false;
@@ -294,38 +297,23 @@ abstract class Living : Entity {
 		return (effect in this.effects) ? this.removeEffect(this.effects[effect]) : false;
 	}
 
+	protected void onEffectRemoved(Effect effect) {}
+
 	/**
-	 * Remove all the effects
+	 * Removes every effect.
 	 */
-	public @safe void removeEffects() {
+	public @safe void clearEffects() {
 		foreach(Effect effect; this.effects) {
 			this.removeEffect(effect);
 		}
 	}
 
-	/**
-	 * Check if the entity has an effect
-	 */
-	public @safe @nogc bool hasEffect(ubyte id) {
-		return (id in this.effects) ? true : false;
-	}
-
-	/**
-	 * Get an effect
-	 */
-	public @safe Effect getEffect(ubyte id) {
-		return this.effects[id];
-	}
-
-	/**
-	 * Recalculate the potion colours
-	 */
 	protected @safe void recalculateColors() {
 		if(this.effects.length > 0) {
 			Color[] colors;
-			foreach(Effect effect ; this.effects) {
-				foreach(uint i ; 0..effect.levelFromOne()) {
-					colors ~= Effect.effectColor(effect.id);
+			foreach(effect ; this.effects) {
+				foreach(uint i ; 0..effect.levelFromOne) {
+					colors ~= Color.fromRGB(effect.particles);
 				}
 			}
 			this.potionColor = new Color(colors);
@@ -339,7 +327,7 @@ abstract class Living : Entity {
 	/** speed need to be recalculated */
 	public @safe void recalculateSpeed() {
 		float speed = .1;
-		if(Effects.SPEED in this.effects) {
+		/*if(Effects.speed in this.effects) {
 			speed *= 1 + .2 * this.effects[Effects.SPEED].levelFromOne;
 		}
 		if(Effects.SLOWNESS in this.effects) {
@@ -347,7 +335,7 @@ abstract class Living : Entity {
 		}
 		if(this.sprinting) {
 			speed *= 1.3;
-		}
+		}*/
 		this.n_speed = speed < 0 ? 0 : speed;
 	}
 
@@ -390,9 +378,9 @@ struct Health {
 		this.maxAbsorption = 0;
 	}
 
-	public @property @safe uint health() {
+	public nothrow @property @safe @nogc uint health() {
 		if(this.dead) return 0;
-		uint ret = to!uint(round(this.m_health));
+		uint ret = cast(uint)round(this.m_health);
 		return ret == 0 ? 1 : ret;
 	}
 
@@ -403,7 +391,7 @@ struct Health {
 		return this.health;
 	}
 
-	public @property @safe @nogc uint max() {
+	public pure nothrow @property @safe @nogc uint max() {
 		return this.m_max;
 	}
 
@@ -413,11 +401,11 @@ struct Health {
 		return this.m_max;
 	}
 
-	public @property @safe uint absorption() {
-		return to!uint(round(this.m_absorption));
+	public nothrow @property @safe uint absorption() {
+		return cast(uint)round(this.m_absorption);
 	}
 
-	public @property @safe @nogc uint maxAbsorption() {
+	public pure nothrow @property @safe @nogc uint maxAbsorption() {
 		return this.m_max_absorption;
 	}
 
@@ -444,11 +432,11 @@ struct Health {
 		this.health = this.m_health - amount;
 	}
 
-	public @property @safe bool alive() {
+	public pure nothrow @property @safe @nogc bool alive() {
 		return this.m_health != 0;
 	}
 
-	public @property @safe bool dead() {
+	public pure nothrow @property @safe @nogc bool dead() {
 		return this.m_health == 0;
 	}
 
@@ -458,36 +446,6 @@ struct Health {
 		this.m_absorption = 0;
 		this.m_max_absorption = 0;
 	}
-
-}
-
-enum Damage : ubyte {
-
-	UNKNOWN = 0,
-	VOID = 1,
-
-	ATTACK = 2,
-	PROJECTILE = 3,
-
-	SUFFOCATION = 4,
-	FALL = 5,
-	BURNING = 6,
-	FIRE = 7,
-	LAVA = 8,
-	DROWNING = 9,
-	BLOCK_EXPLOSION = 10,
-	ENTITY_EXPLOSION = 11,
-	MAGIC = 12,
-	LIGHTNING = 13,
-	THORNS = 14,
-	STARVATION = 15,
-	CACTUS = 16,
-	BLAZE_FIREBALL = 17,
-	GHAST_FIREBALL = 18,
-	ANVIL = 19,
-	POISON = 20,
-	WITHER = 21,
-	GENERIC_PROJECTILE = 22,
 
 }
 

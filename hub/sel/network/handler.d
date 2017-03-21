@@ -84,7 +84,7 @@ class Handler {
 			}
 
 			if(shncom) {
-				this.n_hncom_address = this.startThread!HncomHandler(server, &this.additionalJson, this.queries.pocketPort, this.queries.minecraftPort).localAddress;
+				this.n_hncom_address = this.startThread!HncomHandler(server, &this.additionalJson, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort).localAddress;
 			}
 
 			if(pocket) {

@@ -28,7 +28,7 @@ import common.sel;
 import sel.player;
 import sel.plugin;
 import sel.server : server;
-import sel.block.block : BlockData, Block, Blocks, PlacedBlock, Update, blockInto;
+import sel.block.block : Block, Blocks, PlacedBlock, Update, Remove, blockInto;
 import sel.block.tile : Tile;
 import sel.entity.entity : Entity;
 import sel.entity.living : Living;
@@ -39,7 +39,7 @@ import sel.event.world;
 import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent;
 import sel.event.world.world : WorldEvent;
-import sel.item.item : Item, Items, ItemsStorage, ItemsStorageHolder;
+import sel.item.item : Item, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.util;
@@ -58,7 +58,7 @@ import sel.world.rules : Rules;
 /**
  * Basic world.
  */
-class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player"), ItemsStorageHolder {
+class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player") {
 	
 	public static void registerAttributes(T:World)(T world) {
 		foreach(immutable fname ; __traits(allMembers, T)) {
@@ -134,9 +134,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.stop();
 	}
 
-	private static size_t wcount = 0;
+	private static uint wcount = 0;
 
-	public immutable size_t id;
+	public immutable uint id;
 	public immutable string n_name;
 
 	protected group!byte n_dimension = Dimension.overworld;
@@ -147,7 +147,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private World[] n_children;
 	
 	protected Blocks n_blocks;
-	protected ItemsStorage n_items;
+	protected Items n_items;
 	
 	private Random n_random;
 
@@ -188,13 +188,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private Command[string] commands;
 	
-	public this(string name="world", Generator generator=null, uint seed=unpredictableSeed) {
+	public this(string name="world", Rules rules=Rules.defaultRules.dup, Generator generator=null, uint seed=unpredictableSeed) {
 		this.id = wcount++;
 		this.n_name = name;
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new Blocks();
-		this.n_items = server ? server.items.dup : new ItemsStorage().registerAll!Items();
-		this.rules = this.parent is null ? Rules.defaultRules.dup : this.parent.rules.dup;
+		if(this.n_items is null) this.n_items = new Items();
+		this.rules = this.parent is null ? rules : this.parent.rules.dup;
 		this.n_random = Random(this.seed);
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
@@ -203,13 +203,17 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.no_rain = this.random.next(0, 180000);
 		this.tasks = new TaskManager();
 	}
+
+	public this(string name, Generator generator, uint seed=unpredictableSeed) {
+		this(name, Rules.defaultRules.dup, generator, seed);
+	}
 	
 	public this(string name, uint seed) {
 		this(name, null, seed);
 	}
 	
 	public this(uint seed) {
-		this("world", null, seed);
+		this("world", seed);
 	}
 
 	/*
@@ -301,14 +305,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/*
 	 * Gets the blocks.
 	 */
-	public final pure nothrow @property @safe @nogc Blocks blocks() {
+	public final pure nothrow @property @safe @nogc ref Blocks blocks() {
 		return this.n_blocks;
 	}
 	
 	/*
 	 * Gets the items
 	 */
-	public final override pure nothrow @property @safe @nogc ItemsStorage items() {
+	public final pure nothrow @property @safe @nogc ref Items items() {
 		return this.n_items;
 	}
 	
@@ -376,7 +380,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * auto nether = overworld.addChild!Nether();
 	 * ---
 	 */
-	public final T addChild(T:World, E...)(E args) if(__traits(compiles, new T(args))) {
+	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
 		T world = new T(args);
 		World.startWorld(world, this);
 		this.n_children ~= world;
@@ -466,8 +470,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 							BlockPosition position = BlockPosition(cx | xz.x, y, cz | xz.z);
 							Block dest = this[position];
 							//TODO check whether the snow can lay on the block
-							if(dest != Blocks.SNOW_LAYER) {
-								this[position + [0, 1, 0]] = Blocks.SNOW_LAYER_0;
+							if(dest.fullUpperShape && dest.opacity == 15) {
+								this[position + [0, 1, 0]] = Blocks.snowLayer0;
 							}
 						}
 					}
@@ -562,7 +566,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		foreach(player ; this.w_players) {
 			player.sendMessage(message, params);
 		}
-		world_log(this.name, translate(message, server.settings.language, params, server.variables));
+		world_log(this, translate(message, server.settings.language, params, server.variables));
 	}
 
 	/**
@@ -839,7 +843,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/// ditto
 	public final void drop(Block from, BlockPosition position) {
-		foreach(Slot slot ; from.drops(this, null, null)) {
+		foreach(slot ; from.drops(this, null, null)) {
 			this.drop(slot, position.entityPosition + .5);
 		}
 	}
@@ -904,11 +908,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				foreach(z ; Range!(rays, 0)) {
 					static if(x == 0 || x == rays - 1 || y == 0 || y == rays - 1 || z == 0 || z == rays - 1) {
 
-						explodeImpl((){
+						enum ray = (){
 							auto ret = EntityPosition(x, y, z) / half_rays - 1;
 							ret.length = length;
 							return ret;
-						}());
+						}();
+						explodeImpl(ray);
 
 					}
 				}
@@ -1138,35 +1143,40 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Sets a block.
 	 * Example:
 	 * ---
-	 * world[0, 55, 12] = Blocks.GRASS;
-	 * world[12, 55, 789] = Blocks.CHEST; // not a tile!
+	 * world[0, 55, 12] = Blocks.grass;
+	 * world[12, 55, 789] = Blocks.chest; // not a tile!
 	 * ---
 	 */
-	public Block** opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == BlockData) || is(T == Block*)) {
+	public Block** opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 
 			Block** ptr = (*chunk)[position.x & 15, position.y, position.z & 15];
 			if(ptr && *ptr) {
-				(**ptr).onUpdate(this, position, Update.REMOVED);
+				(**ptr).onRemoved(this, position, Remove.unset);
 			}
 
-			Block** nb = ((*chunk)[position.x & 15, position.y, position.z & 15] = block);
+			static if(is(T == ushort[])) {
+				block_t b = block[0];
+			} else {
+				alias b = block;
+			}
+
+			Block** nb = ((*chunk)[position.x & 15, position.y, position.z & 15] = b);
 
 			// set as to update
-			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb && *nb ? (**nb).data : Blocks.AIR);
+			//TODO move this in the chunk
+			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb && *nb ? **nb : null);
 
 			// call the update function
 			if(this.updateBlocks) {
-				if(nb && *nb) (**nb).onUpdate(this, position, Update.PLACED);
-				with(position) {
-					this.updateBlock(x, y + 1, z);
-					this.updateBlock(x + 1, y, z);
-					this.updateBlock(x, y, z + 1);
-					this.updateBlock(x - 1, y, z);
-					this.updateBlock(x, y, z - 1);
-					if(y != 0) this.updateBlock(x, y - 1, z);
-				}
+				if(nb && *nb) (**nb).onUpdated(this, position, Update.placed);
+				this.updateBlock(position + [0, 1, 0]);
+				this.updateBlock(position + [1, 0, 0]);
+				this.updateBlock(position + [0, 0, 1]);
+				this.updateBlock(position - [0, 1, 0]);
+				this.updateBlock(position - [1, 0, 0]);
+				this.updateBlock(position - [0, 0, 1]);
 			}
 
 			return nb;
@@ -1176,14 +1186,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public void opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == BlockData) || is(T == Block*)) {
+	public void opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == Block*)) {
 		this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 
 	/**
 	 * Sets a tile.
 	 */
-	public  void opIndexAssign(T)(T tile, BlockPosition position) if(is(T : Tile) && is(T : Block)) {
+	public void opIndexAssign(T)(T tile, BlockPosition position) if(is(T : Tile) && is(T : Block)) {
 		assert(!tile.placed, "This tile has already been placed: " ~ to!string(tile) ~ " at " ~ to!string(position));
 		// place the block
 		this[position] = tile.data;
@@ -1218,8 +1228,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world[0..16, 64, 0..16] = Blocks.BEETROOT_BLOCK;
 	 * ---
 	 */
-	public final void opIndexAssign(BlockData b, Slice x, Slice y, Slice z) {
-		auto block = b.id in this.blocks;
+	public final void opIndexAssign(block_t b, Slice x, Slice y, Slice z) {
+		auto block = b in this.blocks;
 		this.updateBlocks = false;
 		foreach(px ; x.min..x.max) {
 			foreach(py ; y.min..y.max) {
@@ -1232,33 +1242,61 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, int x, Slice y, Slice z) {
+	public final void opIndexAssign(block_t b, int x, Slice y, Slice z) {
 		this[x..x+1, y, z] = b;
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, Slice x, uint y, Slice z) {
+	public final void opIndexAssign(block_t b, Slice x, uint y, Slice z) {
 		this[x, y..y+1, z] = b;
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, Slice x, Slice y, int z) {
+	public final void opIndexAssign(block_t b, Slice x, Slice y, int z) {
 		this[x, y, z..z+1] = b;
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, int x, uint y, Slice z) {
+	public final void opIndexAssign(block_t b, int x, uint y, Slice z) {
 		this[x..x+1, y..y+1, z] = b;
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, int x, Slice y, int z) {
+	public final void opIndexAssign(block_t b, int x, Slice y, int z) {
 		this[x..x+1, y, z..z+1] = b;
 	}
 
 	/// ditto
-	public final void opIndexAssign(BlockData b, Slice x, uint y, int z) {
+	public final void opIndexAssign(block_t b, Slice x, uint y, int z) {
 		this[x, y..y+1, z..z+1] = b;
+	}
+
+	public size_t replace(block_t from, block_t to) {
+		return this.replace(from in this.blocks, to in this.blocks);
+	}
+
+	public size_t replace(Block* from, Block* to) {
+		size_t ret = 0;
+		foreach(cc ; this.n_chunks) {
+			foreach(c ; cc) {
+				ret += this.replaceImpl(c, from, to);
+			}
+		}
+		return ret;
+	}
+
+	public size_t replace(block_t from, block_t to, BlockPosition fromp, BlockPosition top) {
+		if(fromp.x < top.x && fromp.y < top.y && fromp.z < top.z) {
+			//TODO
+			return 0;
+		} else {
+			return 0;
+		}
+	}
+
+	private size_t replaceImpl(ref Chunk chunk, Block* from, Block* to) {
+		//TODO
+		return 0;
 	}
 
 	/// function called by a tile when its data is updated
@@ -1266,9 +1304,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.updated_tiles[tile.tid] = tile;
 	}
 
-	protected final void updateBlock(int x, uint y, int z) {
-		Block block = this[x, y, z];
-		if(block != Blocks.AIR) block.onUpdate(this, BlockPosition(x, y, z), Update.NEAREST_CHANGED);
+	protected final void updateBlock(BlockPosition position) {
+		auto block = position in this;
+		if(block && *block) (**block).onUpdated(this, position, Update.nearestChanged);
 	}
 
 	public @safe Slice opSlice(size_t pos)(int min, int max) {
@@ -1341,7 +1379,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/** Grows a tree in the given world. */
-	public static void growTree(World world, BlockPosition position, BlockData[] trunk=Blocks.OAK_WOOD, BlockData leaves=Blocks.OAK_LEAVES_DECAY) {
+	public static void growTree(World world, BlockPosition position, ushort[] trunk=Blocks.oakWood, ushort leaves=Blocks.oakLeavesDecay) {
 		uint height = world.random.next(3, 6);
 		foreach(uint i ; 0..height) {
 			world[position + [0, i, 0]] = trunk[0];

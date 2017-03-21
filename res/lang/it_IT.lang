@@ -29,6 +29,7 @@ warning.unknownPacket = Pacchetto sconosciuto ricevuto da {0} con ID {1} ({2} by
 warning.crash = {0}: {1} in {2} alla linea {3}
 warning.savedCrash = Un file con i dettagli del problema è stato salvato in {0}
 warning.blocked = {0} è stato bloccato per {1} secondi
+warning.unknownWorld = Il mondo {0} non può essere letto perchè in un formato sconosciuto a {1}
 
 status.outdatedHub = Impossibile connettersi! Hub obsoleta
 status.outdatedNode = Impossibile connettersi! Nodo obsoleto

@@ -22,12 +22,15 @@ import common.sel;
 import sel.player : Player;
 import sel.block.block : Blocks, Block;
 import sel.item.item : SimpleItem;
-import sel.item.flags;
 import sel.item.slot : Slot;
 import sel.nbt.tags;
 import sel.math.vector : BlockPosition, face, entityPosition;
 
-class BucketItem(string name, shortgroup ids, shortgroup metas, ubyte stack, string[string] pickups) : SimpleItem!(name, ids, metas, stack) {
+static import sul.items;
+
+class BucketItem(sul.items.Item si, item_t[item_t] pickups) : SimpleItem!(si) {
+
+	alias sul = si;
 
 	public this(F...)(F args) {
 		super(args);
@@ -38,10 +41,11 @@ class BucketItem(string name, shortgroup ids, shortgroup metas, ubyte stack, str
 	}
 
 	public override bool onPlaced(Player player, BlockPosition position, uint tface) {
-		Block target = player.world[position.face(tface)];
-		if(target !is null && target.directname in pickups && target.directmetas.pe == 0) {
-			Slot slot = Slot(player.world.items.get(pickups[target.directname]), 1);
-			target = Blocks.AIR;
+		auto pos = position.face(tface);
+		auto pick = player.world[pos].id in pickups;
+		if(pick) {
+			player.world[pos] = Blocks.air;
+			Slot slot = Slot(player.world.items.get(*pick), 1);
 			if(player.inventory.held.count == 1) player.inventory.held = slot;
 			else if(!player.inventory.add(slot).empty) player.drop(slot);
 			return true;
@@ -50,9 +54,13 @@ class BucketItem(string name, shortgroup ids, shortgroup metas, ubyte stack, str
 		}
 	}
 
+	alias slot this;
+
 }
 
-class FilledBucketItem(string name, shortgroup ids, shortgroup metas, ubyte stack, string place_block, string residue) : SimpleItem!(name, ids, metas, stack) {
+class FilledBucketItem(sul.items.Item si, block_t place, item_t residue) : SimpleItem!(si) {
+
+	alias sul = si;
 
 	public this(F...)(F args) {
 		super(args);
@@ -64,32 +72,36 @@ class FilledBucketItem(string name, shortgroup ids, shortgroup metas, ubyte stac
 	
 	public override bool onPlaced(Player player, BlockPosition position, uint tface) {
 		Block rep = player.world[position];
-		if(rep is null || !rep.replaceable) {
+		if(!rep.replaceable) {
 			position = face(position, tface);
 			rep = player.world[position];
+			if(rep != Blocks.air) return false;
 		}
-		if(rep !is null && rep.fluid) return false;
-		player.world[position] = place_block;
-		player.inventory.held = player.world.items.has(residue) ? Slot(player.world.items.get(residue), 1) : Slot(null);
+		player.world[position] = place;
+		player.inventory.held = Slot(player.world.items.get(residue), 1);
 		return true;
 	}
 
+	alias slot this;
+
 }
 
-class MapItem(string name, shortgroup ids) : SimpleItem!(name, ids, META!0) {
+class MapItem(sul.items.Item si) : SimpleItem!(si) {
+
+	alias sul = si;
 
 	private ushort m_map_id;
 
-	public this(F...)(F args) {
-		static if(F.length > 0 && isIntegral!(F[0])) {
-			static if(F.length > 1) super(args[1..$]);
+	public this(E...)(E args) {
+		static if(E.length > 0 && isIntegral!(E[0])) {
+			static if(E.length > 1) super(args[1..$]);
 			this.mapId = args[0] & ushort.max;
 		} else {
 			super(args);
 		}
 	}
 
-	public final override pure nothrow @property shortgroup metas() {
+	public final override pure nothrow @property @safe @nogc shortgroup metas() {
 		return shortgroup(0, this.mapId);
 	}
 
@@ -99,21 +111,20 @@ class MapItem(string name, shortgroup ids) : SimpleItem!(name, ids, META!0) {
 
 	public @property @safe ushort mapId(ushort mapId) {
 		if(this.m_pe_tag is null) this.m_pe_tag = new Compound("");
-		this.m_pe_tag["map_uuid"] = new String(to!string(mapId));
+		this.m_pe_tag["map_uuid"] = to!string(mapId);
 		return this.m_map_id = mapId;
 	}
 
-	public override @property @safe Compound petag(Compound tag) {
-		super.petag = tag;
-		if(tag !is null) {
-			if(tag.has!Compound("")) tag = tag.get!Compound("");
-			if(tag.has!String("map_uuid")) {
-				try {
-					this.mapId = to!ushort(tag.get!String("map_uuid").value);
-				} catch(ConvException e) {}
-			}
+	public override void parsePocketCompound(Compound compound) {
+		super.parsePocketCompound(compound);
+		if(compound.has!Compound("")) compound = compound.get!Compound("");
+		if(compound.has!String("map_uuid")) {
+			try {
+				this.mapId = to!ushort(compound.get!String("map_uuid").value);
+			} catch(ConvException e) {}
 		}
-		return super.petag;
 	}
+
+	alias slot this;
 
 }

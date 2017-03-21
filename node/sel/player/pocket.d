@@ -238,7 +238,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	private static ubyte[] creative_inventory;
 
-	public static loadCreativeInventory() {
+	public static bool loadCreativeInventory() {
 		// read creative inventory
 		version(Windows) {
 			immutable su = executeShell("cd %appdata% && cd").output.strip;
@@ -247,32 +247,46 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		}
 		enum cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
 		if(!exists(cached)) {
-			Types.Slot[] slots;
-			foreach(item ; parseJSON(cast(string)read(su ~ "/.sel/utils/json/creative/pocket" ~ __protocol.to!string ~ ".json"))["items"].array) {
-				auto obj = item.object;
-				auto meta = "meta" in obj;
-				auto ench = "enchantments" in obj;
-				auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
-				if(ench) {
-					auto list = new ListOf!Compound("ench");
-					foreach(e ; (*ench).array) {
-						auto eobj = e.object;
-						list ~= new Compound(new Short("id", eobj["id"].integer.to!short), new Short("lvl", eobj["level"].integer.to!short));
+			string[] paths = [
+				"sel-utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
+				"../sel-utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
+				"utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
+				"../utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
+				su ~ "/.sel/utils/json/creative/pocket" ~ __protocol.to!string ~ ".json"
+			];
+			foreach(path ; paths) {
+				if(exists(path)) {
+					Types.Slot[] slots;
+					foreach(item ; parseJSON(cast(string)read(su ~ "/.sel/utils/json/creative/pocket" ~ __protocol.to!string ~ ".json"))["items"].array) {
+						auto obj = item.object;
+						auto meta = "meta" in obj;
+						auto ench = "enchantments" in obj;
+						auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
+						if(ench) {
+							auto list = new ListOf!Compound("ench");
+							foreach(e ; (*ench).array) {
+								auto eobj = e.object;
+								list ~= new Compound(new Short("id", eobj["id"].integer.to!short), new Short("lvl", eobj["level"].integer.to!short));
+							}
+							NbtBuffer!(Endian.littleEndian).instance.writeTag(new Compound(list), slot.nbt);
+						}
+						slots ~= slot;
 					}
-					NbtBuffer!(Endian.littleEndian).instance.writeTag(new Compound(list), slot.nbt);
+					ubyte[] encoded = new Play.ContainerSetContent(121, slots).encode();
+					auto batch = new Play.Batch();
+					Compress c = new Compress(9);
+					batch.data ~= cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
+					batch.data ~= cast(ubyte[])c.flush();
+					creative_inventory = batch.encode();
+					mkdirRecurse(Paths.hidden ~ "creative");
+					write(cached, creative_inventory);
+					return true;
 				}
-				slots ~= slot;
 			}
-			ubyte[] encoded = new Play.ContainerSetContent(121, slots).encode();
-			auto batch = new Play.Batch();
-			Compress c = new Compress(9);
-			batch.data ~= cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
-			batch.data ~= cast(ubyte[])c.flush();
-			creative_inventory = batch.encode();
-			mkdirRecurse(Paths.hidden ~ "creative");
-			write(cached, creative_inventory);
+			return false;
 		} else {
 			creative_inventory = cast(ubyte[])read(cached);
+			return true;
 		}
 	}
 
@@ -289,8 +303,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			return Types.Slot(0);
 		} else {
 			ubyte[] nbt;
-			if(!slot.empty && slot.item.petag !is null) {
-				NbtBuffer!(Endian.littleEndian).instance.writeTag(slot.item.petag, nbt);
+			if(!slot.empty && slot.item.pocketCompound !is null) {
+				NbtBuffer!(Endian.littleEndian).instance.writeTag(slot.item.pocketCompound, nbt);
 			}
 			return Types.Slot(slot.ids.pe, slot.metas.pe << 8 | slot.count, nbt);
 		}
@@ -300,9 +314,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		if(slot.id <= 0) {
 			return Slot(null);
 		} else {
-			auto item = this.world.items.peget(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
+			auto item = this.world.items.fromPocket(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
 			if(slot.nbt.length) {
-				item.petag = NbtBuffer!(Endian.littleEndian).instance.readCompound("", slot.nbt); // is that right? Or readTag should be used instead?
+				//item.parsePocketCompound(NbtBuffer!(Endian.littleEndian).instance.readCompound("", slot.nbt)); // is that right? Or readTag should be used instead?
+				auto tag = NbtBuffer!(Endian.littleEndian).instance.readTag(slot.nbt);
+				if(cast(Compound)tag) item.parsePocketCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.metaAndCount & 255);
 		}
@@ -692,20 +708,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.sendPacket(new Play.UpdateAttributes(this.id, attributes));
 	}
 	
-	public override @trusted bool addEffect(Effect effect, double multiplier=1) {
-		if(super.addEffect(effect, multiplier)) {
-			this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.ADD, effect.id, effect.level, true, effect.duration));
-			return true;
-		}
-		return false;
+	protected override void onEffectAdded(Effect effect, bool modified) {
+		this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.id, effect.level, true, effect.duration));
 	}
 
-	public override @trusted bool removeEffect(Effect effect) {
-		if(super.removeEffect(effect)) {
-			this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.id, effect.level));
-			return true;
-		}
-		return false;
+	protected override void onEffectRemoved(Effect effect) {
+		this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.id, effect.level));
 	}
 	
 	public override @trusted void recalculateSpeed() {
@@ -866,7 +874,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	mixin generateHandlers!(Play.Packets);
 
-	protected void handleResourcePackClientResponsePacket(ubyte status, string[] ids) {}
+	protected void handleResourcePackClientResponsePacket(ubyte status, string[] resourcePackVersion) {}
 
 	protected void handleTextChatPacket(string sender, string message) {
 		this.handleTextMessage(message);
@@ -1078,21 +1086,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 											if(list.length) {
 												switch((*selector).str) {
 													case "nearestPlayer":
-														Player nearest = list[0];
-														if(list.length > 1) {
-															double sd = distance(this.position, nearest.position);
-															foreach(player ; list[1..$]) {
-																double d = distance(this.position, player.position);
-																if(d < sd) {
-																	nearest = player;
-																	sd = d;
-																}
-															}
-														}
-														args ~= nearest.cname;
+														args ~= "@p";
 														break;
 													case "randomPlayer":
-														args ~= this.world.random.array(list).cname;
+														args ~= "@r";
 														break;
 													default:
 														break;

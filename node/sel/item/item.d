@@ -16,920 +16,1646 @@ module sel.item.item;
 
 import std.array : split;
 import std.conv : to;
-import std.json;
+static import std.json;
+import std.string : toLower, replace;
 import std.traits : isIntegral;
-import std.typetuple : staticIndexOf;
+import std.typetuple : TypeTuple, staticIndexOf;
 
 import common.sel;
 
 import sel.player : Player;
-import sel.block.block : Block, PlacedBlock, Blocks, BlockData;
-import sel.entity.effect : EffectInfo, effectInfo, Effect, Effects, Potions;
+import sel.block.block : Block, PlacedBlock, Blocks;
+import sel.entity.effect : Effects;
 import sel.entity.entity : Entity;
 import sel.entity.human : Human;
 import sel.entity.interfaces : Arthropods, Undead;
 import sel.entity.projectile : FallingBlock;
+import sel.item.consumeable;
 import sel.item.enchanting;
-import sel.item.flags;
 import sel.item.miscellaneous;
+import sel.item.placeable;
 import sel.item.slot : Slot;
 import sel.item.tool;
 import sel.math.vector : BlockPosition, face;
 import sel.nbt.tags : Compound, DefinedCompound, List, ListOf, Short, String;
-import sel.util;
 import sel.util.color : Color;
 import sel.util.lang : GenericTranslatable = Translatable;
 import sel.world.world : World;
 
+static import sul.items;
+import sul.items : _ = Items;
+
+static import sul.enchantments;
+
+private enum unimplemented;
+
 public final class Items {
 
-	@disable this();
+	private Item function(ushort damage)[] indexes;
+	private Item function(ushort damage)[ushort][] minecraft, pocket;
+	private Item function(ushort damage)[string] strings;
 
-	public static immutable string AIR = "air";
+	public this() {
+		foreach_reverse(a ; __traits(allMembers, Items)) {
+			static if(mixin("is(" ~ a ~ " : Item)")) {
+				mixin("this.register!" ~ a ~ "();");
+			}
+		}
+	}
 
-	public static immutable string STONE = "stone";
-	public static alias Stone = PlaceableItem!(STONE, ID!1, META!0, Blocks.STONE);
+	public void register(T:Item)() if(is(typeof(T.sul) == sul.items.Item)) {
+		static if(__traits(compiles, new T(ushort.max))) {
+			auto f = (ushort damage){ return cast(Item)new T(damage); };
+		} else {
+			auto f = (ushort damage){ return cast(Item)new T(); };
+		}
+		if(this.indexes.length <= T.sul.index) this.indexes.length = T.sul.index + 1;
+		this.indexes[T.sul.index] = f;
+		if(T.sul.minecraft) {
+			if(this.minecraft.length < T.sul.minecraft.id) this.minecraft.length = T.sul.minecraft.id + 1;
+			this.minecraft[T.sul.minecraft.id][T.sul.minecraft.meta] = f;
+		}
+		if(T.sul.pocket) {
+			if(this.pocket.length < T.sul.pocket.id) this.pocket.length = T.sul.pocket.id + 1;
+			this.pocket[T.sul.pocket.id][T.sul.pocket.meta] = f;
+		}
+		this.strings[T.sul.name] = f;
+	}
 
-	public static immutable string GRANITE = "granite";
-	public static alias Granite = PlaceableItem!(GRANITE, ID!1, META!1, Blocks.GRANITE);
+	public Item function(ushort) getConstructor(size_t index) {
+		return this.indexes.length < index ? this.indexes[index] : null;
+	}
 
-	public static immutable string POLISHED_GRANITE = "polishedGranite";
-	public static alias PolishedGranite = PlaceableItem!(POLISHED_GRANITE, ID!1, META!2, Blocks.POLISHED_GRANITE);
+	public Item get(size_t index, ushort damage=0) {
+		return this.indexes.length < index ? this.indexes[index](damage) : null;
+	}
 
-	public static immutable string DIORITE = "diorite";
-	public static alias Diorite = PlaceableItem!(DIORITE, ID!1, META!3, Blocks.DIORITE);
+	public Item fromMinecraft(ushort id, ushort damage=0) {
+		if(this.minecraft.length < id) return null;
+		auto data = this.minecraft[id];
+		auto dam = damage in data;
+		return dam ? (*dam)(damage) : null;
+	}
 
-	public static immutable string POLISHED_DIORITE = "polishedDiorite";
-	public static alias PolishedDiorite = PlaceableItem!(POLISHED_DIORITE, ID!1, META!4, Blocks.POLISHED_DIORITE);
+	public Item fromPocket(ushort id, ushort damage=0) {
+		if(this.pocket.length < id) return null;
+		auto data = this.pocket[id];
+		auto dam = damage in data;
+		return dam ? (*dam)(damage) : null;
+	}
 
-	public static immutable string ANDESITE = "andesite";
-	public static alias Andesite = PlaceableItem!(ANDESITE, ID!1, META!5, Blocks.ANDESITE);
+	public Item fromString(string name, ushort damage=0) {
+		auto f = name.toLower.replace("_", " ") in this.strings;
+		return f ? (*f)(damage) : null;
+	}
 
-	public static immutable string POLISHED_ANDESITE = "polishedAndesite";
-	public static alias PolishedAndesite = PlaceableItem!(POLISHED_ANDESITE, ID!1, META!6, Blocks.POLISHED_ANDESITE);
+	public enum air = _.AIR.index;
 
-	public static immutable string GRASS = "grass";
-	public static alias Grass = PlaceableItem!(GRASS, ID!2, META!0, Blocks.GRASS);
+	public enum stone = _.STONE.index;
+	public alias Stone = PlaceableItem!(_.STONE, Blocks.stone);
 
-	public static immutable string DIRT = "dirt";
-	public static alias Dirt = PlaceableItem!(DIRT, ID!3, META!0, Blocks.DIRT);
+	public enum granite = _.GRANITE.index;
+	public alias Granite = PlaceableItem!(_.GRANITE, Blocks.granite);
 
-	public static immutable string COBBLESTONE = "cobblestone";
-	public static alias Cobblestone = PlaceableItem!(COBBLESTONE, ID!4, META!0, Blocks.COBBLESTONE);
+	public enum polishedGranite = _.POLISHED_GRANITE.index;
+	public alias PolishedGranite = PlaceableItem!(_.POLISHED_GRANITE, Blocks.polishedGranite);
 
-	public static enum WOODEN_PLANKS = [OAK_WOODEN_PLANKS, SPRUCE_WOODEN_PLANKS, BIRCH_WOODEN_PLANKS, JUNGLE_WOODEN_PLANKS, ACACIA_WOODEN_PLANKS, DARK_OAK_WOODEN_PLANKS];
-	public static alias WoodenPlanks(string name, shortgroup metas, BlockData place) = PlaceableItem!(name, ID!5, metas, place);
+	public enum diorite = _.DIORITE.index;
+	public alias Diorite = PlaceableItem!(_.DIORITE, Blocks.diorite);
 
-	public static immutable string OAK_WOODEN_PLANKS = "oakWoodenPlanks";
-	public static alias OakWoodenPlanks = WoodenPlanks!(OAK_WOODEN_PLANKS, META!0, Blocks.OAK_WOODEN_PLANKS);
+	public enum polishedDiorite = _.POLISHED_DIORITE.index;
+	public alias PolishedDiorite = PlaceableItem!(_.POLISHED_DIORITE, Blocks.polishedDiorite);
 
-	public static immutable string SPRUCE_WOODEN_PLANKS = "spruceWoodenPlanks";
-	public static alias SpruceWoodenPlanks = WoodenPlanks!(SPRUCE_WOODEN_PLANKS, META!1, Blocks.SPRUCE_WOODEN_PLANKS);
+	public enum andesite = _.ANDESITE.index;
+	public alias Andesite = PlaceableItem!(_.ANDESITE, Blocks.andesite);
 
-	public static immutable string BIRCH_WOODEN_PLANKS = "birchWoodenPlanks";
-	public static alias BirchWoodenPlanks = WoodenPlanks!(BIRCH_WOODEN_PLANKS, META!2, Blocks.BIRCH_WOODEN_PLANKS);
+	public enum polishedAndesite = _.POLISHED_ANDESITE.index;
+	public alias PolishedAndesite = PlaceableItem!(_.POLISHED_ANDESITE, Blocks.polishedAndesite);
 
-	public static immutable string JUNGLE_WOODEN_PLANKS = "jungleWoodenPlanks";
-	public static alias JungleWoodenPlanks = WoodenPlanks!(JUNGLE_WOODEN_PLANKS, META!3, Blocks.JUNGLE_WOODEN_PLANKS);
+	public enum grass = _.GRASS.index;
+	public alias Grass = PlaceableItem!(_.GRASS, Blocks.grass);
 
-	public static immutable string ACACIA_WOODEN_PLANKS = "acaciaWoodenPlanks";
-	public static alias AcaciaWoodenPlanks = WoodenPlanks!(ACACIA_WOODEN_PLANKS, META!4, Blocks.ACACIA_WOODEN_PLANKS);
+	public enum dirt = _.DIRT.index;
+	public alias Dirt = PlaceableItem!(_.DIRT, Blocks.dirt);
 
-	public static immutable string DARK_OAK_WOODEN_PLANKS = "darkOakWoodenPlanks";
-	public static alias DarkOakWoodenPlanks = WoodenPlanks!(DARK_OAK_WOODEN_PLANKS, META!5, Blocks.DARK_OAK_WOODEN_PLANKS);
+	public enum coarseDirt = _.COARSE_DIRT.index;
+	public alias CoarseDirt = PlaceableItem!(_.COARSE_DIRT, Blocks.coarseDirt);
+
+	public enum podzol = _.PODZOL.index;
+	public alias Podzol = PlaceableItem!(_.PODZOL, Blocks.podzol);
+
+	public enum cobblestone = _.COBBLESTONE.index;
+	public alias Cobblestone = PlaceableItem!(_.COBBLESTONE, Blocks.cobblestone);
+
+	public enum oakWoodPlanks = _.OAK_WOOD_PLANKS.index;
+	public alias OakWoodPlanks = PlaceableItem!(_.OAK_WOOD_PLANKS, Blocks.oakWoodPlanks);
 	
-	public static enum SAPLING = [OAK_SAPLING, SPRUCE_SAPLING, BIRCH_SAPLING, JUNGLE_SAPLING, ACACIA_SAPLING, DARK_OAK_SAPLING];
+	public enum spruceWoodPlanks = _.SPRUCE_WOOD_PLANKS.index;
+	public alias SpruceWoodPlanks = PlaceableItem!(_.SPRUCE_WOOD_PLANKS, Blocks.spruceWoodPlanks);
 	
-	public static immutable string OAK_SAPLING = "oakSapling";
+	public enum birchWoodPlanks = _.BIRCH_WOOD_PLANKS.index;
+	public alias BirchWoodPlanks = PlaceableItem!(_.BIRCH_WOOD_PLANKS, Blocks.birchWoodPlanks);
 	
-	public static immutable string SPRUCE_SAPLING = "spruceSapling";
+	public enum jungleWoodPlanks = _.JUNGLE_WOOD_PLANKS.index;
+	public alias JungleWoodPlanks = PlaceableItem!(_.JUNGLE_WOOD_PLANKS, Blocks.jungleWoodPlanks);
 	
-	public static immutable string BIRCH_SAPLING = "birchSapling";
+	public enum acaciaWoodPlanks = _.ACACIA_WOOD_PLANKS.index;
+	public alias AcaciaWoodPlanks = PlaceableItem!(_.ACACIA_WOOD_PLANKS, Blocks.acaciaWoodPlanks);
 	
-	public static immutable string JUNGLE_SAPLING = "jungleSapling";
+	public enum darkOakWoodPlanks = _.DARK_OAK_WOOD_PLANKS.index;
+	public alias DarkOakWoodPlanks = PlaceableItem!(_.DARK_OAK_WOOD_PLANKS, Blocks.darkOakWoodPlanks);
+
+	public enum woodPlanks = [oakWoodPlanks, spruceWoodPlanks, birchWoodPlanks, jungleWoodPlanks, acaciaWoodPlanks, darkOakWoodPlanks];
+	public alias WoodPlanks = TypeTuple!(OakWoodPlanks, SpruceWoodPlanks, BirchWoodPlanks, JungleWoodPlanks, AcaciaWoodPlanks, DarkOakWoodPlanks);
 	
-	public static immutable string ACACIA_SAPLING = "acaciaSapling";
+	public enum oakSapling = _.OAK_SAPLING.index;
+	public alias OakSapling = PlaceableItem!(_.OAK_SAPLING, Blocks.oakSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
+
+	public enum spruceSapling = _.SPRUCE_SAPLING.index;
+	public alias SpruceSapling = PlaceableItem!(_.SPRUCE_SAPLING, Blocks.spruceSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
 	
-	public static immutable string DARK_OAK_SAPLING = "darkOakSapling";
+	public enum birchSapling = _.BIRCH_SAPLING.index;
+	public alias BirchSapling = PlaceableItem!(_.BIRCH_SAPLING, Blocks.birchSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
 
-	public static immutable string BEDROCK = "bedrock";
-	public static alias Bedrock = PlaceableItem!(BEDROCK, ID!7, META!0, Blocks.BEDROCK);
-
-	/*public static enum WATER = [FLOWING_WATER, STILL_WATER];
-
-	public static immutable string FLOWING_WATER = "water";
-	public static alias Water = PlaceableItem!(FLOWING_WATER, ID!8, META!0, Blocks.FLOWING_WATER);
-
-	public static immutable string STILL_WATER = "stillWater";
-	public static alias StillWater = PlaceableItem!(STILL_WATER, ID!9, META!0, Blocks.STILL_WATER);
-
-	public static enum LAVA = [FLOWING_LAVA, STILL_LAVA];
-
-	public static immutable string FLOWING_LAVA = "lava";
-	public static alias Lava = PlaceableItem!(FLOWING_LAVA, ID!10, META!0, Blocks.FLOWING_WATER);
-
-	public static immutable string STILL_LAVA = "stillLava";
-	public static alias StillLava = PlaceableItem!(STILL_LAVA, ID!11, META!0, Blocks.STILL_LAVA);*/
-
-	public static immutable string SAND = "sand";
-	public static alias Sand = PlaceableItem!(SAND, ID!12, META!0, Blocks.SAND);
-
-	public static immutable string RED_SAND = "redSand";
-	public static alias RedSand = PlaceableItem!(RED_SAND, ID!12, META!1, Blocks.RED_SAND);
-
-	public static immutable string GRAVEL = "gravel";
-	public static alias Gravel = PlaceableItem!(GRAVEL, ID!13, META!0, Blocks.GRAVEL);
-
-	public static immutable string GOLD_ORE = "goldOre";
-	public static alias GoldOre = PlaceableItem!(GOLD_ORE, ID!14, META!0, Blocks.GOLD_ORE);
-
-	public static immutable string IRON_ORE = "ironOre";
-	public static alias IronOre = PlaceableItem!(IRON_ORE, ID!15, META!0, Blocks.IRON_ORE);
-
-	public static immutable string COAL_ORE = "coalOre";
-	public static alias CoalOre = PlaceableItem!(COAL_ORE, ID!16, META!0, Blocks.COAL_ORE);
-
-	//TODO placing with the right orientation
-	public static enum WOOD = [OAK_WOOD, SPRUCE_WOOD, BIRCH_WOOD, JUNGLE_WOOD, ACACIA_WOOD, DARK_OAK_WOOD];
-
-	public static immutable string OAK_WOOD = "oakWood";
-	public static alias OakWood = PlaceableItem!(OAK_WOOD, ID!17, META!0, Blocks.OAK_WOOD_UP_DOWN);
-
-	public static immutable string SPRUCE_WOOD = "spruceWood";
-	public static alias SpruceWood = PlaceableItem!(SPRUCE_WOOD, ID!17, META!1, Blocks.SPRUCE_WOOD_UP_DOWN);
-
-	public static immutable string BIRCH_WOOD = "birchWood";
-	public static alias BirchWood = PlaceableItem!(BIRCH_WOOD, ID!17, META!2, Blocks.BIRCH_WOOD_UP_DOWN);
-
-	public static immutable string JUNGLE_WOOD = "jungleWood";
-	public static alias JungleWood = PlaceableItem!(JUNGLE_WOOD, ID!17, META!3, Blocks.BIRCH_WOOD_UP_DOWN);
-
-	public static immutable string ACACIA_WOOD = "acaciaWood";
-	public static alias AcaciaWood = PlaceableItem!(ACACIA_WOOD, ID!162, META!0, Blocks.ACACIA_WOOD_UP_DOWN);
-
-	public static immutable string DARK_OAK_WOOD = "darkOakWood";
-	public static alias DarkOakWood = PlaceableItem!(DARK_OAK_WOOD, ID!162, META!1, Blocks.DARK_OAK_WOOD_UP_DOWN);
-
-	public static enum LEAVES = [OAK_LEAVES, SPRUCE_LEAVES, BIRCH_LEAVES, JUNGLE_LEAVES, ACACIA_LEAVES, DARK_OAK_LEAVES];
-
-	public static immutable string OAK_LEAVES = "oakLeaves";
-	public static alias OakLeaves = PlaceableItem!(OAK_LEAVES, ID!18, META!0, Blocks.OAK_LEAVES_NO_DECAY);
-
-	public static immutable string SPRUCE_LEAVES = "spruceLeaves";
-	public static alias SpruceLeaves = PlaceableItem!(SPRUCE_LEAVES, ID!18, META!1, Blocks.SPRUCE_LEAVES_NO_DECAY);
-
-	public static immutable string BIRCH_LEAVES = "birchLeaves";
-	public static alias BirchLeaves = PlaceableItem!(BIRCH_LEAVES, ID!18, META!2, Blocks.BIRCH_LEAVES_NO_DECAY);
-
-	public static immutable string JUNGLE_LEAVES = "jungleLeaves";
-	public static alias JungleLeaves = PlaceableItem!(JUNGLE_LEAVES, ID!18, META!3, Blocks.JUNGLE_LEAVES_NO_DECAY);
-
-	public static immutable string ACACIA_LEAVES = "acaciaLeaves";
-	public static alias AcaciaLeaves = PlaceableItem!(ACACIA_LEAVES, ID!161, META!0, Blocks.ACACIA_LEAVES_NO_DECAY);
-
-	public static immutable string DARK_OAK_LEAVES = "darkOakLeaves";
-	public static alias DarkOakLeaves = PlaceableItem!(DARK_OAK_LEAVES, ID!161, META!1, Blocks.DARK_OAK_LEAVES_NO_DECAY);
-
-	public static immutable string SPONGE = "sponge";
-	public static alias Sponge = PlaceableItem!(SPONGE, ID!19, META!0, Blocks.SPONGE);
-
-	public static immutable string GLASS = "glass";
-	public static alias Glass = PlaceableItem!(GLASS, ID!20, META!0, Blocks.GLASS);
-
-	public static immutable string LAPIS_LAZULI_ORE = "lapisLazuliOre";
-	public static alias LapisLazuliOre = PlaceableItem!(LAPIS_LAZULI_ORE, ID!21, META!0, Blocks.LAPIS_LAZULI_ORE);
-
-	public static immutable string LAPIS_LAZULI_BLOCK = "lapisLazuliBlock";
-	public static alias LapisLazuliBlock = PlaceableItem!(LAPIS_LAZULI_BLOCK, ID!22, META!0, Blocks.LAPIS_LAZULI_BLOCK);
-
-	public static immutable string DISPENSER = "dispencer";
-	//public static alias Dispencer = PlaceableItem!(DISPENSER, ID!23, META!0, Blocks.DISPENSER);
-
-	public static immutable string SANDSTONE = "sandstone";
-	public static alias Sandstone = PlaceableItem!(SANDSTONE, ID!24, META!0, Blocks.SANDSTONE);
-
-	public static immutable string CHISELED_SANDSTONE = "chiseledSandstone";
-	public static alias ChiseledSandstone = PlaceableItem!(CHISELED_SANDSTONE, ID!24, META!1, Blocks.CHISELED_SANDSTONE);
-
-	public static immutable string SMOOTH_SANDSTONE = "smoothSandstone";
-	public static alias SmoothSandstone = PlaceableItem!(SMOOTH_SANDSTONE, ID!24, META!2, Blocks.SMOOTH_SANDSTONE);
-
-	public static immutable string NOTEBLOCK = "noteblock";
-	//public static alias Noteblock = PlaceableItem!(NOTEBLOCK, ID!25, META!0, Blocks.NOTEBLOCK);
+	public enum jungleSapling = _.JUNGLE_SAPLING.index;
+	public alias JungleSapling = PlaceableItem!(_.JUNGLE_SAPLING, Blocks.jungleSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
 	
-	public static immutable string TALL_GRASS = "tallGrass";
-	public static alias TallGrass = PlaceableItem!(TALL_GRASS, ID!31, META!1, Blocks.TALL_GRASS);
+	public enum acaciaSapling = _.ACACIA_SAPLING.index;
+	public alias AcaciaSapling = PlaceableItem!(_.ACACIA_SAPLING, Blocks.acaciaSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
+
+	public enum darkOakSapling = _.DARK_OAK_SAPLING.index;
+	public alias DarkOakSapling = PlaceableItem!(_.DARK_OAK_SAPLING, Blocks.darkOakSapling, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
+
+	public enum sapling = [oakSapling, spruceSapling, birchSapling, acaciaSapling, darkOakSapling];
+	public alias Sapling = TypeTuple!(OakSapling, SpruceSapling, BirchSapling, JungleSapling, AcaciaSapling, DarkOakSapling);
+
+	public enum bedrock = _.BEDROCK.index;
+	public alias Bedrock = PlaceableItem!(_.BEDROCK, Blocks.bedrock);
+
+	public enum sand = _.SAND.index;
+	public alias Sand = PlaceableItem!(_.SAND, Blocks.sand);
+
+	public enum redSand = _.RED_SAND.index;
+	public alias RedSand = PlaceableItem!(_.RED_SAND, Blocks.redSand);
+
+	public enum gravel = _.GRAVEL.index;
+	public alias Gravel = PlaceableItem!(_.GRAVEL, Blocks.gravel);
+
+	public enum goldOre = _.GOLD_ORE.index;
+	public alias GoldOre = PlaceableItem!(_.GOLD_ORE, Blocks.goldOre);
+
+	public enum ironOre = _.IRON_ORE.index;
+	public alias IronOre = PlaceableItem!(_.IRON_ORE, Blocks.ironOre);
+
+	public enum coalOre = _.COAL_ORE.index;
+	public alias CoalOre = PlaceableItem!(_.COAL_ORE, Blocks.coalOre);
 	
-	public static immutable string FERN = "fern";
-	public static alias Fern = PlaceableItem!(FERN, ID!31, META!2, Blocks.FERN);
-
-	public static immutable string DEAD_BUSH = "deadBush";
-	public static alias DeadBush = PlaceableItem!(DEAD_BUSH, ID!32, META!0, Blocks.DEAD_BUSH);
-
-	public static enum WOOL = [WHITE_WOOL, ORANGE_WOOL, MAGENTA_WOOL, LIGHT_BLUE_WOOL, YELLOW_WOOL, LIME_WOOL, PINK_WOOL, GRAY_WOOL, LIGHT_GRAY_WOOL, CYAN_WOOL, PURPLE_WOOL, BLUE_WOOL, BROWN_WOOL, GREEN_WOOL, RED_WOOL, BLACK_WOOL];
+	public enum oakWood = _.OAK_WOOD.index;
+	public alias OakWood = WoodItem!(_.OAK_WOOD, Blocks.oakWood);
 	
-	public static immutable string WHITE_WOOL = "whiteWool";
-	public static alias WhiteWool = PlaceableItem!(WHITE_WOOL, ID!35, META!0, Blocks.WHITE_WOOL);
+	public enum spruceWood = _.SPRUCE_WOOD.index;
+	public alias SpruceWood = WoodItem!(_.SPRUCE_WOOD, Blocks.spruceWood);
 	
-	public static immutable string ORANGE_WOOL = "orangeWool";
-	public static alias OrangeWool = PlaceableItem!(ORANGE_WOOL, ID!35, META!1, Blocks.ORANGE_WOOL);
+	public enum birchWood = _.BIRCH_WOOD.index;
+	public alias BirchWood = WoodItem!(_.BIRCH_WOOD, Blocks.birchWood);
+
+	public enum jungleWood = _.JUNGLE_WOOD.index;
+	public alias JungleWood = WoodItem!(_.JUNGLE_WOOD, Blocks.jungleWood);
+
+	public enum acaciaWood = _.ACACIA_WOOD.index;
+	public alias AcaciaWood = WoodItem!(_.ACACIA_WOOD, Blocks.acaciaWood);
 	
-	public static immutable string MAGENTA_WOOL = "magentaWool";
-	public static alias MagentaWool = PlaceableItem!(MAGENTA_WOOL, ID!35, META!2, Blocks.MAGENTA_WOOL);
+	public enum darkOakWood = _.DARK_OAK_WOOD.index;
+	public alias DarkOakWood = WoodItem!(_.DARK_OAK_WOOD, Blocks.darkOakWood);
 	
-	public static immutable string LIGHT_BLUE_WOOL = "lightBlueWool";
-	public static alias LightBlueWool = PlaceableItem!(LIGHT_BLUE_WOOL, ID!35, META!3, Blocks.LIGHT_BLUE_WOOL);
+	public enum oakLeaves = _.OAK_LEAVES.index;
+	public alias OakLeaves = PlaceableItem!(_.OAK_LEAVES, Blocks.oakLeavesNoDecay);
+
+	public enum spruceLeaves = _.SPRUCE_LEAVES.index;
+	public alias SpruceLeaves = PlaceableItem!(_.SPRUCE_LEAVES, Blocks.spruceLeavesNoDecay);
+
+	public enum birchLeaves = _.BIRCH_LEAVES.index;
+	public alias BirchLeaves = PlaceableItem!(_.BIRCH_LEAVES, Blocks.birchLeavesNoDecay);
 	
-	public static immutable string YELLOW_WOOL = "yellowWool";
-	public static alias YellowWool = PlaceableItem!(YELLOW_WOOL, ID!35, META!4, Blocks.YELLOW_WOOL);
+	public enum jungleLeaves = _.JUNGLE_LEAVES.index;
+	public alias JungleLeaves = PlaceableItem!(_.JUNGLE_LEAVES, Blocks.jungleLeavesNoDecay);
 	
-	public static immutable string LIME_WOOL = "limeWool";
-	public static alias LimeWool = PlaceableItem!(LIME_WOOL, ID!35, META!5, Blocks.LIME_WOOL);
+	public enum acaciaLeaves = _.ACACIA_LEAVES.index;
+	public alias AcaciaLeaves = PlaceableItem!(_.ACACIA_LEAVES, Blocks.acaciaLeavesNoDecay);
 	
-	public static immutable string PINK_WOOL = "pinkWool";
-	public static alias PinkWool = PlaceableItem!(PINK_WOOL, ID!35, META!6, Blocks.PINK_WOOL);
+	public enum darkOakLeaves = _.DARK_OAK_LEAVES.index;
+	public alias DarkOakLeaves = PlaceableItem!(_.DARK_OAK_LEAVES, Blocks.darkOakLeavesNoDecay);
+
+	public enum sponge = _.SPONGE.index;
+	public alias Sponge = PlaceableItem!(_.SPONGE, Blocks.sponge);
+
+	public enum wetSponge = _.WET_SPONGE.index;
+	public alias WetSponge = PlaceableItem!(_.WET_SPONGE, Blocks.wetSponge);
+
+	public enum glass = _.GLASS.index;
+	public alias Glass = PlaceableItem!(_.GLASS, Blocks.glass);
+
+	public enum lapisLazuliOre = _.LAPIS_LAZULI_ORE.index;
+	public alias LapisLazuliOre = PlaceableItem!(_.LAPIS_LAZULI_ORE, Blocks.lapisLazuliOre);
+
+	public enum lapisLazuliBlock = _.LAPIS_LAZULI_BLOCK.index;
+	public alias LapisLazuliBlock = PlaceableItem!(_.LAPIS_LAZULI_BLOCK, Blocks.lapisLazuliBlock);
+
+	public @unimplemented enum dispenser = _.DISPENSER.index;
+	public alias Dispenser = SimpleItem!(_.DISPENSER);
+
+	public enum sandstone = _.SANDSTONE.index;
+	public alias Sandstone = PlaceableItem!(_.SANDSTONE, Blocks.sandstone);
+
+	public enum chiseledSandstone = _.CHISELED_SANDSTONE.index;
+	public alias ChiseledSandstone = PlaceableItem!(_.CHISELED_SANDSTONE, Blocks.chiseledSandstone);
+
+	public enum smoothSandstone = _.SMOOTH_SANDSTONE.index;
+	public alias SmoothSandstone = PlaceableItem!(_.SMOOTH_SANDSTONE, Blocks.smoothSandstone);
+
+	public enum noteBlock = _.NOTE_BLOCK.index;
+	public alias NoteBlock = PlaceableItem!(_.NOTE_BLOCK, Blocks.noteBlock);
 	
-	public static immutable string GRAY_WOOL = "grayWool";
-	public static alias GrayWool = PlaceableItem!(GRAY_WOOL, ID!35, META!7, Blocks.GRAY_WOOL);
+	public @unimplemented enum poweredRail = _.POWERED_RAIL.index;
+	public alias PoweredRail = SimpleItem!(_.POWERED_RAIL);
 	
-	public static immutable string LIGHT_GRAY_WOOL = "lightGrayWool";
-	public static alias LightGrayWool = PlaceableItem!(LIGHT_GRAY_WOOL, ID!35, META!8, Blocks.LIGHT_GRAY_WOOL);
+	public @unimplemented enum detectorRail = _.DETECTOR_RAIL.index;
+	public alias DetectorRail = SimpleItem!(_.DETECTOR_RAIL);
+
+	public @unimplemented enum stickyPiston = _.STICKY_PISTON.index;
+	public alias StickyPiston = SimpleItem!(_.STICKY_PISTON);
+
+	public enum cobweb = _.COBWEB.index;
+	public alias Cobweb = PlaceableItem!(_.COBWEB, Blocks.cobweb);
+
+	public enum tallGrass = _.TALL_GRASS.index;
+	public alias TallGrass = PlaceableItem!(_.TALL_GRASS, Blocks.tallGrass, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
+
+	public enum fern = _.FERN.index;
+	public alias Fern = PlaceableItem!(_.FERN, Blocks.fern, [Blocks.dirt, Blocks.grass, Blocks.podzol, Blocks.coarseDirt] ~ Blocks.farmland);
+
+	public enum deadBush = _.DEAD_BUSH.index;
+	public alias DeadBush = PlaceableItem!(_.DEAD_BUSH, Blocks.deadBush, [Blocks.sand, Blocks.redSand, Blocks.dirt, Blocks.podzol, Blocks.coarseDirt, Blocks.hardenedClay] ~ Blocks.stainedClay);
 	
-	public static immutable string CYAN_WOOL = "cyanWool";
-	public static alias CyanWool = PlaceableItem!(CYAN_WOOL, ID!35, META!9, Blocks.CYAN_WOOL);
+	public @unimplemented enum piston = _.PISTON.index;
+	public alias Piston = SimpleItem!(_.PISTON);
+
+	public enum whiteWool = _.WHITE_WOOL.index;
+	public alias WhiteWool = PlaceableItem!(_.WHITE_WOOL, Blocks.whiteWool);
+
+	public enum orangeWool = _.ORANGE_WOOL.index;
+	public alias OrangeWool = PlaceableItem!(_.ORANGE_WOOL, Blocks.orangeWool);
 	
-	public static immutable string PURPLE_WOOL = "purpleWool";
-	public static alias PurpleWool = PlaceableItem!(PURPLE_WOOL, ID!35, META!10, Blocks.PURPLE_WOOL);
+	public enum magentaWool = _.MAGENTA_WOOL.index;
+	public alias MagentaWool = PlaceableItem!(_.MAGENTA_WOOL, Blocks.magentaWool);
+
+	public enum lightBlueWool = _.LIGHT_BLUE_WOOL.index;
+	public alias LightBlueWool = PlaceableItem!(_.LIGHT_BLUE_WOOL, Blocks.lightBlueWool);
+
+	public enum yellowWool = _.YELLOW_WOOL.index;
+	public alias YellowWool = PlaceableItem!(_.YELLOW_WOOL, Blocks.yellowWool);
+
+	public enum limeWool = _.LIME_WOOL.index;
+	public alias LimeWool = PlaceableItem!(_.LIME_WOOL, Blocks.limeWool);
+
+	public enum pinkWool = _.PINK_WOOL.index;
+	public alias PinkWool = PlaceableItem!(_.PINK_WOOL, Blocks.pinkWool);
 	
-	public static immutable string BLUE_WOOL = "blueWool";
-	public static alias BlueWool = PlaceableItem!(BLUE_WOOL, ID!35, META!11, Blocks.BLUE_WOOL);
+	public enum grayWool = _.GRAY_WOOL.index;
+	public alias GrayWool = PlaceableItem!(_.GRAY_WOOL, Blocks.grayWool);
 	
-	public static immutable string BROWN_WOOL = "brownWool";
-	public static alias BrownWool = PlaceableItem!(BROWN_WOOL, ID!35, META!12, Blocks.BROWN_WOOL);
+	public enum lightGrayWool = _.LIGHT_GRAY_WOOL.index;
+	public alias LightGrayWool = PlaceableItem!(_.LIGHT_GRAY_WOOL, Blocks.lightGrayWool);
 	
-	public static immutable string GREEN_WOOL = "greenWool";
-	public static alias GreenWool = PlaceableItem!(GREEN_WOOL, ID!35, META!13, Blocks.GREEN_WOOL);
+	public enum cyanWool = _.CYAN_WOOL.index;
+	public alias CyanWool = PlaceableItem!(_.CYAN_WOOL, Blocks.cyanWool);
 	
-	public static immutable string RED_WOOL = "redWool";
-	public static alias RedWool = PlaceableItem!(RED_WOOL, ID!35, META!14, Blocks.RED_WOOL);
+	public enum purpleWool = _.PURPLE_WOOL.index;
+	public alias PurpleWool = PlaceableItem!(_.PURPLE_WOOL, Blocks.purpleWool);
 	
-	public static immutable string BLACK_WOOL = "blackWool";
-	public static alias BlackWool = PlaceableItem!(BLACK_WOOL, ID!35, META!15, Blocks.BLACK_WOOL);
-
-	public static immutable string DANDELION = "dandelion";
-	public static alias Dandelion = PlaceableItem!(DANDELION, ID!37, META!0, Blocks.DANDELION);
+	public enum blueWool = _.BLUE_WOOL.index;
+	public alias BlueWool = PlaceableItem!(_.BLUE_WOOL, Blocks.blueWool);
 	
-	public static immutable string POPPY = "poppy";
-	public static alias Poppy = PlaceableItem!(POPPY, ID!38, META!0, Blocks.POPPY);
+	public enum brownWool = _.BROWN_WOOL.index;
+	public alias BrownWool = PlaceableItem!(_.BROWN_WOOL, Blocks.brownWool);
 	
-	public static immutable string BLUE_ORCHID = "blueOrchid";
-	public static alias BlueOrchid = PlaceableItem!(BLUE_ORCHID, ID!38, META!1, Blocks.BLUE_ORCHID);
+	public enum greenWool = _.GREEN_WOOL.index;
+	public alias GreenWool = PlaceableItem!(_.GREEN_WOOL, Blocks.greenWool);
 	
-	public static immutable string ALLIUM = "allium";
-	public static alias Allium = PlaceableItem!(ALLIUM, ID!38, META!2, Blocks.ALLIUM);
+	public enum redWool = _.RED_WOOL.index;
+	public alias RedWool = PlaceableItem!(_.RED_WOOL, Blocks.redWool);
 	
-	public static immutable string AZURE_BLUET = "azureBluet";
-	public static alias AzureBluet = PlaceableItem!(AZURE_BLUET, ID!38, META!3, Blocks.AZURE_BLUET);
+	public enum blackWool = _.BLACK_WOOL.index;
+	public alias BlackWool = PlaceableItem!(_.BLACK_WOOL, Blocks.blackWool);
 	
-	public static immutable string RED_TULIP = "redTulip";
-	public static alias RedTulip = PlaceableItem!(RED_TULIP, ID!38, META!4, Blocks.RED_TULIP);
+	public enum wool = [whiteWool, orangeWool, magentaWool, lightBlueWool, yellowWool, limeWool, pinkWool, grayWool, lightGrayWool, cyanWool, purpleWool, blueWool, brownWool, greenWool, redWool, blackWool];
+
+	public enum dandelion = _.DANDELION.index;
+	public alias Dandelion = PlaceableItem!(_.DANDELION, Blocks.dandelion);
 	
-	public static immutable string ORANGE_TULIP = "orangeTulip";
-	public static alias OrangeTulip = PlaceableItem!(ORANGE_TULIP, ID!38, META!5, Blocks.ORANGE_TULIP);
+	public enum poppy = _.POPPY.index;
+	public alias Poppy = PlaceableItem!(_.POPPY, Blocks.poppy);
 	
-	public static immutable string WHITE_TULIP = "whiteTulip";
-	public static alias WhiteTulip = PlaceableItem!(WHITE_TULIP, ID!38, META!6, Blocks.WHITE_TULIP);
+	public enum blueOrchid = _.BLUE_ORCHID.index;
+	public alias BlueOrchid = PlaceableItem!(_.BLUE_ORCHID, Blocks.blueOrchid);
 	
-	public static immutable string PINK_TULIP = "pinkTulip";
-	public static alias PinkTulip = PlaceableItem!(PINK_TULIP, ID!38, META!7, Blocks.PINK_TULIP);
-
-	public static immutable string OXEYE_DAISY = "exeyeDaisy";
-	public static alias OxeyeDaisy = PlaceableItem!(OXEYE_DAISY, ID!38, META!8, Blocks.OXEYE_DAISY);
+	public enum allium = _.ALLIUM.index;
+	public alias Allium = PlaceableItem!(_.ALLIUM, Blocks.allium);
 	
-	public static immutable string 	BROWN_MUSHROOM = "brownMushroom";
+	public enum azureBluet = _.AZURE_BLUET.index;
+	public alias AzureBluet = PlaceableItem!(_.AZURE_BLUET, Blocks.azureBluet);
 	
-	public static immutable string 	RED_MUSHROOM = "redMushroom";
-
-	public static immutable string GOLD_BLOCK = "goldBlock";
-	public static alias GoldBlock = PlaceableItem!(GOLD_BLOCK, ID!41, META!0, Blocks.GOLD_BLOCK);
-
-	public static immutable string IRON_BLOCK = "ironBlock";
-	public static alias IronBlock = PlaceableItem!(IRON_BLOCK, ID!42, META!0, Blocks.IRON_BLOCK);
-
-	// TODO up and down
-	public static immutable string STONE_SLAB = "doubleStoneSlab";
-	public static alias DoubleStoneSlab = PlaceableItem!(STONE_SLAB, ID!43, META!0, Blocks.STONE_SLAB);
-
-	public static immutable string TNT = "tnt";
-	public static alias Tnt = PlaceableItem!(TNT, ID!46, META!0, Blocks.TNT);
-
-	public static immutable string OBSIDIAN = "obsidian";
-	public static alias Obsidian = PlaceableItem!(OBSIDIAN, ID!49, META!0, Blocks.OBSIDIAN);
-
-	public static immutable string FIRE = "fire";
-	public static alias Fire = PlaceableItem!(FIRE, ID!51, META!0, Blocks.FIRE);
-
-	public static immutable string DIAMOND_ORE = "diamondOre";
-	public static alias DiamondOre = PlaceableItem!(DIAMOND_ORE, ID!56, META!0, Blocks.DIAMOND_ORE);
-
-	public static immutable string DIAMOND_BLOCK = "diamondBlock";
-	public static alias DiamondBlock = PlaceableItem!(DIAMOND_BLOCK, ID!57, META!0, Blocks.DIAMOND_BLOCK);
-
-	public static immutable string CRAFTING_TABLE = "craftingTable";
-	public static alias CraftingTable = PlaceableItem!(CRAFTING_TABLE, ID!58, META!0, Blocks.CRAFTING_TABLE);
-
-	//TODO facing
-	public static immutable string LADDER = "ladder";
-	public static alias Ladder = PlaceableItem!(LADDER, ID!65, META!0, Blocks.LADDER_NORTH);
-
-	public static immutable string SNOW_BLOCK = "snowBlock";
-	public static alias SnowBlock = PlaceableItem!(SNOW_BLOCK, ID!80, META!0, Blocks.SNOW);
-
-	//TODO facing
-	public static immutable string PUMPKIN = "pumpkin";
-	public static alias Pumpkin = PlaceableArmor!(PUMPKIN, ID!86, META!0, Blocks.PUMPKIN_SOUTH);
-
-	public static immutable string SOUL_SAND = "soulSand";
-	public static alias SoulSand = PlaceableItem!(SOUL_SAND, ID!88, META!0, Blocks.SOUL_SAND);
-
-	public static immutable string BARRIER = "barrier";
-	public static immutable string INVISIBLE_BEDROCK = BARRIER;
-	public static alias Barrier = PlaceableItem!(BARRIER, IDS!(95, 166), META!0, Blocks.BARRIER);
-
-	public static immutable string MELON_BLOCK = "melonBlock";
-	public static alias MelonBlock = PlaceableItem!(MELON_BLOCK, ID!103, META!0, Blocks.MELON);
-
-
-	public static immutable string MYCELIUM = "mycelium";
-	public static alias Mycelium = PlaceableItem!(MYCELIUM, ID!110, META!0, Blocks.MYCELIUM);
-
-	public static immutable string REDSTONE_BLOCK = "redstoneBlock";
-	public static alias RedstoneBlock = PlaceableItem!(REDSTONE_BLOCK, ID!152, META!0, Blocks.REDSTONE_BLOCK);
-
-	public static immutable string QUARTZ_BLOCK = "quartzBlock";
-	public static alias QuartzBlock = PlaceableItem!(QUARTZ_BLOCK, ID!155, META!0, Blocks.QUARTZ_BLOCK);
-
-
-	public static enum STAINED_CLAY = [WHITE_STAINED_CLAY, ORANGE_STAINED_CLAY, MAGENTA_STAINED_CLAY, LIGHT_BLUE_STAINED_CLAY, YELLOW_STAINED_CLAY, LIME_STAINED_CLAY, PINK_STAINED_CLAY, GRAY_STAINED_CLAY, LIGHT_GRAY_STAINED_CLAY, CYAN_STAINED_CLAY, PURPLE_STAINED_CLAY, BLUE_STAINED_CLAY, BROWN_STAINED_CLAY, GREEN_STAINED_CLAY, RED_STAINED_CLAY, BLACK_STAINED_CLAY];
-
-	public static immutable string WHITE_STAINED_CLAY = "whiteStainedClay";
-
-	public static immutable string ORANGE_STAINED_CLAY = "orangeStainedClay";
-
-	public static immutable string MAGENTA_STAINED_CLAY = "magentaStainedClay";
-
-	public static immutable string LIGHT_BLUE_STAINED_CLAY = "lightBlueStainedClay";
-
-	public static immutable string YELLOW_STAINED_CLAY = "yellowStainedClay";
-
-	public static immutable string LIME_STAINED_CLAY = "limeStainedClay";
-
-	public static immutable string PINK_STAINED_CLAY = "pinkStainedClay";
-
-	public static immutable string GRAY_STAINED_CLAY = "grayStainedClay";
-
-	public static immutable string LIGHT_GRAY_STAINED_CLAY = "lightGrayStainedClay";
-
-	public static immutable string CYAN_STAINED_CLAY = "cyanStainedClay";
-
-	public static immutable string PURPLE_STAINED_CLAY = "purpleStainedClay";
-
-	public static immutable string BLUE_STAINED_CLAY = "blueStainedClay";
-
-	public static immutable string BROWN_STAINED_CLAY = "brownStainedClay";
-
-	public static immutable string GREEN_STAINED_CLAY = "greenStainedClay";
-
-	public static immutable string RED_STAINED_CLAY = "redStainedClay";
-
-	public static immutable string BLACK_STAINED_CLAY = "blackStainedClay";
-
-	public static immutable string SLIME_BLOCK = "slimeBlock";
-	public static alias SlimeBlock = PlaceableItem!(SLIME_BLOCK, ID!165, META!0, Blocks.SLIME_BLOCK);
-
-	public static enum CARPET = [WHITE_CARPET, ORANGE_CARPET, MAGENTA_CARPET, LIGHT_BLUE_CARPET, YELLOW_CARPET, LIME_CARPET, PINK_CARPET, GRAY_CARPET, LIGHT_GRAY_CARPET, CYAN_CARPET, PURPLE_CARPET, BLUE_CARPET, BROWN_CARPET, GREEN_CARPET, RED_CARPET, BLACK_CARPET];
+	public enum redTulip = _.RED_TULIP.index;
+	public alias RedTulip = PlaceableItem!(_.RED_TULIP, Blocks.redTulip);
 	
-	public static immutable string WHITE_CARPET = "whiteCarpet";
-	public static alias WhiteCarpet = PlaceableItem!(WHITE_CARPET, ID!171, META!0, Blocks.WHITE_CARPET);
+	public enum orangeTulip = _.ORANGE_TULIP.index;
+	public alias OrangeTulip = PlaceableItem!(_.ORANGE_TULIP, Blocks.orangeTulip);
 	
-	public static immutable string ORANGE_CARPET = "orangeCarpet";
-	public static alias OrangeCarpet = PlaceableItem!(ORANGE_CARPET, ID!171, META!1, Blocks.ORANGE_CARPET);
+	public enum whiteTulip = _.WHITE_TULIP.index;
+	public alias WhiteTulip = PlaceableItem!(_.WHITE_TULIP, Blocks.whiteTulip);
 	
-	public static immutable string MAGENTA_CARPET = "magentaCarpet";
-	public static alias MagentaCarpet = PlaceableItem!(MAGENTA_CARPET, ID!171, META!2, Blocks.MAGENTA_CARPET);
+	public enum pinkTulip = _.PINK_TULIP.index;
+	public alias PinkTulip = PlaceableItem!(_.PINK_TULIP, Blocks.pinkTulip);
+
+	public enum oxeyeDaisy = _.OXEYE_DAISY.index;
+	public alias OxeyeDaisy = PlaceableItem!(_.OXEYE_DAISY, Blocks.oxeyeDaisy);
 	
-	public static immutable string LIGHT_BLUE_CARPET = "lightBlueCarpet";
-	public static alias LightBlueCarpet = PlaceableItem!(LIGHT_BLUE_CARPET, ID!171, META!3, Blocks.LIGHT_BLUE_CARPET);
-	
-	public static immutable string YELLOW_CARPET = "yellowCarpet";
-	public static alias YellowCarpet = PlaceableItem!(YELLOW_CARPET, ID!171, META!4, Blocks.YELLOW_CARPET);
-	
-	public static immutable string LIME_CARPET = "limeCarpet";
-	public static alias LimeCarpet = PlaceableItem!(LIME_CARPET, ID!171, META!5, Blocks.LIME_CARPET);
-	
-	public static immutable string PINK_CARPET = "pinkCarpet";
-	public static alias PinkCarpet = PlaceableItem!(PINK_CARPET, ID!171, META!6, Blocks.PINK_CARPET);
-	
-	public static immutable string GRAY_CARPET = "grayCarpet";
-	public static alias GrayCarpet = PlaceableItem!(GRAY_CARPET, ID!171, META!7, Blocks.GRAY_CARPET);
-	
-	public static immutable string LIGHT_GRAY_CARPET = "lightGrayCarpet";
-	public static alias LightGrayCarpet = PlaceableItem!(LIGHT_GRAY_CARPET, ID!171, META!8, Blocks.LIGHT_GRAY_CARPET);
-	
-	public static immutable string CYAN_CARPET = "cyanCarpet";
-	public static alias CyanCarpet = PlaceableItem!(CYAN_CARPET, ID!171, META!9, Blocks.CYAN_CARPET);
-	
-	public static immutable string PURPLE_CARPET = "purpleCarpet";
-	public static alias PurpleCarpet = PlaceableItem!(PURPLE_CARPET, ID!171, META!10, Blocks.PURPLE_CARPET);
-	
-	public static immutable string BLUE_CARPET = "blueCarpet";
-	public static alias BlueCarpet = PlaceableItem!(BLUE_CARPET, ID!171, META!11, Blocks.BLUE_CARPET);
-	
-	public static immutable string BROWN_CARPET = "brownCarpet";
-	public static alias BrownCarpet = PlaceableItem!(BROWN_CARPET, ID!171, META!12, Blocks.BROWN_CARPET);
-	
-	public static immutable string GREEN_CARPET = "greenCarpet";
-	public static alias GreenCarpet = PlaceableItem!(GREEN_CARPET, ID!171, META!13, Blocks.GREEN_CARPET);
-	
-	public static immutable string RED_CARPET = "redCarpet";
-	public static alias RedCarpet = PlaceableItem!(RED_CARPET, ID!171, META!14, Blocks.RED_CARPET);
-	
-	public static immutable string BLACK_CARPET = "blackCarpet";
-	public static alias BlackCarpet = PlaceableItem!(BLACK_CARPET, ID!171, META!15, Blocks.BLACK_CARPET);
+	public enum brownMushroom = _.BROWN_MUSHROOM.index; //TODO place on low light level
+	public alias BrownMushroom = PlaceableItem!(_.BROWN_MUSHROOM, Blocks.brownMushroom, [Blocks.podzol]);
 
-	public static immutable string HARDENED_CLAY = "hardenedClay";
-	//public static alias HardenedClay = PlaceableItem!(HARDENED_CLAY, ID!172, META!0, Blocks.HARDENED_CLAY);
+	public enum redMushroom = _.RED_MUSHROOM.index;
+	public alias RedMushroom = PlaceableItem!(_.RED_MUSHROOM, Blocks.redMushroom, [Blocks.podzol]);
 
-	public static immutable string COAL_BLOCK = "coalBlock";
-	public static alias CoalBlock = PlaceableItem!(COAL_BLOCK, ID!173, META!0, Blocks.COAL_BLOCK);
+	public enum goldBlock = _.GOLD_BLOCK.index;
+	public alias GoldBlock = PlaceableItem!(_.GOLD_BLOCK, Blocks.goldBlock);
 
+	public enum ironBlock = _.IRON_BLOCK.index;
+	public alias IronBlock = PlaceableItem!(_.IRON_BLOCK, Blocks.ironBlock);
 
-	public static immutable string IRON_SHOVEL = "ironShovel";
-	public static alias IronShovel = ShovelItem!(IRON_SHOVEL, ID!256, Tool.IRON, Durability.IRON, 4);
+	public enum stoneSlab = _.STONE_SLAB.index;
+	public alias StoneSlab = SlabItem!(_.STONE_SLAB, Blocks.stoneSlab, Blocks.upperStoneSlab, Blocks.doubleStoneSlab);
 
-	public static immutable string IRON_PICKAXE = "ironPickaxe";
-	public static alias IronPickaxe = PickaxeItem!(IRON_PICKAXE, ID!257, Tool.IRON, Durability.IRON, 5);
+	public enum sandstoneSlab = _.SANDSTONE_SLAB.index;
+	public alias SandstoneSlab = SlabItem!(_.SANDSTONE_SLAB, Blocks.sandstoneSlab, Blocks.upperSandstoneSlab, Blocks.doubleSandstoneSlab);
 
-	public static immutable string IRON_AXE = "ironAxe";
-	public static alias IronAxe = AxeItem!(IRON_AXE, ID!258, Tool.IRON, Durability.IRON, 6);
+	public enum stoneWoodenSlab = _.STONE_WOODEN_SLAB.index;
+	public alias StoneWoodenSlab = SlabItem!(_.STONE_WOODEN_SLAB, Blocks.stoneWoodenSlab, Blocks.upperStoneWoodenSlab, Blocks.doubleStoneWoodenSlab);
 
-	public static immutable string FLINT_AND_STEEL = "flintAndSteel";
+	public enum cobblestoneSlab = _.COBBLESTONE_SLAB.index;
+	public alias CobblestoneSlab = SlabItem!(_.COBBLESTONE_SLAB, Blocks.cobblestoneSlab, Blocks.upperCobblestoneSlab, Blocks.doubleCobblestoneSlab);
 
-	public static immutable string APPLE = "apple";
-	public static alias Apple = SimpleFoodItem!(APPLE, ID!260, 4, 2.4);
+	public enum bricksSlab = _.BRICKS_SLAB.index;
+	public alias BricksSlab = SlabItem!(_.BRICKS_SLAB, Blocks.bricksSlab, Blocks.upperBricksSlab, Blocks.doubleBricksSlab);
 
-	public static immutable string BOW = "bow";
+	public enum stoneBrickSlab = _.STONE_BRICK_SLAB.index;
+	public alias StoneBrickSlab = SlabItem!(_.STONE_BRICK_SLAB, Blocks.stoneBrickSlab, Blocks.upperStoneBrickSlab, Blocks.doubleStoneBrickSlab);
 
-	public static immutable string ARROW = "arrow";
-	public static alias Arrow = SimpleItem!(ARROW, ID!262, META!0);
+	public enum netherBrickSlab = _.NETHER_BRICK_SLAB.index;
+	public alias NetherBrickSlab = SlabItem!(_.NETHER_BRICK_SLAB, Blocks.netherBrickSlab, Blocks.upperNetherBrickSlab, Blocks.doubleNetherBrickSlab);
 
-	public static immutable string COAL = "coal";
-	public static alias Coal = SimpleItem!(COAL, ID!263, META!0);
+	public enum quartzSlab = _.QUARTZ_SLAB.index;
+	public alias QuartzSlab = SlabItem!(_.QUARTZ_SLAB, Blocks.quartzSlab, Blocks.upperQuartzSlab, Blocks.doubleQuartzSlab);
 
-	public static immutable string CHARCOAL = "charcoal";
-	public static alias Charcoal = SimpleItem!(CHARCOAL, ID!263, META!1);
+	public enum bricks = _.BRICKS.index;
+	public alias Bricks = PlaceableItem!(_.BRICKS, Blocks.bricks);
 
-	public static immutable string DIAMOND = "diamond";
-	public static alias Diamond = SimpleItem!(DIAMOND, ID!264, META!0);
+	public enum tnt = _.TNT.index;
+	public alias Tnt = PlaceableItem!(_.TNT, Blocks.tnt);
 
-	public static immutable string IRON_INGOT = "ironIngot";
-	public static alias IronIngot = SimpleItem!(IRON_INGOT, ID!265, META!0);
+	public enum bookshelf = _.BOOKSHELF.index;
+	public alias Bookshelf = PlaceableItem!(_.BOOKSHELF, Blocks.bookshelf);
 
-	public static immutable string GOLD_INGOT = "goldIngot";
-	public static alias GoldIngot = SimpleItem!(GOLD_INGOT, ID!266, META!0);
+	public enum mossStone = _.MOSS_STONE.index;
+	public alias MossStone = PlaceableItem!(_.MOSS_STONE, Blocks.mossStone);
 
-	public static immutable string IRON_SWORD = "ironSword";
-	public static alias IronSword = SwordItem!(IRON_SWORD, ID!267, Tool.IRON, Durability.IRON, 7);
+	public enum obsidian = _.OBSIDIAN.index;
+	public alias Obsidian = PlaceableItem!(_.OBSIDIAN, Blocks.obsidian);
 
-	public static immutable string WOODEN_SWORD = "woodenSword";
-	public static alias WoodenSword = SwordItem!(WOODEN_SWORD, ID!268,Tool. WOODEN, Durability.WOOD, 5);
+	public enum torch = _.TORCH.index;
+	public alias Torch = TorchItem!(_.TORCH, Blocks.torch);
 
-	public static immutable string WOODEN_SHOVEL = "woodenShovel";
-	public static alias WoodenShovel = ShovelItem!(WOODEN_SHOVEL, ID!269, Tool.WOODEN, Durability.WOOD, 2);
+	public enum monsterSpawner = _.MONSTER_SPAWNER.index;
+	public alias MonsterSpawner = PlaceableItem!(_.MONSTER_SPAWNER, Blocks.monsterSpawner);
 
-	public static immutable string WOODEN_PICKAXE = "woodenPickaxe";
-	public static alias WoodenPickaxe = PickaxeItem!(WOODEN_PICKAXE, ID!270, Tool.WOODEN, Durability.WOOD, 3);
+	public enum oakWoodStairs = _.OAK_WOOD_STAIRS.index;
+	public alias OakWoodStairs = StairsItem!(_.OAK_WOOD_STAIRS, Blocks.oakWoodStairs);
 
-	public static immutable string WOODEN_AXE = "woodenAxe";
-	public static alias WoodenAxe = AxeItem!(WOODEN_AXE, ID!271, Tool.WOODEN, Durability.WOOD, 4);
+	public enum chest = _.CHEST.index;
+	//TODO place tile in right direction
 
-	public static immutable string STONE_SWORD = "stoneSword";
-	public static alias StoneSword = SwordItem!(STONE_SWORD, ID!272, Tool.STONE, Durability.STONE, 6);
+	public enum diamondOre = _.DIAMOND_ORE.index;
+	public alias DiamondOre = PlaceableItem!(_.DIAMOND_ORE, Blocks.diamondOre);
 
-	public static immutable string STONE_SHOVEL = "stoneShovel";
-	public static alias StoneShovel = ShovelItem!(STONE_SHOVEL, ID!273, Tool.STONE, Durability.STONE, 3);
+	public enum diamondBlock = _.DIAMOND_BLOCK.index;
+	public alias DiamondBlock = PlaceableItem!(_.DIAMOND_BLOCK, Blocks.diamondBlock);
 
-	public static immutable string STONE_PICKAXE = "stonePickaxe";
-	public static alias StonePickaxe = PickaxeItem!(STONE_PICKAXE, ID!274, Tool.STONE, Durability.STONE, 4);
+	public enum craftingTable = _.CRAFTING_TABLE.index;
+	public alias CraftingTable = PlaceableItem!(_.CRAFTING_TABLE, Blocks.craftingTable);
 
-	public static immutable string STONE_AXE = "stoneAxe";
-	public static alias StoneAxe = AxeItem!(STONE_AXE, ID!275, Tool.STONE, Durability.STONE, 5);
+	public enum furnace = _.FURNACE.index;
+	//TODO place tile in the right direction
 
-	public static immutable string DIAMOND_SWORD = "diamondSword";
-	public static alias DiamondSword = SwordItem!(DIAMOND_SWORD, ID!276, Tool.DIAMOND, Durability.DIAMOND, 8);
+	public enum ladder = _.LADDER.index;
+	//TODO place in the right direction
 
-	public static immutable string DIAMOND_SHOVEL = "diamondShovel";
-	public static alias DiamondShovel = ShovelItem!(DIAMOND_SHOVEL, ID!277, Tool.DIAMOND, Durability.DIAMOND, 5);
-
-	public static immutable string DIAMOND_PICKAXE = "diamondPickaxe";
-	public static alias DiamondPickaxe = PickaxeItem!(DIAMOND_PICKAXE, ID!278, Tool.DIAMOND, Durability.DIAMOND, 6);
-
-	public static immutable string DIAMOND_AXE = "diamondAxe";
-	public static alias DiamondAxe = AxeItem!(DIAMOND_AXE, ID!279, Tool.DIAMOND, Durability.DIAMOND, 7);
-
-	public static immutable string STICK = "stick";
-	public static alias Stick = SimpleItem!(STICK, ID!280, META!0);
-
-	public static immutable string BOWL = "bowl";
-	public static alias Bowl = SimpleItem!(BOWL, ID!281, META!0);
-
-	public static immutable string MUSHROOM_STEW = "mushroomStew";
-	public static alias MushroomStew = SoupItem!(MUSHROOM_STEW, ID!282, META!0, 6, 7.2);
-
-	public static immutable string GOLDEN_SWORD = "goldenSword";
-	public static alias GoldenSword = SwordItem!(GOLDEN_SWORD, ID!283, Tool.GOLDEN, Durability.GOLD, 5);
-
-	public static immutable string GOLDEN_SHOVEL = "goldenShovel";
-	public static alias GoldenShovel = ShovelItem!(GOLDEN_SHOVEL, ID!284, Tool.GOLDEN, Durability.GOLD, 2);
-
-	public static immutable string GOLDEN_PICKAXE = "goldenPickaxe";
-	public static alias GoldenPickaxe = PickaxeItem!(GOLDEN_PICKAXE, ID!285, Tool.GOLDEN, Durability.GOLD, 3);
-
-	public static immutable string GOLDEN_AXE = "goldenAxe";
-	public static alias GoldenAxe = AxeItem!(GOLDEN_AXE, ID!286, Tool.GOLDEN, Durability.GOLD, 4);
-
-	public static immutable string STRING = "string";
-	public static alias String = SimpleItem!(STRING, ID!287, META!0);
-
-	public static immutable string FEATHER = "feather";
-	public static alias Feather = SimpleItem!(FEATHER, ID!288, META!0);
-
-	public static immutable string GUNPOWDER = "gunpowder";
-	public static alias Gunpowder = SimpleItem!(GUNPOWDER, ID!289, META!0);
-
-	public static immutable string WOODEN_HOE = "woodenHoe";
-	public static alias WoodenHoe = HoeItem!(WOODEN_HOE, ID!290, Tool.WOODEN, Durability.WOOD);
-
-	public static immutable string STONE_HOE = "stoneHoe";
-	public static alias StoneHoe = HoeItem!(STONE_HOE, ID!291, Tool.STONE, Durability.STONE);
-
-	public static immutable string IRON_HOE = "ironHoe";
-	public static alias IronHoe = HoeItem!(IRON_HOE, ID!292, Tool.IRON, Durability.IRON);
-
-	public static immutable string DIAMOND_HOE = "diamondHoe";
-	public static alias DiamondHoe = HoeItem!(DIAMOND_HOE, ID!293, Tool.DIAMOND, Durability.DIAMOND);
-
-	public static immutable string GOLDEN_HOE = "goldenHoe";
-	public static alias GoldenHoe = HoeItem!(GOLDEN_HOE, ID!294, Tool.GOLDEN, Durability.GOLD);
-
-	public static immutable string SEEDS = "seeds";
-	public static alias Seeds = SimpleItem!(SEEDS, ID!295, META!0, 64, "crop", Blocks.SEEDS_BLOCK_0);
-
-	public static immutable string WHEAT = "wheat";
-	public static alias Wheat = SimpleItem!(WHEAT, ID!296, META!0);
-
-	public static immutable string BREAD = "bread";
-	public static alias Bread = SimpleFoodItem!(BREAD, ID!297, 5, 6);
-
-	public static immutable string LEATHER_CAP = "leatherCap";
-	public static alias LeatherCap = ArmorItem!(LEATHER_CAP, ID!298, 56, Armor.CAP, 1, COLORABLE);
-
-	public static immutable string LEATHER_TUNIC = "leatherTunic";
-	public static alias LeatherTunic = ArmorItem!(LEATHER_TUNIC, ID!299, 81, Armor.TUNIC, 3, COLORABLE);
-
-	public static immutable string LEATHER_PANTS = "leatherPants";
-	public static alias LeatherPants = ArmorItem!(LEATHER_PANTS, ID!300, 76, Armor.PANTS, 2, COLORABLE);
-
-	public static immutable string LEATHER_BOOTS = "leatherBoots";
-	public static alias LeatherBoots = ArmorItem!(LEATHER_BOOTS, ID!301, 66, Armor.BOOTS, 1, COLORABLE);
-
-	public static immutable string CHAIN_HELMET = "chainHelmet";
-	public static alias ChainHelmet = ArmorItem!(CHAIN_HELMET, ID!302, 166, Armor.HELMET, 2);
-
-	public static immutable string CHAIN_CHESTPLATE = "chainChestplate";
-	public static alias ChainChestplate = ArmorItem!(CHAIN_CHESTPLATE, ID!303, 241, Armor.CHESTPLATE, 5);
-
-	public static immutable string CHAIN_LEGGINGS = "chainLeggings";
-	public static alias ChainLeggings = ArmorItem!(CHAIN_LEGGINGS, ID!304, 226, Armor.LEGGINGS, 4);
-
-	public static immutable string CHAIN_BOOTS = "chainBoots";
-	public static alias ChainBoots = ArmorItem!(CHAIN_BOOTS, ID!305, 196, Armor.BOOTS, 1);
-
-	public static immutable string IRON_HELMET = "ironHelmet";
-	public static alias IronHelmet = ArmorItem!(IRON_HELMET, ID!306, 166, Armor.HELMET, 2);
-
-	public static immutable string IRON_CHESTPLATE = "ironChestplate";
-	public static alias IronChestplate = ArmorItem!(IRON_CHESTPLATE, ID!307, 241, Armor.CHESTPLATE, 6);
-
-	public static immutable string IRON_LEGGINGS = "ironLeggings";
-	public static alias IronLeggings = ArmorItem!(IRON_LEGGINGS, ID!308, 226, Armor.LEGGINGS, 5);
-
-	public static immutable string IRON_BOOTS = "ironBoots";
-	public static alias IronBoots = ArmorItem!(IRON_BOOTS, ID!309, 196, Armor.BOOTS, 2);
-
-	public static immutable string DIAMOND_HELMET = "diamondHelmet";
-	public static alias DiamondHelmet = ArmorItem!(DIAMOND_HELMET, ID!310, 364, Armor.HELMET, 3);
-
-	public static immutable string DIAMOND_CHESTPLATE = "diamondChestplate";
-	public static alias DiamondChestplate = ArmorItem!(DIAMOND_CHESTPLATE, ID!311, 529, Armor.CHESTPLATE, 8);
-
-	public static immutable string DIAMOND_LEGGINGS = "diamondLeggings";
-	public static alias DiamondLeggings = ArmorItem!(DIAMOND_LEGGINGS, ID!312, 496, Armor.LEGGINGS, 6);
-
-	public static immutable string DIAMOND_BOOTS = "diamondBoots";
-	public static alias DiamondBoots = ArmorItem!(DIAMOND_BOOTS, ID!313, 430, Armor.BOOTS, 3);
-
-	public static immutable string GOLDEN_HELMET = "goldenHelmet";
-
-	public static immutable string GOLDEN_CHESTPLATE = "goldenChestplate";
-
-	public static immutable string GOLDEN_LEGGINGS = "goldenLeggings";
-
-	public static immutable string GOLDEN_BOOTS = "goldenBoots";
-
-	public static immutable string FLINT = "flint";
-	public static alias Flint = SimpleItem!(FLINT, ID!318, META!0);
-
-	public static immutable string RAW_PORKCHOP = "rawPorkchop";
-	public static alias RawPorkchop = SimpleFoodItem!(RAW_PORKCHOP, ID!319, 3, 1.8);
-
-	public static immutable string COOKED_PORKCHOP = "cookedPorkchop";
-	public static alias CookedPorkchop = SimpleFoodItem!(COOKED_PORKCHOP, ID!320, 8, 12.8);
-
-	public static immutable string PAINTING = "painting";
-
-	public static immutable string GOLDEN_APPLE = "goldenApple";
-	public static alias GoldenApple = FoodItem!(GOLDEN_APPLE, ID!322, META!0, 64, 4, 9.6, [effectInfo(Effects.REGENERATION, 5, "II"), effectInfo(Effects.ABSORPTION, 120, "I")]);
-
-	public static immutable string SIGN = "sign";
-
-	/*public static immutable string BUCKET = "bucket";
-	public static alias Bucket = BucketItem!(BUCKET, ID!325, META!0, 16, [Blocks.FLOWING_WATER: Items.WATER_BUCKET, Blocks.STILL_WATER: Items.WATER_BUCKET, Blocks.FLOWING_LAVA: Items.LAVA_BUCKET, Blocks.STILL_LAVA: Items.LAVA_BUCKET]);
-
-	public static immutable string WATER_BUCKET = "waterBucket";
-	public static alias WaterBucket = FilledBucketItem!(WATER_BUCKET, IDS!(325, 326), METAS!(8, 0), 1, Blocks.FLOWING_WATER, Items.BUCKET);
-
-	public static immutable string LAVA_BUCKET = "lavaBucket";
-	public static alias LavaBucket = FilledBucketItem!(LAVA_BUCKET, IDS!(325, 327), METAS!(10, 0), 1, Blocks.FLOWING_LAVA, Items.BUCKET);*/
-
-	//TODO throwable
-	public static immutable string SNOWBALL = "snowball";
-	public static alias Snowball = SimpleItem!(SNOWBALL, ID!332, META!0, 16);
-
-	public static immutable string MILK = "milk";
-
-	public static immutable string RAW_FISH = "rawFish";
-	public static alias RawFish = FoodItem!(RAW_FISH, ID!349, META!0, 64, 2, .4);
-
-	public static immutable string COOKED_FISH = "cookedFish";
-	public static alias CookedFish = FoodItem!(COOKED_FISH, ID!350, META!0, 64, 5, 6);
-
-	public static enum DYE = [INK_SAC, ROSE_RED, CACTUS_GREEN, COCOA_BEANS, LAPIS_LAZULI, PURPLE_DYE, CYAN_DYE, LIGHT_GRAY_DYE, GRAY_DYE, PINK_DYE, LIME_DYE, DANDELION_YELLOW, LIGHT_BLUE_DYE, MAGENTA_DYE, ORANGE_DYE, BONE_MEAL];
-
-	public static immutable string INK_SAC = "inkSac";
-	public static alias InkSac = SimpleItem!(INK_SAC, ID!351, META!0, 64);
-
-	public static immutable string ROSE_RED = "roseRed";
-	public static alias RoseRed = SimpleItem!(ROSE_RED, ID!351, META!1, 64);
-
-	public static immutable string CACTUS_GREEN = "cactusGreen";
-	public static alias CactusGreen = SimpleItem!(CACTUS_GREEN, ID!351, META!2, 64);
-
-	public static immutable string COCOA_BEANS = "cocoaBeans";
-	public static alias CocoaBeans = SimpleItem!(COCOA_BEANS, ID!351, META!3, 64);
-
-	public static immutable string LAPIS_LAZULI = "lapisLazuli";
-	public static alias LapisLazuli = SimpleItem!(LAPIS_LAZULI, ID!351, META!4, 64);
-
-	public static immutable string PURPLE_DYE = "purpleDye";
-	public static alias PurpleDye = SimpleItem!(PURPLE_DYE, ID!351, META!5, 64);
-
-	public static immutable string CYAN_DYE = "cyanDye";
-	public static alias CyanDye = SimpleItem!(CYAN_DYE, ID!351, META!6, 64);
-
-	public static immutable string LIGHT_GRAY_DYE = "lightGrayDye";
-	public static alias LightGrayDye = SimpleItem!(LIGHT_GRAY_DYE, ID!351, META!7, 64);
-
-	public static immutable string GRAY_DYE = "grayDye";
-	public static alias GrayDye = SimpleItem!(GRAY_DYE, ID!351, META!8, 64);
-
-	public static immutable string PINK_DYE = "pinkDye";
-	public static alias PinkDye = SimpleItem!(PINK_DYE, ID!351, META!9, 64);
-
-	public static immutable string LIME_DYE = "limeDye";
-	public static alias LimeDye = SimpleItem!(LIME_DYE, ID!351, META!10, 64);
-
-	public static immutable string DANDELION_YELLOW = "dandelionYellow";
-	public static alias DandelionYellow = SimpleItem!(DANDELION_YELLOW, ID!351, META!11, 64);
-
-	public static immutable string LIGHT_BLUE_DYE = "lightBlueDye";
-	public static alias LightBlueDye = SimpleItem!(LIGHT_BLUE_DYE, ID!351, META!12, 64);
-
-	public static immutable string MAGENTA_DYE = "magentaDye";
-	public static alias MagentaDye = SimpleItem!(MAGENTA_DYE, ID!351, META!13, 64);
-
-	public static immutable string ORANGE_DYE = "orangeDye";
-	public static alias OrangeDye = SimpleItem!(ORANGE_DYE, ID!351, META!14, 64);
-
+	public enum rail = _.RAIL.index;
 	//TODO
-	public static immutable string BONE_MEAL = "boneMeal";
-	public static alias BoneMeal = SimpleItem!(BONE_MEAL, ID!351, META!15, 64);
 
-	public static immutable string COOKIE = "cookie";
-	public static alias Cookie = FoodItem!(COOKIE, ID!357, META!0, 64, 2, .4);
+	public enum cobblestoneStairs = _.COBBLESTONE_STAIRS.index;
+	public alias CobblestoneStairs = StairsItem!(_.COBBLESTONE_STAIRS, Blocks.cobblestoneStairs);
 
-	public static immutable string MAP = "map";
-	public static alias Map = MapItem!(MAP, ID!358);
+	public enum lever = _.LEVER.index;
+	//TODO
 
-	public static immutable string MELON = "melon";
-	public static alias Melon = FoodItem!(MELON, ID!360, META!0, 64, 2, 1.2);
+	public enum stonePressurePlate = _.STONE_PRESSURE_PLATE.index;
 
-	public static immutable string PUMPKIN_SEEDS = "pumpkinSeeds";
-	public static alias PumpkinSeeds = SimpleItem!(PUMPKIN_SEEDS, ID!361, META!0, 64, "crop", Blocks.PUMPKIN_STEM_0);
+	public enum woodenPressurePlate = _.WOODEN_PRESSURE_PLATE.index;
 
-	public static immutable string MELON_SEEDS = "melonSeeds";
-	public static alias MelonSeeds = SimpleItem!(MELON_SEEDS, ID!362, META!0, 64, "crop", Blocks.MELON_STEM_0);
+	public enum redstoneOre = _.REDSTONE_ORE.index;
+	public alias RedstoneOre = PlaceableItem!(_.REDSTONE_ORE, Blocks.redstoneOre);
 
-	public static immutable string RAW_BEEF = "rawBeef";
-	public static alias RawBeef = FoodItem!(RAW_BEEF, ID!363, META!0, 64, 3, 1.8);
+	public enum redstoneTorch = _.REDSTONE_TORCH.index;
 
-	public static immutable string RAW_CHICKEN = "rawChicken";
-	public static alias RawChicken = FoodItem!(RAW_CHICKEN, ID!365, META!0, 64, 2, 1.2);
+	public enum stoneButton = _.STONE_BUTTON.index;
 
-	public static immutable string COOKED_CHICKEN = "cookedChicken";
-	public static alias CookedChicked = FoodItem!(COOKED_CHICKEN, ID!366, META!0, 64, 6, 7.2);
+	public enum snowLayer = _.SNOW_LAYER.index;
 
-	public static immutable string ROTTEN_FLESH = "rottenFlesh";
-	public static alias RottenFlesh = FoodItem!(ROTTEN_FLESH, ID!367, META!0, 64, 4, .8, [effectInfo(Effects.HUNGER, 30, "I", .8)]);
+	public enum ice = _.ICE.index;
+	public alias Ice = PlaceableItem!(_.ICE, Blocks.ice);
 
-	public static immutable string GOLDEN_NUGGET = "goldenNugget";
-	public static alias GoldenNugget = SimpleItem!(GOLDEN_NUGGET, ID!371, META!0, 64);
+	public enum snowBlock = _.SNOW_BLOCK.index;
+	public alias SnowBlock = PlaceableItem!(_.SNOW_BLOCK, Blocks.snow);
 
-	public static immutable string WATER_BOTTLE = "waterBattle";
-	public static alias WaterBottle = PotionItem!(WATER_BOTTLE, META!0, Potions.WATER_BOTTLE);
+	public enum cactus = _.CACTUS.index;
+	public alias Cactus = PlaceableItem!(_.CACTUS, Blocks.cactus0, [Blocks.sand, Blocks.redSand] ~ Blocks.cactus); //TODO do not place near other blocks
 
-	public static immutable string MUNDANE_POTION = "mundane";
-	public static alias MundanePotion = PotionItem!(MUNDANE_POTION, METAS!(1, 8192), Potions.MUNDANE);
+	public enum clayBlock = _.CLAY_BLOCK.index;
+	public alias ClayBlock = PlaceableItem!(_.CLAY_BLOCK, Blocks.clay);
 
-	public static immutable string MUNDANE_POTION_EXTENDED = "mundaneExtended";
-	public static alias MundanePotionExtended = PotionItem!(MUNDANE_POTION_EXTENDED, METAS!(2, 64), Potions.MUNDANE_EXTENDED);
+	public enum jukebox = _.JUKEBOX.index;
+	public alias Jukebox = PlaceableItem!(_.JUKEBOX, Blocks.jukebox);
 
-	public static immutable string THICK_POTION = "thick";
-	public static alias ThickPotion = PotionItem!(THICK_POTION, METAS!(3, 32), Potions.THICK);
+	public enum oakFence = _.OAK_FENCE.index;
 
-	public static immutable string AWKWARD_POTION = "awkward";
-	public static alias AwkwardPotion = PotionItem!(AWKWARD_POTION, METAS!(4, 16), Potions.AWKWARD);
+	public enum pumpkin = _.PUMPKIN.index;
 
-	public static immutable string NIGHT_VISION_POTION = "nightVision";
-	public static alias NightVision = PotionItem!(NIGHT_VISION_POTION, METAS!(5, 8198), Potions.NIGHT_VISION);
+	public enum netherrack = _.NETHERRACK.index;
+	public alias Netherrack = PlaceableItem!(_.NETHERRACK, Blocks.netherrack);
 
-	public static immutable string NIGHT_VISION_EXTENDED_POTION = "nightVisionExtended";
-	public static alias NightVisionExtended = PotionItem!(NIGHT_VISION_EXTENDED_POTION, METAS!(6, 8262), Potions.NIGHT_VISION_EXTENDED);
+	public enum soulSand = _.SOUL_SAND.index;
+	public alias SoulSand = PlaceableItem!(_.SOUL_SAND, Blocks.soulSand);
 
-	public static immutable string INVISIBILITY_POTION = "invisibility";
-	public static alias InvisibilityPotion = PotionItem!(INVISIBILITY_POTION, METAS!(7, 8206), Potions.INVISIBILITY);
+	public enum glowstone = _.GLOWSTONE.index;
+	public alias Glowstone = PlaceableItem!(_.GLOWSTONE, Blocks.glowstone);
 
-	public static immutable string INVISIBILITY_EXTENDED_POTION = "invisibilityExtended";
-	public static alias InvisibilityExtendedPotion = PotionItem!(INVISIBILITY_EXTENDED_POTION, METAS!(8, 8270), Potions.INVISIBILITY_EXTENDED);
-
-	public static immutable string LEAPING_POTION = "leaping";
-	public static alias LeapingPotion = PotionItem!(LEAPING_POTION, METAS!(9, 8203), Potions.LEAPING);
-
-	public static immutable string LEAPING_POTION_EXTENDED = "leapingExtended";
-	public static alias LeapingExtendedPotion = PotionItem!(LEAPING_POTION_EXTENDED, METAS!(10, 8267), Potions.LEAPING_EXTENDED);
-
-	public static immutable string LEAPING_PLUS_POTION = "leapingPlus";
-	public static alias LeapingPlusPotion = PotionItem!(LEAPING_PLUS_POTION, METAS!(11, 8235), Potions.LEAPING_PLUS);
-
-	public static immutable string FIRE_RESISTANCE_POTION = "fireResistance";
-	public static alias FireResistancePotion = PotionItem!(FIRE_RESISTANCE_POTION, METAS!(12, 8195), Potions.FIRE_RESISTANCE);
-
-	public static immutable string FIRE_RESISTANCE_POTION_EXTENDED = "fireResistanceExtended";
-	public static alias FireResistancePotionExtended = PotionItem!(FIRE_RESISTANCE_POTION_EXTENDED, METAS!(13, 8295), Potions.FIRE_RESISTANCE_EXTENDED);
-
-	public static immutable string SPEED_POTION = "speed";
-	public static alias SpeedPotion = PotionItem!(SPEED_POTION, METAS!(14, 8194), Potions.SPEED);
-
-	public static immutable string SPEED_POTION_EXTENDED = "speedExtended";
-	public static alias SpeedPotionExtended = PotionItem!(SPEED_POTION_EXTENDED, METAS!(15, 8258), Potions.SPEED_EXTENDED);
-
-	public static immutable string SPEED_PLUS_POTION = "speedPlus";
-	public static alias SpeedPlusPotion = PotionItem!(SPEED_PLUS_POTION, METAS!(16, 8226), Potions.SPEED_PLUS);
-
-	public static immutable string SLOWNESS_POTION = "slowness";
-	public static alias SlownessPotion = PotionItem!(SLOWNESS_POTION, METAS!(17, 8202), Potions.SLOWNESS);
-
-	public static immutable string SLOWNESS_POTION_EXTENDED = "slownessExtended";
-	public static alias SlownessExtendedPotion = PotionItem!(SLOWNESS_POTION_EXTENDED, METAS!(18, 8266), Potions.SLOWNESS_EXTENDED);
-
-	public static immutable string WATER_BREATHING_POTION = "waterBreathing";
-	public static alias WaterBreathingPotion = PotionItem!(WATER_BREATHING_POTION, METAS!(19, 8205), Potions.WATER_BREATHING);
-
-	public static immutable string WATER_BREATHING_EXTENDED_POTION = "waterBreathingExtended";
-	public static alias WaterBreathingExtended = PotionItem!(WATER_BREATHING_EXTENDED_POTION, METAS!(20, 8269), Potions.WATER_BREATHING_EXTENDED);
-
-	public static immutable string HEALING_POTION = "healing";
-	public static alias HealingPotion = PotionItem!(HEALING_POTION, METAS!(21, 8197), Potions.HEALING);
-
-	public static immutable string HEALING_PLUS_POTION = "healingPlus";
-	public static alias HealingPlusPotion = PotionItem!(HEALING_PLUS_POTION, METAS!(22, 8229), Potions.HEALING_PLUS);
-
-	public static immutable string HARMING_POTION = "harming";
-	public static alias HarmingPotion = PotionItem!(HARMING_POTION, METAS!(23, 8204), Potions.HARMING);
-
-	public static immutable string HARMING_PLUS_POTION = "harmingPlus";
-	public static alias HarmingPlusPotion = PotionItem!(HARMING_PLUS_POTION, METAS!(24, 8236), Potions.HARMING_PLUS);
-
-	public static immutable string POISON_POTION = "poison";
-	public static alias PoisonPotion = PotionItem!(POISON_POTION, METAS!(25, 8196), Potions.POISON);
-
-	public static immutable string POISON_POTION_EXTENDED = "poisonExtended";
-	public static alias PoisonExtendedPotion = PotionItem!(POISON_POTION_EXTENDED, METAS!(26, 8260), Potions.POISON_EXTENDED);
-
-	public static immutable string POISON_PLUS_POTION = "poisonPlus";
-	public static alias PoisonPlusPotion = PotionItem!(POISON_PLUS_POTION, METAS!(27, 8228), Potions.POISON_PLUS);
-
-	public static immutable string REGENERATION_POTION = "regeneration";
-	public static alias RegenerationPotion = PotionItem!(REGENERATION_POTION, METAS!(28, 8139), Potions.REGENERATION);
-
-	public static immutable string REGENERATION_POTION_EXTENDED = "regenerationExtended";
-	public static alias RegenerationPotionExtended = PotionItem!(REGENERATION_POTION_EXTENDED, METAS!(29, 8257), Potions.REGENERATION_EXTENDED);
-
-	public static immutable string REGENERATION_PLUS_POTION = "regeneraionPlus";
-	public static alias RegenerationPlusPotion = PotionItem!(REGENERATION_PLUS_POTION, METAS!(30, 8225), Potions.REGENERATION_PLUS);
-
-	public static immutable string STRENGTH_POTION = "strength";
-	public static alias StrengthPotion = PotionItem!(STRENGTH_POTION, METAS!(31, 8201), Potions.STRENGTH);
-
-	public static immutable string STRENGTH_POTION_EXTENDED = "strengthExtended";
-	public static alias StrengthPotionExtended = PotionItem!(STRENGTH_POTION_EXTENDED, METAS!(32, 8265), Potions.STRENGTH_EXTENDED);
-
-	public static immutable string STRENGTH_PLUS_POTION = "strengthPlus";
-	public static alias StrengthPlusPotion = PotionItem!(STRENGTH_PLUS_POTION, METAS!(33, 8233), Potions.STRENGTH_PLUS);
-
-	public static immutable string WEAKNESS_POTION = "weakness";
-	public static alias WeaknessPotion = PotionItem!(WEAKNESS_POTION, METAS!(34, 8200), Potions.WEAKNESS);
-
-	public static immutable string WEAKNESS_POTION_EXTENDED = "weaknessExtended";
-	public static alias WeaknessPotionExtended = PotionItem!(WEAKNESS_POTION_EXTENDED, METAS!(35, 8264), Potions.WEAKNESS);
-
-	//TODO fill with water when tapping a source
-	public static immutable string GLASS_BOTTLE = "glassBottle";
-	public static alias GlassBottle = SimpleItem!(GLASS_BOTTLE, ID!374, META!0);
-
-	public static immutable string SPIDER_EYE = "spiderEye";
-	public static alias SpiderEye = FoodItem!(SPIDER_EYE, ID!375, META!0, 64, 2, 3.2, [effectInfo(Effects.POISON, 4, "I")]);
-
-	public static immutable string CARROT = "carrot";
-	public static alias Carrot = CropFood!(CARROT, ID!391, 3, 4.8, Blocks.CARROT_BLOCK_0);
-
-	public static immutable string POTATO = "potato";
-	public static alias Potato = CropFood!(POTATO, ID!392, 1, .6, Blocks.POTATO_BLOCK_0);
-
-	public static immutable string BAKED_POTATO = "bakedPotato";
-	public static alias BakedPotato = FoodItem!(BAKED_POTATO, ID!393, META!0, 64, 5, 7.2);
-
-	public static immutable string POISONOUS_POTATO = "poisonousPotato";
-	public static alias PoisonousPotato = FoodItem!(POISONOUS_POTATO, ID!394, META!0, 64, 2, 1.2, [effectInfo(Effects.POISON, 4, "I", .6)]);
-
-	public static immutable string GOLDEN_CARROT = "goldenCarrot";
-	public static alias GoldenCarrot = FoodItem!(GOLDEN_CARROT, ID!396, META!0, 64, 6, 14.4);
-
-	public static immutable string PUMPKIN_PIE = "pumpkinPie";
-	public static alias PumpkinPie = FoodItem!(PUMPKIN_PIE, ID!400, META!0, 64, 8, 4.8);
-
-	public static immutable string RAW_RABBIT = "rawRabbit";
-	public static alias RawRabbit = FoodItem!(RAW_RABBIT, ID!411, META!0, 64, 3, 1.8);
-
-	public static immutable string COOKED_RABBIT = "cookedRabbit";
-	public static alias CookedRabbit = FoodItem!(COOKED_RABBIT, ID!412, META!0, 64, 5, 6);
-
-	public static immutable string RABBIT_STEW = "rabbitStew";
-	public static alias RabbitStew = SoupItem!(RABBIT_STEW, ID!413, META!0, 10, 12);
-
-	public static immutable string BEETROOT = "beetroot";
-	public static alias Beetroot = FoodItem!(BEETROOT, IDS!(457, 434), META!0, 64, 1, 1.2);
+	public enum jackOLantern = _.JACK_O_LANTERN.index;
 	
-	public static immutable string BEETROOT_SEEDS = "beetrootSeeds";
-	public static alias BeetrootSeeds = SimpleItem!(BEETROOT_SEEDS, IDS!(458, 435), META!0, 64, "crop", Blocks.BEETROOT_BLOCK_0);
+	public enum whiteStainedGlass = _.WHITE_STAINED_GLASS.index;
+	public alias WhiteStainedGlass = PlaceableItem!(_.WHITE_STAINED_GLASS, Blocks.whiteStainedGlass);
+	
+	public enum orangeStainedGlass = _.ORANGE_STAINED_GLASS.index;
+	public alias OrangeStainedGlass = PlaceableItem!(_.ORANGE_STAINED_GLASS, Blocks.orangeStainedGlass);
+	
+	public enum magentaStainedGlass = _.MAGENTA_STAINED_GLASS.index;
+	public alias MagentaStainedGlass = PlaceableItem!(_.MAGENTA_STAINED_GLASS, Blocks.magentaStainedGlass);
+	
+	public enum lightBlueStainedGlass = _.LIGHT_BLUE_STAINED_GLASS.index;
+	public alias LightBlueStainedGlass = PlaceableItem!(_.LIGHT_BLUE_STAINED_GLASS, Blocks.lightBlueStainedGlass);
+	
+	public enum yellowStainedGlass = _.YELLOW_STAINED_GLASS.index;
+	public alias YellowStainedGlass = PlaceableItem!(_.YELLOW_STAINED_GLASS, Blocks.yellowStainedGlass);
+	
+	public enum limeStainedGlass = _.LIME_STAINED_GLASS.index;
+	public alias LimeStainedGlass = PlaceableItem!(_.LIME_STAINED_GLASS, Blocks.limeStainedGlass);
+	
+	public enum pinkStainedGlass = _.PINK_STAINED_GLASS.index;
+	public alias PinkStainedGlass = PlaceableItem!(_.PINK_STAINED_GLASS, Blocks.pinkStainedGlass);
+	
+	public enum grayStainedGlass = _.GRAY_STAINED_GLASS.index;
+	public alias GrayStainedGlass = PlaceableItem!(_.GRAY_STAINED_GLASS, Blocks.grayStainedGlass);
+	
+	public enum lightGrayStainedGlass = _.LIGHT_GRAY_STAINED_GLASS.index;
+	public alias LightGrayStainedGlass = PlaceableItem!(_.LIGHT_GRAY_STAINED_GLASS, Blocks.lightGrayStainedGlass);
+	
+	public enum cyanStainedGlass = _.CYAN_STAINED_GLASS.index;
+	public alias CyanStainedGlass = PlaceableItem!(_.CYAN_STAINED_GLASS, Blocks.cyanStainedGlass);
+	
+	public enum purpleStainedGlass = _.PURPLE_STAINED_GLASS.index;
+	public alias PurpleStainedGlass = PlaceableItem!(_.PURPLE_STAINED_GLASS, Blocks.purpleStainedGlass);
+	
+	public enum blueStainedGlass = _.BLUE_STAINED_GLASS.index;
+	public alias BlueStainedGlass = PlaceableItem!(_.BLUE_STAINED_GLASS, Blocks.blueStainedGlass);
+	
+	public enum brownStainedGlass = _.BROWN_STAINED_GLASS.index;
+	public alias BrownStainedGlass = PlaceableItem!(_.BROWN_STAINED_GLASS, Blocks.brownStainedGlass);
+	
+	public enum greenStainedGlass = _.GREEN_STAINED_GLASS.index;
+	public alias GreenStainedGlass = PlaceableItem!(_.GREEN_STAINED_GLASS, Blocks.greenStainedGlass);
+	
+	public enum redStainedGlass = _.RED_STAINED_GLASS.index;
+	public alias RedStainedGlass = PlaceableItem!(_.RED_STAINED_GLASS, Blocks.redStainedGlass);
+	
+	public enum blackStainedGlass = _.BLACK_STAINED_GLASS.index;
+	public alias BlackStainedGlass = PlaceableItem!(_.BLACK_STAINED_GLASS, Blocks.blackStainedGlass);
+	
+	public enum stainedGlass = [whiteStainedGlass, orangeStainedGlass, magentaStainedGlass, lightBlueStainedGlass, yellowStainedGlass, limeStainedGlass, pinkStainedGlass, grayStainedGlass, lightGrayStainedGlass, cyanStainedGlass, purpleStainedGlass, blueStainedGlass, brownStainedGlass, greenStainedGlass, redStainedGlass, blackStainedGlass];
 
-	public static immutable string BEETROOT_SOUP = "beetrootSoup";
-	public static alias BeetrootSoup = SoupItem!(BEETROOT_SOUP, IDS!(459, 436), META!0, 6, 7.2);
+	public enum woodenTrapdoor = _.WOODEN_TRAPDOOR.index;
 
-	public static immutable string RAW_SALMON = "rawSalmon";
-	public static alias RawSalmon = FoodItem!(RAW_SALMON, IDS!(460, 349), METAS!(0, 1), 64, 2, .4);
+	public enum stoneMonsterEgg = _.STONE_MONSTER_EGG.index;
+	public alias StoneMonsterEgg = PlaceableItem!(_.STONE_MONSTER_EGG, Blocks.stoneMonsterEgg);
 
-	public static immutable string CLOWNFISH = "clownfish";
-	public static alias Clownfish = FoodItem!(CLOWNFISH, IDS!(461, 349), METAS!(0, 2), 64, 1, .2);
+	public enum cobblestoneMonsterEgg = _.COBBLESTONE_MONSTER_EGG.index;
+	public alias CobblestoneMonsterEgg = PlaceableItem!(_.COBBLESTONE_MONSTER_EGG, Blocks.cobblestoneMonsterEgg);
+	
+	public enum stoneBrickMonsterEgg = _.STONE_BRICK_MONSTER_EGG.index;
+	public alias StoneBrickMonsterEgg = PlaceableItem!(_.STONE_BRICK_MONSTER_EGG, Blocks.stoneBrickMonsterEgg);
+	
+	public enum mossyStoneBrickMonsterEgg = _.MOSSY_STONE_BRICK_MONSTER_EGG.index;
+	public alias MossyStoneBrickMonsterEgg = PlaceableItem!(_.MOSSY_STONE_BRICK_MONSTER_EGG, Blocks.mossyStoneBrickMonsterEgg);
+	
+	public enum crackedStoneBrickMonsterEgg = _.CRACKED_STONE_BRICK_MONSTER_EGG.index;
+	public alias CrackedStoneBrickMonsterEgg = PlaceableItem!(_.CRACKED_STONE_BRICK_MONSTER_EGG, Blocks.crackedStoneBrickMonsterEgg);
+	
+	public enum chiseledStoneBrickMonsterEgg = _.CHISELED_STONE_BRICK_MONSTER_EGG.index;
+	public alias ChiseledStoneBrickMonsterEgg = PlaceableItem!(_.CHISELED_STONE_BRICK_MONSTER_EGG, Blocks.chiseledStoneBrickMonsterEgg);
 
-	public static immutable string PUFFERFISH = "pufferfish";
-	public static alias Pufferfish = FoodItem!(PUFFERFISH, IDS!(462, 349), METAS!(0, 3), 64, 1, .2, [effectInfo(Effects.HUNGER, 15, "III"), effectInfo(Effects.NAUSEA, 15, "II"), effectInfo(Effects.POISON, 60, "IV")]);
+	public enum stoneBricks = _.STONE_BRICKS.index;
+	public alias StoneBricks = PlaceableItem!(_.STONE_BRICKS, Blocks.stoneBricks);
+	
+	public enum mossyStoneBricks = _.MOSSY_STONE_BRICKS.index;
+	public alias MossyStoneBricks = PlaceableItem!(_.MOSSY_STONE_BRICKS, Blocks.mossyStoneBricks);
 
-	public static immutable string COOKED_SALMON = "cookedSalmon";
-	public static alias CookedSalmon = FoodItem!(COOKED_SALMON, IDS!(463, 350), METAS!(0, 1), 64, 6, 9.6);
+	public enum crackedStoneBricks = _.CRACKED_STONE_BRICKS.index;
+	public alias CrackedStoneBricks = PlaceableItem!(_.CRACKED_STONE_BRICKS, Blocks.crackedStoneBricks);
+	
+	public enum chiseledStoneBricks = _.CHISELED_STONE_BRICKS.index;
+	public alias ChiseledStoneBricks = PlaceableItem!(_.CHISELED_STONE_BRICKS, Blocks.chiseledStoneBricks);
 
-	public static immutable string ENCHANTED_GOLDEN_APPLE = "enchantedGoldenApple";
-	public static alias EnchantedGoldenApple = FoodItem!(ENCHANTED_GOLDEN_APPLE, IDS!(466, 322), METAS!(0, 1), 64, 4, 9.6, [effectInfo(Effects.REGENERATION, 30, "V"), effectInfo(Effects.ABSORPTION, 120, "I"), effectInfo(Effects.RESISTANCE, 300, "I"), effectInfo(Effects.FIRE_RESISTANCE, 300, "I")]);
+	public enum brownMushroomBlock = _.BROWN_MUSHROOM_BLOCK.index;
+	public alias BrownMushroomBlock = PlaceableItem!(_.BROWN_MUSHROOM_BLOCK, Blocks.brownMushroomCapsEverywhere);
+
+	public enum redMushroomBlock = _.RED_MUSHROOM_BLOCK.index;
+	public alias RedMushroomBlock = PlaceableItem!(_.RED_MUSHROOM_BLOCK, Blocks.redMushroomCapsEverywhere);
+
+	public enum ironBars = _.IRON_BARS.index;
+	public alias IronBars = PlaceableItem!(_.IRON_BARS, Blocks.ironBars);
+
+	public enum glassPane = _.GLASS_PANE.index;
+	public alias GlassPane = PlaceableItem!(_.GLASS_PANE, Blocks.glassPane);
+
+	public enum melonBlock = _.MELON_BLOCK.index;
+	public alias MelonBlock = PlaceableItem!(_.MELON_BLOCK, Blocks.melon);
+
+	public enum vines = _.VINES.index;
+
+	public enum oakFenceGate = _.OAK_FENCE_GATE.index;
+
+	public enum brickStairs = _.BRICK_STAIRS.index;
+
+	public enum stoneBrickStairs = _.STONE_BRICK_STAIRS.index;
+
+	public enum mycelium = _.MYCELIUM.index;
+	public alias Mycelium = PlaceableItem!(_.MYCELIUM, Blocks.mycelium);
+
+	public enum lilyPad = _.LILY_PAD.index;
+	public alias LilyPad = PlaceableItem!(_.LILY_PAD, Blocks.lilyPad, [Blocks.flowingWater0, Blocks.stillWater0, Blocks.ice] ~ Blocks.frostedIce);
+
+	public enum netherBrickBlock = _.NETHER_BRICK_BLOCK.index;
+	public alias NetherBrickBlock = PlaceableItem!(_.NETHER_BRICK_BLOCK, Blocks.netherBrick);
+
+	public enum netherBrickFence = _.NETHER_BRICK_FENCE.index;
+	public alias NetherBrickFence = PlaceableItem!(_.NETHER_BRICK_FENCE, Blocks.netherBrickFence);
+
+	public enum netherBrickStairs = _.NETHER_BRICK_STAIRS.index;
+
+	public enum enchantmentTable = _.ENCHANTMENT_TABLE.index;
+	public alias EnchantmentTable = PlaceableItem!(_.ENCHANTMENT_TABLE, Blocks.enchantmentTable);
+
+	public enum endPortalFrame = _.END_PORTAL_FRAME.index;
+
+	public enum endStone = _.END_STONE.index;
+	public alias EndStone = PlaceableItem!(_.END_STONE, Blocks.endStone);
+
+	public enum dragonEgg = _.DRAGON_EGG.index;
+	public alias DragonEgg = PlaceableItem!(_.DRAGON_EGG, Blocks.dragonEgg);
+
+	public enum redstoneLamp = _.REDSTONE_LAMP.index;
+	public alias RedstoneLamp = PlaceableItem!(_.REDSTONE_LAMP, Blocks.inactiveRedstoneLamp);
+
+	public enum oakWoodSlab = _.OAK_WOOD_SLAB.index;
+
+	public enum spruceWoodSlab = _.SPRUCE_WOOD_SLAB.index;
+
+	public enum birchWoodSlab = _.BIRCH_WOOD_SLAB.index;
+
+	public enum jungleWoodSlab = _.JUNGLE_WOOD_SLAB.index;
+
+	public enum acaciaWoodSlab = _.ACACIA_WOOD_SLAB.index;
+
+	public enum darkOakWoodSlab = _.DARK_OAK_WOOD_SLAB.index;
+
+	public enum sandstoneStairs = _.SANDSTONE_STAIRS.index;
+
+	public enum emeraldOre = _.EMERALD_ORE.index;
+	public alias EmeraldOre = PlaceableItem!(_.EMERALD_ORE, Blocks.emeraldOre);
+
+	public enum enderChest = _.ENDER_CHEST.index;
+
+	public enum tripwireHook = _.TRIPWIRE_HOOK.index;
+
+	public enum emeraldBlock = _.EMERALD_BLOCK.index;
+	public alias EmeraldBlock = PlaceableItem!(_.EMERALD_BLOCK, Blocks.emeraldBlock);
+
+	public enum spruceWoodStairs = _.SPRUCE_WOOD_STAIRS.index;
+
+	public enum birchWoodStairs = _.BIRCH_WOOD_STAIRS.index;
+
+	public enum jungleWoodStairs = _.JUNGLE_WOOD_STAIRS.index;
+
+	public enum commandBlock = _.COMMAND_BLOCK.index;
+
+	public enum beacon = _.BEACON.index;
+	public alias Beacon = PlaceableItem!(_.BEACON, Blocks.beacon);
+
+	public enum cobblestoneWall = _.COBBLESTONE_WALL.index;
+	public alias CobblestoneWall = PlaceableItem!(_.COBBLESTONE_WALL, Blocks.cobblestoneWall);
+
+	public enum mossyCobblestoneWall = _.MOSSY_COBBLESTONE_WALL.index;
+	public alias MossyCobblestoneWall = PlaceableItem!(_.MOSSY_COBBLESTONE_WALL, Blocks.mossyCobblestoneWall);
+
+	public enum woodenButton = _.WOODEN_BUTTON.index;
+
+	public enum anvil = _.ANVIL.index;
+
+	public enum trappedChest = _.TRAPPED_CHEST.index;
+
+	public enum lightWeightedPressurePlate = _.LIGHT_WEIGHTED_PRESSURE_PLATE.index;
+
+	public enum heavyWeightedPressurePlate = _.HEAVY_WEIGHTED_PRESSURE_PLATE.index;
+
+	public enum daylightSensor = _.DAYLIGHT_SENSOR.index;
+
+	public enum redstoneBlock = _.REDSTONE_BLOCK.index;
+	public alias RedstoneBlock = PlaceableItem!(_.REDSTONE_BLOCK, Blocks.redstoneBlock);
+
+	public enum netherQuartzOre = _.NETHER_QUARTZ_ORE.index;
+	public alias NetherQuartzOre = PlaceableItem!(_.NETHER_QUARTZ_ORE, Blocks.netherQuartzOre);
+
+	public enum hopper = _.HOPPER.index;
+
+	public enum quartzBlock = _.QUARTZ_BLOCK.index;
+	public alias QuartzBlock = PlaceableItem!(_.QUARTZ_BLOCK, Blocks.quartzBlock);
+
+	public enum chiseledQuartzBlock = _.CHISELED_QUARTZ_BLOCK.index;
+	public alias ChiseledQuartzBlock = PlaceableItem!(_.CHISELED_QUARTZ_BLOCK, Blocks.chiseledQuartzBlock);
+
+	public enum pillarQuartzBlock = _.PILLAR_QUARTZ_BLOCK.index;
+
+	public enum quartzStairs = _.QUARTZ_STAIRS.index;
+
+	public enum activatorRail = _.ACTIVATOR_RAIL.index;
+
+	public enum dropper = _.DROPPER.index;
+
+	public enum whiteStainedClay = _.WHITE_STAINED_CLAY.index;
+	public alias WhiteStainedClay = PlaceableItem!(_.WHITE_STAINED_CLAY, Blocks.whiteStainedClay);
+	
+	public enum orangeStainedClay = _.ORANGE_STAINED_CLAY.index;
+	public alias OrangeStainedClay = PlaceableItem!(_.ORANGE_STAINED_CLAY, Blocks.orangeStainedClay);
+	
+	public enum magentaStainedClay = _.MAGENTA_STAINED_CLAY.index;
+	public alias MagentaStainedClay = PlaceableItem!(_.MAGENTA_STAINED_CLAY, Blocks.magentaStainedClay);
+	
+	public enum lightBlueStainedClay = _.LIGHT_BLUE_STAINED_CLAY.index;
+	public alias LightBlueStainedClay = PlaceableItem!(_.LIGHT_BLUE_STAINED_CLAY, Blocks.lightBlueStainedClay);
+	
+	public enum yellowStainedClay = _.YELLOW_STAINED_CLAY.index;
+	public alias YellowStainedClay = PlaceableItem!(_.YELLOW_STAINED_CLAY, Blocks.yellowStainedClay);
+	
+	public enum limeStainedClay = _.LIME_STAINED_CLAY.index;
+	public alias LimeStainedClay = PlaceableItem!(_.LIME_STAINED_CLAY, Blocks.limeStainedClay);
+	
+	public enum pinkStainedClay = _.PINK_STAINED_CLAY.index;
+	public alias PinkStainedClay = PlaceableItem!(_.PINK_STAINED_CLAY, Blocks.pinkStainedClay);
+	
+	public enum grayStainedClay = _.GRAY_STAINED_CLAY.index;
+	public alias GrayStainedClay = PlaceableItem!(_.GRAY_STAINED_CLAY, Blocks.grayStainedClay);
+	
+	public enum lightGrayStainedClay = _.LIGHT_GRAY_STAINED_CLAY.index;
+	public alias LightGrayStainedClay = PlaceableItem!(_.LIGHT_GRAY_STAINED_CLAY, Blocks.lightGrayStainedClay);
+	
+	public enum cyanStainedClay = _.CYAN_STAINED_CLAY.index;
+	public alias CyanStainedClay = PlaceableItem!(_.CYAN_STAINED_CLAY, Blocks.cyanStainedClay);
+	
+	public enum purpleStainedClay = _.PURPLE_STAINED_CLAY.index;
+	public alias PurpleStainedClay = PlaceableItem!(_.PURPLE_STAINED_CLAY, Blocks.purpleStainedClay);
+	
+	public enum blueStainedClay = _.BLUE_STAINED_CLAY.index;
+	public alias BlueStainedClay = PlaceableItem!(_.BLUE_STAINED_CLAY, Blocks.blueStainedClay);
+	
+	public enum brownStainedClay = _.BROWN_STAINED_CLAY.index;
+	public alias BrownStainedClay = PlaceableItem!(_.BROWN_STAINED_CLAY, Blocks.brownStainedClay);
+	
+	public enum greenStainedClay = _.GREEN_STAINED_CLAY.index;
+	public alias GreenStainedClay = PlaceableItem!(_.GREEN_STAINED_CLAY, Blocks.greenStainedClay);
+	
+	public enum redStainedClay = _.RED_STAINED_CLAY.index;
+	public alias RedStainedClay = PlaceableItem!(_.RED_STAINED_CLAY, Blocks.redStainedClay);
+	
+	public enum blackStainedClay = _.BLACK_STAINED_CLAY.index;
+	public alias BlackStainedClay = PlaceableItem!(_.BLACK_STAINED_CLAY, Blocks.blackStainedClay);
+	
+	public enum stainedClay = [whiteStainedClay, orangeStainedClay, magentaStainedClay, lightBlueStainedClay, yellowStainedClay, limeStainedClay, pinkStainedClay, grayStainedClay, lightGrayStainedClay, cyanStainedClay, purpleStainedClay, blueStainedClay, brownStainedClay, greenStainedClay, redStainedClay, blackStainedClay];
+
+	public enum whiteStainedGlassPane = _.WHITE_STAINED_GLASS_PANE.index;
+	public alias WhiteStainedGlassPane = PlaceableItem!(_.WHITE_STAINED_GLASS_PANE, Blocks.whiteStainedGlassPane);
+	
+	public enum orangeStainedGlassPane = _.ORANGE_STAINED_GLASS_PANE.index;
+	public alias OrangeStainedGlassPane = PlaceableItem!(_.ORANGE_STAINED_GLASS_PANE, Blocks.orangeStainedGlassPane);
+	
+	public enum magentaStainedGlassPane = _.MAGENTA_STAINED_GLASS_PANE.index;
+	public alias MagentaStainedGlassPane = PlaceableItem!(_.MAGENTA_STAINED_GLASS_PANE, Blocks.magentaStainedGlassPane);
+	
+	public enum lightBlueStainedGlassPane = _.LIGHT_BLUE_STAINED_GLASS_PANE.index;
+	public alias LightBlueStainedGlassPane = PlaceableItem!(_.LIGHT_BLUE_STAINED_GLASS_PANE, Blocks.lightBlueStainedGlassPane);
+	
+	public enum yellowStainedGlassPane = _.YELLOW_STAINED_GLASS_PANE.index;
+	public alias YellowStainedGlassPane = PlaceableItem!(_.YELLOW_STAINED_GLASS_PANE, Blocks.yellowStainedGlassPane);
+	
+	public enum limeStainedGlassPane = _.LIME_STAINED_GLASS_PANE.index;
+	public alias LimeStainedGlassPane = PlaceableItem!(_.LIME_STAINED_GLASS_PANE, Blocks.limeStainedGlassPane);
+	
+	public enum pinkStainedGlassPane = _.PINK_STAINED_GLASS_PANE.index;
+	public alias PinkStainedGlassPane = PlaceableItem!(_.PINK_STAINED_GLASS_PANE, Blocks.pinkStainedGlassPane);
+	
+	public enum grayStainedGlassPane = _.GRAY_STAINED_GLASS_PANE.index;
+	public alias GrayStainedGlassPane = PlaceableItem!(_.GRAY_STAINED_GLASS_PANE, Blocks.grayStainedGlassPane);
+	
+	public enum lightGrayStainedGlassPane = _.LIGHT_GRAY_STAINED_GLASS_PANE.index;
+	public alias LightGrayStainedGlassPane = PlaceableItem!(_.LIGHT_GRAY_STAINED_GLASS_PANE, Blocks.lightGrayStainedGlassPane);
+	
+	public enum cyanStainedGlassPane = _.CYAN_STAINED_GLASS_PANE.index;
+	public alias CyanStainedGlassPane = PlaceableItem!(_.CYAN_STAINED_GLASS_PANE, Blocks.cyanStainedGlassPane);
+	
+	public enum purpleStainedGlassPane = _.PURPLE_STAINED_GLASS_PANE.index;
+	public alias PurpleStainedGlassPane = PlaceableItem!(_.PURPLE_STAINED_GLASS_PANE, Blocks.purpleStainedGlassPane);
+	
+	public enum blueStainedGlassPane = _.BLUE_STAINED_GLASS_PANE.index;
+	public alias BlueStainedGlassPane = PlaceableItem!(_.BLUE_STAINED_GLASS_PANE, Blocks.blueStainedGlassPane);
+	
+	public enum brownStainedGlassPane = _.BROWN_STAINED_GLASS_PANE.index;
+	public alias BrownStainedGlassPane = PlaceableItem!(_.BROWN_STAINED_GLASS_PANE, Blocks.brownStainedGlassPane);
+	
+	public enum greenStainedGlassPane = _.GREEN_STAINED_GLASS_PANE.index;
+	public alias GreenStainedGlassPane = PlaceableItem!(_.GREEN_STAINED_GLASS_PANE, Blocks.greenStainedGlassPane);
+	
+	public enum redStainedGlassPane = _.RED_STAINED_GLASS_PANE.index;
+	public alias RedStainedGlassPane = PlaceableItem!(_.RED_STAINED_GLASS_PANE, Blocks.redStainedGlassPane);
+	
+	public enum blackStainedGlassPane = _.BLACK_STAINED_GLASS_PANE.index;
+	public alias BlackStainedGlassPane = PlaceableItem!(_.BLACK_STAINED_GLASS_PANE, Blocks.blackStainedGlassPane);
+	
+	public enum stainedGlassPane = [whiteStainedGlassPane, orangeStainedGlassPane, magentaStainedGlassPane, lightBlueStainedGlassPane, yellowStainedGlassPane, limeStainedGlassPane, pinkStainedGlassPane, grayStainedGlassPane, lightGrayStainedGlassPane, cyanStainedGlassPane, purpleStainedGlassPane, blueStainedGlassPane, brownStainedGlassPane, greenStainedGlassPane, redStainedGlassPane, blackStainedGlassPane];
+
+	public enum acaciaWoodStairs = _.ACACIA_WOOD_STAIRS.index;
+
+	public enum darkOakWoodStairs = _.DARK_OAK_WOOD_STAIRS.index;
+
+	public enum slimeBlock = _.SLIME_BLOCK.index;
+	public alias SlimeBlock = PlaceableItem!(_.SLIME_BLOCK, Blocks.slimeBlock);
+
+	public enum barrier = _.BARRIER.index;
+	public enum invisibleBedrock = barrier;
+	public alias Barrier = PlaceableItem!(_.BARRIER, Blocks.barrier);
+	public alias InvisibleBedrock = Barrier;
+
+	public enum ironTrapdoor = _.IRON_TRAPDOOR.index;
+
+	public enum prismarine = _.PRISMARINE.index;
+	public alias Prismarine = PlaceableItem!(_.PRISMARINE, Blocks.prismarine);
+
+	public enum prismarineBricks = _.PRISMARINE_BRICKS.index;
+	public alias PrismarineBricks = PlaceableItem!(_.PRISMARINE_BRICKS, Blocks.prismarineBricks);
+
+	public enum darkPrismarine = _.DARK_PRISMARINE.index;
+	public alias DarkPrismarine = PlaceableItem!(_.DARK_PRISMARINE, Blocks.darkPrismarine);
+
+	public enum seaLantern = _.SEA_LANTERN.index;
+	public alias SeaLantern = PlaceableItem!(_.SEA_LANTERN, Blocks.seaLantern);
+
+	public enum hayBale = _.HAY_BALE.index;
+	
+	public enum whiteCarpet = _.WHITE_CARPET.index;
+	public alias WhiteCarpet = PlaceableItem!(_.WHITE_CARPET, Blocks.whiteCarpet);
+	
+	public enum orangeCarpet = _.ORANGE_CARPET.index;
+	public alias OrangeCarpet = PlaceableItem!(_.ORANGE_CARPET, Blocks.orangeCarpet);
+	
+	public enum magentaCarpet = _.MAGENTA_CARPET.index;
+	public alias MagentaCarpet = PlaceableItem!(_.MAGENTA_CARPET, Blocks.magentaCarpet);
+	
+	public enum lightBlueCarpet = _.LIGHT_BLUE_CARPET.index;
+	public alias LightBlueCarpet = PlaceableItem!(_.LIGHT_BLUE_CARPET, Blocks.lightBlueCarpet);
+	
+	public enum yellowCarpet = _.YELLOW_CARPET.index;
+	public alias YellowCarpet = PlaceableItem!(_.YELLOW_CARPET, Blocks.yellowCarpet);
+	
+	public enum limeCarpet = _.LIME_CARPET.index;
+	public alias LimeCarpet = PlaceableItem!(_.LIME_CARPET, Blocks.limeCarpet);
+	
+	public enum pinkCarpet = _.PINK_CARPET.index;
+	public alias PinkCarpet = PlaceableItem!(_.PINK_CARPET, Blocks.pinkCarpet);
+	
+	public enum grayCarpet = _.GRAY_CARPET.index;
+	public alias GrayCarpet = PlaceableItem!(_.GRAY_CARPET, Blocks.grayCarpet);
+	
+	public enum lightGrayCarpet = _.LIGHT_GRAY_CARPET.index;
+	public alias LightGrayCarpet = PlaceableItem!(_.LIGHT_GRAY_CARPET, Blocks.lightGrayCarpet);
+	
+	public enum cyanCarpet = _.CYAN_CARPET.index;
+	public alias CyanCarpet = PlaceableItem!(_.CYAN_CARPET, Blocks.cyanCarpet);
+	
+	public enum purpleCarpet = _.PURPLE_CARPET.index;
+	public alias PurpleCarpet = PlaceableItem!(_.PURPLE_CARPET, Blocks.purpleCarpet);
+	
+	public enum blueCarpet = _.BLUE_CARPET.index;
+	public alias BlueCarpet = PlaceableItem!(_.BLUE_CARPET, Blocks.blueCarpet);
+	
+	public enum brownCarpet = _.BROWN_CARPET.index;
+	public alias BrownCarpet = PlaceableItem!(_.BROWN_CARPET, Blocks.brownCarpet);
+	
+	public enum greenCarpet = _.GREEN_CARPET.index;
+	public alias GreenCarpet = PlaceableItem!(_.GREEN_CARPET, Blocks.greenCarpet);
+	
+	public enum redCarpet = _.RED_CARPET.index;
+	public alias RedCarpet = PlaceableItem!(_.RED_CARPET, Blocks.redCarpet);
+	
+	public enum blackCarpet = _.BLACK_CARPET.index;
+	public alias BlackCarpet = PlaceableItem!(_.BLACK_CARPET, Blocks.blackCarpet);
+	
+	public enum carpet = [whiteCarpet, orangeCarpet, magentaCarpet, lightBlueCarpet, yellowCarpet, limeCarpet, pinkCarpet, grayCarpet, lightGrayCarpet, cyanCarpet, purpleCarpet, blueCarpet, brownCarpet, greenCarpet, redCarpet, blackCarpet];
+
+	public enum hardenedClay = _.HARDENED_CLAY.index;
+	public alias HardenedClay = PlaceableItem!(_.HARDENED_CLAY, Blocks.hardenedClay);
+
+	public enum coalBlock = _.COAL_BLOCK.index;
+	public alias CoalBlock = PlaceableItem!(_.COAL_BLOCK, Blocks.coalBlock);
+
+	public enum packedIce = _.PACKED_ICE.index;
+	public alias PackedIce = PlaceableItem!(_.PACKED_ICE, Blocks.packedIce);
+
+	public enum sunflower = _.SUNFLOWER.index;
+
+	public enum liliac = _.LILIAC.index;
+
+	public enum doubleTallgrass = _.DOUBLE_TALLGRASS.index;
+
+	public enum largeFern = _.LARGE_FERN.index;
+
+	public enum roseBush = _.ROSE_BUSH.index;
+
+	public enum peony = _.PEONY.index;
+
+	public enum redSandstone = _.RED_SANDSTONE.index;
+	public alias RedSandstone = PlaceableItem!(_.RED_SANDSTONE, Blocks.redSandstone);
+
+	public enum chiseledRedSandstone = _.CHISELED_RED_SANDSTONE.index;
+	public alias ChiseledRedSandstone = PlaceableItem!(_.CHISELED_RED_SANDSTONE, Blocks.chiseledRedSandstone);
+
+	public enum smoothRedSandstone = _.SMOOTH_RED_SANDSTONE.index;
+	public alias SmoothRedSandstone = PlaceableItem!(_.SMOOTH_RED_SANDSTONE, Blocks.smoothRedSandstone);
+
+	public enum redSandstoneStairs = _.RED_SANDSTONE_STAIRS.index;
+
+	public enum redSandstoneSlab = _.RED_SANDSTONE_SLAB.index;
+
+	public enum spruceFenceGate = _.SPRUCE_FENCE_GATE.index;
+
+	public enum birchFenceGate = _.BIRCH_FENCE_GATE.index;
+
+	public enum jungleFenceGate = _.JUNGLE_FENCE_GATE.index;
+
+	public enum acaciaFenceGate = _.ACACIA_FENCE_GATE.index;
+
+	public enum darkOakFenceGate = _.DARK_OAK_FENCE_GATE.index;
+
+	public enum endRod = _.END_ROD.index;
+
+	public enum chorusPlant = _.CHORUS_PLANT.index;
+
+	public enum chorusFlower = _.CHORUS_FLOWER.index;
+
+	public enum purpurBlock = _.PURPUR_BLOCK.index;
+	public alias PurpurBlock = PlaceableItem!(_.PURPUR_BLOCK, Blocks.purpurBlock);
+
+	public enum purpurPillar = _.PURPUR_PILLAR.index;
+
+	public enum purpurStairs = _.PURPUR_STAIRS.index;
+
+	public enum purpurSlab = _.PURPUR_SLAB.index;
+
+	public enum endStoneBricks = _.END_STONE_BRICKS.index;
+	public alias EndStoneBricks = PlaceableItem!(_.END_STONE_BRICKS, Blocks.endStoneBricks);
+
+	public enum grassPath = _.GRASS_PATH.index;
+	public alias GrassPath = PlaceableItem!(_.GRASS_PATH, Blocks.grassPath);
+
+	public enum repeatingCommandBlock = _.REPEATING_COMMAND_BLOCK.index;
+
+	public enum chainCommandBlock = _.CHAIN_COMMAND_BLOCK.index;
+
+	public enum frostedIce = _.FROSTED_ICE.index;
+	public alias FrostedIce = PlaceableItem!(_.FROSTED_ICE, Blocks.frostedIce0);
+
+	public enum magmaBlock = _.MAGMA_BLOCK.index;
+	public alias MagmaBlock = PlaceableItem!(_.MAGMA_BLOCK, Blocks.magmaBlock);
+
+	public enum netherWartBlock = _.NETHER_WART_BLOCK.index;
+	public alias NetherWartBlock = PlaceableItem!(_.NETHER_WART_BLOCK, Blocks.netherWartBlock);
+
+	public enum redNetherBrick = _.RED_NETHER_BRICK.index;
+	public alias RedNetherBrick = PlaceableItem!(_.RED_NETHER_BRICK, Blocks.redNetherBrick);
+
+	public enum boneBlock = _.BONE_BLOCK.index;
+
+	public enum structureVoid = _.STRUCTURE_VOID.index;
+	public alias StructureVoid = PlaceableItem!(_.STRUCTURE_VOID, Blocks.structureVoid);
+
+	public enum observer = _.OBSERVER.index;
+
+	public enum whiteShulkerBox = _.WHITE_SHULKER_BOX.index;
+	public alias WhiteShulkerBox = PlaceableItem!(_.WHITE_SHULKER_BOX, Blocks.whiteShulkerBox);
+	
+	public enum orangeShulkerBox = _.ORANGE_SHULKER_BOX.index;
+	public alias OrangeShulkerBox = PlaceableItem!(_.ORANGE_SHULKER_BOX, Blocks.orangeShulkerBox);
+	
+	public enum magentaShulkerBox = _.MAGENTA_SHULKER_BOX.index;
+	public alias MagentaShulkerBox = PlaceableItem!(_.MAGENTA_SHULKER_BOX, Blocks.magentaShulkerBox);
+	
+	public enum lightBlueShulkerBox = _.LIGHT_BLUE_SHULKER_BOX.index;
+	public alias LightBlueShulkerBox = PlaceableItem!(_.LIGHT_BLUE_SHULKER_BOX, Blocks.lightBlueShulkerBox);
+	
+	public enum yellowShulkerBox = _.YELLOW_SHULKER_BOX.index;
+	public alias YellowShulkerBox = PlaceableItem!(_.YELLOW_SHULKER_BOX, Blocks.yellowShulkerBox);
+	
+	public enum limeShulkerBox = _.LIME_SHULKER_BOX.index;
+	public alias LimeShulkerBox = PlaceableItem!(_.LIME_SHULKER_BOX, Blocks.limeShulkerBox);
+	
+	public enum pinkShulkerBox = _.PINK_SHULKER_BOX.index;
+	public alias PinkShulkerBox = PlaceableItem!(_.PINK_SHULKER_BOX, Blocks.pinkShulkerBox);
+	
+	public enum grayShulkerBox = _.GRAY_SHULKER_BOX.index;
+	public alias GrayShulkerBox = PlaceableItem!(_.GRAY_SHULKER_BOX, Blocks.grayShulkerBox);
+	
+	public enum lightGrayShulkerBox = _.LIGHT_GRAY_SHULKER_BOX.index;
+	public alias LightGrayShulkerBox = PlaceableItem!(_.LIGHT_GRAY_SHULKER_BOX, Blocks.lightGrayShulkerBox);
+	
+	public enum cyanShulkerBox = _.CYAN_SHULKER_BOX.index;
+	public alias CyanShulkerBox = PlaceableItem!(_.CYAN_SHULKER_BOX, Blocks.cyanShulkerBox);
+	
+	public enum purpleShulkerBox = _.PURPLE_SHULKER_BOX.index;
+	public alias PurpleShulkerBox = PlaceableItem!(_.PURPLE_SHULKER_BOX, Blocks.purpleShulkerBox);
+	
+	public enum blueShulkerBox = _.BLUE_SHULKER_BOX.index;
+	public alias BlueShulkerBox = PlaceableItem!(_.BLUE_SHULKER_BOX, Blocks.blueShulkerBox);
+	
+	public enum brownShulkerBox = _.BROWN_SHULKER_BOX.index;
+	public alias BrownShulkerBox = PlaceableItem!(_.BROWN_SHULKER_BOX, Blocks.brownShulkerBox);
+	
+	public enum greenShulkerBox = _.GREEN_SHULKER_BOX.index;
+	public alias GreenShulkerBox = PlaceableItem!(_.GREEN_SHULKER_BOX, Blocks.greenShulkerBox);
+	
+	public enum redShulkerBox = _.RED_SHULKER_BOX.index;
+	public alias RedShulkerBox = PlaceableItem!(_.RED_SHULKER_BOX, Blocks.redShulkerBox);
+	
+	public enum blackShulkerBox = _.BLACK_SHULKER_BOX.index;
+	public alias BlackShulkerBox = PlaceableItem!(_.BLACK_SHULKER_BOX, Blocks.blackShulkerBox);
+	
+	public enum shulkerBox = [whiteShulkerBox, orangeShulkerBox, magentaShulkerBox, lightBlueShulkerBox, yellowShulkerBox, limeShulkerBox, pinkShulkerBox, grayShulkerBox, lightGrayShulkerBox, cyanShulkerBox, purpleShulkerBox, blueShulkerBox, brownShulkerBox, greenShulkerBox, redShulkerBox, blackShulkerBox];
+
+	public enum stonecutter = _.STONECUTTER.index;
+	public alias Stonecutter = PlaceableItem!(_.STONECUTTER, Blocks.stonecutter);
+
+	public enum glowingObsidian = _.GLOWING_OBSIDIAN.index;
+	public alias GlowingObsidian = PlaceableItem!(_.GLOWING_OBSIDIAN, Blocks.glowingObsidian);
+
+	public enum netherReactorCore = _.NETHER_REACTOR_CORE.index;
+	public alias NetherReactorCore = PlaceableItem!(_.NETHER_REACTOR_CORE, Blocks.netherReactorCore);
+
+	public enum updateBlock = _.UPDATE_BLOCK.index;
+	public alias UpdateBlock = PlaceableItem!(_.UPDATE_BLOCK, Blocks.updateBlock);
+
+	public enum ateupdBlock = _.ATEUPD_BLOCK.index;
+	public alias AteupdBlock = PlaceableItem!(_.ATEUPD_BLOCK, Blocks.ateupdBlock);
+
+	public enum structureSave = _.STRUCTURE_SAVE.index;
+	public alias StructureSave = PlaceableItem!(_.STRUCTURE_SAVE, Blocks.structureBlockSave);
+
+	public enum structureLoad = _.STRUCTURE_LOAD.index;
+	public alias StructureLoad = PlaceableItem!(_.STRUCTURE_LOAD, Blocks.structureBlockLoad);
+
+	public enum structureCorner = _.STRUCTURE_CORNER.index;
+	public alias StructureCorner = PlaceableItem!(_.STRUCTURE_CORNER, Blocks.structureBlockCorner);
+
+	public enum structureData = _.STRUCTURE_DATA.index;
+	public alias StructureData = PlaceableItem!(_.STRUCTURE_DATA, Blocks.structureBlockData);
+
+
+	public enum ironShovel = _.IRON_SHOVEL.index;
+	public alias IronShovel = ShovelItem!(_.IRON_SHOVEL, Tools.iron, Durability.iron, 4);
+
+	public enum ironPickaxe = _.IRON_PICKAXE.index;
+	public alias IronPickaxe = PickaxeItem!(_.IRON_PICKAXE, Tools.iron, Durability.iron, 5);
+
+	public enum ironAxe = _.IRON_AXE.index;
+	public alias IronAxe = AxeItem!(_.IRON_AXE, Tools.iron, Durability.iron, 6);
+
+	public enum flintAndSteel = _.FLINT_AND_STEEL.index;
+
+	public enum apple = _.APPLE.index;
+	public alias Apple = FoodItem!(_.APPLE, 4, 2.4);
+
+	public enum bow = _.BOW.index;
+
+	public enum arrow = _.ARROW.index;
+	public alias Arrow = SimpleItem!(_.ARROW);
+
+	public enum coal = _.COAL.index;
+	public alias Coal = SimpleItem!(_.COAL);
+
+	public enum charcoal = _.CHARCOAL.index;
+	public alias Charcoal = SimpleItem!(_.CHARCOAL);
+
+	public enum diamond = _.DIAMOND.index;
+	public alias Diamond = SimpleItem!(_.DIAMOND);
+
+	public enum ironIngot = _.IRON_INGOT.index;
+	public alias IronIngot = SimpleItem!(_.IRON_INGOT);
+
+	public enum goldIngot = _.GOLD_INGOT.index;
+	public alias GoldIngot = SimpleItem!(_.GOLD_INGOT);
+
+	public enum ironSword = _.IRON_SWORD.index;
+	public alias IronSword = SwordItem!(_.IRON_SWORD, Tools.iron, Durability.iron, 7);
+
+	public enum woodenSword = _.WOODEN_SWORD.index;
+	public alias WoodenSword = SwordItem!(_.WOODEN_SWORD, Tools.wood, Durability.wood, 5);
+
+	public enum woodenShovel = _.WOODEN_SHOVEL.index;
+	public alias WoodenShovel = ShovelItem!(_.WOODEN_SHOVEL, Tools.wood, Durability.wood, 2);
+
+	public enum woodenPickaxe = _.WOODEN_PICKAXE.index;
+	public alias WoodenPickaxe = PickaxeItem!(_.WOODEN_PICKAXE, Tools.wood, Durability.wood, 3);
+
+	public enum woodenAxe = _.WOODEN_AXE.index;
+	public alias WoodenAxe = AxeItem!(_.WOODEN_AXE, Tools.wood, Durability.wood, 4);
+
+	public enum stoneSword = _.STONE_SWORD.index;
+	public alias StoneSword = SwordItem!(_.STONE_SWORD, Tools.stone, Durability.stone, 6);
+
+	public enum stoneShovel = _.STONE_SHOVEL.index;
+	public alias StoneShovel = ShovelItem!(_.STONE_SHOVEL, Tools.stone, Durability.stone, 3);
+
+	public enum stonePickaxe = _.STONE_PICKAXE.index;
+	public alias StonePickaxe = PickaxeItem!(_.STONE_PICKAXE, Tools.stone, Durability.stone, 4);
+
+	public enum stoneAxe = _.STONE_AXE.index;
+	public alias StoneAxe = AxeItem!(_.STONE_AXE, Tools.stone, Durability.stone, 5);
+
+	public enum diamondSword = _.DIAMOND_SWORD.index;
+	public alias DiamondSword = SwordItem!(_.DIAMOND_SWORD, Tools.diamond, Durability.diamond, 8);
+
+	public enum diamondShovel = _.DIAMOND_SHOVEL.index;
+	public alias DiamondShovel = ShovelItem!(_.DIAMOND_SHOVEL, Tools.diamond, Durability.diamond, 5);
+
+	public enum diamondPickaxe = _.DIAMOND_PICKAXE.index;
+	public alias DiamondPickaxe = PickaxeItem!(_.DIAMOND_PICKAXE, Tools.diamond, Durability.diamond, 6);
+
+	public enum diamondAxe = _.DIAMOND_AXE.index;
+	public alias DiamondAxe = AxeItem!(_.DIAMOND_AXE, Tools.diamond, Durability.diamond, 7);
+
+	public enum stick = _.STICK.index;
+	public alias Stick = SimpleItem!(_.STICK);
+
+	public enum bowl = _.BOWL.index;
+	public alias Bowl = SimpleItem!(_.BOWL);
+
+	public enum mushroomStew = _.MUSHROOM_STEW.index;
+	public alias MushroomStew = SoupItem!(_.MUSHROOM_STEW, 6, 7.2);
+
+	public enum goldenSword = _.GOLDEN_SWORD.index;
+	public alias GoldenSword = SwordItem!(_.GOLDEN_SWORD, Tools.gold, Durability.gold, 5);
+
+	public enum goldenShovel = _.GOLDEN_SHOVEL.index;
+	public alias GoldenShovel = ShovelItem!(_.GOLDEN_SHOVEL, Tools.gold, Durability.gold, 2);
+
+	public enum goldenPickaxe = _.GOLDEN_PICKAXE.index;
+	public alias GoldenPickaxe = PickaxeItem!(_.GOLDEN_PICKAXE, Tools.gold, Durability.gold, 3);
+
+	public enum goldenAxe = _.GOLDEN_AXE.index;
+	public alias GoldenAxe = AxeItem!(_.GOLDEN_AXE, Tools.gold, Durability.gold, 4);
+
+	public enum stringItem = _.STRING.index;
+
+	public enum feather = _.FEATHER.index;
+	public alias Feather = SimpleItem!(_.FEATHER);
+
+	public enum gunpowder = _.GUNPOWDER.index;
+	public alias Gunpowder = SimpleItem!(_.GUNPOWDER);
+
+	public enum woodenHoe = _.WOODEN_HOE.index;
+	public alias WoodenHoe = HoeItem!(_.WOODEN_HOE, Tools.wood, Durability.wood);
+
+	public enum stoneHoe = _.STONE_HOE.index;
+	public alias StoneHoe = HoeItem!(_.STONE_HOE, Tools.stone, Durability.stone);
+
+	public enum ironHoe = _.IRON_HOE.index;
+	public alias IronHoe = HoeItem!(_.IRON_HOE, Tools.iron, Durability.iron);
+
+	public enum diamondHoe = _.DIAMOND_HOE.index;
+	public alias DiamondHoe = HoeItem!(_.DIAMOND_HOE, Tools.diamond, Durability.diamond);
+
+	public enum goldenHoe = _.GOLDEN_HOE.index;
+	public alias GoldenHoe = HoeItem!(_.GOLDEN_HOE, Tools.gold, Durability.gold);
+
+	public enum seeds = _.SEEDS.index;
+	public alias Seeds = PlaceableItem!(_.SEEDS, Blocks.seeds0, Blocks.farmland);
+
+	public enum wheat = _.WHEAT.index;
+	public alias Wheat = SimpleItem!(_.WHEAT);
+
+	public enum bread = _.BREAD.index;
+	public alias Bread = FoodItem!(_.BREAD, 5, 6);
+
+	public enum leatherCap = _.LEATHER_CAP.index;
+	public alias LeatherCap = ColorableArmorItem!(_.LEATHER_CAP, 56, Armor.cap, 1);
+
+	public enum leatherTunic = _.LEATHER_TUNIC.index;
+	public alias LeatherTunic = ColorableArmorItem!(_.LEATHER_TUNIC, 81, Armor.tunic, 3);
+
+	public enum leatherPants = _.LEATHER_PANTS.index;
+	public alias LeatherPants = ColorableArmorItem!(_.LEATHER_PANTS, 76, Armor.pants, 2);
+
+	public enum leatherBoots = _.LEATHER_BOOTS.index;
+	public alias LeatherBoots = ColorableArmorItem!(_.LEATHER_BOOTS, 66, Armor.boots, 1);
+
+	public enum chainHelmet = _.CHAIN_HELMET.index;
+	public alias ChainHelmet = ArmorItem!(_.CHAIN_HELMET, 166, Armor.helmet, 2);
+
+	public enum chainChestplate = _.CHAIN_CHESTPLATE.index;
+	public alias ChainChestplate = ArmorItem!(_.CHAIN_CHESTPLATE, 241, Armor.chestplate, 5);
+
+	public enum chainLeggings = _.CHAIN_LEGGINGS.index;
+	public alias ChainLeggings = ArmorItem!(_.CHAIN_LEGGINGS, 226, Armor.leggings, 4);
+
+	public enum chainBoots = _.CHAIN_BOOTS.index;
+	public alias ChainBoots = ArmorItem!(_.CHAIN_BOOTS, 196, Armor.boots, 1);
+
+	public enum ironHelmet = _.IRON_HELMET.index;
+	public alias IronHelmet = ArmorItem!(_.IRON_HELMET, 166, Armor.helmet, 2);
+
+	public enum ironChestplate = _.IRON_CHESTPLATE.index;
+	public alias IronChestplate = ArmorItem!(_.IRON_CHESTPLATE, 241, Armor.chestplate, 6);
+
+	public enum ironLeggings = _.IRON_LEGGINGS.index;
+	public alias IronLeggings = ArmorItem!(_.IRON_LEGGINGS, 226, Armor.leggings, 5);
+
+	public enum ironBoots = _.IRON_BOOTS.index;
+	public alias IronBoots = ArmorItem!(_.IRON_BOOTS, 196, Armor.boots, 2);
+
+	public enum diamondHelmet = _.DIAMOND_HELMET.index;
+	public alias DiamondHelmet = ArmorItem!(_.DIAMOND_HELMET, 364, Armor.helmet, 3);
+
+	public enum diamondChestplate = _.DIAMOND_CHESTPLATE.index;
+	public alias DiamondChestplate = ArmorItem!(_.DIAMOND_CHESTPLATE, 529, Armor.chestplate, 8);
+
+	public enum diamondLeggings = _.DIAMOND_LEGGINGS.index;
+	public alias DiamondLeggings = ArmorItem!(_.DIAMOND_LEGGINGS, 496, Armor.leggings, 6);
+
+	public enum diamondBoots = _.DIAMOND_BOOTS.index;
+	public alias DiamondBoots = ArmorItem!(_.DIAMOND_BOOTS, 430, Armor.boots, 3);
+
+	public enum goldenHelmet = _.GOLDEN_HELMET.index;
+	public alias GoldenHelmet = ArmorItem!(_.GOLDEN_HELMET, 78, Armor.helmet, 2);
+
+	public enum goldenChestplate = _.GOLDEN_CHESTPLATE.index;
+	public alias GoldenChestplate = ArmorItem!(_.GOLDEN_CHESTPLATE, 113, Armor.chestplate, 5);
+
+	public enum goldenLeggings = _.GOLDEN_LEGGINGS.index;
+	public alias GoldenLeggings = ArmorItem!(_.GOLDEN_LEGGINGS, 106, Armor.leggings, 3);
+
+	public enum goldenBoots = _.GOLDEN_BOOTS.index;
+	public alias GoldenBoots = ArmorItem!(_.GOLDEN_BOOTS, 92, Armor.boots, 1);
+
+	public enum flint = _.FLINT.index;
+	public alias Flint = SimpleItem!(_.FLINT);
+
+	public enum rawPorkchop = _.RAW_PORKCHOP.index;
+	public alias RawPorkchop = FoodItem!(_.RAW_PORKCHOP, 3, 1.8);
+
+	public enum cookedPorkchop = _.COOKED_PORKCHOP.index;
+	public alias CookedPorkchop = FoodItem!(_.COOKED_PORKCHOP, 8, 12.8);
+
+	public enum painting = _.PAINTING.index;
+
+	public enum goldenApple = _.GOLDEN_APPLE.index;
+	public alias GoldenApple = FoodItem!(_.GOLDEN_APPLE, 4, 9.6, [effectInfo(Effects.regeneration, 5, "II"), effectInfo(Effects.absorption, 120, "I")]);
+
+	public enum enchantedGoldenApple = _.ENCHANTED_GOLDEN_APPLE.index;
+	public alias EnchantedGoldenApple = FoodItem!(_.ENCHANTED_GOLDEN_APPLE, 4, 9.6, [effectInfo(Effects.regeneration, 20, "II"), effectInfo(Effects.absorption, 120, "IV"), effectInfo(Effects.resistance, 300, "I"), effectInfo(Effects.fireResistance, 300, "I")]);
+
+	public enum sign = _.SIGN.index;
+
+	public enum oakDoor = _.OAK_DOOR.index;
+
+	public enum bucket = _.BUCKET.index;
+
+	public enum waterBucket = _.WATER_BUCKET.index;
+
+	public enum lavaBucket = _.LAVA_BUCKET.index;
+
+	public enum minecart = _.MINECART.index;
+
+	public enum saddle = _.SADDLE.index;
+
+	public enum ironDoor = _.IRON_DOOR.index;
+
+	public enum redstoneDust = _.REDSTONE_DUST.index;
+
+	public enum snowball = _.SNOWBALL.index;
+
+	public enum oakBoat = _.OAK_BOAT.index;
+
+	public enum leather = _.LEATHER.index;
+	public alias Leather = SimpleItem!(_.LEATHER);
+
+	public enum milkBucket = _.MILK_BUCKET.index;
+	public alias MilkBucket = ClearEffectsItem!(_.MILK_BUCKET, bucket);
+
+	public enum brick = _.BRICK.index;
+	public alias Brick = SimpleItem!(_.BRICK);
+
+	public enum clay = _.CLAY.index;
+	public alias Clay = SimpleItem!(_.CLAY);
+
+	public enum sugarCanes = _.SUGAR_CANES.index;
+
+	public enum paper = _.PAPER.index;
+	public alias Paper = SimpleItem!(_.PAPER);
+
+	public enum book = _.BOOK.index;
+	public alias Book = SimpleItem!(_.BOOK);
+
+	public enum slimeball = _.SLIMEBALL.index;
+	public alias Slimeball = SimpleItem!(_.SLIMEBALL);
+
+	public enum minecartWithChest = _.MINECART_WITH_CHEST.index;
+
+	public enum minecartWithFurnace = _.MINECART_WITH_FURNACE.index;
+
+	public enum egg = _.EGG.index;
+
+	public enum compass = _.COMPASS.index;
+	public alias Compass = SimpleItem!(_.COMPASS);
+
+	public enum fishingRod = _.FISHING_ROD.index;
+
+	public enum clock = _.CLOCK.index;
+	public alias Clock = SimpleItem!(_.CLOCK);
+
+	public enum glowstoneDust = _.GLOWSTONE_DUST.index;
+	public alias GlowstoneDust = SimpleItem!(_.GLOWSTONE_DUST);
+
+	public enum rawFish = _.RAW_FISH.index;
+	public alias RawFish = FoodItem!(_.RAW_FISH, 2, .4);
+
+	public enum rawSalmon = _.RAW_SALMON.index;
+	public alias RawSalmon = FoodItem!(_.RAW_SALMON, 2, .4);
+
+	public enum clownfish = _.CLOWNFISH.index;
+	public alias Clowfish = FoodItem!(_.CLOWNFISH, 1, .2);
+
+	public enum pufferfish = _.PUFFERFISH.index;
+	public alias Pufferfish = FoodItem!(_.PUFFERFISH, 1, .2, [effectInfo(Effects.hunger, 15, "III"), effectInfo(Effects.poison, 60, "IV"), effectInfo(Effects.nausea, 15, "II")]);
+	
+	public enum cookedFish = _.COOKED_FISH.index;
+	public alias CookedFish = FoodItem!(_.COOKED_FISH, 5, 6);
+
+	public enum cookedSalmon = _.COOKED_SALMON.index;
+	public alias CookedSalmon = FoodItem!(_.COOKED_SALMON, 6, 9.6);
+
+	public enum inkSac = _.INK_SAC.index;
+	public alias InkSac = SimpleItem!(_.INK_SAC);
+
+	public enum roseRed = _.ROSE_RED.index;
+	public alias RoseRed = SimpleItem!(_.ROSE_RED);
+
+	public enum cactusGreen = _.CACTUS_GREEN.index;
+	public alias CactusGreen = SimpleItem!(_.CACTUS_GREEN);
+
+	public enum cocoaBeans = _.COCOA_BEANS.index;
+	public alias CocoaBeans = BeansItem!(_.COCOA_BEANS, Blocks.cocoa0);
+
+	public enum lapisLazuli = _.LAPIS_LAZULI.index;
+	public alias LapisLazuli = SimpleItem!(_.LAPIS_LAZULI);
+
+	public enum purpleDye = _.PURPLE_DYE.index;
+	public alias PurpleDye = SimpleItem!(_.PURPLE_DYE);
+
+	public enum cyanDye = _.CYAN_DYE.index;
+	public alias CyanDye = SimpleItem!(_.CYAN_DYE);
+
+	public enum lightGrayDye = _.LIGHT_GRAY_DYE.index;
+	public alias LightGrayDye = SimpleItem!(_.LIGHT_GRAY_DYE);
+
+	public enum grayDye = _.GRAY_DYE.index;
+	public alias GrayDye = SimpleItem!(_.GRAY_DYE);
+
+	public enum pinkDye = _.PINK_DYE.index;
+	public alias PinkDye = SimpleItem!(_.PINK_DYE);
+
+	public enum limeDye = _.LIME_DYE.index;
+	public alias LimeDye = SimpleItem!(_.LIME_DYE);
+
+	public enum dandelionYellow = _.DANDELION_YELLOW.index;
+	public alias DandelionYellow = SimpleItem!(_.DANDELION_YELLOW);
+
+	public enum lightBlueDye = _.LIGHT_BLUE_DYE.index;
+	public alias LightBlueDye = SimpleItem!(_.LIGHT_BLUE_DYE);
+
+	public enum magentaDye = _.MAGENTA_DYE.index;
+	public alias MagentaDye = SimpleItem!(_.MAGENTA_DYE);
+
+	public enum orangeDye = _.ORANGE_DYE.index;
+	public alias OrangeDye = SimpleItem!(_.ORANGE_DYE);
+
+	public enum boneMeal = _.BONE_MEAL.index;
+
+	public enum bone = _.BONE.index;
+	public alias Bone = SimpleItem!(_.BONE);
+
+	public enum sugar = _.SUGAR.index;
+	public alias Sugar = SimpleItem!(_.SUGAR);
+
+	public enum cake = _.CAKE.index;
+	public alias Cake = PlaceableItem!(_.CAKE, Blocks.cake0);
+
+	public enum bed = _.BED.index;
+
+	public enum redstoneRepeater = _.REDSTONE_REPEATER.index;
+
+	public enum cookie = _.COOKIE.index;
+	public alias Cookie = FoodItem!(_.COOKIE, 2, .4);
+
+	public enum map = _.MAP.index;
+	public alias Map = MapItem!(_.MAP);
+
+	public enum shears = _.SHEARS.index;
+
+	public enum melon = _.MELON.index;
+	public alias Melon = FoodItem!(_.MELON, 2, 1.2);
+
+	public enum pumpkinSeeds = _.PUMPKIN_SEEDS.index;
+	public alias PumpkinSeeds = PlaceableItem!(_.PUMPKIN_SEEDS, Blocks.pumpkinStem0, Blocks.farmland);
+
+	public enum melonSeeds = _.MELON_SEEDS.index;
+	public alias MelonSeeds = PlaceableItem!(_.MELON_SEEDS, Blocks.melonStem0, Blocks.farmland);
+
+	public enum rawBeef = _.RAW_BEEF.index;
+	public alias RawBeef = FoodItem!(_.RAW_BEEF, 3, 1.8);
+
+	public enum steak = _.STEAK.index;
+	public alias Steak = FoodItem!(_.STEAK, 8, 12.8);
+
+	public enum rawChicken = _.RAW_CHICKEN.index;
+	public alias RawChicken = FoodItem!(_.RAW_CHICKEN, 2, 1.2);
+
+	public enum cookedChicken = _.COOKED_CHICKEN.index;
+	public alias CookedChicked = FoodItem!(_.COOKED_CHICKEN, 6, 7.2);
+
+	public enum rottenFlesh = _.ROTTEN_FLESH.index;
+	public alias RottenFlesh = FoodItem!(_.ROTTEN_FLESH, 4, .8, [effectInfo(Effects.hunger, 30, "I", .8)]);
+
+	public enum enderPearl = _.ENDER_PEARL.index;
+
+	public enum blazeRod = _.BLAZE_ROD.index;
+	public alias BlazeRod = SimpleItem!(_.BLAZE_ROD);
+
+	public enum ghastTear = _.GHAST_TEAR.index;
+	public alias GhastTear = SimpleItem!(_.GHAST_TEAR);
+
+	public enum goldNugget = _.GOLD_NUGGET.index;
+	public alias GoldNugget = SimpleItem!(_.GOLD_NUGGET);
+
+	public enum netherWart = _.NETHER_WART.index;
+	public alias NetherWart = PlaceableItem!(_.NETHER_WART, Blocks.netherWart0, [Blocks.soulSand]);
+
+	public enum potion = _.POTION.index;
+
+	public enum glassBottle = _.GLASS_BOTTLE.index;
+
+	public enum spiderEye = _.SPIDER_EYE.index;
+	public alias SpiderEye = SimpleItem!(_.SPIDER_EYE);
+
+	public enum fermentedSpiderEye = _.FERMENTED_SPIDER_EYE.index;
+	public alias FermentedSpiderEye = SimpleItem!(_.FERMENTED_SPIDER_EYE);
+
+	public enum blazePowder = _.BLAZE_POWDER.index;
+	public alias BlazePowder = SimpleItem!(_.BLAZE_POWDER);
+
+	public enum magmaCream = _.MAGMA_CREAM.index;
+	public alias MagmaCream = SimpleItem!(_.MAGMA_CREAM);
+
+	public enum brewingStand = _.BREWING_STAND.index;
+	public alias BrewingStand = PlaceableItem!(_.BREWING_STAND, Blocks.brewingStandEmpty);
+
+	public enum cauldron = _.CAULDRON.index;
+	public alias Cauldron = PlaceableItem!(_.CAULDRON, Blocks.cauldronEmpty);
+
+	public enum eyeOfEnder = _.EYE_OF_ENDER.index;
+
+	public enum glisteringMelon = _.GLISTERING_MELON.index;
+	public alias GlisteringMelon = SimpleItem!(_.GLISTERING_MELON);
+
+	//TODO spawn eggs
+
+	public enum bottleOEnchanting = _.BOTTLE_O_ENCHANTING.index;
+
+	public enum fireCharge = _.FIRE_CHARGE.index;
+
+	public enum bookAndQuill = _.BOOK_AND_QUILL.index;
+
+	public enum writtenBook = _.WRITTEN_BOOK.index;
+
+	public enum emerald = _.EMERALD.index;
+	public alias Emerald = SimpleItem!(_.EMERALD);
+
+	public enum itemFrame = _.ITEM_FRAME.index;
+
+	public enum flowerPot = _.FLOWER_POT.index;
+	public alias FlowerPot = PlaceableOnSolidItem!(_.FLOWER_POT, Blocks.flowerPot);
+
+	public enum carrot = _.CARROT.index;
+	public alias Carrot = CropFoodItem!(_.CARROT, 3, 4.8, Blocks.carrot0);
+
+	public enum potato = _.POTATO.index;
+	public alias Potato = CropFoodItem!(_.POTATO, 1, .6, Blocks.potato0);
+
+	public enum bakedPotato = _.BAKED_POTATO.index;
+	public alias BakedPotato = FoodItem!(_.BAKED_POTATO, 5, 7.2);
+
+	public enum poisonousPotato = _.POISONOUS_POTATO.index;
+	public alias PoisonousPotato = FoodItem!(_.POISONOUS_POTATO, 2, 1.2, [effectInfo(Effects.poison, 4, "I", .6)]);
+
+	public enum emptyMap = _.EMPTY_MAP.index;
+
+	public enum goldenCarrot = _.GOLDEN_CARROT.index;
+	public alias GoldenCarrot = FoodItem!(_.GOLDEN_CARROT, 6, 14.4);
+
+	public enum skeletonSkull = _.SKELETON_SKULL.index;
+
+	public enum witherSkeletonSkull = _.WITHER_SKELETON_SKULL.index;
+
+	public enum zombieHead = _.ZOMBIE_HEAD.index;
+
+	public enum humanHead = _.HUMAN_HEAD.index;
+
+	public enum creeperHead = _.CREEPER_HEAD.index;
+
+	public enum dragonHead = _.DRAGON_HEAD.index;
+
+	public enum carrotOnAStick = _.CARROT_ON_A_STICK.index;
+
+	public enum netherStar = _.NETHER_STAR.index;
+	public alias NetherStar = SimpleItem!(_.NETHER_STAR);
+
+	public enum pumpkinPie = _.PUMPKIN_PIE.index;
+	public alias PumpkinPie = FoodItem!(_.PUMPKIN_PIE, 8, 4.8);
+
+	public enum fireworkRocket = _.FIREWORK_ROCKET.index;
+
+	public enum fireworkStar = _.FIREWORK_STAR.index;
+
+	public enum enchantedBook = _.ENCHANTED_BOOK.index;
+
+	public enum redstoneComparator = _.REDSTONE_COMPARATOR.index;
+
+	public enum netherBrick = _.NETHER_BRICK.index;
+	public alias NetherBrick = SimpleItem!(_.NETHER_BRICK);
+
+	public enum netherQuartz = _.NETHER_QUARTZ.index;
+	public alias NetherQuartz = SimpleItem!(_.NETHER_QUARTZ);
+
+	public enum minecartWithTnt = _.MINECART_WITH_TNT.index;
+
+	public enum minecartWithHopper = _.MINECART_WITH_HOPPER.index;
+
+	public enum prismarineShard = _.PRISMARINE_SHARD.index;
+	public alias PrismarineShard = SimpleItem!(_.PRISMARINE_SHARD);
+
+	public enum prismarineCrystals = _.PRISMARINE_CRYSTALS.index;
+	public alias PrismarineCrystals = SimpleItem!(_.PRISMARINE_CRYSTALS);
+
+	public enum rawRabbit = _.RAW_RABBIT.index;
+	public alias RawRabbit = FoodItem!(_.RAW_RABBIT, 3, 1.8);
+
+	public enum cookedRabbit = _.COOKED_RABBIT.index;
+	public alias CookedRabbit = FoodItem!(_.COOKED_RABBIT, 5, 6);
+
+	public enum rabbitStew = _.RABBIT_STEW.index;
+	public alias RabbitStew = SoupItem!(_.RABBIT_STEW, 10, 12);
+
+	public enum rabbitFoot = _.RABBIT_FOOT.index;
+	public alias RabbitFoot = SimpleItem!(_.RABBIT_FOOT);
+
+	public enum rabbitHide = _.RABBIT_HIDE.index;
+	public alias RabbitHide = SimpleItem!(_.RABBIT_HIDE);
+
+	public enum armorStand = _.ARMOR_STAND.index;
+
+	public enum leatherHorseArmor = _.LEATHER_HORSE_ARMOR.index;
+
+	public enum ironHorseArmor = _.IRON_HORSE_ARMOR.index;
+
+	public enum goldenHorseArmor = _.GOLDEN_HORSE_ARMOR.index;
+
+	public enum diamondHorseArmor = _.DIAMOND_HORSE_ARMOR.index;
+
+	public enum lead = _.LEAD.index;
+
+	public enum nameTag = _.NAME_TAG.index;
+
+	public enum minecartWithCommandBlock = _.MINECART_WITH_COMMAND_BLOCK.index;
+
+	public enum rawMutton = _.RAW_MUTTON.index;
+	public alias RawMutton = FoodItem!(_.RAW_MUTTON, 2, 1.2);
+
+	public enum cookedMutton = _.COOKED_MUTTON.index;
+	public alias CookedMutton = FoodItem!(_.COOKED_MUTTON, 6, 9.6);
+
+	public enum banner = _.BANNER.index;
+
+	public enum endCrystal = _.END_CRYSTAL.index;
+
+	public enum spruceDoor = _.SPRUCE_DOOR.index;
+
+	public enum birchDoor = _.BIRCH_DOOR.index;
+
+	public enum jungleDoor = _.JUNGLE_DOOR.index;
+
+	public enum acaciaDoor = _.ACACIA_DOOR.index;
+
+	public enum darkOakDoor = _.DARK_OAK_DOOR.index;
+
+	public enum chorusFruit = _.CHORUS_FRUIT.index;
+	public alias ChorusFruit = TeleportationItem!(_.CHORUS_FRUIT, 4, 2.4);
+
+	public enum poppedChorusFruit = _.POPPED_CHORUS_FRUIT.index;
+	public alias PoppedChorusFruit = SimpleItem!(_.POPPED_CHORUS_FRUIT);
+
+	public enum beetroot = _.BEETROOT.index;
+	public alias Beetroot = FoodItem!(_.BEETROOT, 1, 1.2);
+
+	public enum beetrootSeeds = _.BEETROOT_SEEDS.index;
+	public alias BeetrootSeeds = PlaceableItem!(_.BEETROOT_SEEDS, Blocks.beetroot0, Blocks.farmland);
+
+	public enum beetrootSoup = _.BEETROOT_SOUP.index;
+	public alias BeetrootSoup = SoupItem!(_.BEETROOT_SOUP, 6, 7.2);
+
+	public enum dragonsBreath = _.DRAGONS_BREATH.index;
+
+	public enum splashPotion = _.SPLASH_POTION.index;
+
+	public enum spectralArrow = _.SPECTRAL_ARROW.index;
+
+	public enum tippedArrow = _.TIPPED_ARROW.index;
+
+	public enum lingeringPotion = _.LINGERING_POTION.index;
+
+	public enum shield = _.SHIELD.index;
+
+	public enum elytra = _.ELYTRA.index;
+
+	public enum spruceBoat = _.SPRUCE_BOAT.index;
+
+	public enum birchBoat = _.BIRCH_BOAT.index;
+
+	public enum jungleBoat = _.JUNGLE_BOAT.index;
+
+	public enum acaciaBoat = _.ACACIA_BOAT.index;
+
+	public enum darkOakBoat = _.DARK_OAK_BOAT.index;
+
+	public enum undyingTotem = _.UNDYING_TOTEM.index;
+
+	public enum shulkerShell = _.SHULKER_SHELL.index;
+	public alias ShulkerShell = SimpleItem!(_.SHULKER_SHELL);
+
+	public enum ironNugget = _.IRON_NUGGET.index;
+	public alias IronNugget = SimpleItem!(_.IRON_NUGGET);
+
+	//TODO discs
 
 }
 
@@ -937,14 +1663,12 @@ public final class Items {
  * Base abstract class for an Item.
  */
 abstract class Item {
-	
-	alias ItemCompound = DefinedCompound!(Compound, "display", ListOf!Compound, "ench");
 
-	protected Compound m_pe_tag;
 	protected Compound m_pc_tag;
+	protected Compound m_pe_tag;
 
 	private string m_name = "";
-	private ubyte[ushort] enchantments;
+	private Enchantment[ubyte] enchantments;
 
 	public @safe @nogc this() {}
 	
@@ -953,49 +1677,61 @@ abstract class Item {
 	 * Throws: JSONException if the JSON string is malformed
 	 * Example:
 	 * ---
-	 * new Items.Apple("{\"customName\":\"SPECIAL APPLE\",\"enchantments\":[{\"name\":\"protection\",\"level\":\"IV\"}]}");
+	 * auto item = new Items.Apple(`{"customName":"SPECIAL APPLE","enchantments":[{"name":"protection","level":"IV"}]}`);
+	 * assert(item.customName == "SPECIAL_APPLE");
+	 * assert(Enchantments.protection in item);
 	 * ---
 	 */
 	public @trusted this(string data) {
-		this(parseJSON(data));
+		this(std.json.parseJSON(data));
 	}
 
 	/**
 	 * Constructs an item adding properties from a JSON.
 	 * Throws: RangeError if the enchanting name doesn't exist
 	 */
-	public @safe this(JSONValue data) {
-		this.elaborateJSON(data);
+	public @safe this(std.json.JSONValue data) {
+		this.parseJSON(data);
 	}
 
-	public @trusted void elaborateJSON(JSONValue data) {
+	public @trusted void parseJSON(std.json.JSONValue data) {
+		if(data.type == std.json.JSON_TYPE.OBJECT) {
 
-		if("customName" in data && data["customName"].type == JSON_TYPE.STRING) { this.customName = data["customName"].str; }
-		else if("name" in data && data["name"].type == JSON_TYPE.STRING) { this.customName = data["name"].str; }
-		
-		foreach(string e ; ["enchantments", "enchantment", "ench"]) {
-			if(e in data && data[e].type == JSON_TYPE.ARRAY) {
-				foreach(JSONValue ench ; data[e].array) {
-					string se = "";
-					foreach(string s ; ["id", "name", "type"]) {
-						if(s in ench && ench[s].type == JSON_TYPE.STRING) {
-							se = ench[s].str;
-							break;
+			auto name = "customName" in data;
+			if(name && name.type == std.json.JSON_TYPE.STRING) this.customName = name.str;
+
+			void parseEnchantment(std.json.JSONValue ench) @trusted {
+				if(ench.type == std.json.JSON_TYPE.ARRAY) {
+					foreach(e ; ench.array) {
+						if(e.type == std.json.JSON_TYPE.OBJECT) {
+							ubyte l = 1;
+							auto level = "level" in e;
+							auto lvl = "lvl" in e;
+							if(level && level.type == std.json.JSON_TYPE.INTEGER) {
+								l = cast(ubyte)level.integer;
+							} else if(lvl && lvl.type == std.json.JSON_TYPE.INTEGER) {
+								l = cast(ubyte)lvl.integer;
+							}
+							auto name = "name" in e;
+							auto minecraft = "minecraft" in e;
+							auto pocket = "pocket" in e;
+							try {
+								if(name && name.type == std.json.JSON_TYPE.STRING) {
+									this.addEnchantment(Enchantment.fromString(name.str, l));
+								} else if(minecraft && minecraft.type == std.json.JSON_TYPE.INTEGER) {
+									this.addEnchantment(Enchantment.fromMinecraft(cast(ubyte)minecraft.integer, l));
+								} else if(pocket && pocket.type == std.json.JSON_TYPE.INTEGER) {
+									this.addEnchantment(Enchantment.fromPocket(cast(ubyte)pocket.integer, l));
+								}
+							} catch(EnchantmentException) {}
 						}
 					}
-					ubyte level = 1;
-					foreach(string s ; ["level", "lvl"]) {
-						if(s in ench && (ench[s].type == JSON_TYPE.STRING || ench[s].type == JSON_TYPE.INTEGER)) {
-							level = (ench[s].type == JSON_TYPE.INTEGER ? ench[s].integer : roman(ench[s].str)) & 255;
-							break;
-						}
-					}
-					this.addEnchantment(Enchantment.fromString(se), level);
 				}
-				break;
 			}
-		}
+			if("ench" in data) parseEnchantment(data["ench"]);
+			else if("enchantments" in data) parseEnchantment(data["enchantments"]);
 
+		}
 	}
 
 	/**
@@ -1017,6 +1753,8 @@ abstract class Item {
 	 * Gets the name (not the custom name!) of the item.
 	 */
 	public abstract pure nothrow @property @safe @nogc string name();
+
+	protected abstract pure nothrow @property @safe @nogc size_t index();
 
 	/** 
 	 * Highest number of items that can be stacked in the slot.
@@ -1043,8 +1781,8 @@ abstract class Item {
 	 * assert(new Items.DiamondSword().tool == true);
 	 * ---
 	 */
-	public final @property @safe @nogc bool tool() {
-		return this.toolType != Tool.NO;
+	public pure nothrow @property @safe @nogc bool tool() {
+		return false;
 	}
 
 	/**
@@ -1057,8 +1795,8 @@ abstract class Item {
 	 * assert(new Items.DiamondSword().toolType == SWORD);
 	 * ---
 	 */
-	public @property @safe @nogc ubyte toolType() {
-		return Tool.NO;
+	public pure nothrow @property @safe @nogc ubyte toolType() {
+		return Tools.none;
 	}
 
 	/**
@@ -1071,8 +1809,8 @@ abstract class Item {
 	 * assert(new Items.DiamondSword().toolMaterial == DIAMOND);
 	 * ---
 	 */
-	public @property @safe @nogc ubyte toolMaterial() {
-		return Tool.NO;
+	public pure nothrow @property @safe @nogc ubyte toolMaterial() {
+		return Tools.none;
 	}
 
 	/**
@@ -1084,7 +1822,7 @@ abstract class Item {
 	 * assert(new Items.DiamondSword(Items.DiamondSword.DURABILITY + 1).finished == true);
 	 * ---
 	 */
-	public @property @safe @nogc bool finished() {
+	public pure nothrow @property @safe @nogc bool finished() {
 		return false;
 	}
 
@@ -1092,7 +1830,7 @@ abstract class Item {
 	 * Attack damage caused by the item, as an hit, usually modified
 	 * by the tools, like words and axes.
 	 */
-	public @property @safe @nogc uint attack() {
+	public pure nothrow @property @safe @nogc uint attack() {
 		return 1;
 	}
 
@@ -1110,8 +1848,16 @@ abstract class Item {
 	 * }
 	 * ---
 	 */
-	public @property @safe @nogc bool consumeable() {
+	public pure nothrow @property @safe @nogc bool consumeable() {
 		return false;
+	}
+
+	/**
+	 * Indicates whether the item can be consumed when the holder's
+	 * hunger is full.
+	 */
+	public pure nothrow @property @safe @nogc bool alwaysConsumeable() {
+		return true;
 	}
 
 	/**
@@ -1136,7 +1882,7 @@ abstract class Item {
 	 * If this function returns true, Item::place(World world) will be probably
 	 * called next for place a block
 	 */
-	public @property @safe @nogc bool placeable() {
+	public pure nothrow @property @safe @nogc bool placeable() {
 		return false;
 	}
 
@@ -1148,8 +1894,8 @@ abstract class Item {
 	public bool onPlaced(Player player, BlockPosition tpos, uint tface) {
 		BlockPosition position = tpos.face(tface);
 		//TODO calling events on player and on block
-		auto placed = this.place(player.world, position);
-		if(placed.id != 0) {
+		auto placed = this.place(player.world, position, tface);
+		if(placed != 0) {
 			player.world[position] = placed;
 			return true;
 		} else {
@@ -1165,8 +1911,8 @@ abstract class Item {
 	 * 		world: the world where the block has been placed
 	 * 		position: where the item should place the block
 	 */
-	public BlockData place(World world, BlockPosition position) {
-		return Blocks.AIR;
+	public ushort place(World world, BlockPosition position, uint face) {
+		return Blocks.air;
 	}
 
 	/** 
@@ -1246,153 +1992,234 @@ abstract class Item {
 		return false;
 	}
 
-	protected @trusted void reset() {
-		this.m_pe_tag = null;
-		this.m_pc_tag = null;
-		this.m_name.length = 0;
-		this.enchantments.clear();
-	}
-
-	public final @property @safe @nogc bool petags() {
-		return this.m_pe_tag !is null;
-	}
-
-	public final @property @safe @nogc Compound petag() {
-		return this.m_pe_tag;
-	}
-
-	public @property @safe Compound petag(Compound petag) {
-		this.reset();
-		if(petag.has!Compound("")) petag = petag.get!Compound("");
-		if(petag.has!Compound("display") && petag.get!Compound("display").has!String("Name")) this.customName = petag.get!Compound("display").get!String("Name");
-		if(petag.has!(ListOf!Compound)("ench")) {
-			foreach(Compound compound ; petag.get!(ListOf!Compound)("ench")) {
-				if(compound.has!Short("id") && compound.has!Short("lvl")) {
-					try {
-						this.addEnchantment(Enchantment.pe(compound.get!Short("id").value & 255), compound.get!Short("lvl").value & 255);
-					} catch(Exception e) {}
-				}
-			}
-		}
-		return this.petag;
-	}
-
-	public final @property @safe @nogc bool pctags() {
-		return this.m_pc_tag !is null;
-	}
-
-	public final @property @safe @nogc Compound pctag() {
+	/**
+	 * Gets the item's compound tag with the custom data of the item.
+	 * It may be null if the item has no custom behaviours.
+	 * Example:
+	 * ---
+	 * if(item.minecraftCompound is null) {
+	 *    assert(item.customName == "");
+	 * }
+	 * item.customName = "not empty";
+	 * assert(item.pocketCompound !is null);
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc Compound minecraftCompound() {
 		return this.m_pc_tag;
 	}
 
-	public final @property @safe Compound pctag(Compound pctag) {
-		return null; //TODO
+	/// ditto
+	public final pure nothrow @property @safe @nogc Compound pocketCompound() {
+		return this.m_pe_tag;
 	}
 
 	/**
-	 * Get or set the item's custom name
-	 * Returns: the item's custom name
+	 * Parses a compound, usually received from the client or
+	 * saved in a world.
+	 * The tag should never be null as the method doesn't check it.
 	 * Example:
 	 * ---
-	 * // add a custom name
-	 * item.customName = "Custom item";
-	 * 
-	 * // reset the custom name
-	 * item.customName = null;
+	 * item.parseMinecraftCompound(new Compound(new Compound("display", new String("Name", "custom"))));
+	 * assert(item.customName == "custom");
 	 * ---
 	 */
-	public @property @safe @nogc string customName() {
-		return this.m_name;
+	public @safe void parseMinecraftCompound(Compound compound) {
+		this.clear();
+		this.parseCompound(compound, &Enchantment.fromMinecraft);
 	}
 
 	/// ditto
+	public @safe void parsePocketCompound(Compound compound) {
+		this.clear();
+		this.parseCompound(compound, &Enchantment.fromPocket);
+	}
+
+	private @safe void parseCompound(Compound compound, Enchantment function(ubyte id, ubyte level) @safe get) {
+		if(compound.has!Compound("")) compound = compound.get!Compound("");
+		if(compound.has!Compound("display")) {
+			auto display = compound.get!Compound("display");
+			if(display.has!String("Name")) {
+				auto name = display.get!String("Name").value;
+				if(name.length) this.customName = name;
+			}
+		}
+		if(compound.has!(ListOf!Compound)("ench")) {
+			foreach(e ; compound.get!(ListOf!Compound)("ench")) {
+				if(e.has!Short("id") && e.has!Short("lvl")) {
+					auto ench = get(cast(ubyte)e.get!Short("id").value, cast(ubyte)e.get!Short("lvl").value);
+					if(ench !is null) this.addEnchantment(ench);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Removes the custom behaviours of the item, like custom name
+	 * and enchantments.
+	 * Example:
+	 * ---
+	 * item.customName = "name";
+	 * assert(item.customName == "name");
+	 * item.clear();
+	 * assert(item.customName == "");
+	 * ---
+	 */
+	public @trusted void clear() {
+		this.m_pc_tag = null;
+		this.m_pe_tag = null;
+		this.m_name = "";
+		this.enchantments.clear();
+	}
+
+	/**
+	 * Gets the item's custom name.
+	 */
+	public pure nothrow @property @safe @nogc string customName() {
+		return this.m_name;
+	}
+
+	/**
+	 * Sets the item's custom name.
+	 * Example:
+	 * ---
+	 * item.customName = "§aColoured!";
+	 * item.customName = ""; // remove
+	 * ---
+	 */
 	public @property @safe string customName(string name) {
-		if(name is null) name = "";
-		if(name == "") {
-			if(this.petags && this.m_pe_tag.has!Compound("display") && this.m_pe_tag.get!Compound("display").has("Name")) {
-				this.m_pe_tag.get!Compound("display").remove("Name");
-				if(this.m_pe_tag.get!Compound("display").empty) {
-					this.m_pe_tag.remove("display");
-					if(this.m_pe_tag.empty) {
-						this.m_pe_tag = null;
-					}
-				}
+		if(name.length) {
+			void set(ref Compound compound) {
+				auto n = new String("Name", name);
+				if(compound is null) compound = new Compound(new Compound("display", n));
+				else if(!compound.has!Compound("display")) compound["display"] = new Compound(n);
+				else compound.get!Compound("display")[] = n;
 			}
-			if(this.pctags && this.m_pc_tag.has!Compound("display") && this.m_pc_tag.get!Compound("display").has("Name")) {
-				this.m_pc_tag.get!Compound("display").remove("Name");
-				if(this.m_pc_tag.get!Compound("display").empty) {
-					this.m_pc_tag.remove("display");
-					if(this.m_pc_tag.empty) {
-						this.m_pc_tag = null;
-					}
-				}
-			}
+			set(this.m_pc_tag);
+			set(this.m_pe_tag);
 		} else {
-			if(this.m_pe_tag is null) this.m_pe_tag = new Compound("");
-			if(!this.m_pe_tag.has!Compound("display")) this.m_pe_tag["display"] = new Compound("");
-			this.m_pe_tag.get!Compound("display")["Name"] = new String(name);
-			if(this.m_pc_tag is null) this.m_pc_tag = new Compound("");
-			if(!this.m_pc_tag.has!Compound("display")) this.m_pc_tag["display"] = new Compound("");
-			this.m_pc_tag.get!Compound("display")["Name"] = new String(name);
+			void reset(ref Compound compound) {
+				auto display = compound.get!Compound("display");
+				display.remove("Name");
+				if(display.empty) {
+					compound.remove("display");
+					if(compound.empty) compound = null;
+				}
+			}
+			reset(this.m_pc_tag);
+			reset(this.m_pe_tag);
 		}
 		return this.m_name = name;
 	}
 
+	/**
+	 * Adds an enchantment to the item.
+	 * Throws: EnchantmentException if the enchantment doesn't exist
+	 * Example:
+	 * ---
+	 * item.addEnchantment(new Enchantment(Enchantments.sharpness, 1));
+	 * item.addEnchantment(Enchantments.power, 5);
+	 * item.addEnchantment(Enchantments.fortune, "X");
+	 * item += new Enchantment(Enchantments.smite, 2);
+	 * ---
+	 */
 	public @safe void addEnchantment(Enchantment ench) {
-		this.addEnchantment(ench.id, ench.level);
-	}
-
-	public @safe void addEnchantment(ushort ench, ushort level=1) in { assert(level != 0, "Invalid enchantment level given"); } body {
-		if(ench in this.enchantments) {
-			this.removeEnchantment(ench);
+		if(ench is null) throw new EnchantmentException("Invalid enchantment given");
+		auto e = ench.id in this.enchantments;
+		if(e) {
+			// modify
+			*e = ench;
+			void modify(ref Compound compound, ubyte id) @safe {
+				foreach(ref tag ; compound.get!(ListOf!Compound)("ench")) {
+					if(tag.get!Short("id").value == id) {
+						tag.get!Short("lvl").value = ench.level;
+						break;
+					}
+				}
+			}
+			if(ench.minecraft) modify(this.m_pc_tag, ench.minecraft.id);
+			if(ench.pocket) modify(this.m_pe_tag, ench.pocket.id);
+		} else {
+			// add
+			this.enchantments[ench.id] = ench;
+			void add(ref Compound compound, ubyte id) @safe {
+				auto ec = new Compound([new Short("id", id), new Short("lvl", ench.level)]);
+				if(compound is null) compound = new Compound([new ListOf!Compound("ench", [ec])]);
+				else if(!compound.has!(ListOf!Compound)("ench")) compound["ench"] = new ListOf!Compound(ec);
+				else compound.get!(ListOf!Compound)("ench") ~= ec;
+			}
+			if(ench.minecraft) add(this.m_pc_tag, ench.minecraft.id);
+			if(ench.pocket) add(this.m_pe_tag, ench.pocket.id);
 		}
-		this.enchantments[ench] = level.to!ubyte;
-		//save to pe
-		if(this.m_pe_tag is null) this.m_pe_tag = new Compound("");
-		if(!this.m_pe_tag.has!(ListOf!Compound)("ench")) this.m_pe_tag["ench"] = new ListOf!Compound();
-		this.m_pe_tag.get!(ListOf!Compound)("ench") ~= new Compound([new Short("id", ench.pe), new Short("lvl", level)]);
-		//save to pc
-		if(this.m_pc_tag is null) this.m_pc_tag = new Compound("");
-		if(!this.m_pc_tag.has!(ListOf!Compound)("ench")) this.m_pc_tag["ench"] = new ListOf!Compound();
-		this.m_pc_tag.get!(ListOf!Compound)("ench") ~= new Compound([new Short("id", ench.pc), new Short("lvl", level)]);
 	}
 
-	public @safe void addEnchantment(ushort ench, string level) {
-		this.addEnchantment(ench, level.roman & 255);
+	/// ditto
+	public @safe void addEnchantment(sul.enchantments.Enchantment ench, ubyte level) {
+		this.addEnchantment(new Enchantment(ench, level));
 	}
 
+	/// ditto
+	public @safe void addEnchantment(sul.enchantments.Enchantment ench, string level) {
+		this.addEnchantment(new Enchantment(ench, level));
+	}
+
+	/// ditto
+	public @safe void opBinaryRight(string op : "+")(Enchantment ench) {
+		this.addEnchantment(ench);
+	}
+
+	/// ditto
 	alias enchant = this.addEnchantment;
 
-	public final @safe bool hasEnchantment(Enchantment ench) {
-		return this.hasEnchantment(ench.id);
+	/**
+	 * Gets a pointer to the enchantment.
+	 * This method can be used to check if the item has an
+	 * enchantment and its level.
+	 * Example:
+	 * ---
+	 * auto e = Enchantments.protection in item;
+	 * if(!e || e.level != 5) {
+	 *    item.enchant(Enchantment.protection, 5);
+	 * }
+	 * assert(Enchantments.protection in item);
+	 * ---
+	 */
+	public @safe Enchantment* opBinaryRight(string op : "in")(sul.enchantments.Enchantment ench) {
+		return ench.minecraft.id in this.enchantments;
 	}
 
-	public final @safe bool hasEnchantment(ushort ench) {
-		return ench in this.enchantments ? true : false;
-	}
-
-	public @safe void removeEnchantment(Enchantment ench) {}
-
-	public @trusted void removeEnchantment(ushort ench) {
-		if(ench in this.enchantments) {
-			this.enchantments.remove(ench);
-			foreach(size_t index, Compound compound; this.m_pe_tag.get!(ListOf!Compound)("ench")[]) {
-				if(compound.has!Short("id") && compound.get!Short("id") == ench.pe) {
-					this.m_pe_tag.get!(ListOf!Compound)("ench").remove(index);
-					break;
+	/**
+	 * Removes an enchantment from the item.
+	 * Example:
+	 * ---
+	 * item.removeEnchantment(Enchantments.sharpness);
+	 * item -= Enchantments.fortune;
+	 * ---
+	 */
+	public @safe void removeEnchantment(sul.enchantments.Enchantment ench) {
+		if(ench.minecraft.id in this.enchantments) {
+			this.enchantments.remove(ench.minecraft.id);
+			void remove(ref Compound compound, ubyte id) @safe {
+				auto list = compound.get!(ListOf!Compound)("ench");
+				if(list.length == 1) {
+					compound.remove("ench");
+					if(compound.empty) compound = null;
+				} else {
+					foreach(i, e; list) {
+						if(e.get!Short("id").value == id) {
+							list.remove(i);
+							break;
+						}
+					}
 				}
 			}
-			if(this.enchantments.length == 0) {
-				this.m_pe_tag.remove("ench");
-				if(this.m_pe_tag.empty) {
-					this.m_pe_tag = null;
-				}
-			}
+			if(ench.minecraft) remove(this.m_pc_tag, ench.minecraft.id);
+			if(ench.pocket) remove(this.m_pe_tag, ench.pocket.id);
 		}
 	}
 
-	public @safe uint getEnchantmentLevel(ushort ench) {
-		return this.enchantments[ench];
+	/// ditto
+	public @safe void opBinaryRight(string op : "-")(sul.enchantments.Enchantment ench) {
+		this.removeEnchantment(ench);
 	}
 
 	/**
@@ -1408,15 +2235,16 @@ abstract class Item {
 	 * assert(a != b);
 	 * 
 	 * b.customName = "beetroot";
-	 * a.enchant(Enchantments.PROTECTION, "IV");
-	 * b.enchant(Enchantments.PROTECTION, "IV");
+	 * a.enchant(Enchantments.protection, "IV");
+	 * b.enchant(Enchantments.protection, "IV");
 	 * assert(a == b);
 	 * ---
 	 */
-	public override @safe @nogc bool opEquals(Object o) {
+	public override bool opEquals(Object o) {
 		if(cast(Item)o) {
 			Item i = cast(Item)o;
-			return this.ids == i.ids && this.metas == i.metas && this.petags == i.petags && this.pctags == i.pctags;
+			//TODO compare enchantments and custom name directly instead of nbts
+			return this.ids == i.ids && this.metas == i.metas && this.customName == i.customName && this.enchantments == i.enchantments;
 		}
 		return false;
 	}
@@ -1426,17 +2254,17 @@ abstract class Item {
 	 * Example:
 	 * ---
 	 * Item item = new Items.Beetroot();
-	 * assert(item == Items.BEETROOT);
-	 * assert(item == [Items.BEETROOT_SOUP, Items.BEETROOT]);
+	 * assert(item == Items.beetroot);
+	 * assert(item == [Items.beetrootSoup, Items.beetroot]);
 	 * ---
 	 */
-	public @safe @nogc bool opEquals(string item) {
-		return item == this.name;
+	public @safe @nogc bool opEquals(item_t item) {
+		return item == this.index;
 	}
 
 	/// ditto
-	public @safe @nogc bool opEquals(string[] items) {
-		foreach(string item ; items) {
+	public @safe @nogc bool opEquals(item_t[] items) {
+		foreach(item ; items) {
 			if(this.opEquals(item)) return true;
 		}
 		return false;
@@ -1446,7 +2274,7 @@ abstract class Item {
 	 * Returns the item as string in format "name" or
 	 * "name:damage" for tools.
 	 */
-	public override @safe string toString() {
+	public override string toString() {
 		return this.name ~ (this.tool ? (":" ~ this.metas.pe.to!string) : "") ~ (this.customName != "" ? (" (\"" ~ this.customName ~ "\")") : "");
 	}
 
@@ -1470,260 +2298,43 @@ abstract class Item {
 
 }
 
+//TODO the translatable should affect the compound tag
 /*template Translatable(T:Item) {
 	alias Translatable = GenericTranslatable!("this.customName", T);
 }*/
 
-class SimpleItem(string ct_name, shortgroup ct_ids, shortgroup ct_metas, ubyte maxstack=64, E...) : Item
-	if(staticIndexOf!("crop", E) < 0 || (staticIndexOf!("crop", E) + 1 < E.length && is(typeof(E[staticIndexOf!("crop", E) + 1]) == BlockData))) {
+class SimpleItem(sul.items.Item si) : Item {
 
-	public @safe this(F...)(F args) {
+	alias sul = si;
+
+	private enum __ids = shortgroup(si.pocket ? si.pocket.id : 0, si.minecraft ? si.minecraft.id : 0);
+
+	private enum __metas = shortgroup(si.pocket ? si.pocket.meta : 0, si.minecraft ? si.minecraft.meta : 0);
+
+	public @safe this(E...)(E args) {
 		super(args);
+	}
+
+	public final override pure nothrow @property @safe @nogc item_t index() {
+		return si.index;
 	}
 
 	public final override pure nothrow @property @safe @nogc shortgroup ids() {
-		return ct_ids;
+		return __ids;
 	}
 
 	public override pure nothrow @property @safe @nogc shortgroup metas() {
-		return ct_metas;
+		return __metas;
 	}
 
 	public final override pure nothrow @property @safe @nogc string name() {
-		return ct_name;
+		return si.name;
 	}
 
 	public override pure nothrow @property @safe @nogc ubyte max() {
-		return maxstack;
-	}
-
-	public override @property @safe @nogc bool placeable() {
-		static if(staticIndexOf!("crop", E) >= 0) return true;
-		else return false;
-	}
-
-	public override @safe BlockData place(World world, BlockPosition position) {
-		static if(staticIndexOf!("crop", E) >= 0) {
-			Block block = world[position - [0, 1, 0]];
-			if(block == Blocks.FARMLAND) return E[staticIndexOf!("crop", E) + 1];
-		}
-		return Blocks.AIR;
-	}
-
-	alias petag = super.petag;
-
-	alias pctag = super.pctag;
-	
-	alias slot this;
-
-}
-
-class PlaceableItem(string name, shortgroup ids, shortgroup metas, BlockData blockdata, ubyte maxstack=64) : SimpleItem!(name, ids, metas, maxstack) {
-
-	public @safe this(F...)(F args) {
-		super(args);
-	}
-
-	public override @property @safe @nogc bool placeable() {
-		return true;
-	}
-
-	public override @property @safe BlockData place(World world, BlockPosition position) {
-		return blockdata;
+		return si.stack;
 	}
 	
 	alias slot this;
 
-}
-
-class ToolItem(string name, shortgroup ids, shortgroup ct_metas, ubyte type, ubyte material, ushort durability, uint attackstrength=1, E...) : SimpleItem!(name, ids, ct_metas, 1, E) {
-
-	protected ushort damage;
-
-	public @safe this(F...)(F args) {
-		static if(F.length > 0 && is(typeof(F[0]) : int)) {
-			super(args[1..$]);
-			this.damage = args[0] & ushort.max;
-		} else {
-			super(args);
-		}
-	}
-
-	public override pure nothrow @property @safe @nogc shortgroup metas() {
-		return shortgroup(this.damage, this.damage);
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte toolType() {
-		return type;
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte toolMaterial() {
-		return material;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool finished() {
-		return this.damage >= durability;
-	}
-
-	public final override pure nothrow @property @safe @nogc uint attack() {
-		return attackstrength;
-	}
-	
-	alias slot this;
-
-}
-
-class ConsumeableItem(string name, shortgroup ids, shortgroup metas, ubyte maxstack, EffectInfo[] effects, string residue="substract", E...) : SimpleItem!(name, ids, metas, maxstack, E) if(residue == "substract" || residue == "bowl" || residue == "bottle") {
-
-	public @safe this(F...)(F args) {
-		super(args);
-	}
-
-	public final override pure nothrow @property @safe @nogc bool consumeable() {
-		return true;
-	}
-
-	public override Item onConsumed(Player player) {
-		static if(effects.length > 0) {
-			foreach(EffectInfo effect ; effects) {
-				if(effect.probability >= 1 || player.world.random.probability(effect.probability)) {
-					player.addEffect(new Effect(effect.id, effect.duration, effect.level));
-				}
-			}
-		}
-		static if(residue == "substract") return null;
-		else static if(residue == "bottle") return player.world.items.get(Items.GLASS_BOTTLE);
-		else return player.world.items.get(Items.BOWL);
-	}
-	
-	alias slot this;
-
-}
-
-class FoodItem(string name, shortgroup ids, shortgroup metas, ubyte maxstack, uint ghunger, float gsaturation, EffectInfo[] effects=[], string residue="substract", E...) : ConsumeableItem!(name, ids, metas, maxstack, effects, residue, E) {
-
-	public @safe this(F...)(F args) {
-		super(args);
-	}
-
-	public static pure nothrow @property @safe @nogc uint hunger() { return ghunger; }
-	
-	public static pure nothrow @property @safe @nogc float saturation() { return gsaturation; }
-
-	public override Item onConsumed(Player player) {
-		player.hunger = player.hunger + ghunger;
-		player.saturate(gsaturation);
-		return super.onConsumed(player);
-	}
-	
-	alias slot this;
-
-}
-
-alias SimpleFoodItem(string name, shortgroup ids, uint ghunger, float gsaturation) = FoodItem!(name, ids, META!0, 64, ghunger, gsaturation);
-
-alias SoupItem(string name, shortgroup ids, shortgroup metas, uint ghunger, float gsaturation) = FoodItem!(name, ids, metas, 1, ghunger, gsaturation, [], "bowl");
-
-alias CropFood(string name, shortgroup ids, uint ghunger, float gsaturation, BlockData block) = FoodItem!(name, ids, META!0, 64, ghunger, gsaturation, [], "substract", "crop", block);
-
-class PotionItem(string name, shortgroup metas, EffectInfo eff) : ConsumeableItem!(name, ID!373, metas, 1, eff.id == 0 ? [] : [eff], "bottle") {
-
-	public @safe this(F...)(F args) {
-		super(args);
-	}
-
-	public static pure nothrow @property @safe @nogc EffectInfo effect() {
-		return eff;
-	}
-	
-	alias slot this;
-
-}
-
-
-abstract class IStorage {
-	
-	public @safe Item get(ushort damage);
-	
-}
-
-class Storage(O:Item, bool cwd) : IStorage {
-
-	public override @safe O get(ushort damage) {
-		static if(cwd) return new O(damage);
-		else return new O();
-	}
-	
-}
-
-final class ItemsStorage {
-	
-	protected IStorage[uint] pe_objects;
-	protected IStorage[uint] pc_objects;
-	protected IStorage[string] objects;
-	
-	public @safe ItemsStorage registerAll(C)() {
-		foreach(a ; __traits(allMembers, C)) {
-			static if(mixin("is(C." ~ a ~ " : Item)")) {
-				mixin("this.register!(C." ~ a ~ ")();");
-			}
-		}
-		return this;
-	}
-	
-	public @safe void register(O:Item)() if(__traits(compiles, new O())) {
-		O ins = new O();
-		this.register!O(ins.name, ins.ids, ins.metas);
-	}
-	
-	public @safe void register(O:Item)(string name, shortgroup ids, shortgroup metas) {
-		IStorage storage;
-		static if(__traits(compiles, new O(ushort.max))) {
-			storage = new Storage!(O, true)();
-		} else {
-			storage = new Storage!(O, false)();
-		}
-		this.pe_objects[(ids.pe << 16) | metas.pe] = storage;
-		this.pc_objects[(ids.pc << 16) | metas.pc] = storage;
-		this.objects[name] = storage;
-	}
-	
-	public @property @safe Item get(string name, ushort damage=0) {
-		return name in this.objects ? this.objects[name].get(damage) : null;
-	}
-	
-	public @property @safe Item peget(ushort id, ushort damage=0) {
-		return ((id << 16) | damage) in this.pe_objects ? this.pe_objects[(id << 16) | damage].get(damage) : ((id << 16) in this.pe_objects ? this.pe_objects[id << 16].get(damage) : null);
-	}
-	
-	public @property @safe Item pcget(ushort id, ushort damage=0) {
-		return ((id << 16) | damage) in this.pc_objects ? this.pc_objects[(id << 16) | damage].get(damage) : ((id << 16) in this.pc_objects ? this.pc_objects[id << 16].get(damage) : null);
-	}
-
-	public @safe bool has(string name) {
-		return name in this.objects ? true : false;
-	}
-	
-	public @property @safe string[] indexes() {
-		string[] ret;
-		foreach(string i, IStorage s; this.objects) {
-			ret ~= i;
-		}
-		return ret;
-	}
-	
-	public @property @safe ItemsStorage dup() {
-		ItemsStorage ret = new ItemsStorage();
-		ret.pe_objects = this.pe_objects;
-		ret.pc_objects = this.pc_objects;
-		ret.objects = this.objects;
-		return ret;
-	}
-	
-}
-
-public interface ItemsStorageHolder {
-	
-	public @property @safe @nogc ItemsStorage items();
-	
 }

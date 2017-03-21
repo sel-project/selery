@@ -16,11 +16,12 @@ module sel.session.http;
 
 import core.atomic : atomicOp;
 
-static import std.bitmanip;
+import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : time_t, dur;
 import std.file : exists, read;
 import std.json;
+import std.regex : ctRegex, replaceAll;
 import std.socket;
 import std.string;
 import std.system : Endian;
@@ -45,6 +46,7 @@ class HttpHandler : HandlerThread {
 	private shared WebResource icon;
 	private shared string info;
 	private shared WebResource status;
+	private shared WebResource stylesheet;
 	
 	private shared string* socialJson;
 
@@ -124,28 +126,28 @@ class HttpHandler : HandlerThread {
 		this.index.compress();
 		
 		// icon.png
-		if(exists(Paths.resources ~ "icon.png")) {
-			this.icon.uncompressed = cast(shared string)read(Paths.resources ~ "icon.png");
+		if(exists(Paths.resources ~ settings.icon)) {
+			this.icon.uncompressed = cast(shared string)read(Paths.resources ~ settings.icon);
 			this.icon.compress();
 		}
 		
 		// status.json
 		this.reloadWebStatus(settings);
+
+		// style.css
+		if(exists(Paths.res ~ "http/style.css")) {
+			this.stylesheet.uncompressed = (cast(string)read(Paths.res ~ "http/style.css")).replaceAll(ctRegex!`[\r\n\t]*`, "").replaceAll(ctRegex!`[ ]*([\{\:\,])[ ]*`, "$1");
+			this.stylesheet.compress();
+		}
 		
 	}
 	
 	public void reloadWebStatus(shared const Settings settings) {
-		ubyte[] status = new ubyte[8]; // online (uint-le), max (uint-le)
-		std.bitmanip.write!(uint, Endian.littleEndian)(status, server.onlinePlayers.to!uint, 0);
-		std.bitmanip.write!(uint, Endian.littleEndian)(status, server.maxPlayers, 4);
+		ubyte[] status = nativeToLittleEndian(server.onlinePlayers) ~ nativeToLittleEndian(server.maxPlayers);
 		static if(JSON_STATUS_SHOW_PLAYERS) {
 			foreach(player ; this.server.players) {
-				// id (uint-le)
-				// display name length (ushort-le)
-				// display name (ubyte[])
-				status ~= new ubyte[6];
-				std.bitmanip.write!(uint, Endian.littleEndian)(status, player.id, status.length - 6);
-				std.bitmanip.write!(ushort, Endian.littleEndian)(status, player.displayName.length.to!ushort, status.length - 2);
+				status ~= nativeToLittleEndian(player.id);
+				status ~= nativeToLittleEndian(player.displayName.length.to!ushort);
 				status ~= cast(ubyte[])player.displayName;
 			}
 		}
@@ -182,14 +184,12 @@ class HttpHandler : HandlerThread {
 					auto response = Response(200, "OK", ["Content-Type": "image/png"]);
 					return this.returnWebResource(this.icon, request, response);
 				} else {
-					return Response(301, "Moved Permanently", ["Location": "//i.imgur.com/4csCRoU.png"]);
+					return Response(301, "Moved Permanently", ["Location": "//i.imgur.com/uxvZbau.png"]);
 				}
-			case "index.html":
-				return Response(301, "Moved Permanently", ["Location": "/"]);
 			case "icon":
 				return Response(301, "Moved Permanently", ["Location": "/icon.png"]);
 			case Software.codenameEmoji:
-				return Response(418, "I'm an " ~ Software.codename.toLower, ["Content-Type": "text/html"], "<head><meta charset='UTF-8'/><style>span{font-size:128px}</style><script>function a(){document.body.innerHTML+='<span>" ~ Software.codenameEmoji ~ "</span>';setTimeout(a,Math.round(Math.random()*2500));}window.onload=a;</script></head>");
+				return Response(418, "I'm a " ~ Software.codename.toLower, ["Content-Type": "text/html"], "<head><meta charset='UTF-8'/><style>span{font-size:128px}</style><script>function a(){document.body.innerHTML+='<span>" ~ Software.codenameEmoji ~ "</span>';setTimeout(a,Math.round(Math.random()*2500));}window.onload=a;</script></head>");
 			case "software":
 				return Response(301, "Moved Permanently", ["Location": "//" ~ Software.website]);
 			case "website":
@@ -198,6 +198,8 @@ class HttpHandler : HandlerThread {
 				} else {
 					return this.returnWebError(404, "Not Found");
 				}
+			case "style.css":
+				return this.returnWebResource(this.stylesheet, request, Response(200, "OK", ["Content-Type": "text/css"]));
 			default:
 				if(request.path.startsWith("/player/") && request.path.endsWith(".json")) {
 					try {
@@ -207,8 +209,8 @@ class HttpHandler : HandlerThread {
 							json["name"] = JSONValue(player.username);
 							json["display"] = JSONValue(player.displayName);
 							json["version"] = JSONValue(player.game);
-							if(player.skin !is null) json["picture"] = JSONValue(player.skin.face);
-							json["world"] = JSONValue(["name": JSONValue(player.world), "dimension": JSONValue(player.dimension)]);
+							if(player.skin !is null) json["picture"] = JSONValue(player.skin.faceBase64);
+							json["world"] = JSONValue(["name": JSONValue(player.world.name), "dimension": JSONValue(player.dimension)]);
 							return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], JSONValue(json).toString());
 						}
 					} catch(Exception) {}
@@ -296,17 +298,17 @@ public struct Response {
 	
 	public string toString() {
 		return "HTTP/1.1 " ~ to!string(this.code) ~ " " ~ this.codeMessage ~ "\r\n" ~
-				"Server: SEL/1.0.0\r\n" ~
+				"Server: " ~ Software.display ~ "\r\n" ~
 				"Connection: close\r\n" ~
 				"Content-Length: " ~ to!string(this.content.length) ~ "\r\n" ~
-			(){
-				string ret = "";
-				foreach(string key, string value; headers) {
-					ret ~= key ~ ": " ~ value ~ "\r\n";
-				}
-				return ret;
-			}() ~
-			"\r\n" ~ this.content;
+				(){
+					string ret = "";
+					foreach(string key, string value; headers) {
+						ret ~= key ~ ": " ~ value ~ "\r\n";
+					}
+					return ret;
+				}() ~
+				"\r\n" ~ this.content;
 	}
 	
 }

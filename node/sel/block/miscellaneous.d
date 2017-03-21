@@ -14,18 +14,23 @@
  */
 module sel.block.miscellaneous;
 
-import sel.block.block : BlockData, Block, Blocks, SimpleBlock;
-import sel.block.flags;
+import sel.block.block : Block, Blocks, SimpleBlock;
 import sel.math.vector;
 import sel.world.world : World;
 
-class FireBlock(BlockData blockdata) : SimpleBlock!(blockdata, RANDOM_TICK, REPLACEABLE) {
+static import sul.blocks;
+
+class FireBlock(sul.blocks.Block sb) : SimpleBlock!(sb) {
+
+	public final override pure nothrow @property @safe @nogc bool doRandomTick() {
+		return true;
+	}
 
 	public override void onRandomTick(World world, BlockPosition position) {
 
 		// check for rain
 		if(world.downfall && this.seesSky(world, position)) {
-			world[position] = Blocks.AIR;
+			world[position] = Blocks.air;
 			return;
 		}
 
@@ -38,21 +43,21 @@ class FireBlock(BlockData blockdata) : SimpleBlock!(blockdata, RANDOM_TICK, REPL
 
 		if(burning is null) {
 			// extinguish
-			world[position] = Blocks.AIR;
+			world[position] = Blocks.air;
 		} else {
 			if(world.random.probability(.75)) {
 				// try to spread
 				foreach(BlockPosition pos ; [p - [0, 1, 0], p + [1, 0, 0], p + [0, 0, 1], p - [1, 0, 0], p + [0, 0, 1]]) {
 					Block b = world[pos];
-					if(b == Blocks.AIR) {
+					if(b == Blocks.air) {
 						world[p] = blockdata;
 						return;
 					}
 				}
 			}
 			// burn out
-			world[p] = Blocks.AIR;
-			world[position] = Blocks.AIR;
+			world[p] = Blocks.air;
+			world[position] = Blocks.air;
 		}
 
 	}

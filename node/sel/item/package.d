@@ -18,4 +18,4 @@ module sel.item;
 public import sel.item.inventory : Inventory;
 public import sel.item.item : Items, Item;
 public import sel.item.slot : Slot;
-public import sel.item.tool : Durability, Tool, Armor;
+public import sel.item.tool : Durability, Tools, Armor;

@@ -29,23 +29,23 @@ import sel.event.world.player : PlayerEvent;
 import sel.item.enchanting;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
-import sel.item.tool : Tool;
+import sel.item.tool : Tools;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.world.world : World;
 
 private enum Modifiers : size_t {
 
-	NONE = 0,
+	none = 0,
 
-	RESISTANCE = 1 << 0,
-	FALLING = 1 << 1,
-	ARMOR = 1 << 2,
-	FIRE = 1 << 3,
-	BLAST = 1 << 4,
-	PROJECTILE = 1 << 5,
+	resistance = 1 << 0,
+	falling = 1 << 1,
+	armor = 1 << 2,
+	fire = 1 << 3,
+	blast = 1 << 4,
+	projectile = 1 << 5,
 	
-	ALL = size_t.max
+	all = size_t.max
 
 }
 
@@ -88,7 +88,7 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 		
 		protected @safe void calculateDamage() {
 			
-			static if(modifiers != Modifiers.NONE) {
+			static if(modifiers != Modifiers.none) {
 			
 				float damage = this.originalDamage;
 				
@@ -96,19 +96,19 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 				
 					Living victim = cast(Living)this.entity;
 					
-					static if(modifiers & Modifiers.RESISTANCE) {
-						if(victim.hasEffect(Effects.RESISTANCE)) {
-							damage /= 1.2 * victim.getEffect(Effects.RESISTANCE).levelFromOne;
+					static if(modifiers & Modifiers.resistance) {
+						if(Effect* resistance = (Effects.resistance in victim)) {
+							damage /= 1.2 * (*resistance).levelFromOne;
 						}
 					}
 					
-					static if(modifiers & Modifiers.FALLING) {
-						if(victim.hasEffect(Effects.JUMP)) {
-							damage -= victim.getEffect(Effects.JUMP).levelFromOne;
+					static if(modifiers & Modifiers.falling) {
+						if(Effect* jumpBoost = (Effects.jumpBoost in victim)) {
+							damage -= (*jumpBoost).levelFromOne;
 						}
 					}
 					
-					static if(modifiers & Modifiers.ARMOR) {
+					static if(modifiers & Modifiers.armor) {
 						if(cast(Human)victim) {
 							Human human = cast(Human)victim;
 							
@@ -118,28 +118,30 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 							float epf = 0f;
 							foreach(size_t i, Slot slot; human.inventory.armor) {
 								if(!slot.empty) {
-									if(slot.item.hasEnchantment(Enchantments.PROTECTION)) {
-										epf += slot.item.getEnchantmentLevel(Enchantments.PROTECTION);
+									if(Enchantment* p = (Enchantments.protection in slot.item)) {
+										epf += (*p).level;
 									}
-									static if(modifiers & Modifiers.FIRE) {
-										if(slot.item.hasEnchantment(Enchantments.FIRE_PROTECTION)) {
-											epf += slot.item.getEnchantmentLevel(Enchantments.FIRE_PROTECTION) * 2;
+									static if(modifiers & Modifiers.fire) {
+										if(Enchantment* fireProtection = (Enchantments.fireProtection in slot.item)) {
+											epf += (*fireProtection).level * 2;
 										}
 									}
-									static if(modifiers & Modifiers.BLAST) {
-										if(slot.item.hasEnchantment(Enchantments.BLAST_PROTECTION)) {
-											epf += slot.item.getEnchantmentLevel(Enchantments.BLAST_PROTECTION) * 2;
+									static if(modifiers & Modifiers.blast) {
+										if(Enchantment* blastProtection = (Enchantments.blastProtection in slot.item)) {
+											epf += (*blastProtection).level * 2;
 										}
 									}
-									static if(modifiers & Modifiers.PROJECTILE) {
-										if(slot.item.hasEnchantment(Enchantments.PROJECTILE_PROTECTION)) {
-											epf += slot.item.getEnchantmentLevel(Enchantments.PROJECTILE_PROTECTION) * 2;
+									static if(modifiers & Modifiers.projectile) {
+										if(Enchantment* projectileProtection = (Enchantments.projectileProtection in slot.item)) {
+											epf += (*projectileProtection).level * 2;
 										}
 									}
-									static if(modifiers & Modifiers.FALLING) {
+									static if(modifiers & Modifiers.falling) {
 										// boots only
-										if(i == 3 && slot.item.hasEnchantment(Enchantments.FEATHER_FALLING)) {
-											epf += slot.item.getEnchantmentLevel(Enchantments.FEATHER_FALLING) * 3;
+										if(i == 3) {
+											if(Enchantment* featherFalling = (Enchantments.featherFalling in slot.item)) {
+												epf += (*featherFalling).level * 3;
+											}
 										}
 									}
 									if(epf >= 20) {
@@ -251,7 +253,7 @@ interface EntityDamageByEntityEvent : EntityDamageEvent {
 
 class EntityDamageByVoidEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 
 	protected @safe this() {}
 
@@ -267,7 +269,7 @@ class EntityDamageByVoidEvent : EntityDamageEvent {
 
 final class EntityPushedIntoVoidEvent : EntityDamageByVoidEvent, EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.NONE);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.none);
 	
 	public @safe this(Entity victim, Entity damager) {
 		super();
@@ -282,10 +284,10 @@ final class EntityPushedIntoVoidEvent : EntityDamageByVoidEvent, EntityDamageByE
 
 class EntityDamageByCommandEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 0xFFFF, "{death.attack.generic}");
+		this.entityDamage(entity, 0xDEAD, "{death.attack.generic}");
 	}
 
 	public final override pure nothrow @property @safe @nogc bool imminent() {
@@ -298,7 +300,7 @@ class EntityDamageByCommandEvent : EntityDamageEvent {
 
 class EntityDamageByEntityAttackEvent : EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.RESISTANCE | Modifiers.ARMOR);
+	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
 		this.entityDamageByEntity(victim, damager, damage, "{death.attack.player}");
@@ -311,7 +313,7 @@ class EntityDamageByEntityAttackEvent : EntityDamageByEntityEvent {
 
 }
 
-deprecated alias EntityAttackedByEntityEvent = EntityDamageByEntityAttackEvent;
+alias EntityAttackedByEntityEvent = EntityDamageByEntityAttackEvent;
 
 class EntityDamageByPlayerAttackEvent : EntityDamageByEntityAttackEvent, PlayerEvent {
 	
@@ -323,26 +325,26 @@ class EntityDamageByPlayerAttackEvent : EntityDamageByEntityAttackEvent, PlayerE
 			this.n_item = damager.inventory.held.item;
 			// damage from weapon and weapon's enchantments
 			damage = this.item.attack;
-			if(this.item.hasEnchantment(Enchantments.SHARPNESS)) damage *= 1.2f * this.item.getEnchantmentLevel(Enchantments.SHARPNESS);
-			if(this.item.hasEnchantment(Enchantments.BANE_OF_ARTHROPODS) && cast(Arthropods)this.victim) damage *= 2.5f * this.item.getEnchantmentLevel(Enchantments.BANE_OF_ARTHROPODS);
-			if(this.item.hasEnchantment(Enchantments.SMITE) && cast(Undead)this.victim) damage *= 2.5f * this.item.getEnchantmentLevel(Enchantments.SMITE);
+			if(Enchantment* sharpness = (Enchantments.sharpness in this.item)) damage *= 1.2f * (*sharpness).level;
+			if(cast(Arthropods)this.victim){ if(Enchantment* baneOfArthropods = (Enchantments.baneOfArthropods in this.item)) damage *= 2.5f * (*baneOfArthropods).level; }
+			if(cast(Undead)this.victim){ if(Enchantment* smite = (Enchantments.smite in this.item)) damage *= 2.5f * (*smite).level; }
 		}
 		// effects
-		if(damager.hasEffect(Effects.STRENGTH)) damage *= 1.3f * damager.getEffect(Effects.STRENGTH).levelFromOne;
-		if(damager.hasEffect(Effects.WEAKNESS)) damage *= .5f * damager.getEffect(Effects.WEAKNESS).levelFromOne;
+		if(Effect* strength = (Effects.strength in damager)) damage *= 1.3f * (*strength).levelFromOne;
+		if(Effect* weakness = (Effects.weakness in damager)) damage *= .5f * (*weakness).levelFromOne;
 		// critical
-		this.n_critical = damager.falling && !damager.sprinting && damager.vehicle is null && !damager.hasEffect(Effects.BLINDNESS);
+		this.n_critical = damager.falling && !damager.sprinting && damager.vehicle is null && Effects.blindness !in damager;
 		// calculate damage
 		super(victim, damager, damage);
 		// more enchantments
 		if(this.item !is null) {
 			//TODO fire ench
 			// more knockback!
-			if(this.item.toolType == Tool.SWORD || this.item.toolType == Tool.AXE) {
+			if(this.item.toolType == Tools.sword || this.item.toolType == Tools.axe) {
 				this.knockback_modifier = .52;
 			}
-			if(this.item.hasEnchantment(Enchantments.KNOCKBACK)) {
-				this.knockback_modifier += .6 * this.item.getEnchantmentLevel(Enchantments.KNOCKBACK);
+			if(Enchantment* knockback = (Enchantments.knockback in this.item)) {
+				this.knockback_modifier += .6 * (*knockback).level;
 			}
 		}
 		// add weapon's name to args
@@ -366,7 +368,7 @@ class EntityDamageByPlayerAttackEvent : EntityDamageByEntityAttackEvent, PlayerE
 
 }
 
-deprecated alias EntityAttackedByPlayerEvent = EntityDamageByPlayerAttackEvent;
+alias EntityAttackedByPlayerEvent = EntityDamageByPlayerAttackEvent;
 
 final class PlayerDamageByPlayerAttackEvent : EntityDamageByPlayerAttackEvent {
 
@@ -380,7 +382,7 @@ final class PlayerDamageByPlayerAttackEvent : EntityDamageByPlayerAttackEvent {
 
 }
 
-deprecated alias PlayerAttackedByPlayerEvent = PlayerDamageByPlayerAttackEvent;
+alias PlayerAttackedByPlayerEvent = PlayerDamageByPlayerAttackEvent;
 
 // projectile
 /*
@@ -397,7 +399,7 @@ class EntityDamageWithFireballEvent : EntityDamageWithProjectileEvent {}*/
 
 final class EntitySuffocationEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
 		this.entityDamage(entity, 1, "{death.attack.inWall}");
@@ -409,7 +411,7 @@ final class EntitySuffocationEvent : EntityDamageEvent {
 
 class EntityDrowningEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 
 	protected @safe @nogc this() {}
 	
@@ -421,7 +423,7 @@ class EntityDrowningEvent : EntityDamageEvent {
 
 final class EntityDrowningEscapingEntityEvent : EntityDrowningEvent {
 	
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.NONE);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.none);
 	
 	public @safe this(Entity victim, Entity damager) {
 		this.entityDamageByEntity(victim, damager, 1, "{death.attack.drown.player}");
@@ -433,7 +435,7 @@ final class EntityDrowningEscapingEntityEvent : EntityDrowningEvent {
 
 class EntityDamageByExplosionEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.RESISTANCE | Modifiers.ARMOR | Modifiers.BLAST);
+	mixin EntityDamageEvent.Implementation!(Modifiers.resistance | Modifiers.armor | Modifiers.blast);
 
 	protected @safe @nogc this() {}
 	
@@ -445,7 +447,7 @@ class EntityDamageByExplosionEvent : EntityDamageEvent {
 
 class EntityDamageByEntityExplosionEvent : EntityDamageByExplosionEvent, EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.RESISTANCE | Modifiers.ARMOR | Modifiers.BLAST);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.resistance | Modifiers.armor | Modifiers.blast);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
 		this.entityDamageByEntity(victim, damager, damage, "{death.attack.explosion.player}");
@@ -465,7 +467,7 @@ interface EntityDamageByHeatEvent : EntityDamageEvent {
 
 	public static mixin template Implementation() {
 	
-		mixin EntityDamageEvent.Implementation!(Modifiers.RESISTANCE | Modifiers.ARMOR | Modifiers.FIRE);
+		mixin EntityDamageEvent.Implementation!(Modifiers.resistance | Modifiers.armor | Modifiers.fire);
 	
 	}
 
@@ -475,7 +477,7 @@ interface EntityDamageByHeatEscapingEntityEvent : EntityDamageByHeatEvent, Entit
 
 	public static mixin template Implementation() {
 	
-		mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.RESISTANCE | Modifiers.ARMOR | Modifiers.FIRE);
+		mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.resistance | Modifiers.armor | Modifiers.fire);
 
 		mixin Cancellable.FinalImplementation;
 	
@@ -528,32 +530,54 @@ final class EntityDamageByFireEscapingEntityEvent : EntityDamageByFireEvent, Ent
 }
 
 class EntityDamageByLavaEvent : EntityDamageByHeatEvent {
-
+	
 	mixin EntityDamageByHeatEvent.Implementation;
-
+	
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
 		this.entityDamage(entity, 4, "{death.attack.lava}");
 	}
-
+	
 }
 
 final class EntityDamageByLavaEscapingEntityEvent : EntityDamageByLavaEvent, EntityDamageByHeatEscapingEntityEvent {
-
+	
 	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
 	
 	public @safe this(Entity victim, Entity damager) {
 		this.entityDamageByEntity(victim, damager, 4, "{death.attack.lava.player}");
 	}
+	
+}
 
+class EntityDamageByMagmaBlockEvent : EntityDamageByHeatEvent {
+	
+	mixin EntityDamageByHeatEvent.Implementation;
+	
+	protected @safe @nogc this() {}
+	
+	public @safe this(Entity entity) {
+		this.entityDamage(entity, 4, "{death.attack.magmaBlock}");
+	}
+	
+}
+
+final class EntityDamageByMagmaBlockEscapingEntityEvent : EntityDamageByMagmaBlockEvent, EntityDamageByHeatEscapingEntityEvent {
+	
+	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
+	
+	public @safe this(Entity victim, Entity damager) {
+		this.entityDamageByEntity(victim, damager, 4, "{death.attack.magmaBlock.player}");
+	}
+	
 }
 
 // magic
 
 class EntityDamageByMagicEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 
 	protected @safe @nogc this() {}
 	
@@ -565,7 +589,7 @@ class EntityDamageByMagicEvent : EntityDamageEvent {
 
 final class EntityDamageWithMagicEvent : EntityDamageByMagicEvent, EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.NONE);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.none);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
 		this.entityDamageByEntity(victim, damager, damage, "{death.attack.indirectMagic}");
@@ -579,7 +603,7 @@ final class EntityDamageWithMagicEvent : EntityDamageByMagicEvent, EntityDamageB
 
 final class EntityDamageByPoisonEvent : EntityDamageEvent {
 	
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
 		this.entityDamage(entity, 1, ""); // no message (can't die poisoned)
@@ -591,7 +615,7 @@ final class EntityDamageByPoisonEvent : EntityDamageEvent {
 
 final class EntityDamageByWitherEffectEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
 		this.entityDamage(entity, 1, "{death.attack.wither}");
@@ -603,7 +627,7 @@ final class EntityDamageByWitherEffectEvent : EntityDamageEvent {
 
 final class EntityStruckByLightningEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.RESISTANCE | Modifiers.ARMOR);
+	mixin EntityDamageEvent.Implementation!(Modifiers.resistance | Modifiers.armor);
 	
 	private Lightning n_lightning;
 	
@@ -626,7 +650,7 @@ final class EntityStruckByLightningEvent : EntityDamageEvent {
 
 final class EntityDamageByThornsEvent : EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.RESISTANCE | Modifiers.ARMOR);
+	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
 		this.entityDamageByEntity(victim, damager, damage, "{death.attack.thorns}");
@@ -638,7 +662,7 @@ final class EntityDamageByThornsEvent : EntityDamageByEntityEvent {
 
 final class EntityStarveEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.NONE);
+	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
 		this.entityDamage(entity, 1, "{death.attack.starve}");
@@ -650,7 +674,7 @@ final class EntityStarveEvent : EntityDamageEvent {
 
 class EntitySquashedByFallingBlockEvent : EntityDamageEvent {
 	
-	mixin EntityDamageEvent.Implementation!(Modifiers.ARMOR);
+	mixin EntityDamageEvent.Implementation!(Modifiers.armor);
 	
 	private Block n_block;
 	
@@ -672,7 +696,7 @@ class EntitySquashedByFallingBlockEvent : EntityDamageEvent {
 
 class EntityDamageByCactusEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.RESISTANCE | Modifiers.ARMOR);
+	mixin EntityDamageEvent.Implementation!(Modifiers.resistance | Modifiers.armor);
 
 	protected @safe @nogc this() {}
 	
@@ -684,7 +708,7 @@ class EntityDamageByCactusEvent : EntityDamageEvent {
 
 final class EntityDamageByCactusEscapingEntityEvent : EntityDamageByCactusEvent, EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.RESISTANCE | Modifiers.ARMOR);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager) {
 		this.entityDamageByEntity(victim, damager, 1, "{death.attack.cactus.player}");
@@ -698,7 +722,7 @@ final class EntityDamageByCactusEscapingEntityEvent : EntityDamageByCactusEvent,
 
 class EntityFallDamageEvent : EntityDamageEvent {
 
-	mixin EntityDamageEvent.Implementation!(Modifiers.FALLING);
+	mixin EntityDamageEvent.Implementation!(Modifiers.falling);
 
 	protected @safe @nogc this() {}
 	
@@ -710,7 +734,7 @@ class EntityFallDamageEvent : EntityDamageEvent {
 
 final class EntityDoomedToFallEvent : EntityFallDamageEvent, EntityDamageByEntityEvent {
 
-	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.FALLING);
+	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.falling);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
 		this.entityDamageByEntity(victim, damager, damage, "{death.fell.assist}");
@@ -719,6 +743,7 @@ final class EntityDoomedToFallEvent : EntityFallDamageEvent, EntityDamageByEntit
 	mixin Cancellable.FinalImplementation;
 
 }
+
 /+
 /**
  * Example:

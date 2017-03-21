@@ -23,7 +23,7 @@ import sel.player : Player;
 import sel.block;
 import sel.entity.effect;
 import sel.entity.entity : Entity, Entities;
-import sel.entity.living : Living, Damage;
+import sel.entity.living : Living;
 import sel.entity.metadata;
 import sel.event.world;
 import sel.math.vector;
@@ -62,6 +62,9 @@ abstract class Projectile : Entity {
 		// TODO move in Entity and add bool doMotion
 
 		if(!this.motionless) {
+
+			// add gravity
+
 			
 			// update the motion
 			if(this.acceleration != 0) this.motion = this.motion - [0, this.acceleration, 0];
@@ -93,7 +96,7 @@ abstract class Projectile : Entity {
 					foreach(int z ; min.z.blockInto..max.z.blockInto+1) {
 						BlockPosition position = BlockPosition(x, y, z);
 						Block block = this.world[position];
-						if(!block.nobox) {
+						if(block.hasBoundingBox) {
 							block.box.update(position.entityPosition);
 							if(block.box.intersects(this.n_box) && this.onCollide(block, position, 0)) goto BreakCycle;
 						}
@@ -491,19 +494,19 @@ class FallingBlock : Projectile {
 	public static immutable float DRAG = .02f;
 	public static immutable float TERMINAL_VELOCITY = /*1.96f*/10f;
 
-	private BlockData block;
+	private Block block;
 
-	public this(World world, BlockData block, BlockPosition position) {
+	public this(World world, Block block, BlockPosition position) {
 		super(world, position.entityPosition + [.5, .0001, .5], EntityPosition(0, 0, 0));
 		this.setSize(WIDTH, HEIGHT);
 		this.n_eye_height = HEIGHT / 2f;
 		this.acceleration = ACCELERATION;
 		this.drag = DRAG;
 		this.terminal_velocity = TERMINAL_VELOCITY;
+		this.setSize(.98, .98);
 		this.block = block;
-		this.metadata.set!"variant"(this.block.ids.pe | this.block.metas.pe << 8);
-		//this.n_pc_metadata[PC_DATA_BLOCK_INFO] = MetadataType(longpos(position), PC, PC_POSITION);
-		this.n_data = this.block.ids.pc | this.block.metas.pc << 12;
+		this.metadata.set!"variant"(block.ids.pe | block.metas.pe << 8);
+		this.n_data = block.ids.pc | block.metas.pc << 12;
 	}
 
 	public override pure nothrow @property @safe @nogc bytegroup type() {
@@ -517,8 +520,8 @@ class FallingBlock : Projectile {
 	public override bool onCollide(Block block, BlockPosition position, uint face) {
 		//TODO check the face
 		BlockPosition pos = position + [0, 1, 0];
-		if(this.world[pos] == Blocks.AIR) {
-			this.world[pos] = this.block;
+		if(this.world[pos] == Blocks.air) {
+			this.world[pos] = &this.block;
 			this.despawn();
 			return true;
 		}

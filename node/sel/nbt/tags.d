@@ -47,12 +47,15 @@ import std.algorithm : canFind;
 import std.conv : to;
 import std.string : replace, toLower, indexOf;
 import std.system : Endian;
-import std.traits : isAbstractClass;
+import std.traits : isAbstractClass, isNumeric;
 import std.typetuple : TypeTuple;
 
 import sel.util.buffers;
 
-/// NBT's ids, as unsigned bytes, used by for client-server and generic io communication.
+/**
+ * NBT's ids, as unsigned bytes, used by for client-server
+ * and generic io communication.
+ */
 enum NBT : ubyte {
 	
 	END = 0,
@@ -695,6 +698,20 @@ class Compound : SimpleTag!(NamedTag[string], NBT.COMPOUND, "Compound") {
 	public @safe NamedTag opIndex(string index) {
 		return this.value[index];
 	}
+
+	/**
+	 * Gets a pointer to the element at the given index.
+	 * Example:
+	 * ---
+	 * auto test = "test" in compound;
+	 * if(test && cast(String)*test) {
+	 *    assert(*test == "test");
+	 * }
+	 * ---
+	 */
+	public @safe NamedTag* opBinaryRight(string op : "in")(string index) {
+		return index in this.value;
+	}
 	
 	/**
 	 * Gets the element at the given index, casting it to T.
@@ -731,14 +748,28 @@ class Compound : SimpleTag!(NamedTag[string], NBT.COMPOUND, "Compound") {
 	 * name will be changed to the given index's one.
 	 * Example:
 	 * ---
-	 * auto str = new String("test", "test");
-	 * new Compound("")["auto"] = str;
-	 * assert(str.name == "auto");
+	 * compound["string"] = new String("test", "test");
+	 * assert(compound["string"].name == "string");
+	 * compound["int"] = 12;
+	 * compound["string"] = "Another string";
 	 * ---
 	 */
-	public @safe void opIndexAssign(NamedTag value, string index) {
-		value.n_name = index;
-		this.value[index] = value;
+	public @safe void opIndexAssign(T)(T value, string index) if(is(T : NamedTag) || isNumeric!T || is(T == string) || is(T == ubyte[]) || is(T == int[])) {
+		static if(is(T : NamedTag)) {
+			value.n_name = index;
+			this.value[index] = value;
+		} else {
+			static if(is(T == bool) || is(T == byte) || is(T == ubyte)) auto v = new Byte(index, value);
+			else static if(is(T == short) || is(T == ushort)) auto v = new Short(index, value);
+			else static if(is(T == int) || is(T == uint)) auto v = new Int(index, value);
+			else static if(is(T == long) || is(T == ulong)) auto v = new Long(index, value);
+			else static if(is(T == float)) auto v = new Float(index, value);
+			else static if(is(T == double)) auto v = new Double(index, value);
+			else static if(is(T == string)) auto v = new String(index, value);
+			else static if(is(T == ubyte[])) auto v = new ByteArray(index, value);
+			else auto v = new IntArray(index, value);
+			this.value[index] = v;
+		}
 	}
 	
 	/**

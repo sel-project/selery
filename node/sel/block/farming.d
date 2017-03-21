@@ -19,16 +19,27 @@ import std.conv : to;
 import std.string : split;
 import std.traits : isNumeric;
 
+import common.sel;
+
 import sel.player : Player;
-import sel.block.block : BlockData, BlockDataArray, Blocks, Block, SimpleBlock, MineableBlock, Update;
-import sel.block.flags;
-import sel.block.solid : Facing;
-import sel.item.item : Item;
+import sel.block.block : Blocks, Block, SimpleBlock, Update, Instance;
+import sel.block.solid;
+import sel.entity.entity : Entity;
+import sel.item.item : Item, Items;
 import sel.item.slot : Slot;
+import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition;
 import sel.world.world : World;
 
-class FertileTerrain(BlockData blockdata, bool hydrated, E...) : MineableBlock!(blockdata, RANDOM_TICK, E) {
+static import sul.blocks;
+
+class FertileTerrain(sul.blocks.Block sb, bool hydrated, block_t wetter, block_t dryer) : MineableBlock!(sb, MiningTool(false, Tools.pickaxe, Tools.wood), Drop(Items.dirt, 1)) {
+
+	mixin Instance;
+
+	public final override pure nothrow @property @safe @nogc bool doRandomTick() {
+		return true;
+	}
 
 	/*public override void place(ref World world, BlockPosition position) {
 		super.place(world, position);
@@ -36,9 +47,9 @@ class FertileTerrain(BlockData blockdata, bool hydrated, E...) : MineableBlock!(
 			this.init = true;
 			this.section = this.world[(this.position.x - 4)..(this.position.x + 5), this.position.y..min(this.position.y+1, $), (this.position.z - 4)..(this.position.z + 5)];
 		}
-	}
+	}*/
 
-	public override void onRandomTick() {
+	/*public override void onRandomTick() {
 		static if(hydrated) {
 			//check if the water still there
 			Block b;
@@ -58,7 +69,7 @@ class FertileTerrain(BlockData blockdata, bool hydrated, E...) : MineableBlock!(
 				this = Blocks.DIRT;
 			}
 		}
-	}
+	}*/
 
 	/**
 	 * Searches for water in the section.
@@ -77,136 +88,206 @@ class FertileTerrain(BlockData blockdata, bool hydrated, E...) : MineableBlock!(
 			}
 		}
 		return false;
-	}
+	}*/
 
-	public override void onUpdate(Update update) {
-		if(update == Update.NEAREST_CHANGED && !this.breathe(false)) {
-			this = Blocks.DIRT;
-		}
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		Block up = world[position + [0, 1, 0]];
+		if(up.solid) world[position] = Blocks.dirt;
 		//TODO moved by piston
 		//TODO stepped
-	}*/
+	}
 
 }
 
-class CropBlock(BlockData blockdata, BlockData next, string[string] dropped_items, alias grow_to=null,) : SimpleBlock!(blockdata, SHAPELESS, INSTANT_BREAKING) if(isValidDrop!dropped_items && (is(typeof(grow_to) == typeof(null)) || is(typeof(grow_to) == BlockData) || is(typeof(grow_to) == BlockDataArray))) {
+class CropBlock(sul.blocks.Block sb, block_t next, Drop[] drops, alias growTo=null) : MineableBlock!(sb, MiningTool.init, drops) {
 
-	private byte[string] min, max;
+	mixin Instance;
 
-	public this() {
-		static if(dropped_items !is null) {
-			this.min = minDrop!dropped_items;
-			this.max = maxDrop!dropped_items;
-		}
-	}
+	private enum mayGrow = is(typeof(growTo) == ushort) || is(typeof(growTo) == ushort[]);
 
-	public override Slot[] drops(World world, Player player, Item item) {
-		Slot[] items;
-		foreach(string item, byte m; this.min) {
-			if(world.items.has(item)) {
-				//TODO apply fortune enchantment?
-				byte amount = m == this.max[item] ? m : world.random.range!byte(m, this.max[item]);
-				if(amount > 0) {
-					foreach(uint i ; 0..amount) {
-						items ~= Slot(world.items.get(item), 1);
-					}
-				}
-			}
-		}
-		return items;
-	}
-
-	public override pure nothrow @property @safe @nogc bool doRandomTick() {
-		static if(next != Blocks.AIR || !is(typeof(grow_to) == typeof(null))) {
+	static if(next != 0 || mayGrow) {
+		public override pure nothrow @property @safe @nogc bool doRandomTick() {
 			return true;
-		} else {
-			return false;
 		}
 	}
 
 	public override void onRandomTick(World world, BlockPosition position) {
-		if(world.random.probability(world[position - [0, 1, 0]] != Blocks.HYDRATED_FARMLAND ?/* .125 : .25*/.25 : .5)) {
+		if(world.random.probability(world[position - [0, 1, 0]] != Blocks.farmland7 ? .125 : .25)) {
 			this.grow(world, position);
 		}
 	}
 
 	public void grow(World world, BlockPosition position) {
-		static if(next != Blocks.AIR) {
+		static if(next != 0) {
 			world[position] = next;
-		} else static if(!is(typeof(grow_to) == typeof(null))) {
-			if(this.checkFruit(world, position)) {
-				//search for a place to grow
-				BlockPosition[] positions = [position + [1, 0, 0], position + [0, 0, 1], position - [1, 0, 0], position - [0, 0, 1]];
-				world.random.shuffle(positions);
-				foreach(BlockPosition pos ; positions) {
-					if(world[pos] == Blocks.AIR) {
-						Block s = world[pos - [0, 1, 0]];
-						if(s == ([Blocks.DIRT, Blocks.GRASS, Blocks.PODZOL] ~ Blocks.FARMLAND)) {
-							static if(is(typeof(grow_to) == BlockDataArray)) {
-								ubyte face;
-								if(position.x == pos.x) {
-									if(position.z > pos.z) face = Facing.NORTH;
-									else face = Facing.SOUTH;
-								} else {
-									if(position.x > pos.x) face = Facing.WEST;
-									else face = Facing.EAST;
-								}
-								world[pos] = grow_to[face];
+		} else static if(mayGrow) {
+			//search for a place to grow
+			BlockPosition[] positions = [position + [1, 0, 0], position + [0, 0, 1], position - [1, 0, 0], position - [0, 0, 1]];
+			world.random.shuffle(positions);
+			foreach(BlockPosition pos ; positions) {
+				if(world[pos] == Blocks.air) {
+					Block s = world[pos - [0, 1, 0]];
+					if(s == [Blocks.grass, Blocks.dirt, Blocks.coarseDirt, Blocks.podzol] ~ Blocks.farmland) {
+						static if(is(typeof(growTo) == ushort[])) {
+							ubyte face;
+							if(position.x == pos.x) {
+								if(position.z > pos.z) face = Facing.north;
+								else face = Facing.south;
 							} else {
-								world[pos] = grow_to;
+								if(position.x > pos.x) face = Facing.west;
+								else face = Facing.east;
 							}
-							break;
+							world[pos] = growTo[face];
+						} else {
+							world[pos] = growTo;
 						}
+						break;
 					}
 				}
 			}
 		}
 	}
 
-	private bool checkFruit(World world, BlockPosition position) {
-		static if(!(is(typeof(grow_to) == typeof(null)))) {
-			foreach(BlockPosition pos ; [position + [0, 0, 1], position - [0, 0, 1], position + [1, 0, 0], position - [1, 0, 0]]) {
-				if(world[pos] == grow_to) return false;
-			}
-		}
-		return true;
-	}
-
-	public override void onUpdate(World world, BlockPosition position, Update update) {
-		if(update == Update.PLACED || update == Update.NEAREST_CHANGED) {
-			if(world[position - [0, 1, 0]] != Blocks.FARMLAND) {
-				//end my existance
-				world.drop(this, position);
-				world[position] = Blocks.AIR;
-			}
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		if(world[position - [0, 1, 0]] != Blocks.farmland) {
+			world.drop(this, position);
+			world[position] = Blocks.air;
 		}
 	}
 
 }
 
-private bool isValidDrop(string[string] drops)() {
-	if(drops is null) return true;
-	foreach(string n, string drop; drops) {
-		if(drop.split("..").length > 2) return false;
-		/*if(drop.split("..").length == 1 && !drop.isNumeric) return false;
-		if(!drop.split("..")[0].isNumeric || !drop.split("..").isNumeric) return false;*/
+class ChanceCropBlock(sul.blocks.Block sb, ushort next, Drop[] drops, ubyte a, ubyte b) : CropBlock!(sb, next, drops, null) {
+
+	mixin Instance;
+
+	public override void onRandomTick(World world, BlockPosition position) {
+		if(world.random.next(b) < a) {
+			super.onRandomTick(world, position);
+		}
 	}
-	return true;
+
 }
 
-alias minDrop(string[string] drops) = getDrops!(0, drops);
+class StemBlock(sul.blocks.Block sb, block_t next, item_t drop, alias growTo=null) : CropBlock!(sb, next, [], growTo) {
 
-alias maxDrop(string[string] drops) = getDrops!(1, drops);
+	mixin Instance;
 
-private byte[string] getDrops(uint index, string[string] drops)() {
-	byte[string] ret;
-	if(drops is null) return ret;
-	foreach(string i, string d; drops) {
-		if(d.split("..").length == 1) {
-			ret[i] = to!byte(d);
+	public override Slot[] drops(World world, Player player, Item item) {
+		immutable amount = (){
+			immutable r = world.random.next(0, 125);
+			if(r < 100) return 0;
+			else if(r < 120) return 1;
+			else if(r < 124) return 2;
+			else return 3;
+		}();
+		if(amount) {
+			auto func = world.items.getConstructor(drop);
+			if(func !is null) {
+				Slot[] ret;
+				foreach(i ; 0..amount) {
+					ret ~= Slot(func(0), 1);
+				}
+				return ret;
+			}
+		}
+		return [];
+	}
+
+}
+
+class GrowingBlock(sul.blocks.Block sb, block_t next, block_t[] compare, size_t height, bool waterNeeded, block_t[] requiredBlock, Drop drops) : MineableBlock!(sb, MiningTool.init, drops) {
+
+	mixin Instance;
+
+	public override void onRandomTick(World world, BlockPosition position) {
+		//TODO check if there's water around
+		static if(next == 0) {
+			@property bool tooHigh() {
+				size_t h = 1;
+				auto pos = position - [0, 1, 0];
+				while(world[pos] == compare && ++h < height) pos -= [0, 1, 0];
+				return h >= height;
+			}
+			auto up = position + [0, 1, 0];
+			if(world[up] == Blocks.air && !tooHigh) {
+				world[up] = compare[0];
+			}
 		} else {
-			ret[i] = to!byte(d.split("..")[index]);
+			world[position] = next;
 		}
 	}
-	return ret;
+
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		auto down = world[position - [0, 1, 0]];
+		if(down != compare && (down != requiredBlock || !this.searchWater(world, position))) {
+			world.drop(this, position);
+			world[position] = Blocks.air;
+		}
+	}
+
+	private bool searchWater(World world, BlockPosition position) {
+		static if(waterNeeded) {
+			foreach(p ; [[0, -1, 1], [1, -1, 0], [0, -1, -1], [-1, -1, 0]]) {
+				if(world[position + p] == Blocks.water) return true;
+			}
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+}
+
+alias SugarCanesBlock(sul.blocks.Block sb, block_t next) = GrowingBlock!(sb, next, Blocks.sugarCanes, 3, true, [Blocks.sand, Blocks.redSand, Blocks.dirt, Blocks.coarseDirt, Blocks.podzol, Blocks.grass], Drop(Items.sugarCanes, 1));
+
+class CactusBlock(sul.blocks.Block sb, block_t next) : GrowingBlock!(sb, next, Blocks.cactus, 3, false, [Blocks.sand, Blocks.redSand], Drop(Items.cactus, 1)) {
+
+	//TODO do cactus damage on step and on contact
+
+}
+
+class NetherCrop(sul.blocks.Block sb, block_t next, Drop drop) : CropBlock!(sb, next, [drop]) {
+
+	mixin Instance;
+
+	public override void onRandomTick(World world, BlockPosition position) {
+		this.grow(world, position);
+	}
+
+}
+
+class BeansBlock(sul.blocks.Block sb, block_t next, ubyte facing, MiningTool miningTool, Drop drop) : MineableBlock!(sb, miningTool, drop) {
+
+	mixin Instance;
+
+	static if(next != 0) {
+
+		public override pure nothrow @property @safe @nogc bool doRandomTick() {
+			return true;
+		}
+
+		public override void onRandomTick(World world, BlockPosition position) {
+			world[position] = next; // every random tick?
+		}
+
+	}
+
+	public override void onUpdated(World world, BlockPosition position, Update update) {
+		//TODO verify facing
+		static if(facing == Facing.north) {
+			auto attached = position + [0, 0, 1];
+		} else static if(facing == Facing.south) {
+			auto attached = position - [0, 0, 1];
+		} else static if(facing == Facing.west) {
+			auto attached = position + [1, 0, 0];
+		} else {
+			auto attached = position - [1, 0, 0];
+		}
+		if(world[attached] != Blocks.jungleWood) {
+			world.drop(this, position);
+			world[attached] = Blocks.air;
+		}
+	}
+
 }

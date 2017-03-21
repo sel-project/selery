@@ -42,9 +42,12 @@ enum size_t __GENERATOR__ = 2;
 
 void main(string[] args) {
 
-	JSONValue[string] plugs; //plugs[location] = settingsfile
+	mkdirRecurse(Paths.worlds);
+	mkdirRecurse(Paths.resources);
+	mkdirRecurse(Paths.plugins);
+	mkdirRecurse(Paths.hidden);
 
-	if(!exists(Paths.hidden)) mkdirRecurse(Paths.hidden);
+	JSONValue[string] plugs; //plugs[location] = settingsfile
 
 	version(Windows) {
 		setAttributes(Paths.hidden, FILE_ATTRIBUTE_HIDDEN);
@@ -59,7 +62,6 @@ void main(string[] args) {
 	}
 	temp = tempDir() ~ dirSeparator ~ "sel" ~ dirSeparator ~ temp ~ dirSeparator;
 
-	if(!exists(Paths.plugins)) mkdir(Paths.plugins);
 	if(!exists(temp)) mkdirRecurse(temp);
 
 	void loadPlugin(string path) {
@@ -156,8 +158,6 @@ void main(string[] args) {
 			info[index].api = exists(path ~ "api.d");
 		}
 	}
-
-	if(!exists(Paths.resources)) mkdir(Paths.resources);
 
 	// read activation file
 	string active = Paths.resources ~ "plugins.txt";

@@ -19,56 +19,6 @@ import sel.entity.projectile : Projectile, EntitySnowball = Snowball, EntityEgg 
 import sel.item.consumeable : Potions;
 import sel.item.item : Item, Items, register;
 
-struct ThrowableInit {
-
-	public static void init() {
-
-		register!Snowball(Items.SNOWBALL);
-		register!Egg(Items.EGG);
-		register!Enderpearl(Items.SLIMEBALL);
-
-		//can't do that with a loop :(
-		register!WaterBottleSplashPotion(Items.SPLASH_POTION, Potions.WATER_BOTTLE);
-		register!MundaneSplashPotion(Items.SPLASH_POTION, Potions.MUNDANE);
-		register!MundaneExtendedSplashPotion(Items.SPLASH_POTION, Potions.MUNDANE_EXTENDED);
-		register!ThickSplashPotion(Items.SPLASH_POTION, Potions.THICK);
-		register!AwkwardSplashPotion(Items.SPLASH_POTION, Potions.AWKWARD);
-		register!NightVisionSplashPotion(Items.SPLASH_POTION, Potions.NIGHT_VISION);
-		register!NightVisionExtendedSplashPotion(Items.SPLASH_POTION, Potions.NIGHT_VISION_EXTENDED);
-		register!InvisibilitySplashPotion(Items.SPLASH_POTION, Potions.INVISIBILITY);
-		register!InvisibilityExtendedSplashPotion(Items.SPLASH_POTION, Potions.INVISIBILITY_EXTENDED);
-		register!LeapingSplashPotion(Items.SPLASH_POTION, Potions.LEAPING);
-		register!LeapingExtendedSplashPotion(Items.SPLASH_POTION, Potions.LEAPING_EXTENDED);
-		register!LeapingPlusSpashPotion(Items.SPLASH_POTION, Potions.LEAPING_PLUS);
-		register!FireResistanceSplashPotion(Items.SPLASH_POTION, Potions.FIRE_RESISTANCE);
-		register!FireResistanceExtendedSplashPotions(Items.SPLASH_POTION, Potions.FIRE_RESISTANCE_EXTENDED);
-		register!SpeedSplashPotion(Items.SPLASH_POTION, Potions.SPEED);
-		register!SpeedExtendedSplashPotion(Items.SPLASH_POTION, Potions.SPEED_EXTENDED);
-		register!SpeedPlusSplashPotion(Items.SPLASH_POTION, Potions.SPEED_PLUS);
-		register!SlownessSplashPotion(Items.SPLASH_POTION, Potions.SLOWNESS);
-		register!SlownessExtendedSplashPotion(Items.SPLASH_POTION, Potions.SLOWNESS_EXTENDED);
-		register!WaterBreathingSplashPotion(Items.SPLASH_POTION, Potions.WATER_BREATHING);
-		register!WaterBreathingExtendedSplashPotion(Items.SPLASH_POTION, Potions.WATER_BREATHING_EXTENDED);
-		register!HealingSplashPotion(Items.SPLASH_POTION, Potions.HEALING);
-		register!HealingPlusSplashPotion(Items.SPLASH_POTION, Potions.HEALING_PLUS);
-		register!HarmingSplasPotion(Items.SPLASH_POTION, Potions.HARMING);
-		register!HarmingPlusSplashPotion(Items.SPLASH_POTION, Potions.HARMING_PLUS);
-		register!PoisonSplashPotion(Items.SPLASH_POTION, Potions.POISON);
-		register!PoisonExtendedSplashPotion(Items.SPLASH_POTION, Potions.POISON_EXTENDED);
-		register!PoisonPlusSplashPotion(Items.SPLASH_POTION, Potions.POISON_PLUS);
-		register!RegenerationSplashPotion(Items.SPLASH_POTION, Potions.REGENERATION);
-		register!RegenerationExtendedSplashPotion(Items.SPLASH_POTION, Potions.REGENERATION_EXTENDED);
-		register!RegenerationPlusSpashPotion(Items.SPLASH_POTION, Potions.REGENERATION_PLUS);
-		register!StrengthSpashPotion(Items.SPLASH_POTION, Potions.STRENGTH);
-		register!StrengthExtendedSplashPotion(Items.SPLASH_POTION, Potions.STRENGTH_EXTENDED);
-		register!StrengthPlusSplashPotion(Items.SPLASH_POTION, Potions.STRENGTH_PLUS);
-		register!WeaknessSplashPotion(Items.SPLASH_POTION, Potions.WEAKNESS);
-		register!WeaknessExtendedSplashPotion(Items.SPLASH_POTION, Potions.WEAKNESS_EXTENDED);
-
-	}
-
-}
-
 abstract class ThrowableItem(T:Projectile, E...) : Item {
 
 	private E args;

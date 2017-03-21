@@ -271,7 +271,7 @@ class Inventory {
 	 * ---
 	 */
 	public @trusted Slot opOpAssign(string op)(Slot slot) if(op == "+") {
-		assert(!slot.empty, "Can't add an empty slot");
+		if(slot.empty) return slot;
 		// try to add on deep equals items
 		// try to add on free space
 		size_t[] empties;
@@ -494,7 +494,7 @@ class Inventory {
 	 * assert(inventory != [Slot(null), Slot(new Items.Apple("{\"customName\":\"test\"}"))]);
 	 * ---
 	 */
-	public @safe bool opEquals(Slot[] slots) {
+	public bool opEquals(Slot[] slots) {
 		if(this.length != slots.length) return false;
 		foreach(size_t i ; 0..this.length) {
 			if(this[i] != slots[i]) return false;
@@ -503,7 +503,7 @@ class Inventory {
 	}
 
 	/// ditto
-	public override @safe bool opEquals(Object object) {
+	public override bool opEquals(Object object) {
 		return cast(Inventory)object ? this.opEquals(cast(Slot[])cast(Inventory)object) : false;
 	}
 
@@ -511,7 +511,7 @@ class Inventory {
 	 * Returns a string with representing the inventory and its
 	 * array of slots.
 	 */
-	public override @safe string toString() {
+	public override string toString() {
 		return "Inventory(" ~ to!string(this.length) ~ ", " ~ to!string(this[]) ~ ")";
 	}
 
@@ -800,7 +800,7 @@ class PlayerInventory : Inventory {
 	}
 
 	// called when a player is using this item but it didn't send any MobEquipment packet (because it's a shitty buggy game)
-	public @safe bool heldFromHotbar(Slot item) {
+	public bool heldFromHotbar(Slot item) {
 		if(item == this.held) return true;
 		foreach(size_t index ; 0..this.hotbar.length) {
 			Slot cmp = super.opIndex(this.hotbar[index] - 9);
@@ -845,7 +845,7 @@ class PlayerInventory : Inventory {
 	 * assert(player.inventory[1] == Slot(new Items.Apple());
 	 * ---
 	 */
-	public @safe void opIndexAssign(string item, size_t index) {
+	public void opIndexAssign(item_t item, size_t index) {
 		this[index] = this.holder.world.items.get(item);
 	}
 

@@ -38,7 +38,7 @@ class Color {
 	 * Constructs a colour using rgb(a) values (in range 0..255).
 	 * By default alpha is 0% transparent (255).
 	 */
-	public @safe @nogc this(ubyte r, ubyte g, ubyte b, ubyte a=0xFF) {
+	public pure nothrow @safe @nogc this(ubyte r, ubyte g, ubyte b, ubyte a=0xFF) {
 		this.r = r;
 		this.g = g;
 		this.b = b;
@@ -70,17 +70,17 @@ class Color {
 	 * Encodes the colour as an unsigned integer to
 	 * be used in the network operations or to be saved.
 	 */
-	public @property @safe uint rgb() {
+	public pure nothrow @property @safe @nogc uint rgb() {
 		return (this.r << 16) | (this.g << 8) | this.b;
 	}
 
 	/// ditto
-	public @property @safe uint rgba() {
+	public pure nothrow @property @safe @nogc uint rgba() {
 		return (this.rgb << 8) | a;
 	}
 
 	/// ditto
-	public @property @safe uint argb() {
+	public pure nothrow @property @safe @nogc uint argb() {
 		return (a << 24) | this.rgb;
 	}
 
@@ -93,7 +93,7 @@ class Color {
 	 * assert(Colors.TRANSPARENT.transparent);
 	 * ---
 	 */
-	public @property @safe @nogc bool transparent() {
+	public pure nothrow @property @safe @nogc bool transparent() {
 		return this.alpha == 0;
 	}
 
@@ -101,15 +101,15 @@ class Color {
 	 * Sets the colour as transparent (with alpha = 0) or
 	 * opaque (with alpha = 255).
 	 */
-	public @property @safe @nogc bool transparent(bool transparent) {
+	public pure nothrow @property @safe @nogc bool transparent(bool transparent) {
 		return (this.alpha = (transparent ? 0 : 255)) == 0;
 	}
 
 	/**
 	 * Compares two colours.
-	 * Returns: true if re, green, blue an alpha are equals, false otherwise
+	 * Returns: true if red, green, blue an alpha are equals, false otherwise
 	 */
-	public override @safe bool opEquals(Object o) {
+	public override bool opEquals(Object o) {
 		if(cast(Color)o) {
 			Color c = cast(Color)o;
 			return this.r == c.r && this.g == c.g && this.b == c.b && this.a == c.a;
@@ -117,45 +117,40 @@ class Color {
 		return false;
 	}
 
-}
-
-/**
- * Creates a colour from an encoded integer.
- * Params:
- * 		encoding = 4 characters indicating the encoding type (argb by default)
- * 		value = the encoded value
- * Example:
- * ---
- * assert(color!"argb"(255 << 24) == color!"rgba"(255));
- * ---
- */
-public @safe Color color(string encoding="argb")(uint value) if(encoding.length == 4) {
-	Color ret = new Color(0, 0, 0);
-	foreach(uint index, char c; encoding) {
-		ubyte v = (value >> ((3 - index) * 8)) & 255;
-		switch(c) {
-			case 'r':
-				ret.r = v;
-				break;
-			case 'g':
-				ret.g = v;
-				break;
-			case 'b':
-				ret.b = v;
-				break;
-			case 'a':
-				ret.a = v;
-				break;
-			default:
-				assert(0, "Invalid colour: " ~ c);
+	/**
+	 * Converts and hexadecimal representation of a colour into
+	 * a Color object.
+	 * Returns: a Color object or null if the string's length is invalid
+	 * Throws:
+	 * 		ConvException if one of the string is not an hexadecimal number
+	 * Example:
+	 * ---
+	 * assert(Color.fromString("00CC00").green == 204);
+	 * assert(Color.fromString("123456").rgb == 0x123456);
+	 * assert(Color.fromString("01F") == Color.fromString("0011FF"));
+	 * ---
+	 */
+	public static pure @safe Color fromString(string c) {
+		if(c.length == 6) {
+			return new Color(to!ubyte(c[0..2], 16), to!ubyte(c[2..4], 16), to!ubyte(c[4..6], 16));
+		} else if(c.length == 3) {
+			return fromString([c[0], c[0], c[1], c[1], c[2], c[2]].idup);
+		} else {
+			return null;
 		}
 	}
-	return ret;
-}
 
-unittest {
-
-	assert(new Color(1, 88, 190, 1) == color!"rgba"(new Color(1, 88, 190, 1).rgba));
+	/**
+	 * Converts an rgb-encoded integer to a Color.
+	 * Example:
+	 * ---
+	 * assert(Color.fromRGB(0x0000FF).blue == 255);
+	 * assert(Color.fromRGB(0x111111).green == 17);
+	 * ---
+	 */
+	public static pure nothrow @safe Color fromRGB(uint c) {
+		return new Color((c >> 16) & 255, (c >> 8) & 255, c & 255);
+	}
 
 }
 
@@ -174,8 +169,8 @@ interface Colorable {
 	 * Gets the current colour.
 	 * Example:
 	 * ---
-	 * if(col.color.transparent) {
-	 *    d("There's no colour!");
+	 * if(object.color is null || object.color.transparent) {
+	 *    writeln("There's no colour!");
 	 * }
 	 * ---
 	 */
@@ -183,6 +178,12 @@ interface Colorable {
 
 	/**
 	 * Sets the colour for this object.
+	 * Example:
+	 * ---
+	 * if(object.color is null) {
+	 *    object.color = Color.fromString("003311");
+	 * }
+	 * ---
 	 */
 	public @property @safe Color color(Color color);
 
@@ -193,52 +194,52 @@ interface Colorable {
  * block's colours and colouring maps.
  * Example:
  * ---
- * leatherHelmet.color = Colors.COCOA;
+ * leatherHelmet.color = Colors.cocoa;
  * 
- * world[0, 64, 0] = Blocks.WOOL[Colors.Wool.BROWN];
+ * world[0, 64, 0] = Blocks.wool[Colors.Wool.brown];
  * ---
  */
 final class Colors {
 
 	@disable this();
 
-	public static const(Color) TRANSPARENT = new Color(0, 0, 0, 0);
+	public static const(Color) transparent = new Color(0, 0, 0, 0);
 
-	public static const(Color) BLACK = color(0x191919);
-	public static const(Color) RED = color(0x993333);
-	public static const(Color) GREEN = color(0x667F33);
-	public static const(Color) COCOA = color(0x664C33);
-	public static const(Color) LAPIS = color(0x334CB2);
-	public static const(Color) PURPLE = color(0x7F3FB2);
-	public static const(Color) CYAN = color(0x4C7F99);
-	public static const(Color) LIGHT_GREY = color(0x999999);
-	public static const(Color) GREY = color(0x4C4C4C);
-	public static const(Color) PINK = color(0xF27FA5);
-	public static const(Color) LIME = color(0x7FCC19);
-	public static const(Color) YELLOW = color(0xE5E533);
-	public static const(Color) BLUE = color(0x6699D8);
-	public static const(Color) MAGENTA = color(0xB24CD8);
-	public static const(Color) ORANGE = color(0xD87F33);
-	public static const(Color) WHITE = color(0xFFFFFF);
+	public static const(Color) black = Color.fromRGB(0x191919);
+	public static const(Color) red = Color.fromRGB(0x993333);
+	public static const(Color) green = Color.fromRGB(0x667F33);
+	public static const(Color) cocoa = Color.fromRGB(0x664C33);
+	public static const(Color) lapis = Color.fromRGB(0x334CB2);
+	public static const(Color) purple = Color.fromRGB(0x7F3FB2);
+	public static const(Color) cyan = Color.fromRGB(0x4C7F99);
+	public static const(Color) lightGray = Color.fromRGB(0x999999);
+	public static const(Color) gray = Color.fromRGB(0x4C4C4C);
+	public static const(Color) pink = Color.fromRGB(0xF27FA5);
+	public static const(Color) lime = Color.fromRGB(0x7FCC19);
+	public static const(Color) yellow = Color.fromRGB(0xE5E533);
+	public static const(Color) blue = Color.fromRGB(0x6699D8);
+	public static const(Color) magenta = Color.fromRGB(0xB24CD8);
+	public static const(Color) orange = Color.fromRGB(0xD87F33);
+	public static const(Color) white = Color.fromRGB(0xFFFFFF);
 
 	enum Wool : ubyte {
 
-		WHITE = 0,
-		ORANGE = 1,
-		MAGENTA = 2,
-		LIGHT_BLUE = 3,
-		YELLOW = 4,
-		LIME = 5,
-		PINK = 6,
-		GRAY = 7,
-		LIGHT_GRAY = 8,
-		CYAN = 9,
-		PURPLE = 10,
-		BLUE = 11,
-		BROWN = 12,
-		GREEN = 13,
-		RED = 14,
-		BLACK = 15
+		white = 0,
+		orange = 1,
+		magenta = 2,
+		lightBlue = 3,
+		yellow = 4,
+		lime = 5,
+		pink = 6,
+		gray = 7,
+		lightGray = 8,
+		cyan = 9,
+		purple = 10,
+		blue = 11,
+		brown = 12,
+		green = 13,
+		red = 14,
+		black = 15
 
 	}
 
@@ -246,6 +247,8 @@ final class Colors {
 
 	alias Sheep = Wool;
 
-	alias HardenedClay = Wool;
+	alias StainedClay = Wool;
+
+	alias StainedGlass = Wool;
 
 }

@@ -28,7 +28,7 @@ import sel.player : Player;
 import sel.server : server;
 import sel.settings;
 import sel.block.block : Block, blockInto;
-import sel.entity.living : Living, Damage;
+import sel.entity.living : Living;
 import sel.entity.metadata : Metadata;
 import sel.entity.noai : ItemEntity, PaintingEntity = Painting;
 import sel.event.event;
@@ -39,6 +39,8 @@ import sel.math.vector;
 import sel.plugin.plugin : Plugin, PluginException;
 import sel.util;
 import sel.world.world : World, Rules;
+
+static import sul.entities;
 
 /** minecraft pocket edition's entities' network id */
 enum Entities : bytegroup {
@@ -105,10 +107,10 @@ enum Entities : bytegroup {
  */
 abstract class Entity : EventListener!WorldEvent {
 
-	private static uint count = 1;
+	private static uint count = 0;
 
 	public static @safe @nogc uint reserve() {
-		return count++;
+		return ++count;
 	}
 
 	public immutable uint id;
@@ -590,7 +592,7 @@ abstract class Entity : EventListener!WorldEvent {
 				foreach(int z ; min.z.blockInto..max.z.blockInto+1) {
 					BlockPosition position = BlockPosition(x, to!int(this.position.y) - (to!int(this.position.y) == this.position.y ? 1 : 0), z);
 					auto block = this.world[position];
-					if(!block.nobox && !block.fluid) {
+					if(block.hasBoundingBox && !block.fluid) {
 						block.box.update(position.entityPosition);
 						if(block.box.intersects(this.n_box)) {
 							this.n_on_ground = true;
@@ -672,7 +674,7 @@ abstract class Entity : EventListener!WorldEvent {
 				foreach(int z ; min.z.blockInto..max.z.blockInto+1) {
 					auto position = BlockPosition(x, y, z);
 					auto block = this.world[position];
-					if(!block.nobox) {
+					if(block.hasBoundingBox) {
 						block.box.update(position.entityPosition);
 						if(block.box.intersects(this.n_box) && this.onCollideWithBlock(block, position, 0)) return;
 					}

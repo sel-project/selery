@@ -230,7 +230,7 @@ class MinecraftHandler : HandlerThread {
 		with(this.server.settings) {
 			// version.protocol, version.name, players.online and players.max will be set by the session
 			status["description"] = ["text": JSONValue(minecraftMotd)];
-			if(icon.length) status["favicon"] = icon;
+			if(iconData.length) status["favicon"] = iconData;
 			this.status = cast(shared)status;
 		}
 	}
