@@ -17,7 +17,8 @@ module sel.world.generator;
 import std.algorithm : min;
 import std.conv : to;
 
-import sel.block.block : Block, Blocks;
+import sel.block.block : Block;
+import sel.block.blocks : Blocks;
 import sel.math.vector : ChunkPosition, BlockPosition, distance;
 import sel.util.random : Random;
 import sel.world.chunk : Chunk;

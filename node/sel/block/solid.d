@@ -20,11 +20,13 @@ import std.math : ceil;
 
 import common.sel;
 
-import sel.block.block : Blocks, Update, Remove, Block, SimpleBlock, Instance;
+import sel.block.block : Update, Remove, Block, SimpleBlock, Instance;
+import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.projectile : FallingBlock;
 import sel.item.enchanting : Enchantments;
-import sel.item.item : Item, Items;
+import sel.item.item : Item;
+import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition;

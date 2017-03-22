@@ -20,7 +20,8 @@ import std.json : JSONValue, JSON_TYPE;
 import common.sel;
 
 import sel.player : Player;
-import sel.block.block : Block, Blocks, Faces;
+import sel.block.block : Block, Faces;
+import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.living : Living;
 import sel.item.item;

@@ -14,7 +14,8 @@
  */
 module sel.block.miscellaneous;
 
-import sel.block.block : Block, Blocks, SimpleBlock;
+import sel.block.block : Block, SimpleBlock;
+import sel.block.blocks : Blocks;
 import sel.math.vector;
 import sel.world.world : World;
 

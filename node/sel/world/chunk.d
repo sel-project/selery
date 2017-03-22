@@ -28,8 +28,8 @@ import std.string : split, join, endsWith;
 import common.path : Paths;
 import common.sel;
 
-import sel.block;
-import sel.block.block : Blocks;
+import sel.block.block : Block;
+import sel.block.blocks : Blocks;
 import sel.block.tile : Tile;
 import sel.math.vector;
 import sel.util;

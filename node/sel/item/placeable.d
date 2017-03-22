@@ -16,7 +16,8 @@ module sel.item.placeable;
 
 import common.sel;
 
-import sel.block.block : Blocks, compareBlock;
+import sel.block.block : compareBlock;
+import sel.block.blocks : Blocks;
 import sel.item.item;
 import sel.math.vector;
 import sel.player.player : Player;

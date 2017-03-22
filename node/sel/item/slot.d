@@ -18,7 +18,8 @@ import std.conv : to;
 
 import common.sel;
 
-import sel.item.item : Item, Items;
+import sel.item.item : Item;
+import sel.item.items : Items;
 
 /**
  * Container for an item stack that has always a value.
@@ -149,6 +150,14 @@ struct Slot {
 
 	public bool opEquals(Slot slot) {
 		return this.empty == slot.empty && (this.empty || this.count == slot.count && this.item == slot.item);
+	}
+
+	public bool opEquals(Item item) {
+		return this.empty == !!(item is null) && (this.empty || this.item == item);
+	}
+
+	public bool opEquals(item_t item) {
+		return this.empty == (item == Items.air) && (this.empty || this.item == item);
 	}
 
 	public string toString() {

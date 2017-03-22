@@ -18,7 +18,8 @@ import common.sel;
 
 import sel.block.block;
 import sel.block.solid;
-import sel.item.item : Item, Items;
+import sel.item.item : Item;
+import sel.item.items : Items;
 import sel.math.vector;
 import sel.player.player : Player;
 

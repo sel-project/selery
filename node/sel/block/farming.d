@@ -22,10 +22,12 @@ import std.traits : isNumeric;
 import common.sel;
 
 import sel.player : Player;
-import sel.block.block : Blocks, Block, SimpleBlock, Update, Instance;
+import sel.block.block : Block, SimpleBlock, Update, Instance;
+import sel.block.blocks : Blocks;
 import sel.block.solid;
 import sel.entity.entity : Entity;
-import sel.item.item : Item, Items;
+import sel.item.item : Item;
+import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition;

@@ -19,12 +19,13 @@ import std.traits : isIntegral;
 
 import common.sel;
 
-import sel.player : Player;
-import sel.block.block : Blocks, Block;
+import sel.block.block : Block;
+import sel.block.blocks : Blocks;
 import sel.item.item : SimpleItem;
 import sel.item.slot : Slot;
 import sel.nbt.tags;
 import sel.math.vector : BlockPosition, face, entityPosition;
+import sel.player.player : Player;
 
 static import sul.items;
 

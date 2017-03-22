@@ -29,11 +29,13 @@ import common.sel;
 
 import sel.player : Player;
 import sel.block.block;
+import sel.block.blocks : Blocks;
 import sel.block.solid : Facing;
 import sel.entity.entity : Entity;
 import sel.entity.human : Human;
 import sel.item.inventory : Inventory, NotifiedInventory, InventoryHolder;
-import sel.item.item : Item, Items;
+import sel.item.item : Item;
+import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
 import sel.nbt.tags;
