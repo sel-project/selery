@@ -2,6 +2,7 @@
 *.sln
 *.userprefs
 *.dproj
+*.obj
 node/.config
 node/main
 node/init
