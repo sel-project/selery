@@ -2,11 +2,12 @@ language: d
 
 d:
  - dmd
+ - ldc
  
 install:
  - git clone https://github.com/sel-project/sel-utils.git utils
  
 script:
  - cd hub && rdmd --build-only -I.. -I../utils/src/d main.d
- - cd node && rdmd --build-only -I.. init.d && rdmd -I.. -I../utils/src/d main.d
+ - cd ../node && rdmd -I.. init.d && rdmd --build-only -I.. -I../utils/src/d main.d
  
