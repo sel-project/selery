@@ -444,7 +444,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	public override void sendChatMessage(string message) {
-		this.glue_messages ~= message; // CLIENT BUG IN 1.0.{0 - 3} -- CHANGE BACK WHEN FIXED
+		this.glue_messages ~= message; // CLIENT BUG IN 1.0.{0 - 4} -- CHANGE BACK WHEN FIXED
 		//this.sendPacket(new Play.Text().new Raw(message));
 	}
 
@@ -557,7 +557,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				section.blockLight = s.blocksLight;
 			} else {
 				section.skyLight = 255;
-				section.blockLight = 255;
+				section.blockLight = 0;
 			}
 			data.sections ~= section;
 		}
@@ -709,7 +709,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.id, effect.level, true, effect.duration));
+		this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.id, effect.level, true, cast(int)effect.duration));
 	}
 
 	protected override void onEffectRemoved(Effect effect) {

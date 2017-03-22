@@ -517,7 +517,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		this.sendPacket(new Clientbound.EntityEffect(this.id, effect.id, effect.level, effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
+		this.sendPacket(new Clientbound.EntityEffect(this.id, effect.id, effect.level, cast(uint)effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
 	}
 	
 	protected override void onEffectRemoved(Effect effect) {

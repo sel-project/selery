@@ -45,7 +45,7 @@ abstract class Item {
 	private string m_name = "";
 	private Enchantment[ubyte] enchantments;
 
-	public @safe @nogc this() {}
+	public pure nothrow @safe @nogc this() {}
 	
 	/**
 	 * Constructs an item with some extra data.
