@@ -40,8 +40,17 @@ public class Blocks {
 	public this() {
 		foreach(a ; __traits(allMembers, Blocks)) {
 			static if(mixin("is(" ~ a ~ " : Block)")) {
-				mixin("this.register(" ~ a ~ ".instance);");
+				mixin("this.register(new " ~ a ~ "());");
+				//mixin("this.register(" ~ a ~ ".instance);");
 			}
+		}
+	}
+
+	public void register(T:Block)(T block) {
+		static if(is(T : Tile)) {
+			auto f = (){ return new T(); };
+		} else {
+			auto f = (){ return &block; };
 		}
 	}
 	
@@ -646,7 +655,7 @@ public class Blocks {
 	public enum lava = flowingLava ~ stillLava;
 	
 	public enum sponge = _.SPONGE.id;
-	public alias Sponge = AbsorbingBlock!(_.SPONGE, Items.sponge, wetSponge, 7, 65);
+	public alias Sponge = AbsorbingBlock!(_.SPONGE, Items.sponge, wetSponge, water, 7, 65);
 	
 	public enum wetSponge = _.WET_SPONGE.id;
 	public alias WetSponge = MineableBlock!(_.WET_SPONGE, MiningTool.init, Drop(Items.wetSponge, 1));

@@ -148,20 +148,20 @@ class Command {
 									auto players = sender.watchlist!Player;
 									if(players.length) {
 										Player player;
-										double distance = double.infinity;
+										double dist = double.infinity;
 										foreach(p ; players) {
 											double d = distance(sender.position, p.position);
-											if(d < distance) {
-												distance = d;
+											if(d < dist) {
+												dist = d;
 												player = p;
 											}
 										}
-										cargs[j] = player;
+										cargs[i] = player;
 									}
 									break;
 								case "@r":
 									auto players = sender.world.players;
-									if(players.length) cargs[i] = players[sender.world.random($)];
+									if(players.length) cargs[i] = players[sender.world.random.next($)];
 									break;
 								default:
 									// first player with the given name
@@ -173,7 +173,7 @@ class Command {
 							try {
 								static if(is(T == BlockPosition) || is(T == EntityPosition)) {
 									if(j + 3 > args.length) return false;
-									cargs[i] = sender.commandPosition(args[j++], args[j++], args[j]);
+									cargs[i] = sender.commandPosition!(T.Type)(args[j++], args[j++], args[j]);
 								} else {
 									cargs[i] = to!T(args[j]);
 								}

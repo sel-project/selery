@@ -391,7 +391,7 @@ class LeavesBlock(sul.blocks.Block sb, bool decayable, item_t drop, item_t sapli
 
 }
 
-class AbsorbingBlock(sul.blocks.Block sb, item_t drop, block_t wet, size_t maxDistance, size_t maxBlocks) : MineableBlock!(sb, MiningTool.init, Drop(drop, 1)) {
+class AbsorbingBlock(sul.blocks.Block sb, item_t drop, block_t wet, block_t[] absorb, size_t maxDistance, size_t maxBlocks) : MineableBlock!(sb, MiningTool.init, Drop(drop, 1)) {
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
 		// also called when the block is placed

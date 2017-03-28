@@ -82,7 +82,7 @@ class PocketHandler : UnconnectedHandler {
 	
 	private shared string* socialJson;
 	
-	private shared string[2] status; // ["MCPE;motd;protocol;version;", ";max;server_id;world_name;gametype;"]
+	private shared string[2] status; // ["MCPE;motd;protocol;version;", ";server_id;world_name;gametype;"]
 
 	private shared int[session_t]* querySessions;
 	

@@ -14,8 +14,6 @@
  */
 module init;
 
-version(Realm) { void main(string[] args) {} } else:
-
 version(Windows) import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
 
 import std.algorithm : sort, canFind, clamp;
@@ -38,7 +36,7 @@ import common.path : Paths;
 import common.sel;
 import common.util.format : Text, writeln;
 
-enum size_t __GENERATOR__ = 2;
+enum size_t __GENERATOR__ = 4;
 
 void main(string[] args) {
 
@@ -264,7 +262,26 @@ void main(string[] args) {
 
 		if(paths.length > 2) paths = paths[0..$-2];
 		
-		write(Paths.plugins ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __plugin_load() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+		// reset src/plugins
+		if(exists("src/plugins")) {
+			foreach(string f ; dirEntries("src/plugins", SpanMode.breadth)) {
+				if(f.isFile) remove(f);
+			}
+		}
+
+		write("src" ~ dirSeparator ~ "plugins" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __plugin_load() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+
+		// copy plugins into src/plugins
+		foreach(p ; ordered) {
+			if(p.active) {
+				foreach(string f ; dirEntries(p.path, SpanMode.breadth)) {
+					if(f.isFile) {
+						mkdirRecurse("src" ~ dirSeparator ~ f[0..f.lastIndexOf(dirSeparator)]);
+						write("src" ~ dirSeparator ~ f, read(f));
+					}
+				}
+			}
+		}
 
 	}
 

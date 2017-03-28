@@ -29,6 +29,7 @@ import std.regex : replaceAll, ctRegex;
 import std.socket : Address, InternetAddress, Internet6Address, AddressFamily;
 import std.string : toLower, toUpper, startsWith, indexOf, split, join, strip, replace;
 import std.system : endian;
+import std.typetuple : TypeTuple;
 import std.uuid : UUID, randomUUID;
 
 import common.sel;
@@ -982,22 +983,22 @@ abstract class Player : Human {
 	}
 
 	public Vector3!T commandPosition(T)(string x, string y, string z) {
-		auto ret = Vector3!T(0);
-		foreach(c ; TypeTuple!("x", "y", "z")) {
+		T[3] ret;
+		foreach(i, c; TypeTuple!("x", "y", "z")) {
 			{
 				mixin("alias a = " ~ c ~ ";");
 				T value = 0;
 				if(a.length && a[0] == '~') {
-					mixin("a = this.position." ~ c ~ ";");
+					mixin("value = cast(T)this.position." ~ c ~ ";");
 					a = a[1..$];
 				}
 				if(a.length) {
 					value += to!T(a);
 				}
-				mixin("ret." ~ c ~ " = value;");
+				mixin("ret[" ~ to!string(i) ~ "] = value;");
 			}
 		}
-		return ret;
+		return Vector3!T(ret);
 	}
 	
 	public override @trusted bool onCollect(Collectable collectable) {

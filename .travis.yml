@@ -2,11 +2,13 @@ language: d
 
 d:
  - dmd
+ - ldc
  
 install:
- - git clone https://github.com/sel-project/sel-utils.git utils
+ - cp -r common hub/src
+ - cp -r common node/src
+ - cp -r common node
  
 script:
- - cd hub && rdmd --build-only -I.. -I../utils/src/d main.d
- - cd ../node && rdmd -I.. init.d && rdmd --build-only -I.. -I../utils/src/d -Iplugins main.d
- 
+ - cd hub && dub build --compiler=$DC && cd ..
+ - cd node && $DC -run init.d && dub build --compiler=$DC && cd..

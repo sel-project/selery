@@ -32,6 +32,7 @@ import sel.session.externalconsole : ExternalConsoleHandler;
 import sel.session.hncom : HncomHandler;
 import sel.session.http : HttpHandler;
 import sel.session.minecraft : MinecraftHandler, MinecraftQueryHandler;
+import sel.session.panel : PanelHandler;
 import sel.session.pocket : PocketHandler;
 import sel.session.rcon : RconHandler;
 import sel.network.session;
@@ -108,6 +109,10 @@ class Handler {
 
 			if(web) {
 				this.startThread!HttpHandler(server, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort);
+			}
+
+			if(panel) {
+				this.startThread!PanelHandler(server);
 			}
 
 		}

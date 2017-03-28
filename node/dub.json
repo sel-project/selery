@@ -1,0 +1,6 @@
+{
+	"name": "sel-node",
+	"dependencies": {
+		"sel-utils": "~>1.0.340"
+	}
+}

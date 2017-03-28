@@ -1,0 +1,7 @@
+{
+	"name": "sel-hub",
+	"authors": ["sel-project"],
+	"dependencies": {
+		"sel-utils": "~>1.0.340"
+	}
+}

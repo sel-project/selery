@@ -212,9 +212,11 @@ struct Settings {
 
 	string iconData;
 	
-	bool controlPanel;
+	bool panel;
 	
-	string[] controlPanelAddresses;
+	string[] panelAddresses;
+	
+	string[string] panelUsers;
 	
 	bool externalConsole;
 	
@@ -303,8 +305,9 @@ struct Settings {
 			set(&forcedIp, "forced-ip", "");
 			set(&language, "language", environment.get("LANGUAGE", "en_GB"), false);
 			set(&icon, "icon", "favicon.png", false);
-			set(&controlPanel, "control-panel", false);
-			set(&controlPanelAddresses, "control-panel-addresses", ["0.0.0.0:8080"], false);
+			set(&panel, "panel", false);
+			set(&panelAddresses, "panel-addresses", ["127.0.0.1:8080"], false);
+			set(&panelUsers, "panel-users", ["admin": randomPassword]);
 			set(&externalConsole, "external-console-enabled", false);
 			set(&externalConsolePassword, "external-console-password", randomPassword);
 			set(&externalConsoleAddresses, "external-console-addresses", ["0.0.0.0:19134"], false);
@@ -465,8 +468,9 @@ struct Settings {
 		add("forced-ip", this.forcedIp);
 		add("language", this.language);
 		add("accepted-languages", sort(this.acceptedLanguages).release());
-		add("control-panel", this.controlPanel);
-		add("control-panel-addresses", this.controlPanelAddresses);
+		add("panel", this.panel);
+		add("panel-addresses", this.panelAddresses);
+		add("panel-users", this.panelUsers);
 		add("external-console-enabled", this.externalConsole);
 		add("external-console-password", this.externalConsolePassword);
 		add("external-console-addresses", this.externalConsoleAddresses);

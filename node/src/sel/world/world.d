@@ -884,7 +884,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
 				//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
 				auto block = pos in this;
-				if(block && *block && **block != Blocks.AIR) {
+				if(block && *block && **block != Blocks.air) {
 					blastForce -= ((**block).blastResistance / 5 + length) * length;
 					if(blastForce <= 0) break;
 					static if(breakBlocks) {
@@ -927,8 +927,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		foreach(exploded ; explodedBlocks) {
 			auto block = this[exploded[0]];
-			if(block != Blocks.AIR) {
-				this.opIndexAssign!true(Blocks.AIR, exploded[0]); //TODO use packet's fields
+			if(block != Blocks.air) {
+				this.opIndexAssign!true(Blocks.air, exploded[0]); //TODO use packet's fields
 				if(this.random.range(0f, power) <= 1) {
 					this.drop(block, exploded[0]);
 					//TODO drop experience
@@ -1198,7 +1198,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public void opIndexAssign(T)(T tile, BlockPosition position) if(is(T : Tile) && is(T : Block)) {
 		assert(!tile.placed, "This tile has already been placed: " ~ to!string(tile) ~ " at " ~ to!string(position));
 		// place the block
-		this[position] = tile.data;
+		this[position] = tile.id;
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 			// then set it as placed here
@@ -1221,13 +1221,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Example:
 	 * ---
 	 * // sets a chunk to stone
-	 * world[0..16, 0..$, 0..16] = Blocks.STONE;
+	 * world[0..16, 0..$, 0..16] = Blocks.stone;
 	 * 
 	 * // sets an area to air
-	 * world[0..16, 64..128, 0..16] = Blocks.AIR;
+	 * world[0..16, 64..128, 0..16] = Blocks.air;
 	 * 
 	 * // sets a 1-block-high layer only
-	 * world[0..16, 64, 0..16] = Blocks.BEETROOT_BLOCK;
+	 * world[0..16, 64, 0..16] = Blocks.beetroot0;
 	 * ---
 	 */
 	public final void opIndexAssign(block_t b, Slice x, Slice y, Slice z) {
@@ -1296,7 +1296,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
-	private size_t replaceImpl(ref Chunk chunk, Block* from, Block* to) {
+	protected size_t replaceImpl(ref Chunk chunk, Block* from, Block* to) {
 		//TODO
 		return 0;
 	}
