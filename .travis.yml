@@ -7,8 +7,8 @@ d:
 install:
  - cp -r common hub/src
  - cp -r common node/src
- - cp -r common node
  
 script:
- - cd hub && dub build --compiler=$DC && cd ..
- - cd node && $DC -run init.d && dub build --compiler=$DC && cd..
+ - cd hub && dub build --compiler=$DC
+ - cd ../node && $DC init.d src/common/sel.d src/common/path.d src/common/util/format.d && ./init
+ - dub build --compiler=$DC
