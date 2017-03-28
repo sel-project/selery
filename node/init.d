@@ -263,10 +263,12 @@ void main(string[] args) {
 		if(paths.length > 2) paths = paths[0..$-2];
 		
 		// reset src/plugins
-		if(exists("src/plugins")) {
-			foreach(string f ; dirEntries("src/plugins", SpanMode.breadth)) {
+		if(exists("src" ~ dirSeparator ~ "plugins")) {
+			foreach(string f ; dirEntries("src" ~ dirSeparator ~ "plugins", SpanMode.breadth)) {
 				if(f.isFile) remove(f);
 			}
+		} else {
+			mkdirRecurse("src" ~ dirSeparator ~ "plugins");
 		}
 
 		write("src" ~ dirSeparator ~ "plugins" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __plugin_load() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);

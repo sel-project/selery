@@ -1,9 +1,12 @@
 .gitignore
 .git/
+.hidden/
 .editorconfig
 .travis.yml
+.latest
 CONTRIBUTING.md
 README.md
+LICENSE
 install.sh
 install.bat
 compress.d
@@ -11,6 +14,7 @@ copy.d
 release.d
 refactor_ids.d
 utils/
+res/
 node/sel-node.exe
 node/dub.selections.json
 node/.config
