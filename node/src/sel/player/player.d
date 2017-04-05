@@ -1646,14 +1646,12 @@ mixin template generateHandlers(E...) {
 											_variant.decode();
 											with(_variant) mixin("return this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");");
 										}
-										break;
 									}
 								}
-								default: break;
+								default: return;
 							}
 						}
 					}
-					break;
 				} else version(ShowUnhandled) {
 					static if(P.SERVERBOUND) pragma(msg, "Packet " ~ P.stringof ~ " is not handled");
 				}

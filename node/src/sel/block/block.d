@@ -183,7 +183,7 @@ abstract class Block {
 	 * as an Axis instance.
 	 * Values are from 0 to 1
 	 */
-	public final @property @safe @nogc BlockAxis box() {
+	public pure nothrow @property @safe @nogc BlockAxis box() {
 		return null;
 	}
 
@@ -341,6 +341,8 @@ abstract class Block {
 
 }
 
+private enum double m = 1.0 / 16.0;
+
 class SimpleBlock(sul.blocks.Block sb) : Block {
 
 	mixin Instance;
@@ -350,6 +352,14 @@ class SimpleBlock(sul.blocks.Block sb) : Block {
 	private enum __metas = bytegroup(sb.pocket ? sb.pocket.meta : 0, sb.minecraft ? sb.minecraft.meta : 0);
 
 	private enum __to_string = (string[] data){ foreach(ref d;data){d=capitalize(d);} return data.join(""); }(sb.name.split(" ")) ~ "(id: " ~ to!string(sb.id) ~ ", " ~ (sb.minecraft ? "minecraft(" ~ to!string(sb.minecraft.id) ~ (sb.minecraft.meta ? ":" ~ to!string(sb.minecraft.meta) : "") ~ ")" ~ (sb.pocket ? ", " : "") : "") ~ (sb.pocket ? "pocket(" ~ to!string(sb.pocket.id) ~ (sb.pocket.meta ? ":" ~ to!string(sb.pocket.meta) : "") ~ ")" : "") ~ ")";
+
+	private BlockAxis n_box;
+
+	public this() {
+		static if(sb.boundingBox.exists) {
+			with(sb.boundingBox) this.n_box = new BlockAxis(m * min.x, m * min.y, m * min.z, m * max.x, m * max.y, m * max.z);
+		}
+	}
 
 	public final override pure nothrow @property @safe @nogc ushort id() {
 		return sb.id;
@@ -440,13 +450,9 @@ class SimpleBlock(sul.blocks.Block sb) : Block {
 	}
 
 	static if(sb.boundingBox.exists) {
-
-		private BoundingBox n_box = new BlockBoundingBox();
-
-		public override pure nothrow @property @safe @nogc BoundingBox box() {
+		public override pure nothrow @property @safe @nogc BlockAxis box() {
 			return this.n_box;
 		}
-
 	}
 
 	public final override pure nothrow @property @safe @nogc bool fullUpperShape() {

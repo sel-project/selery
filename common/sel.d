@@ -137,11 +137,6 @@ const struct Software {
 	enum ubyte api = 2;
 
 	/**
-	 * Required version of the sel-utils library.
-	 */
-	enum uint sul = 321;
-
-	/**
 	 * Version of the hub-node communication protocol used by
 	 * the software.
 	 */
@@ -172,6 +167,7 @@ enum supportedPocketProtocols = cast(string[][uint])[
 	101: ["1.0.3"],
 	102: ["1.0.4"],
 	105: ["1.0.5", "1.0.6"],
+	110: ["1.1.0"],
 ];
 
 /**

@@ -49,13 +49,19 @@ class Metadata {
 	}
 
 	T get(string m, T)() {
-		foreach(immutable game ; Games) {
-			mixin("alias T = sul.metadata." ~ game ~ ".Metadata;");
-			static if(__traits(hasMember, T, m)) {
-				mixin("return this." ~ game ~ "." ~ m ~ ";");
+		enum string game = (){
+			string ret = "";
+			foreach(immutable g ; Games) {
+				mixin("alias T = sul.metadata." ~ g ~ ".Metadata;");
+				static if(__traits(hasMember, T, m)) ret = g;
 			}
+			return ret;
+		}();
+		static if(game.length) {
+			mixin("return this." ~ game ~ "." ~ m ~ ";");
+		} else {
+			return T.init;
 		}
-		return T.init;
 	}
 
 	T set(string m, string filter, T)(T value) {
