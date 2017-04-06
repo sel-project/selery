@@ -53,7 +53,7 @@ install:
             }
         }
   - ps: SetUpDCompiler
-  - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.0.0-windows-x86.zip -OutFile dub.zip
+  - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.2.1-windows-x86.zip -OutFile dub.zip
   - 7z x dub.zip -odub > nul
   - set PATH=%CD%\%binpath%;%CD%\dub;%PATH%
   - dub --version
@@ -79,7 +79,9 @@ before_build:
   - '"%compilersetup%" %compilersetupargs%'
 
 build_script:
- - echo dummy build script - dont remove me
+ - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC%
+ - cd ..\node && '%DC% init.d src\common\sel.d src\common\path.d src\common\util\format.d' && .\init
+ - dub build --arch=%Darch% --compiler=%DC%
 
 test_script:
  - echo %PLATFORM%
@@ -87,4 +89,3 @@ test_script:
  - echo %DC%
  - echo %PATH%
  - '%DC% --version'
- - dub test --arch=%Darch% --compiler=%DC%
