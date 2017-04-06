@@ -82,7 +82,7 @@ before_build:
 
 build_script:
  - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC%
- - cd ..\node && '%DC% init.d src\common\sel.d src\common\path.d src\common\util\format.d' && .\init
+ - cd ..\node && %DC% init.d src\common\sel.d src\common\path.d src\common\util\format.d && .\init
  - dub build --arch=%Darch% --compiler=%DC%
 
 test_script:
