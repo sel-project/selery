@@ -12,6 +12,7 @@ node/src/res
 node/src/plugins
 node/plugins
 node/resources
+node/crash
 hub/.config
 hub/.hidden
 hub/.dub
@@ -19,6 +20,7 @@ hub/dub.selections.json
 hub/src/common
 hub/src/res
 hub/resources
+hub/crash
 res/dbip-country.csv
 res/dbip-country-uncompressed.bin
 

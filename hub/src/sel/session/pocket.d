@@ -56,7 +56,7 @@ import Control = sul.protocol.raknet8.control;
 import Unconnected = sul.protocol.raknet8.unconnected;
 import Encapsulated = sul.protocol.raknet8.encapsulated;
 
-mixin("import Play = sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play;");
+mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;");
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : HncomAdd = Add;");
 
@@ -311,7 +311,7 @@ final class PocketSession : PlayerSession {
 	public shared void checkTimeout() {
 		atomicOp!"+="(this.timeoutTicks, 1);
 		if(this.timeoutTicks >= POCKET_TIMEOUT) {
-			this.encapsulate(new Play.Disconnect(false, "disconnect.timeout"));
+			this.encapsulate(new Disconnect(false, "disconnect.timeout"));
 			this.onTimedOut();
 		}
 		atomicOp!"+="(this.nextUpdate, 1);
@@ -483,37 +483,20 @@ final class PocketSession : PlayerSession {
 
 	private shared void handleLogin(ubyte[] payload) {
 		switch(payload[0]) {
-			case 254: // 0.15, 0.16 and 1.0 container
-				if(payload.length > 1) {
-					payload = payload[1..$];
-					switch(payload[0]) {
-						case Play.Login.ID:
-							this.handleLogin(Play.Login.fromBuffer(payload));
-							break;
-						case Play.Batch.ID:
-							ubyte[] batch = Play.Batch.fromBuffer(payload).data;
-							if(batch.length == 0) {
-								// probably an old version that uses uint instead of varuint
-								// handle it with protocol 0 and disconnect as 0.15 with outdated client
-								this.handleLogin(new Play.Login());
-							} else {
-								this.functionHandler = &this.handleFail;
-								new Thread({
-									try {
-										UnCompress u = new UnCompress(HeaderFormat.determineFromData);
-										ubyte[] data = cast(ubyte[])u.uncompress(Play.Batch.fromBuffer(payload).data);
-										data ~= cast(ubyte[])u.flush();
-										if(data.length && varuint.fromBuffer(data) == data.length && data[0] == Play.Login.ID) {
-											return this.handleLogin(Play.Login.fromBuffer(data));
-										}
-									} catch(ZlibException) {}
-									this.close();
-								}).start();
+			case Encapsulated.Mcpe.ID: // 0.15+ container
+				if(payload.length) {
+					// from 1.1 it's always compressed
+					try {
+						auto p = readBatch(payload[1..$]);
+						if(p.length == 1) {
+							auto login = p[0];
+							if(login.length && login[0] == Login.ID) {
+								this.handleLogin(Login.fromBuffer(login));
 							}
-							break;
-						default:
-							this.close();
-							break;
+						}
+					} catch(ZlibException) {
+						// before 1.1, disconnect as outdated client
+						this.encapsulate(cast(ubyte[])[254, 2, 0, 0, 0, 1], false);
 					}
 				} else {
 					this.close();
@@ -541,9 +524,9 @@ final class PocketSession : PlayerSession {
 
 	private shared void handlePlay(ubyte[] payload) {
 		if(payload[0] == Encapsulated.Mcpe.ID && payload.length > 1) {
-			payload = payload[1..$];
-			if(payload[0] == Play.Batch.ID) {
-				ubyte[] data = Play.Batch.fromBuffer(payload).data;
+			/*payload = payload[1..$];
+			if(payload[0] == Batch.ID) {
+				ubyte[] data = Batch.fromBuffer(payload).data;
 				if(data.length) {
 					this.decompressionQueue ~= cast(shared ubyte[])data;
 					//this.handler.decompress(this);
@@ -551,7 +534,9 @@ final class PocketSession : PlayerSession {
 				}
 			} else {
 				this.handleUncompressedPlay(payload);
-			}
+			}*/
+			// always compressed
+			//TODO
 		} else {
 			this.addFail();
 		}
@@ -584,13 +569,13 @@ final class PocketSession : PlayerSession {
 		}
 	}
 
-	private shared void handleLogin(Play.Login login) {
+	private shared void handleLogin(Login login) {
 		bool accepted = false;
-		this.edu = login.edition == Play.Login.EDUCATION;
+		this.edu = login.edition == Login.EDUCATION;
 		this.n_protocol = login.protocol;
 		auto protocols = this.server.settings.pocketProtocols;
-		if(login.protocol > protocols[$-1]) this.encapsulate(new Play.PlayStatus(Play.PlayStatus.OUTDATED_SERVER));
-		else if(!protocols.canFind(login.protocol)) this.encapsulate(new Play.PlayStatus(Play.PlayStatus.OUTDATED_CLIENT));
+		if(login.protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
+		else if(!protocols.canFind(login.protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
 		else {
 			this.n_version = supportedPocketProtocols[login.protocol][0];
 			this.functionHandler = &this.handleFail;
@@ -598,19 +583,19 @@ final class PocketSession : PlayerSession {
 			// kick if the server is edu and the client is not
 			static if(__edu) {
 				auto error = (){
-					if(!this.edu && !this.server.settings.allowMcpePlayers) return Play.PlayStatus.EDITION_MISMATCH;
+					if(!this.edu && !this.server.settings.allowMcpePlayers) return PlayStatus.EDITION_MISMATCH;
 					//TODO implement invalidTenant
-					else return Play.PlayStatus.OK;
+					else return PlayStatus.OK;
 				}();
-				if(error != Play.PlayStatus.OK) {
-					this.encapsulate(new Play.PlayStatus(error));
+				if(error != PlayStatus.OK) {
+					this.encapsulateUncompressed(new PlayStatus(error));
 					this.close();
 					return;
 				}
 			}
 			// valid version and protocol
 			accepted = true;
-			this.encapsulate(new Play.PlayStatus(Play.PlayStatus.OK));
+			this.encapsulateUncompressed(new PlayStatus(PlayStatus.OK));
 			// decompress the body and check validate more parameters
 			new Thread({
 				bool valid = false;
@@ -747,7 +732,7 @@ final class PocketSession : PlayerSession {
 					this.firstConnect();
 
 				} catch(Throwable t) {
-					this.encapsulate(new Play.Disconnect(false, t.msg));
+					this.encapsulateUncompressed(new Disconnect(false, t.msg));
 				}
 				if(!valid) this.close();
 				
@@ -792,6 +777,10 @@ final class PocketSession : PlayerSession {
 		this.encapsulate(packet.encode(), play);
 	}
 
+	public shared void encapsulateUncompressed(T)(T packet) {
+		this.encapsulate(writeBatch([packet.encode()]), true);
+	}
+
 	/**
 	 * The node only uses packets that are in Protocol.Play.
 	 * These packets are encapsulated into an MCPE container and
@@ -802,12 +791,12 @@ final class PocketSession : PlayerSession {
 	}
 
 	protected override shared void endOfStream() {
-		this.encapsulate(new Play.Disconnect(false, "disconnect.endOfStream"));
+		this.encapsulateUncompressed(new Disconnect(false, "disconnect.endOfStream"));
 		this.close();
 	}
 
 	public override shared void kick(string reason, bool translation, string[] params) {
-		this.encapsulate(new Play.Disconnect(false, reason));
+		this.encapsulateUncompressed(new Disconnect(false, reason));
 		this.close();
 	}
 
@@ -820,6 +809,31 @@ final class PocketSession : PlayerSession {
 		return "PocketSession(" ~ to!string(this.id) ~ ", " ~ to!string(cast()this.address) ~ ", " ~ to!string(this.mtu) ~ ")";
 	}
 
+}
+
+private ubyte[][] readBatch(ubyte[] data) {
+	auto u = new UnCompress(HeaderFormat.deflate);
+	data = cast(ubyte[])u.uncompress(data);
+	data ~= cast(ubyte[])u.flush();
+	ubyte[][] ret;
+	size_t length, index;
+	while((length = varuint.decode(data, &index)) > 0 && length <= data.length - index) {
+		ret ~= data[index..index+length];
+		index += length;
+	}
+	return ret;
+}
+
+private ubyte[] writeBatch(ubyte[][] packets) {
+	ubyte[] ret;
+	foreach(packet ; packets) {
+		ret ~= varuint.encode(packet.length) ~ packet;
+	}
+	// packet compressed using this function should be small
+	auto c = new Compress(1, HeaderFormat.deflate);
+	ret = cast(ubyte[])c.compress(ret);
+	ret ~= cast(ubyte[])c.flush();
+	return ret;
 }
 
 private uint[] acknowledgePackets(Types.Acknowledge[] acks) {

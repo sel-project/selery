@@ -20,6 +20,7 @@ import std.algorithm : max, sort;
 import std.conv : to;
 import std.file : read, write, exists, mkdirRecurse;
 import std.json;
+import std.net.curl : get, CurlException;
 import std.process : executeShell;
 import std.socket : Address;
 import std.string : split, join, startsWith, replace, strip;
@@ -239,51 +240,36 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private static ubyte[] creative_inventory;
 
 	public static bool loadCreativeInventory() {
-		// read creative inventory
-		version(Windows) {
-			immutable su = executeShell("cd %appdata% && cd").output.strip;
-		} else {
-			immutable su = executeShell("cd ~ && pwd").output.strip;
-		}
 		enum cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
 		if(!exists(cached)) {
-			string[] paths = [
-				"sel-utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
-				"../sel-utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
-				"utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
-				"../utils/json/creative/pocket" ~ __protocol.to!string ~ ".json",
-				su ~ "/.sel/utils/json/creative/pocket" ~ __protocol.to!string ~ ".json"
-			];
-			foreach(path ; paths) {
-				if(exists(path)) {
-					Types.Slot[] slots;
-					foreach(item ; parseJSON(cast(string)read(su ~ "/.sel/utils/json/creative/pocket" ~ __protocol.to!string ~ ".json"))["items"].array) {
-						auto obj = item.object;
-						auto meta = "meta" in obj;
-						auto ench = "enchantments" in obj;
-						auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
-						if(ench) {
-							auto list = new ListOf!Compound("ench");
-							foreach(e ; (*ench).array) {
-								auto eobj = e.object;
-								list ~= new Compound(new Short("id", eobj["id"].integer.to!short), new Short("lvl", eobj["level"].integer.to!short));
-							}
-							NbtBuffer!(Endian.littleEndian).instance.writeTag(new Compound(list), slot.nbt);
+			try {
+				Types.Slot[] slots;
+				foreach(item ; parseJSON(cast(string)get("https://raw.githubusercontent.com/sel-utils/sel-utils.github.io/master/json/creative/pocket" ~ __protocol.to!string ~ ".min.json"))["items"].array) {
+					auto obj = item.object;
+					auto meta = "meta" in obj;
+					auto ench = "enchantments" in obj;
+					auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
+					if(ench) {
+						auto list = new ListOf!Compound("ench");
+						foreach(e ; (*ench).array) {
+							auto eobj = e.object;
+							list ~= new Compound(new Short("id", eobj["id"].integer.to!short), new Short("lvl", eobj["level"].integer.to!short));
 						}
-						slots ~= slot;
+						NbtBuffer!(Endian.littleEndian).instance.writeTag(new Compound(list), slot.nbt);
 					}
-					ubyte[] encoded = new Play.ContainerSetContent(121, slots).encode();
-					auto batch = new Play.Batch();
-					Compress c = new Compress(9);
-					batch.data ~= cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
-					batch.data ~= cast(ubyte[])c.flush();
-					creative_inventory = batch.encode();
-					mkdirRecurse(Paths.hidden ~ "creative");
-					write(cached, creative_inventory);
-					return true;
+					slots ~= slot;
 				}
+				ubyte[] encoded = new Play.ContainerSetContent(121, 0, slots).encode(); // warning! the 0 (3rd byte) shold be replaced with the entity's id when sending
+				Compress c = new Compress(9);
+				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
+				creative_inventory ~= cast(ubyte[])c.flush();
+				mkdirRecurse(Paths.hidden ~ "creative");
+				write(cached, creative_inventory);
+				return true;
+			} catch(CurlException e) {
+				warning_log("Could not download creative inventory for pocket ", __protocol);
+				return false;
 			}
-			return false;
 		} else {
 			creative_inventory = cast(ubyte[])read(cached);
 			return true;
@@ -346,8 +332,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	private immutable string full_version;
 
-	private string[] glue_messages;
-
 	private bool has_creative_inventory = false;
 	
 	private Tuple!(string, string)[][][string] sent_commands; // [command][overload] = [(name, type), (name, type), ...]
@@ -369,14 +353,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		return this.full_version;
 	}
 
-	public override void tick() {
-		super.tick();
-		if(this.glue_messages.length) {
-			this.sendPacket(new Play.Text().new Raw(this.glue_messages.join("§r\n"))); // prevents client from showing the same message mutiple times
-			this.glue_messages.length = 0;
-		}
-	}
-
 	protected void sendPacket(T)(T packet) if(is(T == ubyte[]) || is(typeof(T.encode))) {
 		static if(is(T == ubyte[])) {
 			alias buffer = packet;
@@ -388,8 +364,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void flush() {
-		if(this.total_queue_length >= 1024/* || this.queue.length > 32*/) {
-
+		// since protocol 110 everything is compressed
+		if(this.queue.length) {
 			ubyte[] payload;
 			size_t total;
 			size_t total_bytes = 0;
@@ -403,21 +379,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					break;
 				}
 			}
-			
 			this.queue = this.queue[total..$];
-
 			this.compress(payload);
-			
 			this.total_queue_length -= total_bytes;
-			
-			if(this.queue.length > 0) this.flush();
-			
-		} else {
-			foreach(ubyte[] pk ; this.queue) {
-				this.sendPacketPayload(pk);
-			}
-			this.queue.length = 0;
-			this.total_queue_length = 0;
+			if(this.queue.length) this.flush();
 		}
 	}
 
@@ -444,8 +409,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	public override void sendChatMessage(string message) {
-		this.glue_messages ~= message; // CLIENT BUG IN 1.0.{0 - 4} -- CHANGE BACK WHEN FIXED
-		//this.sendPacket(new Play.Text().new Raw(message));
+		this.sendPacket(new Play.Text().new Raw(message));
 	}
 
 	protected override void sendTitleMessage() {}
@@ -604,11 +568,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		}
 		//normal inventory
 		if((flag & PlayerInventory.INVENTORY) > 0) {
-			this.sendPacket(new Play.ContainerSetContent(0, toSlots(this.inventory[]), [9, 10, 11, 12, 13, 14, 15, 16, 17]));
+			this.sendPacket(new Play.ContainerSetContent(0, this.id, toSlots(this.inventory[]), [9, 10, 11, 12, 13, 14, 15, 16, 17]));
 		}
 		//armour
 		if((flag & PlayerInventory.ARMOR) > 0) {
-			this.sendPacket(new Play.ContainerSetContent(120, toSlots(this.inventory.armor[]), new int[0]));
+			this.sendPacket(new Play.ContainerSetContent(120, this.id, toSlots(this.inventory.armor[]), new int[0]));
 		}
 		//held item
 		if((flag & PlayerInventory.HELD) > 0) this.sendHeld();
@@ -724,7 +688,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public override void sendJoinPacket() {
 		// the time is set by SetTime packet, sent after this one
 		// send thunders if enabled
-		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, Software.display, this.world.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
 	}
 	
 	public override void sendTimePacket() {
@@ -1123,10 +1087,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 		protected override ubyte[] compress(ubyte[] payload) {
 			ubyte[] data;
-			Compress compress = new Compress(6, HeaderFormat.deflate);
+			Compress compress = new Compress(6, HeaderFormat.deflate); //TODO smaller level for smaller payloads
 			data ~= cast(ubyte[])compress.compress(payload);
 			data ~= cast(ubyte[])compress.flush();
-			return new Play.Batch(data).encode();
+			return data;
 		}
 
 	}
