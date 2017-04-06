@@ -27,8 +27,6 @@ static import sul.blocks;
 
 class SwitchingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop, block_t change, bool restoneOnly=false) : MineableBlock!(sb, miningTool, drop) {
 	
-	mixin Instance;
-	
 	static if(!restoneOnly) {
 		public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
 			player.world[position] = change;

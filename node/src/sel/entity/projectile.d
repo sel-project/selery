@@ -505,8 +505,8 @@ class FallingBlock : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 		this.setSize(.98, .98);
 		this.block = block;
-		this.metadata.set!"variant"(block.ids.pe | block.metas.pe << 8);
-		this.n_data = block.ids.pc | block.metas.pc << 12;
+		this.metadata.set!"variant"(block.pocketId | block.pocketMeta << 8);
+		this.n_data = block.minecraftId | block.minecraftMeta << 12;
 	}
 
 	public override pure nothrow @property @safe @nogc bytegroup type() {

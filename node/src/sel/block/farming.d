@@ -22,7 +22,7 @@ import std.traits : isNumeric;
 import common.sel;
 
 import sel.player : Player;
-import sel.block.block : Block, SimpleBlock, Update, Instance;
+import sel.block.block : Block, SimpleBlock, Update;
 import sel.block.blocks : Blocks;
 import sel.block.solid;
 import sel.entity.entity : Entity;
@@ -36,8 +36,6 @@ import sel.world.world : World;
 static import sul.blocks;
 
 class FertileTerrain(sul.blocks.Block sb, bool hydrated, block_t wetter, block_t dryer) : MineableBlock!(sb, MiningTool(false, Tools.pickaxe, Tools.wood), Drop(Items.dirt, 1)) {
-
-	mixin Instance;
 
 	public final override pure nothrow @property @safe @nogc bool doRandomTick() {
 		return true;
@@ -103,8 +101,6 @@ class FertileTerrain(sul.blocks.Block sb, bool hydrated, block_t wetter, block_t
 
 class CropBlock(sul.blocks.Block sb, block_t next, Drop[] drops, alias growTo=null) : MineableBlock!(sb, MiningTool.init, drops) {
 
-	mixin Instance;
-
 	private enum mayGrow = is(typeof(growTo) == ushort) || is(typeof(growTo) == ushort[]);
 
 	static if(next != 0 || mayGrow) {
@@ -161,8 +157,6 @@ class CropBlock(sul.blocks.Block sb, block_t next, Drop[] drops, alias growTo=nu
 
 class ChanceCropBlock(sul.blocks.Block sb, ushort next, Drop[] drops, ubyte a, ubyte b) : CropBlock!(sb, next, drops, null) {
 
-	mixin Instance;
-
 	public override void onRandomTick(World world, BlockPosition position) {
 		if(world.random.next(b) < a) {
 			super.onRandomTick(world, position);
@@ -172,8 +166,6 @@ class ChanceCropBlock(sul.blocks.Block sb, ushort next, Drop[] drops, ubyte a, u
 }
 
 class StemBlock(sul.blocks.Block sb, block_t next, item_t drop, alias growTo=null) : CropBlock!(sb, next, [], growTo) {
-
-	mixin Instance;
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		immutable amount = (){
@@ -199,8 +191,6 @@ class StemBlock(sul.blocks.Block sb, block_t next, item_t drop, alias growTo=nul
 }
 
 class GrowingBlock(sul.blocks.Block sb, block_t next, block_t[] compare, size_t height, bool waterNeeded, block_t[] requiredBlock, Drop drops) : MineableBlock!(sb, MiningTool.init, drops) {
-
-	mixin Instance;
 
 	public override void onRandomTick(World world, BlockPosition position) {
 		//TODO check if there's water around
@@ -251,8 +241,6 @@ class CactusBlock(sul.blocks.Block sb, block_t next) : GrowingBlock!(sb, next, B
 
 class NetherCrop(sul.blocks.Block sb, block_t next, Drop drop) : CropBlock!(sb, next, [drop]) {
 
-	mixin Instance;
-
 	public override void onRandomTick(World world, BlockPosition position) {
 		this.grow(world, position);
 	}
@@ -260,8 +248,6 @@ class NetherCrop(sul.blocks.Block sb, block_t next, Drop drop) : CropBlock!(sb, 
 }
 
 class BeansBlock(sul.blocks.Block sb, block_t next, ubyte facing, MiningTool miningTool, Drop drop) : MineableBlock!(sb, miningTool, drop) {
-
-	mixin Instance;
 
 	static if(next != 0) {
 

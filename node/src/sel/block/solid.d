@@ -20,7 +20,7 @@ import std.math : ceil;
 
 import common.sel;
 
-import sel.block.block : Update, Remove, Block, SimpleBlock, Instance;
+import sel.block.block : Update, Remove, Block, SimpleBlock;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.projectile : FallingBlock;
@@ -59,8 +59,6 @@ enum Facing : ubyte {
  * ---
  */
 class MineableBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] cdrops, Experience exp=Experience.init) : SimpleBlock!(sb) {
-
-	mixin Instance;
 
 	static if(cdrops.length) {
 
@@ -223,8 +221,6 @@ class RedstoneOreBlock(sul.blocks.Block sb, bool lit, block_t change) : Mineable
 
 	//TODO +1 with fortune
 
-	mixin Instance;
-
 	static if(lit) {
 
 		public final override pure nothrow @property @safe @nogc bool doRandomTick() {
@@ -251,8 +247,6 @@ class RedstoneOreBlock(sul.blocks.Block sb, bool lit, block_t change) : Mineable
 }
 
 class SpreadingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] drops, block_t[] spreadTo, uint r_x, uint r_z, uint r_y_down, uint r_y_up, block_t suffocation) : MineableBlock!(sb, miningTool, drops) {
-
-	mixin Instance;
 
 	public final override pure nothrow @property @safe @nogc bool doRandomTick() {
 		return true;
@@ -295,13 +289,9 @@ alias SimpleSpreadingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] dr
 
 class SaplingBlock(sul.blocks.Block sb, size_t drop, block_t[] logs, block_t[] leaves) : MineableBlock!(sb, MiningTool.init, Drop(drop, 1)) if(logs.length == 4 && leaves.length == 4) {
 
-	mixin Instance;
-
 }
 
 class GravityBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop) : MineableBlock!(sb, miningTool, drop) {
-
-	mixin Instance;
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
 		if(!world[position].solid) {
@@ -313,8 +303,6 @@ class GravityBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop) : Mine
 }
 
 final class GravelBlock(sul.blocks.Block sb) : GravityBlock!(sb, MiningTool.init, Drop.init) {
-
-	mixin Instance;
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] impl(float prob) {
@@ -338,8 +326,6 @@ final class GravelBlock(sul.blocks.Block sb) : GravityBlock!(sb, MiningTool.init
 alias WoodBlock(sul.blocks.Block sb, item_t drop) = MineableBlock!(sb, MiningTool(false, Tools.axe, Tools.wood), Drop(drop, 1));
 
 class LeavesBlock(sul.blocks.Block sb, bool decayable, item_t drop, item_t sapling, float smallDrop, bool dropApples) : SimpleBlock!(sb) {
-
-	mixin Instance;
 
 	static if(smallDrop) {
 		enum float[] saplingDrop = [.05, .0625, .0833, .1];
@@ -404,8 +390,6 @@ alias FlowerBlock(sul.blocks.Block sb, item_t drop) = MineableBlock!(sb, MiningT
 
 class DoublePlantBlock(sul.blocks.Block sb, bool top, block_t other, item_t drop, bool isGrass=false) : SimpleBlock!(sb) {
 
-	mixin Instance;
-
 	enum count = isGrass ? 2 : 1;
 
 	public override Slot[] drops(World world, Player player, Item item) {
@@ -430,8 +414,6 @@ class DoublePlantBlock(sul.blocks.Block sb, bool top, block_t other, item_t drop
 
 class PlantBlock(sul.blocks.Block sb, item_t shears, Drop hand) : SimpleBlock!(sb) {
 
-	mixin Instance;
-
 	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] ret;
 		if(item !is null && item.toolType == Tools.shears) {
@@ -448,15 +430,11 @@ class PlantBlock(sul.blocks.Block sb, item_t shears, Drop hand) : SimpleBlock!(s
 
 class StairsBlock(sul.blocks.Block sb, ubyte facing, bool upsideDown, MiningTool miningTool, item_t drop) : MineableBlock!(sb, miningTool, Drop(drop, 1)) {
 
-	mixin Instance;
-
 	//TODO
 
 }
 
 class CakeBlock(sul.blocks.Block sb, block_t next) : SimpleBlock!(sb) {
-
-	mixin Instance;
 
 	public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
 		player.hunger = player.hunger + 2;
@@ -473,8 +451,6 @@ class CakeBlock(sul.blocks.Block sb, block_t next) : SimpleBlock!(sb) {
 
 class MonsterEggBlock(sul.blocks.Block sb, block_t disguise) : MineableBlock!(sb, MiningTool.init, Drop(0, 0, 0, disguise)) {
 
-	mixin Instance;
-
 	public override void onRemoved(World world, BlockPosition position, Remove type) {
 		if(type == Remove.broken || type == Remove.exploded) {
 			//TODO spawn silverfish
@@ -485,8 +461,6 @@ class MonsterEggBlock(sul.blocks.Block sb, block_t disguise) : MineableBlock!(sb
 }
 
 class InactiveEndPortalBlock(sul.blocks.Block sb, block_t active, ubyte dir) : SimpleBlock!(sb) {
-
-	mixin Instance;
 
 	public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
 		if(!player.inventory.held.empty && player.inventory.held.item == Items.eyeOfEnder) {

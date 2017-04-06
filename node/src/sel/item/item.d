@@ -109,27 +109,48 @@ abstract class Item {
 		}
 	}
 
-	/**
-	 * Gets the ids for the item.
-	 * They should never change.
-	 * Example:
-	 * ---
-	 * 
-	 * ---
-	 */
-	public abstract pure nothrow @property @safe @nogc shortgroup ids();
+	public pure nothrow @property @safe @nogc sul.items.Item data() {
+		return sul.items.Item.init;
+	}
 
-	/**
-	 * Gets the metas (or the damage) for the item.
-	 */
-	public abstract pure nothrow @property @safe @nogc shortgroup metas();
+	public pure nothrow @property @safe @nogc bool minecraft() {
+		return this.data.minecraft.exists;
+	}
+
+	public pure nothrow @property @safe @nogc ushort minecraftId() {
+		return this.data.minecraft.id;
+	}
+
+	public pure nothrow @property @safe @nogc ushort minecraftMeta() {
+		return this.data.minecraft.meta;
+	}
+
+	public pure nothrow @property @safe @nogc bool pocket() {
+		return this.data.pocket.exists;
+	}
+
+	public pure nothrow @property @safe @nogc ushort pocketId() {
+		return this.data.pocket.id;
+	}
+
+	public pure nothrow @property @safe @nogc ushort pocketMeta() {
+		return this.data.pocket.meta;
+	}
+
+	public deprecated("Use pocketId and minecraftId instead") pure nothrow @property @safe @nogc shortgroup ids() {
+		return shortgroup(this.pocketId, this.minecraftId);
+	}
+
+	public deprecated("Use pocketMeta and minecraftMeta instead") pure nothrow @property @safe @nogc shortgroup metas() {
+		return shortgroup(this.pocketMeta, this.minecraftMeta);
+	}
 
 	/**
 	 * Gets the name (not the custom name!) of the item.
 	 */
-	public abstract pure nothrow @property @safe @nogc string name();
-
-	protected abstract pure nothrow @property @safe @nogc size_t index();
+	public pure nothrow @property @safe @nogc string name() {
+		return this.data.name;
+	}
 
 	/** 
 	 * Highest number of items that can be stacked in the slot.
@@ -144,7 +165,9 @@ abstract class Item {
 	 * assert(slot.count != 64 && slot.count == 23);
 	 * ---
 	 */
-	public abstract pure nothrow @property @safe @nogc ubyte max();
+	public pure nothrow @property @safe @nogc ubyte max() {
+		return this.data.stack;
+	}
 
 	/**
 	 * Indicates whether or not this item is a tool.
@@ -618,8 +641,12 @@ abstract class Item {
 	public override bool opEquals(Object o) {
 		if(cast(Item)o) {
 			Item i = cast(Item)o;
-			//TODO compare enchantments and custom name directly instead of nbts
-			return this.ids == i.ids && this.metas == i.metas && this.customName == i.customName && this.enchantments == i.enchantments;
+			return this.minecraftId == i.minecraftId &&
+					this.pocketId == i.pocketId &&
+					this.minecraftMeta == i.minecraftMeta &&
+					this.pocketMeta == i.pocketMeta &&
+					this.customName == i.customName &&
+					this.enchantments == i.enchantments;
 		}
 		return false;
 	}
@@ -634,7 +661,7 @@ abstract class Item {
 	 * ---
 	 */
 	public @safe @nogc bool opEquals(item_t item) {
-		return item == this.index;
+		return item == this.data.index;
 	}
 
 	/// ditto
@@ -646,11 +673,11 @@ abstract class Item {
 	}
 
 	/**
-	 * Returns the item as string in format "name" or
-	 * "name:damage" for tools.
+	 * Returns the item as string in format "name" or "name:damage" for tools.
 	 */
 	public override string toString() {
-		return this.name ~ (this.tool ? (":" ~ this.metas.pe.to!string) : "") ~ (this.customName != "" ? (" (\"" ~ this.customName ~ "\")") : "");
+		//TODO override in tools to print damage
+		return this.name ~ "(" ~ this.customName ~ ", " ~ to!string(this.enchantments.values) ~ ")";
 	}
 
 	/**
@@ -680,34 +707,12 @@ abstract class Item {
 
 class SimpleItem(sul.items.Item si) : Item {
 
-	alias sul = si;
-
-	private enum __ids = shortgroup(si.pocket ? si.pocket.id : 0, si.minecraft ? si.minecraft.id : 0);
-
-	private enum __metas = shortgroup(si.pocket ? si.pocket.meta : 0, si.minecraft ? si.minecraft.meta : 0);
-
 	public @safe this(E...)(E args) {
 		super(args);
 	}
 
-	public final override pure nothrow @property @safe @nogc item_t index() {
-		return si.index;
-	}
-
-	public final override pure nothrow @property @safe @nogc shortgroup ids() {
-		return __ids;
-	}
-
-	public override pure nothrow @property @safe @nogc shortgroup metas() {
-		return __metas;
-	}
-
-	public final override pure nothrow @property @safe @nogc string name() {
-		return si.name;
-	}
-
-	public override pure nothrow @property @safe @nogc ubyte max() {
-		return si.stack;
+	public final override pure nothrow @property @safe @nogc sul.items.Item data() {
+		return si;
 	}
 	
 	alias slot this;

@@ -442,8 +442,6 @@ abstract class GenericSign(sul.blocks.Block sb) : TileBlock!(sb), Sign {
 }
 
 class SignBlock(sul.blocks.Block sb) : GenericSign!(sb) {
-
-	mixin Instance;
 	
 	public @safe this(E...)(E args) {
 		super(args);
@@ -460,8 +458,6 @@ class SignBlock(sul.blocks.Block sb) : GenericSign!(sb) {
 
 class WallSignBlock(sul.blocks.Block sb, ubyte facing) : GenericSign!(sb) if(facing < 4) {
 
-	mixin Instance;
-	
 	public @safe this(E...)(E args) {
 		super(args);
 	}
@@ -512,7 +508,7 @@ interface FlowerPot {
 	 */
 	public @property Item item(Item item);
 
-	protected enum minecraftItems = [
+	protected enum minecraftItems = cast(string[ushort])[
 		6: "sapling",
 		31: "tallgrass",
 		32: "deadbush",
@@ -526,8 +522,6 @@ interface FlowerPot {
 }
 
 final class FlowerPotTile(sul.blocks.Block sb) : TileBlock!(sb), FlowerPot {
-
-	mixin Instance;
 
 	private Item m_item;
 
@@ -549,8 +543,8 @@ final class FlowerPotTile(sul.blocks.Block sb) : TileBlock!(sb), FlowerPot {
 	public override @property Item item(Item item) {
 		if(item !is null) {
 			item.clear(); // remove enchantments and custom name
-			static if(__pocket) this.pocket_compound = new Compound("", new Short("item", item.ids.pe), new Int("mData", item.metas.pe));
-			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", (){ auto ret=item.ids.pc in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Int("Data", item.metas.pc));
+			static if(__pocket) this.pocket_compound = new Compound("", new Short("item", item.pocketId), new Int("mData", item.pocketMeta));
+			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Int("Data", item.minecraftMeta));
 		} else {
 			this.pocket_compound = null;
 			this.minecraft_compound = null;
@@ -567,7 +561,7 @@ final class FlowerPotTile(sul.blocks.Block sb) : TileBlock!(sb), FlowerPot {
 			else if(!(player.inventory += Slot(this.item, 1)).empty) player.world.drop(Slot(this.item, 1), position.entityPosition + [.5, .375, .5]);
 			this.item = null;
 			return true;
-		} else if(item !is null && [6, 31, 32, 37, 38, 39, 40, 81].canFind(item.ids.pc)) {
+		} else if(item !is null && item.minecraftId in minecraftItems) {
 			// place
 			this.item = item;
 			ubyte c = player.inventory.held.count;

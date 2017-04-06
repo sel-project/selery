@@ -16,7 +16,7 @@ module sel.block.blocks;
 
 import common.sel;
 
-import sel.block.block : Block, SimpleBlock;
+import sel.block.block : Block, BlockWith, SimpleBlock;
 import sel.block.farming;
 import sel.block.fluid;
 import sel.block.miscellaneous;
@@ -33,16 +33,24 @@ import sul.blocks : _ = Blocks;
  * Storage for a world's blocks.
  */
 public class Blocks {
+
+	private static Blocks instance;
 	
 	private Block*[] sel;
 	private Block*[][256] minecraft, pocket;
 	
 	public this() {
-		foreach(a ; __traits(allMembers, Blocks)) {
-			static if(mixin("is(" ~ a ~ " : Block)")) {
-				mixin("this.register(new " ~ a ~ "());");
-				//mixin("this.register(" ~ a ~ ".instance);");
+		if(instance is null) {
+			foreach(a ; __traits(allMembers, Blocks)) {
+				static if(mixin("is(" ~ a ~ " : Block)")) {
+					mixin("this.register(new " ~ a ~ "());");
+				}
 			}
+			instance = this;
+		} else {
+			this.sel = instance.sel.dup;
+			this.minecraft = instance.minecraft.dup;
+			this.pocket = instance.pocket.dup;
 		}
 	}
 
@@ -59,12 +67,12 @@ public class Blocks {
 			if(this.sel.length <= block.id) this.sel.length = block.id + 1;
 			this.sel[block.id] = block;
 			if(block.minecraft) {
-				if(this.minecraft[block.ids.pc].length <= block.metas.pc) this.minecraft[block.ids.pc].length = block.metas.pc + 1;
-				this.minecraft[block.ids.pc][block.metas.pc] = block;
+				if(this.minecraft[block.minecraftId].length <= block.minecraftMeta) this.minecraft[block.minecraftId].length = block.minecraftMeta + 1;
+				this.minecraft[block.minecraftId][block.minecraftMeta] = block;
 			}
 			if(block.pocket) {
-				if(this.minecraft[block.ids.pe].length <= block.metas.pe) this.minecraft[block.ids.pe].length = block.metas.pe + 1;
-				this.minecraft[block.ids.pe][block.metas.pe] = block;
+				if(this.minecraft[block.pocketId].length <= block.pocketMeta) this.minecraft[block.pocketId].length = block.pocketMeta + 1;
+				this.minecraft[block.pocketId][block.pocketMeta] = block;
 			}
 		}
 	}

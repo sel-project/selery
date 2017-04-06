@@ -64,47 +64,57 @@ enum Remove {
 /**
  * Base class for every block.
  */
-abstract class Block {
+class Block {
+
+	public pure nothrow @property @safe @nogc sul.blocks.Block data() {
+		return sul.blocks.Block.init;
+	}
 
 	/**
 	 * Gets the block's SEL id.
 	 */
-	public abstract pure nothrow @property @safe @nogc block_t id();
+	public pure nothrow @property @safe @nogc block_t id() {
+		return this.data.id;
+	}
 
-	public abstract pure nothrow @property @safe @nogc bool minecraft();
+	public pure nothrow @property @safe @nogc bool minecraft() {
+		return this.data.minecraft.exists;
+	}
 
-	public abstract pure nothrow @property @safe @nogc bool pocket();
+	public pure nothrow @property @safe @nogc ubyte minecraftId() {
+		return this.data.minecraft.id;
+	}
 
-	/**
-	 * Gets the block's ids for Minecraft and
-	 * Minecraft: Pocket Edition.
-	 * Example:
-	 * ---
-	 * if(block.ids.pe == block.ids.pc) {
-	 *    d("This block has the same ids");
-	 * }
-	 * ---
-	 */
-	public abstract pure nothrow @property @safe @nogc bytegroup ids();
+	public pure nothrow @property @safe @nogc ubyte minecraftMeta() {
+		return this.data.minecraft.meta;
+	}
 
-	/**
-	 * Gets the block's metas for Minecraft and
-	 * Minecraft: Pocket Edition.
-	 * Example:
-	 * ---
-	 * if(block.metas.pe != block.metas.pc) {
-	 *    d("This block has different metas");
-	 * }
-	 * ---
-	 */
-	public abstract pure nothrow @property @safe @nogc bytegroup metas();
+	public pure nothrow @property @safe @nogc bool pocket() {
+		return this.data.pocket.exists;
+	}
+
+	public pure nothrow @property @safe @nogc ubyte pocketId() {
+		return this.data.pocket.id;
+	}
+
+	public pure nothrow @property @safe @nogc ubyte pocketMeta() {
+		return this.data.pocket.meta;
+	}
+
+	public deprecated("Use minecraftId and pocketId instead") pure nothrow @property @safe @nogc bytegroup ids() {
+		return bytegroup(this.pocketId, this.minecraftId);
+	}
+
+	public deprecated("Use minecraftMeta and pocketMeta instead") pure nothrow @property @safe @nogc bytegroup metas() {
+		return bytegroup(this.pocketMeta, this.minecraftMeta);
+	}
 
 	/**
 	 * Indicates whether a block is solid (can sustain another block or
 	 * an entity) or not.
 	 */
 	public pure nothrow @property @safe @nogc bool solid() {
-		return true;
+		return this.data.solid;
 	}
 
 	/**
@@ -118,52 +128,72 @@ abstract class Block {
 	 * Indicates the block's hardness, used to calculate the mining
 	 * time of the block's material.
 	 */
-	public abstract pure nothrow @property @safe @nogc double hardness();
+	public pure nothrow @property @safe @nogc double hardness() {
+		return this.data.hardness;
+	}
 
 	/**
 	 * Indicates whether the block can be mined.
 	 */
-	public abstract pure nothrow @property @safe @nogc bool indestructible();
+	public pure nothrow @property @safe @nogc bool indestructible() {
+		return this.hardness < 0;
+	}
 	
 	/**
 	 * Indicates whether the block can be mined or it's destroyed
 	 * simply by a left-click.
 	 */
-	public abstract pure nothrow @property @safe @nogc bool instantBreaking();
+	public pure nothrow @property @safe @nogc bool instantBreaking() {
+		return this.hardness == 0;
+	}
 
 	/**
 	 * Gets the blast resistance, used for calculate
 	 * the resistance at the explosion of solid blocks.
 	 */
-	public abstract pure nothrow @property @safe @nogc double blastResistance();
+	public pure nothrow @property @safe @nogc double blastResistance() {
+		return this.data.blastResistance;
+	}
 
 	/**
 	 * Gets the block's opacity, in a range from 0 to 15, where 0 means
 	 * that the light propagates like in the air and 15 means that the
 	 * light is totally blocked.
 	 */
-	public abstract pure nothrow @property @safe @nogc ubyte opacity();
+	public pure nothrow @property @safe @nogc ubyte opacity() {
+		return this.data.opacity;
+	}
 
 	/**
 	 * Indicates the level of light emitted by the block in a range from
 	 * 0 to 15.
 	 */
-	public abstract pure nothrow @property @safe @nogc ubyte luminance();
+	public pure nothrow @property @safe @nogc ubyte luminance() {
+		return this.data.luminance;
+	}
 
 	/**
 	 * Boolean value indicating whether or not the block is replaced
 	 * when touched with a placeable item.
 	 */
-	public abstract pure nothrow @property @safe @nogc bool replaceable();
+	public pure nothrow @property @safe @nogc bool replaceable() {
+		return this.data.replaceable;
+	}
 
 	/**
 	 * Boolean value indicating whether or not the block can be burnt.
 	 */
-	public abstract pure nothrow @property @safe @nogc bool flammable();
+	public pure nothrow @property @safe @nogc bool flammable() {
+		return this.encouragement > 0;
+	}
 
-	public abstract pure nothrow @property @safe @nogc ubyte encouragement();
+	public pure nothrow @property @safe @nogc ubyte encouragement() {
+		return this.data.encouragement;
+	}
 
-	public abstract pure nothrow @property @safe @nogc ubyte flammability();
+	public pure nothrow @property @safe @nogc ubyte flammability() {
+		return this.data.flammability;
+	}
 
 	/**
 	 * Indicates whether falling on this block causes damage or not.
@@ -176,7 +206,9 @@ abstract class Block {
 	 * Indicates whether the block has a bounding box which entities
 	 * can collide with, even if the block is not solid.
 	 */
-	public abstract pure nothrow @property @safe @nogc bool hasBoundingBox();
+	public pure nothrow @property @safe @nogc bool hasBoundingBox() {
+		return false;
+	}
 
 	/**
 	 * If hasBoundingBox is true, returns the bounding box of the block
@@ -187,7 +219,9 @@ abstract class Block {
 		return null;
 	}
 
-	public abstract pure nothrow @property @safe @nogc bool fullUpperShape();
+	public pure nothrow @property @safe @nogc bool fullUpperShape() {
+		return false;
+	}
 
 	public void onCollide(World world, Entity entity) {}
 
@@ -337,21 +371,11 @@ abstract class Block {
 		return cast(Block)o && this.opEquals((cast(Block)o).id);
 	}
 
-	public override abstract string toString();
-
 }
 
 private enum double m = 1.0 / 16.0;
 
 class SimpleBlock(sul.blocks.Block sb) : Block {
-
-	mixin Instance;
-
-	private enum __ids = bytegroup(sb.pocket ? sb.pocket.id : 248 + (sb.minecraft.id & 1), sb.minecraft ? sb.minecraft.id : 0);
-
-	private enum __metas = bytegroup(sb.pocket ? sb.pocket.meta : 0, sb.minecraft ? sb.minecraft.meta : 0);
-
-	private enum __to_string = (string[] data){ foreach(ref d;data){d=capitalize(d);} return data.join(""); }(sb.name.split(" ")) ~ "(id: " ~ to!string(sb.id) ~ ", " ~ (sb.minecraft ? "minecraft(" ~ to!string(sb.minecraft.id) ~ (sb.minecraft.meta ? ":" ~ to!string(sb.minecraft.meta) : "") ~ ")" ~ (sb.pocket ? ", " : "") : "") ~ (sb.pocket ? "pocket(" ~ to!string(sb.pocket.id) ~ (sb.pocket.meta ? ":" ~ to!string(sb.pocket.meta) : "") ~ ")" : "") ~ ")";
 
 	private BlockAxis n_box;
 
@@ -361,84 +385,8 @@ class SimpleBlock(sul.blocks.Block sb) : Block {
 		}
 	}
 
-	public final override pure nothrow @property @safe @nogc ushort id() {
-		return sb.id;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool minecraft() {
-		return sb.minecraft.exists;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool pocket() {
-		return sb.pocket.exists;
-	}
-
-	public final override pure nothrow @property @safe @nogc bytegroup ids() {
-		return __ids;
-	}
-
-	public final override pure nothrow @property @safe @nogc bytegroup metas() {
-		return __metas;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool solid() {
-		static if(sb.solid && sb.boundingBox) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc double hardness() {
-		return sb.hardness;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool indestructible() {
-		static if(sb.hardness < 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc bool instantBreaking() {
-		static if(sb.hardness == 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc double blastResistance() {
-		return sb.blastResistance;
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte opacity() {
-		return sb.opacity;
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte luminance() {
-		return sb.luminance;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool replaceable() {
-		return sb.replaceable;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool flammable() {
-		static if(sb.encouragement > 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte encouragement() {
-		return sb.encouragement;
-	}
-
-	public final override pure nothrow @property @safe @nogc ubyte flammability() {
-		return sb.flammability;
+	public final override pure nothrow @property @safe @nogc sul.blocks.Block data() {
+		return sb;
 	}
 
 	public final override pure nothrow @property @safe @nogc bool hasBoundingBox() {
@@ -463,26 +411,16 @@ class SimpleBlock(sul.blocks.Block sb) : Block {
 		}
 	}
 
-	public override string toString() {
-		return __to_string;
-	}
-
 }
 
-mixin template Instance() {
+template BlockWith(sul.blocks.Block sb, B : Block) {
 
-	private static Block n_instance;
+	class BlockWith : B {
 
-	private static Block* function() instanceImpl = {
-		n_instance = new typeof(this)();
-		instanceImpl = {
-			return &n_instance;
-		};
-		return instanceImpl();
-	};
+		public override pure nothrow @property @safe @nogc sul.blocks.Block data() {
+			return sb;
+		}
 
-	public static @property Block* instance() {
-		return instanceImpl();
 	}
 
 }

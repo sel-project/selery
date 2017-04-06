@@ -65,20 +65,6 @@ struct Slot {
 	}
 
 	/**
-	 * Gets the item's ids.
-	 */
-	public @property @safe @nogc shortgroup ids() {
-		return this.empty ? shortgroup(0, 0) : this.item.ids;
-	}
-
-	/**
-	 * Gets the item's metas.
-	 */
-	public @property @safe @nogc shortgroup metas() {
-		return this.empty ? shortgroup(0, 0) : this.item.metas;
-	}
-
-	/**
 	 * Gets the slot's item.
 	 */
 	public @property @safe @nogc Item item() {

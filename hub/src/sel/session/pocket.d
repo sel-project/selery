@@ -827,7 +827,7 @@ private ubyte[][] readBatch(ubyte[] data) {
 private ubyte[] writeBatch(ubyte[][] packets) {
 	ubyte[] ret;
 	foreach(packet ; packets) {
-		ret ~= varuint.encode(packet.length) ~ packet;
+		ret ~= varuint.encode(cast(uint)packet.length) ~ packet;
 	}
 	// packet compressed using this function should be small
 	auto c = new Compress(1, HeaderFormat.deflate);

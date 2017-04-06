@@ -292,7 +292,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			if(!slot.empty && slot.item.pocketCompound !is null) {
 				NbtBuffer!(Endian.littleEndian).instance.writeTag(slot.item.pocketCompound, nbt);
 			}
-			return Types.Slot(slot.ids.pe, slot.metas.pe << 8 | slot.count, nbt);
+			return Types.Slot(slot.item.pocketId, slot.item.pocketMeta << 8 | slot.count, nbt);
 		}
 	}
 
@@ -511,8 +511,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 							auto ptr = s[x, y, z];
 							if(ptr && *ptr) {
 								Block block = **ptr;
-								section.blockIds[x << 8 | z << 4 | y] = block.ids.pe;
-								if(block.metas.pe) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.metas.pe << (y % 2 == 1 ? 4 : 0));
+								section.blockIds[x << 8 | z << 4 | y] = block.pocketId;
+								if(block.pocketMeta != 0) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.pocketMeta << (y % 2 == 1 ? 4 : 0));
 							}
 						}
 					}
@@ -752,7 +752,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	public override void sendBlocks(PlacedBlock[] blocks) {
 		foreach(PlacedBlock block ; blocks) {
-			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.ids.pe, 176 | block.metas.pe));
+			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.pocketId, 176 | block.pocketMeta));
 		}
 		this.broken_by_this.length = 0;
 	}

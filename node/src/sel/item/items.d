@@ -33,36 +33,46 @@ import sul.items : _ = Items;
  * Storage for a world's items.
  */
 public class Items {
+
+	private static Items instance;
 	
 	private Item function(ushort damage)[] indexes;
 	private Item function(ushort damage)[ushort][] minecraft, pocket;
 	private Item function(ushort damage)[string] strings;
 	
 	public this() {
-		foreach_reverse(a ; __traits(allMembers, Items)) {
-			static if(mixin("is(" ~ a ~ " : Item)")) {
-				mixin("this.register!" ~ a ~ "();");
+		if(instance is null) {
+			foreach_reverse(a ; __traits(allMembers, Items)) {
+				static if(mixin("is(" ~ a ~ " : Item)")) {
+					mixin("this.register(new " ~ a ~ "());");
+				}
 			}
+			instance = this;
+		} else {
+			this.indexes = instance.indexes.dup;
+			this.minecraft = instance.minecraft.dup;
+			this.pocket = instance.pocket.dup;
+			this.strings = instance.strings.dup;
 		}
 	}
 	
-	public void register(T:Item)() if(is(typeof(T.sul) == sul.items.Item)) {
+	public void register(T:Item)(T item) {
 		static if(__traits(compiles, new T(ushort.max))) {
 			auto f = (ushort damage){ return cast(Item)new T(damage); };
 		} else {
 			auto f = (ushort damage){ return cast(Item)new T(); };
 		}
-		if(this.indexes.length <= T.sul.index) this.indexes.length = T.sul.index + 1;
-		this.indexes[T.sul.index] = f;
-		if(T.sul.minecraft) {
-			if(this.minecraft.length < T.sul.minecraft.id) this.minecraft.length = T.sul.minecraft.id + 1;
-			this.minecraft[T.sul.minecraft.id][T.sul.minecraft.meta] = f;
+		if(this.indexes.length <= item.data.index) this.indexes.length = item.data.index + 1;
+		this.indexes[item.data.index] = f;
+		if(item.minecraft) {
+			if(this.minecraft.length < item.minecraftId) this.minecraft.length = item.minecraftId + 1;
+			this.minecraft[item.minecraftId][item.minecraftMeta] = f;
 		}
-		if(T.sul.pocket) {
-			if(this.pocket.length < T.sul.pocket.id) this.pocket.length = T.sul.pocket.id + 1;
-			this.pocket[T.sul.pocket.id][T.sul.pocket.meta] = f;
+		if(item.pocket) {
+			if(this.pocket.length < item.pocketId) this.pocket.length = item.pocketId + 1;
+			this.pocket[item.pocketId][item.pocketMeta] = f;
 		}
-		this.strings[T.sul.name] = f;
+		this.strings[item.name] = f;
 	}
 	
 	public Item function(ushort) getConstructor(size_t index) {

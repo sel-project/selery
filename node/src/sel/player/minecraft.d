@@ -135,7 +135,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			} else {
 				compound = [NBT.END]; // End tag's id
 			}
-			return Types.Slot(slot.ids.pc, slot.count, slot.metas.pc, compound);
+			return Types.Slot(slot.item.minecraftId, slot.count, slot.item.minecraftMeta, compound);
 		}
 	}
 
@@ -353,8 +353,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 					foreach(ubyte z ; 0..16) {
 						foreach(ubyte x ; cast(ubyte[])[7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8]) {
 							auto block = section[x, y, z];
-							if(block && *block && (**block).ids.pc != 0) {
-								uint b = (**block).ids.pc << 4 | (**block).metas.pc;
+							if(block && *block && (**block).minecraftId != 0) {
+								uint b = (**block).minecraftId << 4 | (**block).minecraftMeta;
 								auto p = array_index(b, palette);
 								if(p >= 0) {
 									pointers ~= p & 255;
@@ -588,7 +588,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		Types.BlockChange[][int][int] pc;
 		foreach(PlacedBlock block ; blocks) {
 			auto position = block.position;
-			pc[position.x >> 4][position.z >> 4] ~= Types.BlockChange((position.x & 15) << 4 | (position.z & 15), position.y & 255, block.ids.pc << 4 | block.metas.pc);
+			pc[position.x >> 4][position.z >> 4] ~= Types.BlockChange((position.x & 15) << 4 | (position.z & 15), position.y & 255, block.minecraftId << 4 | block.minecraftMeta);
 		}
 		foreach(x, pcz; pc) {
 			foreach(z, pb; pcz) {
