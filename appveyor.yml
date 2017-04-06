@@ -10,6 +10,8 @@ environment:
   - DC: ldc
     DVersion: 1.2.0-beta2
     arch: x64
+  allow_failures:
+    - platform: x86
 
 skip_tags: true
 branches:
@@ -77,6 +79,8 @@ before_build:
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
+  - xcopy common hub\src\common /s /i
+  - xcopy common node\src\common /s /i
 
 build_script:
  - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC%
