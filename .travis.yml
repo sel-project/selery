@@ -7,6 +7,7 @@ d:
 install:
  - cp -r common hub/src
  - cp -r common node/src
+ - mkdir -p hub/resources
  
 script:
  - cd hub && dub build --compiler=$DC
