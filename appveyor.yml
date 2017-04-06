@@ -10,8 +10,6 @@ environment:
   - DC: ldc
     DVersion: 1.2.0-beta2
     arch: x64
-  allow_failures:
-   - platform: x86
 
 skip_tags: true
 branches:
