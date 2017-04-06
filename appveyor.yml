@@ -1,9 +1,9 @@
 platform: x64
 environment:
  matrix:
-  - DC: dmd
-    DVersion: 2.073.2
-    arch: x64
+#  - DC: dmd
+#    DVersion: 2.073.2
+#    arch: x64
   - DC: dmd
     DVersion: 2.073.2
     arch: x86
@@ -81,9 +81,9 @@ before_build:
   - xcopy common node\src\common /s /i
 
 build_script:
- - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC%
+ - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC% --build=release
  - cd ..\node && %DC% init.d src\common\sel.d src\common\path.d src\common\util\format.d && .\init
- - dub build --arch=%Darch% --compiler=%DC%
+ - dub build --arch=%Darch% --compiler=%DC% --build=release
 
 test_script:
  - echo %PLATFORM%

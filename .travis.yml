@@ -10,6 +10,6 @@ install:
  - mkdir -p hub/resources
  
 script:
- - cd hub && dub build --compiler=$DC
+ - cd hub && dub build --compiler=$DC --build=release
  - cd ../node && $DC init.d src/common/sel.d src/common/path.d src/common/util/format.d && ./init
- - dub build --compiler=$DC
+ - dub build --compiler=$DC --build=release
