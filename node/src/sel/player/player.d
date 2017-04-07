@@ -524,17 +524,12 @@ abstract class Player : Human {
 	}
 	
 	// does the first spawn.
-	public override @safe void firstspawn() {
+	public override void firstspawn() {
 		super.firstspawn();
 		//this.sendInventory();
 		this.healthUpdated();
 		this.hungerUpdated();
 		this.experienceUpdated();
-	}
-	
-	protected override @trusted void recalculateColors() {
-		super.recalculateColors();
-		this.sendMetadata(this);
 	}
 
 
@@ -1428,15 +1423,13 @@ abstract class Player : Human {
 	
 	protected void handleSprinting(bool sprint) {
 		if(this.alive && sprint ^ this.sprinting) {
-			//auto event = sprint ? new PlayerStartSprintingEvent(this) : new PlayerStopSprintingEvent(this);
-			//this.world.callEvent(event);
 			if(sprint) {
 				this.world.callEventIfExists!PlayerStartSprintingEvent(this);
 			} else {
 				this.world.callEventIfExists!PlayerStopSprintingEvent(this);
 			}
 			this.sprinting = sprint;
-			if(this.pe) this.recalculateSpeed();
+			//if(this.pe) this.recalculateSpeed();
 		}
 	}
 	

@@ -128,14 +128,14 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		return 0;
 	}
 
-	public override @trusted void despawn() {
+	public override void despawn() {
 		//do nothing, wait for the respawn
 		this.n_spawned = false;
 		// despawn from players
 		this.viewers!Player.call!"sendDespawnEntity"(this);
 	}
 
-	protected @trusted void respawn() {
+	protected void respawn() {
 		this.ticking = true;
 		this.m_health.reset();
 		this.m_hunger.reset();
@@ -149,7 +149,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		this.viewers!Player.call!"sendSpawnEntity"(this);
 	}
 
-	public @safe void firstspawn() {
+	public void firstspawn() {
 		this.n_spawned = true;
 		this.sprinting = false;
 		this.inventory.init();

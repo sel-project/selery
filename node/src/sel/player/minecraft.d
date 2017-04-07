@@ -517,14 +517,14 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		this.sendPacket(new Clientbound.EntityEffect(this.id, effect.id, effect.level, cast(uint)effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
+		if(effect.minecraft) this.sendPacket(new Clientbound.EntityEffect(this.id, effect.minecraft.id, effect.level, cast(uint)effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
 	}
 	
 	protected override void onEffectRemoved(Effect effect) {
-		this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.id));
+		if(effect.minecraft) this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.minecraft.id));
 	}
 	
-	public override @trusted void recalculateSpeed() {
+	public override void recalculateSpeed() {
 		super.recalculateSpeed();
 		this.sendPacket(new Clientbound.EntityProperties(this.id, [Types.Attribute(Attributes.movementSpeed.name, this.speed)]));
 	}

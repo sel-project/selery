@@ -1209,7 +1209,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public void opIndexAssign(T)(T tile, int x, int y, int z) if(is(T : Tile) && is(T : Block)) {
+	public void opIndexAssign(T)(T tile, int x, uint y, int z) if(is(T : Tile) && is(T : Block)) {
 		this.opIndexAssign(tile, BlockPosition(x, y, z));
 	}
 

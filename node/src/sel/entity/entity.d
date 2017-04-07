@@ -407,7 +407,7 @@ abstract class Entity : EventListener!WorldEvent {
 	/**
 	 * Despawns this entity, calling the event in the world.
 	 */
-	protected @safe void despawn() {
+	protected void despawn() {
 		this.world.despawn(this);
 	}
 

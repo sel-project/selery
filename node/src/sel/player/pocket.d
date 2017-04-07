@@ -34,7 +34,7 @@ import common.sel;
 
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
-import sel.entity.effect : Effect;
+import sel.entity.effect : Effect, Effects;
 import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
 import sel.entity.living : Living;
@@ -397,10 +397,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		return super.world(world);
 	}
 
-	static if(__protocol >= 101) {
-		public override void transfer(string ip, ushort port) {
-			this.sendPacket(new Play.Transfer(ip, port));
-		}
+	public override void transfer(string ip, ushort port) {
+		this.sendPacket(new Play.Transfer(ip, port));
 	}
 
 	public override void firstspawn() {
@@ -672,14 +670,14 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.id, effect.level, true, cast(int)effect.duration));
+		if(effect.pocket) this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.pocket.id, effect.level, true, cast(int)effect.duration));
 	}
 
 	protected override void onEffectRemoved(Effect effect) {
-		this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.id, effect.level));
+		if(effect.pocket) this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.pocket.id, effect.level));
 	}
 	
-	public override @trusted void recalculateSpeed() {
+	public override void recalculateSpeed() {
 		super.recalculateSpeed();
 		this.sendPacket(new Play.UpdateAttributes(this.id, [Types.Attribute(Attributes.speed.min, Attributes.speed.max, this.speed, Attributes.speed.def, Attributes.speed.name)]));
 	}
@@ -941,9 +939,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				break;
 			case Play.PlayerAction.START_SPRINT:
 				this.handleSprinting(true);
+				if(Effects.speed in this) this.recalculateSpeed();
 				break;
 			case Play.PlayerAction.STOP_SPRINT:
 				this.handleSprinting(false);
+				if(Effects.speed in this) this.recalculateSpeed();
 				break;
 			case Play.PlayerAction.START_SNEAK:
 				this.handleSneaking(true);

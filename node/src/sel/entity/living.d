@@ -45,6 +45,7 @@ abstract class Living : Entity {
 	protected float m_body_yaw = Rotation.WEST;
 
 	private float n_speed = .1;
+	private float n_base_speed = .1;
 
 	private tick_t despawn_after = 0;
 
@@ -221,7 +222,6 @@ abstract class Living : Entity {
 	}
 
 	public bool addEffect(Effect effect) {
-
 		if(effect.instant) {
 			effect.onStart();
 		} else {
@@ -239,15 +239,9 @@ abstract class Living : Entity {
 			if(effect.id in this.effects) this.removeEffect(effect); //TODO just edit instead of removing
 
 			this.effects[effect.id] = effect;
-
 			effect.onStart();
 
-			/*if(effect.id == Effects.speed || effect.id == Effects.slowness) {
-				this.recalculateSpeed();
-			} else if(effect.id == Effects.invisibility) {
-				this.invisible = true;
-				this.showNametag = false;
-			} else if(effect.id == Effects.healthBoost) {
+			/*if(effect.id == Effects.healthBoost) {
 				this.m_health.max = 20 + effect.levelFromOne * 4;
 				this.healthUpdated();
 			} else if(effect.id == Effects.absorption) {
@@ -271,23 +265,19 @@ abstract class Living : Entity {
 
 	/// ditto
 	public Effect* opBinaryRight(string op : "in")(sul.effects.Effect effect) {
-		return this.opBinaryRight!"in"(effect.id);
+		return this.opBinaryRight!"in"(effect.minecraft.id);
 	}
 
 	/**
 	 * Removes an effect from the entity.
 	 */
-	public @trusted bool removeEffect(sul.effects.Effect effect) {
-		auto e = effect.id in this.effects;
+	public bool removeEffect(sul.effects.Effect effect) {
+		auto e = effect.minecraft.id in this.effects;
 		if(e) {
-			this.effects.remove(effect.id);
+			this.effects.remove(effect.minecraft.id);
 			this.recalculateColors();
-			/*if(id == Effects.speed.id || effect.id == Effects.slowness) {
-				this.recalculateSpeed();
-			} else if(effect.id == Effects.invisibility) {
-				this.invisible = false;
-				this.showNametag = true;
-			} else if(effect.id == Effects.healthBoost) {
+			(*e).onStop();
+			/*if(effect.id == Effects.healthBoost) {
 				this.m_health.max = 20;
 				this.healthUpdated();
 			} else if(effect.id == Effects.absorption) {
@@ -300,7 +290,7 @@ abstract class Living : Entity {
 	}
 
 	/// ditto
-	public @trusted bool removeEffect(ubyte effect) {
+	public bool removeEffect(ubyte effect) {
 		return (effect in this.effects) ? this.removeEffect(this.effects[effect]) : false;
 	}
 
@@ -309,13 +299,13 @@ abstract class Living : Entity {
 	/**
 	 * Removes every effect.
 	 */
-	public @safe void clearEffects() {
+	public void clearEffects() {
 		foreach(Effect effect; this.effects) {
 			this.removeEffect(effect);
 		}
 	}
 
-	protected @safe void recalculateColors() {
+	protected void recalculateColors() {
 		if(this.effects.length > 0) {
 			Color[] colors;
 			foreach(effect ; this.effects) {
@@ -331,19 +321,20 @@ abstract class Living : Entity {
 		}
 	}
 
-	/** speed need to be recalculated */
-	public @safe void recalculateSpeed() {
-		float speed = .1;
-		/*if(Effects.speed in this.effects) {
-			speed *= 1 + .2 * this.effects[Effects.SPEED].levelFromOne;
+	public void recalculateSpeed() {
+		float s = this.n_base_speed;
+		auto speed = Effects.speed in this;
+		auto slowness = Effects.slowness in this;
+		if(speed) {
+			s *= 1 + .2 * (*speed).levelFromOne;
 		}
-		if(Effects.SLOWNESS in this.effects) {
-			speed /= 1 + .15 * this.effects[Effects.SLOWNESS].levelFromOne;
+		if(slowness) {
+			s /= 1 + .15 * (*slowness).levelFromOne;
 		}
 		if(this.sprinting) {
-			speed *= 1.3;
-		}*/
-		this.n_speed = speed < 0 ? 0 : speed;
+			s *= 1.3;
+		}
+		this.n_speed = s < 0 ? 0 : s;
 	}
 
 	protected @property @trusted Color potionColor(Color color) {
@@ -351,12 +342,16 @@ abstract class Living : Entity {
 			this.metadata.set!"potionColor"(0);
 		} else {
 			auto c = color.rgb & 0xFFFFFF;
-			foreach(p ; __minecraftProtocolsTuple) {
-				mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
+			static if(__minecraft) {
+				foreach(p ; __minecraftProtocolsTuple) {
+					mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
+				}
 			}
-			c |= 0xFF000000;
-			foreach(p ; __pocketProtocolsTuple) {
-				mixin("this.metadata.pocket" ~ p.to!string ~ ".potionColor = c;");
+			static if(__pocket) {
+				c |= 0xFF000000;
+				foreach(p ; __pocketProtocolsTuple) {
+					mixin("this.metadata.pocket" ~ p.to!string ~ ".potionColor = c;");
+				}
 			}
 		}
 		return color;

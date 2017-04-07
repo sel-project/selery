@@ -88,7 +88,7 @@ class Flat : Generator {
 		Chunk chunk = new Chunk(this.world, position);
 		foreach(ubyte xx ; 0..16) {
 			foreach(ubyte zz ; 0..16) {
-				foreach(size_t y ; 0..this.layers.length) {
+				foreach(uint y ; 0..this.layers.length.to!uint) {
 					chunk[xx, y, zz] = this.layers[y];
 				}
 			}
@@ -99,14 +99,14 @@ class Flat : Generator {
 			ubyte height = this.world.random.range!ubyte(4, 24);
 			ubyte foliage = this.world.random.range!ubyte(3, min(height, cast(ubyte)7));
 			//logs
-			foreach(size_t y ; this.layers.length..this.layers.length+height) {
-				chunk[7, y, 7] = Blocks.woodUpDown[tree];
+			foreach(y ; this.layers.length..this.layers.length+height) {
+				chunk[7, cast(uint)y, 7] = Blocks.woodUpDown[tree];
 			}
 			//leaves
 			BlockPosition center = BlockPosition(7, this.layers.length.to!int + height, 7);
 			foreach(ubyte xx ; to!ubyte(7 - foliage)..to!ubyte(7 + foliage + 1)) {
 				foreach(ubyte zz ; to!ubyte(7 - foliage)..to!ubyte(7 + foliage + 1)) {
-					foreach(size_t yy ; (center.y - foliage)..(center.y + foliage + 1)) {
+					foreach(uint yy ; (center.y - foliage)..(center.y + foliage + 1)) {
 						BlockPosition pos = BlockPosition(xx, yy, zz);
 						if(pos.distance(center) <= foliage) {
 							auto current = chunk[xx, yy, zz];

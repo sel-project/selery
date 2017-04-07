@@ -170,9 +170,14 @@ class Chunk {
 	public Block* opIndexAssign(block_t block, BlockPosition position) {
 		return this.opIndexAssign(block in this.blocks, position);
 	}
-
+	
 	/// ditto
-	public Block* opIndexAssign(T)(T block, ubyte x, uint y, ubyte z) if(is(T == block_t) || is(T == Block*)) {
+	public Block* opIndexAssign(Block* block, ubyte x, uint y, ubyte z) {
+		return this.opIndexAssign(block, BlockPosition(x, y, z));
+	}
+	
+	/// ditto
+	public Block* opIndexAssign(block_t block, ubyte x, uint y, ubyte z) {
 		return this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 

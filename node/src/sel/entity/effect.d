@@ -18,6 +18,7 @@ import common.sel;
 
 import sel.entity.human : Human;
 import sel.entity.living : Living;
+import sel.player.player : isPlayerInstance;
 
 static import sul.effects;
 import sul.effects : _ = Effects;
@@ -57,16 +58,18 @@ enum Effects : sul.effects.Effect {
 class Effect {
 
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker=null) {
-		switch(effect.id) {
-			case _.INSTANT_HEALTH.id: return new InstantHealth(effect, victim, level, attacker);
-			case _.INSTANT_DAMAGE.id: return new InstantDamage(effect, victim, level, attacker);
-			case _.REGENERATION.id: return new Regeneration(effect, victim, level, duration, attacker);
-			case _.INVISIBILITY.id: return new Invisibility(effect, victim, level, duration, attacker);
-			case _.HUNGER.id: return new Hunger(effect, victim, level, duration, attacker);
-			case _.POISON.id: return new Poison(effect, victim, level, duration, attacker);
-			case _.WITHER.id: return new Wither(effect, victim, level, duration, attacker);
-			case _.SATURATION.id: return new Saturation(effect, victim, level, duration, attacker);
-			case _.LEVITATION.id: return new Levitation(effect, victim, level, duration, attacker);
+		switch(effect.minecraft.id) {
+			case _.SPEED.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case _.SLOWNESS.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case _.INSTANT_HEALTH.minecraft.id: return new InstantHealth(effect, victim, level, attacker);
+			case _.INSTANT_DAMAGE.minecraft.id: return new InstantDamage(effect, victim, level, attacker);
+			case _.REGENERATION.minecraft.id: return new Regeneration(effect, victim, level, duration, attacker);
+			case _.INVISIBILITY.minecraft.id: return new Invisibility(effect, victim, level, duration, attacker);
+			case _.HUNGER.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
+			case _.POISON.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
+			case _.WITHER.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
+			case _.SATURATION.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
+			case _.LEVITATION.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
 			default: return new Effect(effect, victim, level, duration, attacker);
 		}
 	}
@@ -101,6 +104,10 @@ class Effect {
 		this.duration = duration * 20;
 	}
 
+	public final pure nothrow @property @safe @nogc ubyte id() {
+		return this.effect.minecraft;
+	}
+
 	public final pure nothrow @property @safe @nogc Living victim() {
 		return this.n_victim;
 	}
@@ -113,8 +120,10 @@ class Effect {
 		return false;
 	}
 
+	// called after the effect is added
 	public void onStart() {}
 
+	// called after the effect id removed
 	public void onStop() {}
 
 	public void tick() {
@@ -126,10 +135,26 @@ class Effect {
 	}
 
 	public bool opEquals(sul.effects.Effect e) {
-		return this.id == e.id;
+		return this.id == e.minecraft.id;
 	}
 
 	alias effect this;
+
+}
+
+class SpeedChange : Effect {
+
+	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
+		super(effect, victim, level, duration, attacker);
+	}
+
+	public override void onStart() {
+		this.victim.recalculateSpeed();
+	}
+
+	public override void onStop() {
+		this.victim.recalculateSpeed();
+	}
 
 }
 
@@ -300,18 +325,30 @@ class Saturation : Effect {
 
 class Levitation : Effect {
 
+	private void delegate() apply;
 	private immutable double distance;
 
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 		this.distance = .9 * this.levelFromOne / 20;
+		if(!isPlayerInstance(victim)) {
+			this.apply = &this.move;
+		} else {
+			this.apply = &this.doNothing;
+		}
 	}
 
 	public override void tick() {
 		super.tick();
+		this.apply();
+	}
+
+	private void move() {
 		//TODO check flying and underwater
 		//TODO do not move into a block
 		this.victim.move(this.victim.position + [0, this.distance, 0]);
 	}
+
+	private void doNothing() {}
 
 }

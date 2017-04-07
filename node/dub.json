@@ -2,7 +2,7 @@
 	"name": "sel-node",
 	"authors": ["sel-project"],
 	"dependencies": {
-		"sel-utils": "~>1.0.589"
+		"sel-utils": "~>1.0.593"
 	},
 	"stringImportPaths": [
 		".hidden"
