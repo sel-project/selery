@@ -201,7 +201,7 @@ final class Server : EventListener!ServerEvent {
 		
 		n_server = this;
 
-		version(OneNode) {
+		static if(__oneNode) {
 			ubyte tries = 255;
 			while(--tries) {
 				if(std.file.exists(Paths.hidden ~ "handshake")) {
@@ -404,13 +404,15 @@ final class Server : EventListener!ServerEvent {
 	}
 
 	private void finishConstruction() {
-		
-		this.handler.unblock();
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
 		log(translate("{startup.running}", this.n_settings.language, [Text.white ~ __VENDOR__ ~ Text.reset ~ " v" ~ Text.white ~ to!string(__VERSION__) ~ Text.reset, __DATE__ ~ " " ~ __TIME__, processor() ~ " (" ~ to!string(coresPerCPU) ~ " core" ~ (coresPerCPU() != 1 ? "s" : "") ~ ", " ~ to!string(threadsPerCPU()) ~ " thread" ~ (threadsPerCPU() != 1 ? "s" : "") ~ ")"]));
 		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullCodename ~ Text.white ~ " " ~ Software.fullVersion ~ Text.green ~ " API " ~ Text.white ~ "v" ~ to!string(Software.api)]));
+
+		version(linux) {} else version(Windows) {} else {
+			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
+		}
 
 		this.n_variables = ServerVariables(&this.n_settings.name, &this.n_ticks, &this.n_online, &this.n_max);
 
@@ -466,34 +468,9 @@ final class Server : EventListener!ServerEvent {
 				log(s);
 				plugs ~= plugin.name ~ " " ~ plugin.vers ~ (i < this.n_plugins.length - 1 ? "; " : "");
 			}
-			// call @start functions
-			foreach(plugin ; this.n_plugins) {
-				foreach(del ; plugin.onstart) {
-					del();
-				}
-			}
 		}
 
-		log(translate("{startup.started}", this.n_settings.language, []));
-
-		version(linux) {} else version(Windows) {} else {
-			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
-		}
-
-		version(Windows) {
-			SetConsoleCtrlHandler(&sigHandler, true);
-		} else version(linux) {
-			sigset(SIGTERM, &extsig);
-			sigset(SIGINT, &extsig);
-		}
-
-		if(!this.m_worlds.length) {
-			//this.addWorld!Overworld();
-			this.addWorld!World();
-		}
-
-		getAndClearLoggedMessages();
-
+		// send node's informations to the hub and switch to a non-blocking connection
 		HncomTypes.Game[] games;
 		static if(__pocket) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, __pocketProtocols);
 		static if(__minecraft) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, __minecraftProtocols);
@@ -501,7 +478,31 @@ final class Server : EventListener!ServerEvent {
 		foreach(plugin ; this.n_plugins) {
 			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
 		}
-		this.sendPacket(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode()); //TODO max players of the node
+		this.sendPacket(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode());
+		this.handler.unblock();
+
+		// call @start functions
+		foreach(plugin ; this.n_plugins) {
+			foreach(del ; plugin.onstart) {
+				del();
+			}
+		}
+		
+		if(!this.m_worlds.length) {
+			//this.addWorld!Overworld();
+			this.addWorld!World();
+		}
+		
+		version(Windows) {
+			SetConsoleCtrlHandler(&sigHandler, true);
+		} else version(linux) {
+			sigset(SIGTERM, &extsig);
+			sigset(SIGINT, &extsig);
+		}
+
+		log(translate("{startup.started}", this.n_settings.language, []));
+
+		getAndClearLoggedMessages();
 		
 		this.start();
 

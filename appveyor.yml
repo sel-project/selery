@@ -1,12 +1,12 @@
 platform: x64
 environment:
  matrix:
-#  - DC: dmd
-#    DVersion: 2.073.2
-#    arch: x64
   - DC: dmd
     DVersion: 2.073.2
     arch: x86
+  - DC: dmd
+    DVersion: 2.073.2
+    arch: x64
   - DC: ldc
     DVersion: 1.2.0-beta2
     arch: x64
@@ -15,6 +15,12 @@ skip_tags: true
 branches:
   only:
     - master
+
+artifacts:
+  - path: hub\sel-hub.exe
+    name: sel-hub
+  - path: node\sel-node.exe
+    name: sel-node
 
 install:
   - ps: function SetUpDCompiler

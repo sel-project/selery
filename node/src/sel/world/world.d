@@ -874,7 +874,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		enum float length = .3;
 		enum float attenuation = length * .75;
 		
-		Tuple!(BlockPosition, Block**)[] explodedBlocks;
+		Tuple!(BlockPosition, Block*)[] explodedBlocks;
 
 		void explodeImpl(EntityPosition ray) {
 
@@ -884,8 +884,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
 				//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
 				auto block = pos in this;
-				if(block && *block && **block != Blocks.air) {
-					blastForce -= ((**block).blastResistance / 5 + length) * length;
+				if(block) {
+					blastForce -= ((*block).blastResistance / 5 + length) * length;
 					if(blastForce <= 0) break;
 					static if(breakBlocks) {
 						import std.typecons : tuple;
@@ -1112,18 +1112,18 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * }
 	 * ---
 	 */
-	public @safe Block opIndex(BlockPosition position) {
+	public Block opIndex(BlockPosition position) {
 		auto block = position in this;
-		return (block && *block) ? **block : *this.blocks[0]; // default block (air)
+		return block ? *block : *this.blocks[0]; // default block (air)
 	}
 
 	/// ditto
-	public @safe Block opIndex(int x, uint y, int z) {
+	public Block opIndex(int x, uint y, int z) {
 		return this.opIndex(BlockPosition(x, y, z));
 	}
 
 	//TODO documentation
-	public Block** opBinaryRight(string op : "in")(BlockPosition position) {
+	public Block* opBinaryRight(string op : "in")(BlockPosition position) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		return chunk ? (*chunk)[position.x & 15, position.y, position.z & 15] : null;
 	}
@@ -1149,13 +1149,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world[12, 55, 789] = Blocks.chest; // not a tile!
 	 * ---
 	 */
-	public Block** opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
+	public Block* opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 
-			Block** ptr = (*chunk)[position.x & 15, position.y, position.z & 15];
-			if(ptr && *ptr) {
-				(**ptr).onRemoved(this, position, Remove.unset);
+			Block* ptr = (*chunk)[position.x & 15, position.y, position.z & 15];
+			if(ptr) {
+				(*ptr).onRemoved(this, position, Remove.unset);
 			}
 
 			static if(is(T == ushort[])) {
@@ -1164,15 +1164,15 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				alias b = block;
 			}
 
-			Block** nb = ((*chunk)[position.x & 15, position.y, position.z & 15] = b);
+			Block* nb = ((*chunk)[position.x & 15, position.y, position.z & 15] = b);
 
 			// set as to update
 			//TODO move this in the chunk
-			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb && *nb ? **nb : null);
+			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb ? *nb : null);
 
 			// call the update function
 			if(this.updateBlocks) {
-				if(nb && *nb) (**nb).onUpdated(this, position, Update.placed);
+				if(nb) (*nb).onUpdated(this, position, Update.placed);
 				this.updateBlock(position + [0, 1, 0]);
 				this.updateBlock(position + [1, 0, 0]);
 				this.updateBlock(position + [0, 0, 1]);
@@ -1188,8 +1188,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public void opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == Block*)) {
-		this.opIndexAssign(block, BlockPosition(x, y, z));
+	public Block* opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
+		return this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 
 	/**
@@ -1308,7 +1308,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	protected final void updateBlock(BlockPosition position) {
 		auto block = position in this;
-		if(block && *block) (**block).onUpdated(this, position, Update.nearestChanged);
+		if(block) (*block).onUpdated(this, position, Update.nearestChanged);
 	}
 
 	public @safe Slice opSlice(size_t pos)(int min, int max) {

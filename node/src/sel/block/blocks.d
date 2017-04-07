@@ -36,12 +36,12 @@ public class Blocks {
 
 	private static Blocks instance;
 	
-	private Block*[] sel;
+	private Block[] sel;
 	private Block*[][256] minecraft, pocket;
 	
 	public this() {
 		if(instance is null) {
-			foreach(a ; __traits(allMembers, Blocks)) {
+			foreach_reverse(a ; __traits(allMembers, Blocks)) {
 				static if(mixin("is(" ~ a ~ " : Block)")) {
 					mixin("this.register(new " ~ a ~ "());");
 				}
@@ -53,26 +53,19 @@ public class Blocks {
 			this.pocket = instance.pocket.dup;
 		}
 	}
-
-	public void register(T:Block)(T block) {
-		static if(is(T : Tile)) {
-			auto f = (){ return new T(); };
-		} else {
-			auto f = (){ return &block; };
-		}
-	}
 	
-	public void register(Block* block) {
-		if(block !is null && *block !is null) {
+	public void register(Block block) {
+		if(block !is null) {
 			if(this.sel.length <= block.id) this.sel.length = block.id + 1;
 			this.sel[block.id] = block;
+			auto pointer = &this.sel[block.id];
 			if(block.minecraft) {
 				if(this.minecraft[block.minecraftId].length <= block.minecraftMeta) this.minecraft[block.minecraftId].length = block.minecraftMeta + 1;
-				this.minecraft[block.minecraftId][block.minecraftMeta] = block;
+				this.minecraft[block.minecraftId][block.minecraftMeta] = pointer;
 			}
 			if(block.pocket) {
 				if(this.minecraft[block.pocketId].length <= block.pocketMeta) this.minecraft[block.pocketId].length = block.pocketMeta + 1;
-				this.minecraft[block.pocketId][block.pocketMeta] = block;
+				this.minecraft[block.pocketId][block.pocketMeta] = pointer;
 			}
 		}
 	}
@@ -90,7 +83,11 @@ public class Blocks {
 	 * ---
 	 */
 	public @safe Block* opBinaryRight(string op : "in")(block_t id) {
-		return id < this.sel.length ? this.sel[id] : null;
+		if(id < this.sel.length) {
+			auto ret = &this.sel[id];
+			if(*ret !is null) return ret;
+		}
+		return null;
 	}
 
 	/// ditto
@@ -126,6 +123,10 @@ public class Blocks {
 		auto data = this.pocket[id];
 		if(data.length > meta) return data[meta];
 		else return null;
+	}
+
+	public pure nothrow @property @safe @nogc size_t length() {
+		return this.sel.length;
 	}
 	
 	public enum air = _.AIR.id;

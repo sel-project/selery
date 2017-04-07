@@ -14,13 +14,13 @@
  */
 module sel.player.pocket;
 
-import sel.settings;
+import etc.c.curl : CurlOption;
 
 import std.algorithm : max, sort;
 import std.conv : to;
 import std.file : read, write, exists, mkdirRecurse;
 import std.json;
-import std.net.curl : get, CurlException;
+import std.net.curl : get, HTTP, CurlException;
 import std.process : executeShell;
 import std.socket : Address;
 import std.string : split, join, startsWith, replace, strip;
@@ -32,7 +32,6 @@ import std.zlib : Compress, HeaderFormat;
 import common.path : Paths;
 import common.sel;
 
-import sel.server : server;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect;
@@ -46,6 +45,8 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.nbt;
 import sel.player.player;
+import sel.server : server;
+import sel.settings;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.command : Command;
 import sel.util.lang;
@@ -243,8 +244,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		enum cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
 		if(!exists(cached)) {
 			try {
+				auto http = HTTP();
+				http.handle.set(CurlOption.ssl_verifypeer, false);
+				http.handle.set(CurlOption.timeout, 5);
 				Types.Slot[] slots;
-				foreach(item ; parseJSON(cast(string)get("https://raw.githubusercontent.com/sel-utils/sel-utils.github.io/master/json/creative/pocket" ~ __protocol.to!string ~ ".min.json"))["items"].array) {
+				foreach(item ; parseJSON(get("https://raw.githubusercontent.com/sel-utils/sel-utils.github.io/master/json/creative/pocket" ~ __protocol.to!string ~ ".min.json", http).idup)["items"].array) {
 					auto obj = item.object;
 					auto meta = "meta" in obj;
 					auto ench = "enchantments" in obj;
@@ -494,12 +498,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		auto sections = chunk.sections;
 		size_t[] keys = sections.keys;
 		sort(keys);
-		static if(__protocol <= 101) {
-			// https://bugs.mojang.com/browse/MCPE-19818
-			ubyte top = 16;
-		} else {
-			ubyte top = keys.length ? to!ubyte(keys[$-1] + 1) : 0;
-		}
+		ubyte top = keys.length ? to!ubyte(keys[$-1] + 1) : 0;
 		foreach(size_t i ; 0..top) {
 			Types.Section section;
 			auto section_ptr = i in sections;
@@ -509,9 +508,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					foreach(ubyte z ; 0..16) {
 						foreach(ubyte y ; 0..16) {
 							auto ptr = s[x, y, z];
-							if(ptr && *ptr) {
-								Block block = **ptr;
-								section.blockIds[x << 8 | z << 4 | y] = block.pocketId;
+							if(ptr) {
+								Block block = *ptr;
+								section.blockIds[x << 8 | z << 4 | y] = block.pocketId != 0 ? block.pocketId : ubyte(248);
 								if(block.pocketMeta != 0) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.pocketMeta << (y % 2 == 1 ? 4 : 0));
 							}
 						}

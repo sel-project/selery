@@ -1590,7 +1590,13 @@ enum PlayerOS : ubyte {
 	unknown = HncomPlayer.Add.Pocket.UNKNOWN,
 	android = HncomPlayer.Add.Pocket.ANDROID,
 	ios = HncomPlayer.Add.Pocket.IOS,
+	osx = HncomPlayer.Add.Pocket.OSX,
+	fireOs = HncomPlayer.Add.Pocket.FIRE_OS,
+	gearVr = HncomPlayer.Add.Pocket.GEAR_VR,
+	hololens = HncomPlayer.Add.Pocket.HOLOLENS,
 	windows10 = HncomPlayer.Add.Pocket.WINDOWS10,
+	windows32 = HncomPlayer.Add.Pocket.WINDOWS32,
+	dedicated = HncomPlayer.Add.Pocket.DEDICATED,
 
 }
 

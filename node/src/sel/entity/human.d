@@ -25,6 +25,7 @@ import sel.entity.interfaces;
 import sel.entity.living : Healing, Living;
 import sel.event.world.damage;
 import sel.event.world.entity : EntityHealEvent;
+import sel.item.enchanting : Enchantments;
 import sel.item.inventory : PlayerInventory;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
@@ -113,7 +114,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		this.ticking = false;
 		//drop the content of the inventory
 		foreach(Slot slot ; this.inventory.full) {
-			if(!slot.empty) {
+			if(!slot.empty && Enchantments.curseOfVanishing !in slot.item) {
 				float f0 = this.world.random.next!float * .5f;
 				float f1 = this.world.random.next!float * PI * 2;
 				this.world.drop(slot, this.position + [0, 1.3, 0], EntityPosition(-sin(f1) * f0, .2, cos(f1) * f0));

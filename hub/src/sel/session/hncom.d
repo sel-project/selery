@@ -69,7 +69,7 @@ class HncomHandler : HandlerThread {
 	version(Posix) private shared string unixSocketAddress;
 	
 	public this(shared Server server, shared string* additionalJson, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
-		version(OneNode) {
+		static if(__oneNode) {
 			string ip = "::1";
 		} else {
 			string ip = "::";
@@ -114,7 +114,7 @@ class HncomHandler : HandlerThread {
 			try {
 				address = client.remoteAddress;
 			} catch(Exception) {
-				version(OneNode) {
+				static if(__oneNode) {
 					this.server.shutdown();
 					return;
 				} else {
@@ -281,7 +281,7 @@ class Node : Session {
 			}
 		}
 		socket.close();
-		version(OneNode) {
+		static if(__oneNode) {
 			this.server.shutdown();
 		}
 	}

@@ -1403,7 +1403,7 @@ public class Items {
 	public enum cake = _.CAKE.index;
 	public alias Cake = PlaceableItem!(_.CAKE, Blocks.cake0);
 	
-	public enum bed = _.BED.index;
+	//TODO beds
 	
 	public enum redstoneRepeater = _.REDSTONE_REPEATER.index;
 	

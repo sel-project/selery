@@ -524,19 +524,13 @@ final class PocketSession : PlayerSession {
 
 	private shared void handlePlay(ubyte[] payload) {
 		if(payload[0] == Encapsulated.Mcpe.ID && payload.length > 1) {
-			/*payload = payload[1..$];
-			if(payload[0] == Batch.ID) {
-				ubyte[] data = Batch.fromBuffer(payload).data;
-				if(data.length) {
-					this.decompressionQueue ~= cast(shared ubyte[])data;
-					//this.handler.decompress(this);
-					this.decompressQueue();
+			try {
+				foreach(packet ; readBatch(payload[1..$])) {
+					this.handleUncompressedPlay(packet);
 				}
-			} else {
-				this.handleUncompressedPlay(payload);
-			}*/
-			// always compressed
-			//TODO
+			} catch(ZlibException) {
+				this.close();
+			}
 		} else {
 			this.addFail();
 		}
@@ -544,6 +538,7 @@ final class PocketSession : PlayerSession {
 
 	private shared void handleUncompressedPlay(ubyte[] payload) {
 		if(payload.length && this.n_node !is null) {
+			log(payload[0]);
 			this.n_node.sendTo(this, payload);
 		}
 	}
@@ -665,6 +660,7 @@ final class PocketSession : PlayerSession {
 						}
 					}
 					if(os && os.type == JSON_TYPE.INTEGER) this.device = cast(ubyte)os.integer;
+					if(this.device > HncomAdd.Pocket.DEDICATED) this.device = HncomAdd.Pocket.UNKNOWN;
 					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
 					if(input && input.type == JSON_TYPE.INTEGER) {
 						this.n_input_mode = (){

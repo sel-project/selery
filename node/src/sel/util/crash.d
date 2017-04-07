@@ -15,6 +15,7 @@
 module sel.util.crash;
 
 import std.algorithm : min, max;
+import std.ascii : newline;
 import std.conv : to;
 import std.file : read, exists, mkdirRecurse, write;
 import std.string : split;
@@ -27,12 +28,6 @@ import sel.server : server;
 import sel.util.lang : translate;
 import sel.util.log;
 
-version(Windows) {
-	enum LB = "\r\n";
-} else {
-	enum LB = "\n";
-}
-
 /**
  * Creates a crash-log file from a Throwable, usually throwed
  * during the execution of SEL.
@@ -44,17 +39,17 @@ public @trusted void crash(Throwable e) {
 
 	string filename = Paths.crash ~ "node_" ~ seconds.to!string ~ ".txt";
 
-	string file = LB ~ "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ LB ~ LB;
-	file ~= "MESSAGE: " ~ e.msg ~ LB;
-	file ~= "TYPE: " ~ typeid(e).to!string.split(".")[$-1] ~ LB;
-	file ~= "FILE: " ~ e.file ~ LB;
-	file ~= "LINE: " ~ e.line.to!string ~ LB ~ LB;
-	file ~= e.info.to!string ~ LB;
+	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
+	file ~= "MESSAGE: " ~ e.msg ~ newline;
+	file ~= "TYPE: " ~ typeid(e).to!string.split(".")[$-1] ~ newline;
+	file ~= "FILE: " ~ e.file ~ newline;
+	file ~= "LINE: " ~ e.line.to!string ~ newline ~ newline;
+	file ~= e.info.to!string ~ newline;
 	if(exists(e.file)) {
-		file ~= LB;
-		string[] errfile = (cast(string)read(e.file)).split(LB);
+		file ~= newline;
+		string[] errfile = (cast(string)read(e.file)).split(newline);
 		foreach(uint i ; to!uint(max(0, e.line-32))..to!uint(min(errfile.length, e.line+32))) {
-			file ~= "[" ~ (i + 1).to!string ~ "] " ~ errfile[i] ~ LB;
+			file ~= "[" ~ (i + 1).to!string ~ "] " ~ errfile[i] ~ newline;
 		}
 	}
 	if(!exists(Paths.crash)) mkdirRecurse(Paths.crash);

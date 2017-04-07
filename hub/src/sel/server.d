@@ -222,7 +222,7 @@ class Server {
 			return;
 		}
 
-		version(OneNode) {
+		static if(__oneNode) {
 			if(cast(InternetAddress)this.handler.hncomAddress) {
 				auto v4 = cast(InternetAddress)this.handler.hncomAddress;
 				write(Paths.hidden ~ "handshake", "4" ~ newline ~ v4.toAddrString() ~ newline ~ v4.toPortString());
@@ -569,7 +569,7 @@ class Server {
 	}
 
 	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
-		version(OneNode) {
+		static if(__oneNode) {
 			log("[", logger, "] ", message);
 			node = "";
 		} else {
@@ -607,7 +607,7 @@ class Server {
 	}
 
 	public shared bool acceptNode(Address address) {
-		version(OneNode) {
+		static if(__oneNode) {
 			return this.nodes.length == 0;
 		} else {
 			version(Posix) {

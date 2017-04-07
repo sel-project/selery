@@ -26,6 +26,15 @@ import common.sel;
 
 version(OneNode) {
 
+	enum bool __oneNode = true;
+
+} else {
+
+	enum bool __oneNode = false;
+}
+
+static if(__oneNode) {
+
 	// try to read supported protocols from hub.txt
 	static if(__traits(compiles, import("hub.txt"))) {
 

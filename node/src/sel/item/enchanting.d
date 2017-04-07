@@ -80,6 +80,7 @@ enum Enchantments : sul.enchantments.Enchantment {
 }
 
 /**
+ * Class that represents an enchantment and its level.
  * Example:
  * ---
  * auto e = new Enchantment(Enchantments.sharpness, "V");
@@ -119,6 +120,10 @@ final class Enchantment {
 
 	/**
 	 * Creates an enchantment using its Minecraft id.
+	 * Example:
+	 * ---
+	 * assert(Enchantment.fromMinecraft(9, 1).name == "frost walker");
+	 * ---
 	 */
 	public static @safe Enchantment fromMinecraft(ubyte id, ubyte level) {
 		auto ret = id in _minecraft;
@@ -126,8 +131,11 @@ final class Enchantment {
 	}
 
 	/**
-	 * Creates an enchantment using its Minecraft: Pocket
-	 * Edition id.
+	 * Creates an enchantment using its Minecraft: Pocket Edition id.
+	 * Example:
+	 * ---
+	 * assert(Enchantment.fromPocket(9, 2).name == "sharpness");
+	 * ---
 	 */
 	public static @safe Enchantment fromPocket(ubyte id, ubyte level) {
 		auto ret = id in _pocket;

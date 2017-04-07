@@ -94,10 +94,10 @@ final class Handler {
 	public size_t send(ubyte[] buffer) {
 		buffer = nativeToLittleEndian(buffer.length.to!uint) ~ buffer;
 		size_t length = 0;
-		ptrdiff_t recv;
+		ptrdiff_t sent;
 		do {
-			if((recv = this.socket.send(buffer[length..$])) <= 0) break; // connection closed or another error
-		} while((length += recv) < buffer.length);
+			if((sent = this.socket.send(buffer[length..$])) <= 0) break; // connection closed or another error
+		} while((length += sent) < buffer.length);
 		return length;
 	}
 	
@@ -105,7 +105,7 @@ final class Handler {
 		return (cast()this).send(buffer);
 	}
 	
-	public @property string lastError() {
+	public shared @property string lastError() {
 		return lastSocketError();
 	}
 	

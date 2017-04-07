@@ -576,7 +576,7 @@ abstract class Entity : EventListener!WorldEvent {
 	/**
 	 * Does the onGround updates.
 	 */
-	protected @safe void updateGroundStatus() {
+	protected void updateGroundStatus() {
 		if(this.position.y >= this.m_last.y) {
 			// going up
 			this.highestPoint = this.position.y;
@@ -651,7 +651,7 @@ abstract class Entity : EventListener!WorldEvent {
 	 * Checks collisions with the entities in the watchlist
 	 * and calls onCollideWithEntity on collision.
 	 */
-	protected @safe void checkCollisionsWithEntities() {
+	protected void checkCollisionsWithEntities() {
 		foreach(ref Entity entity ; this.viewers) {
 			if(entity.box.intersects(this.n_box) && this.onCollideWithEntity(entity)) return;
 		}
@@ -662,11 +662,11 @@ abstract class Entity : EventListener!WorldEvent {
 	 * this entity collides with another entity.
 	 * Returns: false if the calling function should check for more collisions, true otherwise.
 	 */
-	protected @safe bool onCollideWithEntity(Entity entity) {
+	protected bool onCollideWithEntity(Entity entity) {
 		return false;
 	}
 
-	protected @safe void checkCollisionsWithBlocks() {
+	protected void checkCollisionsWithBlocks() {
 		auto min = this.n_box.minimum;
 		auto max = this.n_box.maximum;
 		foreach(int x ; min.x.blockInto..max.x.blockInto+1) {
@@ -683,7 +683,7 @@ abstract class Entity : EventListener!WorldEvent {
 		}
 	}
 
-	protected @safe bool onCollideWithBlock(Block block, BlockPosition position, uint face) {
+	protected bool onCollideWithBlock(Block block, BlockPosition position, uint face) {
 		return false;
 	}
 	

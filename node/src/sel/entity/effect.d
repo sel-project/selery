@@ -109,6 +109,10 @@ class Effect {
 		return this.n_attacker;
 	}
 
+	public pure nothrow @property @safe @nogc bool instant() {
+		return false;
+	}
+
 	public void onStart() {}
 
 	public void onStop() {}
@@ -135,8 +139,40 @@ abstract class InstantEffect : Effect {
 		super(effect, victim, level, 0, attacker);
 	}
 
-	public abstract void apply();
+	public final override pure nothrow @property @safe @nogc bool instant() {
+		return true;
+	}
 
+	public override void onStart() {
+		this.apply();
+	}
+
+	protected abstract void apply();
+
+}
+
+class InstantHealth : InstantEffect {
+	
+	public this(sul.effects.Effect, Living victim, ubyte level, Living attacker) {
+		super(effect, victim, level, attacker);
+	}
+	
+	protected override void apply() {
+		//TODO heal entity (or damage undeads)
+	}
+	
+}
+
+class InstantDamage : InstantEffect {
+	
+	public this(sul.effects.Effect, Living victim, ubyte level, Living attacker) {
+		super(effect, victim, level, attacker);
+	}
+	
+	protected override void apply() {
+		//TODO damage entity (or heal undeads)
+	}
+	
 }
 
 abstract class RepetitionEffect(tick_t[] repetitions) : Effect {
@@ -160,30 +196,6 @@ abstract class RepetitionEffect(tick_t[] repetitions) : Effect {
 	}
 	
 	public abstract void onRepeat();
-	
-}
-
-class InstantHealth : InstantEffect {
-	
-	public this(sul.effects.Effect, Living victim, ubyte level, Living attacker) {
-		super(effect, victim, level, attacker);
-	}
-	
-	public override void apply() {
-		//TODO heal entity (or damage undeads)
-	}
-	
-}
-
-class InstantDamage : InstantEffect {
-	
-	public this(sul.effects.Effect, Living victim, ubyte level, Living attacker) {
-		super(effect, victim, level, attacker);
-	}
-	
-	public override void apply() {
-		//TODO damage entity (or heal undeads)
-	}
 	
 }
 

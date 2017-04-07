@@ -111,12 +111,12 @@ class Chunk {
 	 * 		y = y coordinate in range 0..HEIGHT
 	 * 		z = z coordinate in range 0..16
 	 */
-	public @safe Block** opIndex(BlockPosition position) {
+	public Block* opIndex(BlockPosition position) {
 		return this.opIndex(position.x & 15, position.y, position.z & 15);
 	}
 
 	/// ditto
-	public @safe Block** opIndex(ubyte x, size_t y, ubyte z) {
+	public Block* opIndex(ubyte x, size_t y, ubyte z) {
 		immutable sectiony = y >> 4;
 		if(auto s = (sectiony in this.n_sections)) {
 			return (*s)[x, y & 15, z];
@@ -133,22 +133,20 @@ class Chunk {
 	 * 		y = y coordinate in range 0..HEIGHT
 	 * 		z = z coordinate in range 0..16
 	 */
-	public @safe Block** opIndexAssign(Block* block, ubyte x, size_t y, ubyte z) {
+	public Block* opIndexAssign(Block* block, BlockPosition position) {
 
 		if(block && (*block).id == 0) block = null;
 
-		immutable sy = y >> 4;
-		if(sy !in this.n_sections) {
+		immutable sy = position.y >> 4;
+		Section* section = sy in this.n_sections;
+		if(section is null) {
 			if(block is null) return null;
-			this.createSection(sy);
+			section = this.createSection(sy);
 		}
 
-		BlockPosition position = BlockPosition(x, y, z);
-		
-		Section section = this.n_sections[sy];
-		auto ptr = section[x & 15, y & 15, z & 15] = block;
+		auto ptr = (*section)[position.x & 15, position.y & 15, position.z & 15] = block;
 
-		if(section.empty) {
+		if((*section).empty) {
 			this.removeSection(sy);
 		}
 
@@ -169,8 +167,13 @@ class Chunk {
 	}
 
 	/// ditto
-	public @safe Block** opIndexAssign(block_t block, ubyte x, size_t y, ubyte z) {
-		return this.opIndexAssign(block in this.blocks, x, y, z);
+	public Block* opIndexAssign(block_t block, BlockPosition position) {
+		return this.opIndexAssign(block in this.blocks, position);
+	}
+
+	/// ditto
+	public Block* opIndexAssign(T)(T block, ubyte x, uint y, ubyte z) if(is(T == block_t) || is(T == Block*)) {
+		return this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 
 	/// Registers a tile.
@@ -204,7 +207,7 @@ class Chunk {
 	 * }
 	 * ---
 	 */
-	public @safe ptrdiff_t firstBlock(ubyte x, ubyte z) {
+	public ptrdiff_t firstBlock(ubyte x, ubyte z) {
 		foreach_reverse(size_t y ; 0..(this.highest_section*16)+16) {
 			if(this[x, y, z] !is null) return y;
 		}
@@ -215,7 +218,7 @@ class Chunk {
 	 * Checks whether or not a section is empty
 	 * (has no blocks in it).
 	 */
-	public @safe bool emptySection(size_t y) {
+	public bool emptySection(size_t y) {
 		auto ptr = y in this.n_sections;
 		return ptr is null || (*ptr).empty;
 	}
@@ -223,19 +226,19 @@ class Chunk {
 	/**
 	 * Checks if a section contains blocks with the random tick.
 	 */
-	public @safe bool tickSection(size_t y) {
+	public bool tickSection(size_t y) {
 		return y in this.n_sections ? this.n_sections[y].tick : false;
 	}
 
 	/**
 	 * Gets a section.
 	 */
-	public @safe Section sectionAt(size_t y) {
+	public Section sectionAt(size_t y) {
 		return this.n_sections[y];
 	}
 
 	/// ditto
-	public @safe Section opIndex(size_t y) {
+	public Section opIndex(size_t y) {
 		return this.sectionAt(y);
 	}
 
@@ -243,14 +246,15 @@ class Chunk {
 		return y in this.n_sections;
 	}
 
-	public @safe void createSection(size_t y) {
+	public Section* createSection(size_t y) {
 		this.n_sections[y] = new Section();
 		if(y > this.highest_section) {
 			this.highest_section = y;
 		}
+		return y in this.n_sections;
 	}
 
-	public @trusted void removeSection(size_t y) {
+	public void removeSection(size_t y) {
 		this.n_sections.remove(y);
 		if(y == this.highest_section) {
 			size_t[] keys = this.n_sections.keys;
@@ -387,12 +391,17 @@ class Section {
 		return this.n_random_ticked > 0;
 	}
 
-	public @trusted Block** opIndex(ubyte x, ubyte y, ubyte z) {
+	private Block** blockAt(ubyte x, ubyte y, ubyte z) {
 		return &this.n_blocks[y << 8 | x << 4 | z];
 	}
 
-	public @safe Block** opIndexAssign(Block* block, ubyte x, ubyte y, ubyte z) {
-		Block** ptr = this[x, y, z];
+	public Block* opIndex(ubyte x, ubyte y, ubyte z) {
+		return *this.blockAt(x, y, z);
+	}
+
+	public Block* opIndexAssign(Block* block, ubyte x, ubyte y, ubyte z) {
+
+		Block** ptr = this.blockAt(x, y, z);
 
 		if(block && (*block).id == 0) block = null;
 		Block* old = *ptr;
@@ -415,23 +424,8 @@ class Section {
 			else this.n_random_ticked++;
 		}
 
-		/*
-		if(old is null && block !is null) {
-			this.n_amount++;
-		} else if(old !is null && block is null) {
-			this.n_amount--;
-		}
-		
-		if((old is null || !(*old).doRandomTick) && (block !is null && (*block).doRandomTick)) {
-			this.n_random_ticked++;
-		} else if((old !is null && (*old).doRandomTick) && (block is null || !(*block).doRandomTick)) {
-			this.n_random_ticked--;
-		}
-		*/
+		return *ptr = block;
 
-		*ptr = block;
-
-		return ptr;
 	}
 
 }

@@ -222,34 +222,41 @@ abstract class Living : Entity {
 
 	public bool addEffect(Effect effect) {
 
-		/+if(effect.id == Effects.healing.id || effect.id == Effects.harming.id) {
-			//TODO for undead mobs
-			if(effect.id == Effects.harming.id) {
-				uint amount = to!uint(round(3 * effect.levelFromOne * multiplier));
-				//this.attack(effect.thrower is null ? new EntityDamageEvent(this, Damage.MAGIC, amount) : new EntityDamagedByEntityEvent(this, Damage.MAGIC, amount, effect.thrower));
-			}
-			else this.heal(new EntityHealEvent(this, Healing.MAGIC, to!uint(round(3 * effect.levelFromOne * multiplier))));
-			return true;
-		}+/
+		if(effect.instant) {
+			effect.onStart();
+		} else {
 
-		if(effect.id in this.effects) this.removeEffect(effect); //TODO just edit instead of removing
+			/+if(effect.id == Effects.healing.id || effect.id == Effects.harming.id) {
+				//TODO for undead mobs
+				if(effect.id == Effects.harming.id) {
+					uint amount = to!uint(round(3 * effect.levelFromOne * multiplier));
+					//this.attack(effect.thrower is null ? new EntityDamageEvent(this, Damage.MAGIC, amount) : new EntityDamagedByEntityEvent(this, Damage.MAGIC, amount, effect.thrower));
+				}
+				else this.heal(new EntityHealEvent(this, Healing.MAGIC, to!uint(round(3 * effect.levelFromOne * multiplier))));
+				return true;
+			}+/
 
-		this.effects[effect.id] = effect;
+			if(effect.id in this.effects) this.removeEffect(effect); //TODO just edit instead of removing
 
-		/*if(effect.id == Effects.speed || effect.id == Effects.slowness) {
-			this.recalculateSpeed();
-		} else if(effect.id == Effects.invisibility) {
-			this.invisible = true;
-			this.showNametag = false;
-		} else if(effect.id == Effects.healthBoost) {
-			this.m_health.max = 20 + effect.levelFromOne * 4;
-			this.healthUpdated();
-		} else if(effect.id == Effects.absorption) {
-			this.m_health.maxAbsorption = effect.levelFromOne * 4;
-		}*/
+			this.effects[effect.id] = effect;
 
-		this.recalculateColors();
-		this.onEffectAdded(effect, false);
+			effect.onStart();
+
+			/*if(effect.id == Effects.speed || effect.id == Effects.slowness) {
+				this.recalculateSpeed();
+			} else if(effect.id == Effects.invisibility) {
+				this.invisible = true;
+				this.showNametag = false;
+			} else if(effect.id == Effects.healthBoost) {
+				this.m_health.max = 20 + effect.levelFromOne * 4;
+				this.healthUpdated();
+			} else if(effect.id == Effects.absorption) {
+				this.m_health.maxAbsorption = effect.levelFromOne * 4;
+			}*/
+
+			this.recalculateColors();
+			this.onEffectAdded(effect, false);
+		}
 		return true;
 	}
 
