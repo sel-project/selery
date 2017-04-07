@@ -2,7 +2,8 @@
 	"name": "sel-node",
 	"authors": ["sel-project"],
 	"dependencies": {
-		"sel-utils": "~>1.0.593"
+		"sel-utils": "~>1.0.593",
+		"nbt-d": "~>1.0.1"
 	},
 	"stringImportPaths": [
 		".hidden"

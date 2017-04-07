@@ -19,6 +19,8 @@ import std.json : JSONValue, JSON_TYPE;
 
 import common.sel;
 
+import nbt.tags;
+
 import sel.player : Player;
 import sel.block.block : Block, Faces;
 import sel.block.blocks : Blocks;
@@ -26,7 +28,6 @@ import sel.entity.entity : Entity;
 import sel.entity.living : Living;
 import sel.item.item;
 import sel.math.vector : BlockPosition;
-import sel.nbt.tags;
 import sel.util.color : Color, Colorable;
 
 static import sul.items;
@@ -346,13 +347,13 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 			// add
 			uint rgb = color.rgb;
 			{
-				auto cc = new Int("color", rgb);
-				if(this.m_pc_tag is null) this.m_pc_tag = new Compound(new Compound("display", cc));
+				auto cc = new Named!Int("color", rgb);
+				if(this.m_pc_tag is null) this.m_pc_tag = new Compound(new Named!Compound("display", cc));
 				else if(!this.m_pc_tag.has!Compound("display")) this.m_pc_tag["display"] = new Compound(cc);
 				else this.m_pc_tag.get!Compound("display")[] = cc;
 			}
 			{
-				auto cc = new Int("customColor", rgb);
+				auto cc = new Named!Int("customColor", rgb);
 				if(this.m_pe_tag is null) this.m_pe_tag = new Compound(cc);
 				else this.m_pe_tag[] = cc;
 			}

@@ -244,7 +244,7 @@ final class Server : EventListener!ServerEvent {
 			Lang.init(this.n_settings.acceptedLanguages, [Paths.lang]);
 		}
 
-		log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
+		static if(!__oneNode) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
 
 		try {
 			this.handler = new Handler();

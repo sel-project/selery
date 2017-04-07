@@ -28,6 +28,9 @@ import std.zlib : Compress, HeaderFormat;
 
 import common.sel;
 
+import nbt.stream;
+import nbt.tags;
+
 import sel.server : server;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
@@ -41,7 +44,6 @@ import sel.event.world.player : PlayerMoveEvent;
 import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
-import sel.nbt;
 import sel.player.player;
 import sel.util;
 import sel.util.buffers : BigEndianBuffer, Writer;
@@ -56,6 +58,12 @@ import sel.world.world : World;
 import sul.utils.var : varuint;
 
 abstract class MinecraftPlayer : Player {
+
+	protected static Stream stream;
+
+	public static this() {
+		stream = new ClassicStream!(Endian.bigEndian)();
+	}
 
 	private bool consuming;
 	private uint consuming_time;
@@ -128,14 +136,13 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		if(slot.empty) {
 			return Types.Slot(-1);
 		} else {
-			ubyte[] compound;
-			auto tag = slot.item.minecraftCompound;
-			if(tag !is null) {
-				NbtBuffer!(Endian.bigEndian).instance.writeTag(tag, compound);
-			} else {
-				compound = [NBT.END]; // End tag's id
+			auto ret = Types.Slot(slot.item.minecraftId, slot.count, slot.item.minecraftMeta, [NBT_TYPE.END]);
+			if(slot.item.minecraftCompound !is null) {
+				stream.buffer.length = 0;
+				stream.writeNamedTag("", cast(Tag)slot.item.minecraftCompound);
+				ret.nbt = stream.buffer;
 			}
-			return Types.Slot(slot.item.minecraftId, slot.count, slot.item.minecraftMeta, compound);
+			return ret;
 		}
 	}
 
@@ -145,7 +152,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		} else {
 			auto item = this.world.items.fromMinecraft(slot.id, slot.damage);
 			if(slot.nbt.length) {
-				auto tag = NbtBuffer!(Endian.bigEndian).instance.readTag(slot.nbt);
+				stream.buffer = slot.nbt;
+				auto tag = stream.readNamedTag();
 				if(cast(Compound)tag) item.parseMinecraftCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.count);
@@ -394,6 +402,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, writer);
 
+		stream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {
 			if(tile.compound.pc !is null) {
 				packet.tilesCount++;
@@ -401,9 +410,10 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
-				NbtBuffer!(Endian.bigEndian).instance.writeTag(compound, packet.tiles);
+				stream.writeNamedTag("", compound);
 			}
 		}
+		packet.tiles = stream.buffer;
 
 		this.sendPacket(packet);
 
@@ -598,6 +608,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	public override void sendTile(Tile tile, bool translatable) {
+		stream.buffer.length = 0;
 		auto packet = new Clientbound.UpdateBlockEntity(ulongPosition(tile.position), tile.action);
 		if(tile.compound.pc !is null) {
 			auto compound = tile.compound.pc.dup;
@@ -605,7 +616,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			compound["x"] = new Int(tile.position.x);
 			compound["y"] = new Int(tile.position.y);
 			compound["z"] = new Int(tile.position.z);
-			NbtBuffer!(Endian.bigEndian).instance.writeTag(compound, packet.nbt);
+			stream.writeNamedTag("", compound);
+			packet.nbt = stream.buffer;
 		} else {
 			packet.nbt ~= 0;
 		}

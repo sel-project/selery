@@ -19,11 +19,12 @@ import std.traits : isIntegral;
 
 import common.sel;
 
+import nbt.tags;
+
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.item.item : SimpleItem;
 import sel.item.slot : Slot;
-import sel.nbt.tags;
 import sel.math.vector : BlockPosition, face, entityPosition;
 import sel.player.player : Player;
 
@@ -111,7 +112,7 @@ class MapItem(sul.items.Item si) : SimpleItem!(si) {
 	}
 
 	public @property @safe ushort mapId(ushort mapId) {
-		if(this.m_pe_tag is null) this.m_pe_tag = new Compound("");
+		if(this.m_pe_tag is null) this.m_pe_tag = new Compound();
 		this.m_pe_tag["map_uuid"] = to!string(mapId);
 		return this.m_map_id = mapId;
 	}

@@ -27,6 +27,8 @@ import std.typetuple : TypeTuple;
 
 import common.sel;
 
+import nbt.tags;
+
 import sel.player : Player;
 import sel.block.block;
 import sel.block.blocks : Blocks;
@@ -38,7 +40,6 @@ import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
-import sel.nbt.tags;
 import sel.settings;
 import sel.util.color : Color, Colors;
 import sel.util.lang : GenericTranslatable = Translatable;
@@ -318,22 +319,22 @@ template Translatable(T:Sign) {
 abstract class GenericSign(sul.blocks.Block sb) : TileBlock!(sb), Sign {
 
 	private Compound n_compound;
-	private String[4] texts;
+	private Named!String[4] texts;
 
 	static if(__minecraft) {
 		private Compound minecraft_compound;
-		private String[4] minecraft_texts;
+		private Named!String[4] minecraft_texts;
 	}
 
 	public @safe this(string a, string b, string c, string d) {
 		super();
 		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
 			enum text = "Text" ~ to!string(i + 1);
-			this.texts[i] = new String(text, "");
-			static if(__minecraft) this.minecraft_texts[i] = new String(text, "");
+			this.texts[i] = new Named!String(text, "");
+			static if(__minecraft) this.minecraft_texts[i] = new Named!String(text, "");
 		}
-		this.n_compound = new Compound("", this.texts[0], this.texts[1], this.texts[2], this.texts[3]);
-		static if(__minecraft) this.minecraft_compound = new Compound("", this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
+		this.n_compound = new Compound(this.texts[0], this.texts[1], this.texts[2], this.texts[3]);
+		static if(__minecraft) this.minecraft_compound = new Compound(this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
 		this.setImpl(0, a);
 		this.setImpl(1, b);
 		this.setImpl(2, c);
@@ -359,18 +360,18 @@ abstract class GenericSign(sul.blocks.Block sb) : TileBlock!(sb), Sign {
 	public override @safe @nogc string[4] opIndex() {
 		string[4] ret;
 		foreach(i, text; this.texts) {
-			ret[i] = text;
+			ret[i] = text.value;
 		}
 		return ret;
 	}
 
 	public override @safe string opIndex(size_t index) {
-		return this.texts[index];
+		return this.texts[index].value;
 	}
 
 	private @trusted void setImpl(size_t index, string data) {
-		this.texts[index] = data;
-		static if(__minecraft) this.minecraft_texts[index] = JSONValue(["text": data]).toString();
+		this.texts[index].value = data;
+		static if(__minecraft) this.minecraft_texts[index].value = JSONValue(["text": data]).toString();
 	}
 
 	public override void opIndexAssign(string[4] texts) {
@@ -543,8 +544,8 @@ final class FlowerPotTile(sul.blocks.Block sb) : TileBlock!(sb), FlowerPot {
 	public override @property Item item(Item item) {
 		if(item !is null) {
 			item.clear(); // remove enchantments and custom name
-			static if(__pocket) this.pocket_compound = new Compound("", new Short("item", item.pocketId), new Int("mData", item.pocketMeta));
-			static if(__minecraft) this.minecraft_compound = new Compound("", new String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Int("Data", item.minecraftMeta));
+			static if(__pocket) this.pocket_compound = new Compound(new Named!Short("item", item.pocketId), new Named!Int("mData", item.pocketMeta));
+			static if(__minecraft) this.minecraft_compound = new Compound(new Named!String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.minecraftMeta));
 		} else {
 			this.pocket_compound = null;
 			this.minecraft_compound = null;

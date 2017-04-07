@@ -79,7 +79,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 				this.attack(new EntityStarveEvent(this));
 			}
 		} else if(this.regeneration_tick != 0 && this.ticks % (this.hunger == 20 ? 10 : 80) == this.regeneration_tick && this.rules.naturalRegeneration) {
-			this.heal(new EntityHealEvent(this, Healing.NATURAL_REGENERATION, 1));
+			this.heal(new EntityHealEvent(this, 1));
 			this.exhaust(Exhaustion.NATURAL_REGENERATION);
 		}
 	}

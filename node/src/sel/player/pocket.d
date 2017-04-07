@@ -32,6 +32,9 @@ import std.zlib : Compress, HeaderFormat;
 import common.path : Paths;
 import common.sel;
 
+import nbt.stream;
+import nbt.tags;
+
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect, Effects;
@@ -43,7 +46,6 @@ import sel.entity.noai : Lightning, ItemEntity;
 import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
-import sel.nbt;
 import sel.player.player;
 import sel.server : server;
 import sel.settings;
@@ -59,6 +61,13 @@ import sel.world.world : World;
 import sul.utils.var : varuint;
 
 abstract class PocketPlayer : Player {
+
+	protected static Stream stream, networkStream;
+
+	public static this() {
+		stream = new ClassicStream!(Endian.littleEndian)();
+		networkStream = new NetworkStream!(Endian.littleEndian)();
+	}
 
 	private bool n_edu;
 	private long n_xuid;
@@ -254,12 +263,14 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					auto ench = "enchantments" in obj;
 					auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
 					if(ench) {
-						auto list = new ListOf!Compound("ench");
+						stream.buffer.length = 0;
+						auto list = new Named!(ListOf!Compound)("ench");
 						foreach(e ; (*ench).array) {
 							auto eobj = e.object;
-							list ~= new Compound(new Short("id", eobj["id"].integer.to!short), new Short("lvl", eobj["level"].integer.to!short));
+							list ~= new Compound(new Named!Short("id", eobj["id"].integer.to!short), new Named!Short("lvl", eobj["level"].integer.to!short));
 						}
-						NbtBuffer!(Endian.littleEndian).instance.writeTag(new Compound(list), slot.nbt);
+						stream.writeNamedTag("", new Compound(list));
+						slot.nbt = stream.buffer.dup;
 					}
 					slots ~= slot;
 				}
@@ -292,11 +303,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		if(slot.empty) {
 			return Types.Slot(0);
 		} else {
-			ubyte[] nbt;
+			stream.buffer.length = 0;
 			if(!slot.empty && slot.item.pocketCompound !is null) {
-				NbtBuffer!(Endian.littleEndian).instance.writeTag(slot.item.pocketCompound, nbt);
+				stream.writeNamedTag("", slot.item.pocketCompound);
 			}
-			return Types.Slot(slot.item.pocketId, slot.item.pocketMeta << 8 | slot.count, nbt);
+			return Types.Slot(slot.item.pocketId, slot.item.pocketMeta << 8 | slot.count, stream.buffer);
 		}
 	}
 
@@ -306,8 +317,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		} else {
 			auto item = this.world.items.fromPocket(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
 			if(slot.nbt.length) {
-				//item.parsePocketCompound(NbtBuffer!(Endian.littleEndian).instance.readCompound("", slot.nbt)); // is that right? Or readTag should be used instead?
-				auto tag = NbtBuffer!(Endian.littleEndian).instance.readTag(slot.nbt);
+				stream.buffer = slot.nbt;
+				//TODO verify that this is right
+				auto tag = stream.readNamedTag();
 				if(cast(Compound)tag) item.parsePocketCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.metaAndCount & 255);
@@ -525,7 +537,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		//data.heights = chunk.lights;
 		data.biomes = chunk.biomes;
 		//TODO extra data
-		
+
+		networkStream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {
 			if(tile.compound.pe !is null) {
 				auto compound = tile.compound.pe.dup;
@@ -533,9 +546,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
-				VarintNbtBuffer!(Endian.littleEndian).instance.writeTag(compound, data.blockEntities);
+				networkStream.writeNamedTag("", compound);
 			}
 		}
+		data.blockEntities = networkStream.buffer;
 
 		this.sendPacket(new Play.FullChunkData(tuple!(typeof(Play.FullChunkData.position))(chunk.position), data));
 
@@ -761,9 +775,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		}
 		auto packet = new Play.BlockEntityData(toBlockPosition(tile.position));
 		if(tile.compound.pe !is null) {
-			VarintNbtBuffer!(Endian.littleEndian).instance.writeTag(tile.compound.pe, packet.nbt);
+			networkStream.buffer.length = 0;
+			networkStream.writeNamedTag("", tile.compound.pe);
+			packet.nbt = networkStream.buffer;
 		} else {
-			packet.nbt ~= 0;
+			packet.nbt ~= NBT_TYPE.END;
 		}
 		this.sendPacket(packet);
 		/*if(translatable) {

@@ -59,20 +59,14 @@ final class EntityHealEvent : EntityEvent, Cancellable {
 
 	mixin EntityEvent.Implementation;
 
-	private ubyte n_cause;
 	private uint n_amount;
 
-	public @safe @nogc this(Living entity, ubyte cause, uint amount) {
+	public pure nothrow @safe @nogc this(Living entity, uint amount) {
 		this.n_entity = entity;
-		this.n_cause = cause;
 		this.n_amount = amount;
 	}
 
-	public @property @safe @nogc ubyte cause() {
-		return this.n_cause;
-	}
-
-	public @property @safe @nogc uint amount() {
+	public pure nothrow @property @safe @nogc uint amount() {
 		return this.n_amount;
 	}
 
@@ -87,7 +81,7 @@ class EntityDeathEvent : EntityEvent {
 	private string m_message;
 	private string[] m_args;
 
-	public @safe @nogc this(Living entity, EntityDamageEvent damage) {
+	public pure nothrow @safe @nogc this(Living entity, EntityDamageEvent damage) {
 		this.n_entity = entity;
 		this.n_damage = damage;
 	}

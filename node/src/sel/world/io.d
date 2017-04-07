@@ -25,9 +25,11 @@ import std.zlib;
 import common.sel : Software;
 import common.util.time : seconds;
 
+import nbt.stream : ClassicStream;
+import nbt.tags;
+
 import sel.block : Block;
 import sel.math.vector;
-import sel.nbt;
 import sel.util;
 import sel.util.buffers;
 import sel.world.chunk : Chunk, Section;
@@ -315,8 +317,8 @@ struct AnvilImpl(immutable(char)[3] order) {
 				UnCompress uc = new UnCompress();
 				auto uncompressed = uc.uncompress(chunkdata);
 				uncompressed ~= uc.flush();
-				auto u = (cast(ubyte[])uncompressed)[3..$]; // skips tag type and name
-				Compound compound = NbtBuffer!(Endian.bigEndian).instance.readCompound("", u);
+				auto compound = new Compound();
+				compound.decode(new ClassicStream!(Endian.bigEndian)((cast(ubyte[])uncompressed)[3..$])); // skip tag type (1 byte) and name (2 bytes)
 				if(compound.has!Compound("Level")) compound = compound.get!Compound("Level");
 				Chunk chunk = new C(world, position);
 				if(compound.has!(ListOf!Compound)("Sections")) {

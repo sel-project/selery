@@ -19,6 +19,8 @@ static import std.json;
 
 import common.sel;
 
+import nbt.tags;
+
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
@@ -26,7 +28,6 @@ import sel.item.enchanting;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition, face;
-import sel.nbt.tags : Compound, List, ListOf, Short, String;
 import sel.player.player : Player;
 import sel.world.world : World;
 
@@ -487,8 +488,8 @@ abstract class Item {
 	public @property @safe string customName(string name) {
 		if(name.length) {
 			void set(ref Compound compound) {
-				auto n = new String("Name", name);
-				if(compound is null) compound = new Compound(new Compound("display", n));
+				auto n = new Named!String("Name", name);
+				if(compound is null) compound = new Compound(new Named!Compound("display", n));
 				else if(!compound.has!Compound("display")) compound["display"] = new Compound(n);
 				else compound.get!Compound("display")[] = n;
 			}
@@ -540,8 +541,8 @@ abstract class Item {
 			// add
 			this.enchantments[ench.id] = ench;
 			void add(ref Compound compound, ubyte id) @safe {
-				auto ec = new Compound([new Short("id", id), new Short("lvl", ench.level)]);
-				if(compound is null) compound = new Compound([new ListOf!Compound("ench", [ec])]);
+				auto ec = new Compound([new Named!Short("id", id), new Named!Short("lvl", ench.level)]);
+				if(compound is null) compound = new Compound([new Named!(ListOf!Compound)("ench", [ec])]);
 				else if(!compound.has!(ListOf!Compound)("ench")) compound["ench"] = new ListOf!Compound(ec);
 				else compound.get!(ListOf!Compound)("ench") ~= ec;
 			}

@@ -18,6 +18,8 @@ import common.sel;
 
 import sel.entity.human : Human;
 import sel.entity.living : Living;
+import sel.event.world.damage;
+import sel.event.world.entity : EntityHealEvent;
 import sel.player.player : isPlayerInstance;
 
 static import sul.effects;
@@ -68,6 +70,8 @@ class Effect {
 			case _.HUNGER.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
 			case _.POISON.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
 			case _.WITHER.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
+			//TODO health boost
+			//TODO absorption
 			case _.SATURATION.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
 			case _.LEVITATION.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
 			default: return new Effect(effect, victim, level, duration, attacker);
@@ -231,7 +235,7 @@ class Regeneration : RepetitionEffect!([50, 25, 12, 6, 3, 1]) {
 	}
 
 	public override void onRepeat() {
-		//TODO call event and heal
+		this.victim.heal(new EntityHealEvent(this.victim, 1));
 	}
 
 }
@@ -284,7 +288,7 @@ class Poison : RepetitionEffect!([25, 12, 6, 3, 1]) {
 	
 	public override void onRepeat() {
 		if(this.victim.health > 1) {
-			//TODO call event and damage
+			this.victim.attack(new EntityDamageByPoisonEvent(this.victim)); //TODO thrown by player
 		}
 	}
 	
@@ -297,7 +301,7 @@ class Wither : RepetitionEffect!([40, 20, 10, 5, 2, 1]) {
 	}
 	
 	public override void onRepeat() {
-		//TODO call event and damage
+		this.victim.attack(new EntityDamageByWitherEffectEvent(this.victim)); //TODO thrown by player
 	}
 	
 }
