@@ -105,7 +105,7 @@ public class Items {
 	 * assert(items.fromString("grass") == Items.grass);
 	 * assert(items.fromString("polished granite") == Items.polishedGranite);
 	 * assert(items.fromString("polished_andesite") == Items.polishedAndesite);
-	 * assert(items.fromString("uuefswk") is null);
+	 * assert(items.fromString("mdnn pttn") is null);
 	 * ---
 	 */
 	public Item fromString(string name, ushort damage=0) {

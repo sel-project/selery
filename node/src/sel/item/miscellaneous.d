@@ -103,8 +103,8 @@ class MapItem(sul.items.Item si) : SimpleItem!(si) {
 		}
 	}
 
-	public final override pure nothrow @property @safe @nogc shortgroup metas() {
-		return shortgroup(0, this.mapId);
+	public override pure nothrow @property @safe @nogc ushort minecraftMeta() {
+		return this.mapId;
 	}
 
 	public pure nothrow @property @safe @nogc ushort mapId() {

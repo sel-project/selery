@@ -67,14 +67,12 @@ enum Tools : ubyte {
 
 }
 
-class ToolItem(sul.items.Item si, ubyte type, ubyte material, ushort durability, uint attackstrength=1) : SimpleItem!(si) {
-	
-	alias sul = si;
+abstract class Tool : Item {
 	
 	protected ushort damage;
 	
-	public @safe this(F...)(F args) {
-		static if(F.length > 0 && is(typeof(F[0]) : int)) {
+	public @safe this(E...)(E args) {
+		static if(E.length > 0 && is(typeof(E[0]) : int)) {
 			super(args[1..$]);
 			this.damage = args[0] & ushort.max;
 		} else {
@@ -82,28 +80,65 @@ class ToolItem(sul.items.Item si, ubyte type, ubyte material, ushort durability,
 		}
 	}
 	
-	public override pure nothrow @property @safe @nogc shortgroup metas() {
-		return shortgroup(this.damage, this.damage);
+	public override pure nothrow @property @safe @nogc ushort minecraftMeta() {
+		return this.damage;
 	}
-
+	
+	public override pure nothrow @property @safe @nogc ushort pocketMeta() {
+		return this.damage;
+	}
+	
 	public override pure nothrow @property @safe @nogc bool tool() {
 		return true;
 	}
+
+	public abstract pure nothrow @property @safe @nogc ushort durability();
 	
-	public final override pure nothrow @property @safe @nogc ubyte toolType() {
-		return type;
+	public override pure nothrow @property @safe @nogc bool finished() {
+		return this.damage >= this.durability;
 	}
 	
-	public final override pure nothrow @property @safe @nogc ubyte toolMaterial() {
-		return material;
+	protected void applyDamage(ushort amount) {
+		if(!this.unbreakable) this.damage += amount;
 	}
 	
-	public final override pure nothrow @property @safe @nogc bool finished() {
-		return this.damage >= durability;
+	alias unbreakable = super.unbreakable;
+	
+	public override @property @safe bool unbreakable(bool unbreakable) {
+		if(super.unbreakable(unbreakable)) {
+			this.damage = 0;
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
-	public final override pure nothrow @property @safe @nogc uint attack() {
-		return attackstrength;
+}
+
+class ToolItem(sul.items.Item si, ubyte _type, ubyte _material, ushort _durability, uint _attack=1) : Tool {
+	
+	public @safe this(E...)(E args) {
+		super(args);
+	}
+
+	public override pure nothrow @property @safe @nogc sul.items.Item data() {
+		return si;
+	}
+	
+	public override pure nothrow @property @safe @nogc ubyte toolType() {
+		return _type;
+	}
+	
+	public override pure nothrow @property @safe @nogc ubyte toolMaterial() {
+		return _material;
+	}
+	
+	public override pure nothrow @property @safe @nogc ushort durability() {
+		return _durability;
+	}
+	
+	public override pure nothrow @property @safe @nogc uint attack() {
+		return _attack;
 	}
 	
 	alias slot this;
@@ -112,23 +147,21 @@ class ToolItem(sul.items.Item si, ubyte type, ubyte material, ushort durability,
 
 class SwordItem(sul.items.Item si, ubyte material, ushort durability, uint attack) : ToolItem!(si, Tools.sword, material, durability, attack) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
 	}
 	
 	public override bool destroyOn(Player player, Block block, BlockPosition position) {
-		if(player.consumeTools && !block.instantBreaking) {
-			this.damage += 2;
+		if(!block.instantBreaking) {
+			this.applyDamage(2);
 			return true;
 		}
 		return false;
 	}
 	
 	public override bool attackOnEntity(Player player, Entity entity) {
-		if(player.consumeTools && cast(Living)entity) {
-			this.damage++;
+		if(cast(Living)entity) {
+			this.applyDamage(1);
 			return true;
 		}
 		return false;
@@ -140,23 +173,21 @@ class SwordItem(sul.items.Item si, ubyte material, ushort durability, uint attac
 
 class MiningItem(sul.items.Item si, ubyte tool, ubyte material, ushort durability, uint attack) : ToolItem!(si, tool, material, durability, attack) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
 	}
 
 	public override bool destroyOn(Player player, Block block, BlockPosition position) {
-		if(player.consumeTools && !block.instantBreaking) {
-			this.damage++;
+		if(!block.instantBreaking) {
+			this.applyDamage(1);
 			return true;
 		}
 		return false;
 	}
 
 	public override bool attackOnEntity(Player player, Entity entity) {
-		if(player.consumeTools && cast(Living)entity) {
-			this.damage += 2;
+		if(cast(Living)entity) {
+			this.applyDamage(2);
 			return true;
 		}
 		return false;
@@ -172,19 +203,15 @@ alias AxeItem(sul.items.Item si, ubyte material, ushort durability, uint attack)
 
 class ShovelItem(sul.items.Item si, ubyte material, ushort durability, uint attack) : MiningItem!(si, Tools.shovel, material, durability, attack) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
 	}
 
 	public override bool useOnBlock(Player player, Block block, BlockPosition position, ubyte face) {
 		if(face != Faces.DOWN && block == Blocks.grass && player.world[position + [0, 1, 0]] == Blocks.air) {
 			player.world[position] = Blocks.grassPath;
-			if(player.consumeTools) {
-				this.damage++;
-				return true;
-			}
+			this.applyDamage(1);
+			return true;
 		}
 		return false;
 	}
@@ -195,26 +222,22 @@ class ShovelItem(sul.items.Item si, ubyte material, ushort durability, uint atta
 
 class HoeItem(sul.items.Item si, ubyte material, ushort durability) : ToolItem!(si, Tools.hoe, material, durability, 1) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
 	}
 
 	public override bool useOnBlock(Player player, Block block, BlockPosition position, ubyte face) {
 		if(face != Faces.DOWN && (block == [Blocks.dirt, Blocks.grass, Blocks.grassPath]) && player.world[position + [0, 1, 0]] == Blocks.air) {
 			player.world[position] = Blocks.farmland0;
-			if(player.consumeTools) {
-				this.damage++;
-				return true;
-			}
+			this.applyDamage(1);
+			return true;
 		}
 		return false;
 	}
 
 	public override bool attackOnEntity(Player player, Entity entity) {
-		if(player.consumeTools && cast(Living)entity) {
-			this.damage++;
+		if(cast(Living)entity) {
+			this.applyDamage(1);
 			return true;
 		}
 		return false;
@@ -245,9 +268,7 @@ interface Armor {
 
 class ArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint aprotection, E...) : ToolItem!(si, Tools.armor, 0, durability, 1, E), Armor if(atype <= 3) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
 	}
 
@@ -260,11 +281,8 @@ class ArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint aprotect
 	}
 
 	public override bool doDamage(Player player) {
-		if(player.consumeTools) {
-			this.damage++;
-			return true;
-		}
-		return false;
+		this.applyDamage(1);
+		return true;
 	}
 	
 	alias slot this;
@@ -272,8 +290,6 @@ class ArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint aprotect
 }
 
 class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint aprotection) : ArmorItem!(si, durability, atype, aprotection), Colorable {
-
-	alias sul = si;
 
 	private Color m_color;
 
@@ -367,10 +383,12 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 
 class PlaceableArmor(sul.items.Item si, E...) : ArmorItem!(si, 1, 0, 0) {
 
-	alias sul = si;
-
-	public this(F...)(F args) {
+	public this(E...)(E args) {
 		super(args);
+	}
+
+	public override pure nothrow @property @safe @nogc bool tool() {
+		return false;
 	}
 
 	public override bool doDamage(Player player) {

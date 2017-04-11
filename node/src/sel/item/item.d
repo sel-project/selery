@@ -16,6 +16,7 @@ module sel.item.item;
 
 import std.conv : to;
 static import std.json;
+import std.string : split, join;
 
 import common.sel;
 
@@ -38,13 +39,17 @@ static import sul.items;
 /**
  * Base abstract class for an Item.
  */
-abstract class Item {
+class Item {
 
 	protected Compound m_pc_tag;
 	protected Compound m_pe_tag;
 
 	private string m_name = "";
+	private string m_lore = "";
 	private Enchantment[ubyte] enchantments;
+	private bool m_unbreakable = false;
+
+	private block_t[] canPlaceOn, canDestroy; //TODO
 
 	public pure nothrow @safe @nogc this() {}
 	
@@ -54,7 +59,7 @@ abstract class Item {
 	 * Example:
 	 * ---
 	 * auto item = new Items.Apple(`{"customName":"SPECIAL APPLE","enchantments":[{"name":"protection","level":"IV"}]}`);
-	 * assert(item.customName == "SPECIAL_APPLE");
+	 * assert(item.customName == "SPECIAL APPLE");
 	 * assert(Enchantments.protection in item);
 	 * ---
 	 */
@@ -75,6 +80,18 @@ abstract class Item {
 
 			auto name = "customName" in data;
 			if(name && name.type == std.json.JSON_TYPE.STRING) this.customName = name.str;
+
+			auto lore = "lore" in data;
+			if(lore) {
+				if(lore.type == std.json.JSON_TYPE.STRING) this.lore = lore.str;
+				else if(lore.type == std.json.JSON_TYPE.ARRAY) {
+					string[] l;
+					foreach(value ; lore.array) {
+						if(value.type == std.json.JSON_TYPE.STRING) l ~= value.str;
+					}
+					this.lore = l.join("\n");
+				}
+			}
 
 			void parseEnchantment(std.json.JSONValue ench) @trusted {
 				if(ench.type == std.json.JSON_TYPE.ARRAY) {
@@ -107,25 +124,39 @@ abstract class Item {
 			if("ench" in data) parseEnchantment(data["ench"]);
 			else if("enchantments" in data) parseEnchantment(data["enchantments"]);
 
+			auto unb = "unbreakable" in data;
+			if(unb && unb.type == std.json.JSON_TYPE.TRUE) this.unbreakable = true;
+
 		}
 	}
 
+	/**
+	 * Gets the item's data.
+	 */
 	public pure nothrow @property @safe @nogc sul.items.Item data() {
 		return sul.items.Item.init;
 	}
 
+	/**
+	 * Indicates wether the item exists in Minecraft.
+	 */
 	public pure nothrow @property @safe @nogc bool minecraft() {
 		return this.data.minecraft.exists;
 	}
 
+	/// ditto
 	public pure nothrow @property @safe @nogc ushort minecraftId() {
 		return this.data.minecraft.id;
 	}
 
+	/// ditto
 	public pure nothrow @property @safe @nogc ushort minecraftMeta() {
 		return this.data.minecraft.meta;
 	}
 
+	/**
+	 * Indicates whether the item exists in Minecraft: Pocket Edition.
+	 */
 	public pure nothrow @property @safe @nogc bool pocket() {
 		return this.data.pocket.exists;
 	}
@@ -138,29 +169,27 @@ abstract class Item {
 		return this.data.pocket.meta;
 	}
 
-	public deprecated("Use pocketId and minecraftId instead") pure nothrow @property @safe @nogc shortgroup ids() {
-		return shortgroup(this.pocketId, this.minecraftId);
-	}
-
-	public deprecated("Use pocketMeta and minecraftMeta instead") pure nothrow @property @safe @nogc shortgroup metas() {
-		return shortgroup(this.pocketMeta, this.minecraftMeta);
-	}
-
 	/**
 	 * Gets the name (not the custom name!) of the item.
+	 * Example:
+	 * ---
+	 * if(item.name == "string")
+	 *    item.customName = "Special String";
+	 * ---
 	 */
 	public pure nothrow @property @safe @nogc string name() {
 		return this.data.name;
 	}
 
 	/** 
-	 * Highest number of items that can be stacked in the slot.
-	 * This number is the default slot's count if not spcified when creating a slot
-	 * Returns: usually a number between 1 and 64.
+	 * Indicates the highest number of items that can be stacked in a slot.
+	 * This number is the default slot's count if not specified when created.
+	 * Returns: a number between 1 and 64 (usually 1, 16 or 64).
 	 * Example:
 	 * ---
 	 * Slot slot = new Items.Beetroot();
 	 * assert(slot.count == 64 && slot.item.max == 64);
+	 * assert(slot.item.max == 64);
 	 * 
 	 * slot = new Slot(new Items.Beetroot(), 23);
 	 * assert(slot.count != 64 && slot.count == 23);
@@ -171,7 +200,7 @@ abstract class Item {
 	}
 
 	/**
-	 * Indicates whether or not this item is a tool.
+	 * Indicates whether the item is a tool.
 	 * A tool can be used on blocks and entities
 	 * and its meta will vary.
 	 * Example:
@@ -185,13 +214,13 @@ abstract class Item {
 	}
 
 	/**
-	 * Get the item's tool type.
-	 * Returns: 0 if Item::tool is false, a number higher that 0 indicating
-	 * 			the tool type otherwise.
+	 * Gets the item's tool type.
+	 * Returns: Tools.none if the item is not a tool or a number higher
+	 * 			than 0 indicating the tool type.
 	 * Example:
 	 * ---
-	 * assert(new Items.Beetroot().toolType == NO_TOOL);
-	 * assert(new Items.DiamondSword().toolType == SWORD);
+	 * assert(new Items.Beetroot().toolType == Tools.none);
+	 * assert(new Items.DiamondSword().toolType == Tools.sword);
 	 * ---
 	 */
 	public pure nothrow @property @safe @nogc ubyte toolType() {
@@ -199,7 +228,7 @@ abstract class Item {
 	}
 
 	/**
-	 * Get the tool's material if Item::tool is true.
+	 * Gets the tool's material if the item is a tool.
 	 * Items with ID 0 have unspecified material, 1 is the minimum (wood)
 	 * and 5 is the maximum (diamond).
 	 * Example:
@@ -213,10 +242,11 @@ abstract class Item {
 	}
 
 	/**
-	 * If the item is a tool, check if it has been consumed.
+	 * If the item is a tool, checks whether its damage is higher than
+	 * its durability.
 	 * Example:
 	 * ---
-	 * assert(new Items.Beetroot().finished == false); //beetroots aren't tools
+	 * assert(new Items.Beetroot().finished == false); // beetroots aren't tools
 	 * assert(new Items.DiamondSword().finished == false);
 	 * assert(new Items.DiamondSword(Items.DiamondSword.DURABILITY + 1).finished == true);
 	 * ---
@@ -226,8 +256,14 @@ abstract class Item {
 	}
 
 	/**
-	 * Attack damage caused by the item, as an hit, usually modified
-	 * by the tools, like words and axes.
+	 * Indicates the damage caused by the item when used as a weapon.
+	 * The value indicates the base damage without the influence of
+	 * enchantments or effects.
+	 * Example:
+	 * ---
+	 * if(item.attack > 1)
+	 *    assert(item.tool);
+	 * ---
 	 */
 	public pure nothrow @property @safe @nogc uint attack() {
 		return 1;
@@ -433,7 +469,7 @@ abstract class Item {
 		this.parseCompound(compound, &Enchantment.fromPocket);
 	}
 
-	private @safe void parseCompound(Compound compound, Enchantment function(ubyte id, ubyte level) @safe get) {
+	private @trusted void parseCompound(Compound compound, Enchantment function(ubyte id, ubyte level) @safe get) {
 		if(compound.has!Compound("")) compound = compound.get!Compound("");
 		if(compound.has!Compound("display")) {
 			auto display = compound.get!Compound("display");
@@ -441,6 +477,7 @@ abstract class Item {
 				auto name = display.get!String("Name").value;
 				if(name.length) this.customName = name;
 			}
+			//TODO lore
 		}
 		if(compound.has!(ListOf!Compound)("ench")) {
 			foreach(e ; compound.get!(ListOf!Compound)("ench")) {
@@ -449,6 +486,9 @@ abstract class Item {
 					if(ench !is null) this.addEnchantment(ench);
 				}
 			}
+		}
+		if(compound.has!Byte("Unbreakable") && compound.get!Byte("Unbreakable") == true) {
+			this.unbreakable = true;
 		}
 	}
 
@@ -467,6 +507,7 @@ abstract class Item {
 		this.m_pc_tag = null;
 		this.m_pe_tag = null;
 		this.m_name = "";
+		this.m_lore = "";
 		this.enchantments.clear();
 	}
 
@@ -508,6 +549,41 @@ abstract class Item {
 			reset(this.m_pe_tag);
 		}
 		return this.m_name = name;
+	}
+
+	/**
+	 * Gets the item's lore or description which is displayed under
+	 * the item's name when the item is hovered in the player's inventory.
+	 */
+	public pure nothrow @property @safe @nogc string lore() {
+		return this.m_lore;
+	}
+
+	public @property @safe string lore(string[] lore) {
+		if(lore.length) {
+			void set(ref Compound compound) {
+				auto n = new Named!(ListOf!String)("Lore", lore);
+				if(compound is null) compound = new Compound(new Named!Compound("display", n));
+				else if(!compound.has!Compound("display")) compound["display"] = new Compound(n);
+				else compound.get!Compound("display")[] = n;
+			}
+			set(this.m_pc_tag);
+		} else {
+			void reset(ref Compound compound) {
+				auto display = compound.get!Compound("display");
+				display.remove("Lore");
+				if(display.empty) {
+					compound.remove("display");
+					if(compound.empty) compound = null;
+				}
+			}
+			reset(this.m_pc_tag);
+		}
+		return this.m_lore = lore.join("\n");
+	}
+
+	public @property @safe string lore(string lore) {
+		return this.lore = lore.split("\n");
 	}
 
 	/**
@@ -622,6 +698,26 @@ abstract class Item {
 	}
 
 	/**
+	 * If the item is a tool, indicates whether the item is consumed
+	 * when used for breaking or combat.
+	 */
+	public pure nothrow @property @safe @nogc bool unbreakable() {
+		return this.m_unbreakable;
+	}
+
+	public @property @safe bool unbreakable(bool unbreakable) {
+		if(unbreakable) {
+			auto u = new Named!Byte("Unbreakable", true);
+			if(this.m_pc_tag is null) this.m_pc_tag = new Compound(u);
+			else this.m_pc_tag[] = u;
+		} else {
+			this.m_pc_tag.remove("Unbreakable");
+			if(this.m_pc_tag.empty) this.m_pc_tag = null;
+		}
+		return this.m_unbreakable = unbreakable;
+	}
+
+	/**
 	 * Deep comparation of 2 instantiated items.
 	 * Compare ids, metas, custom names and enchantments.
 	 * Example:
@@ -647,6 +743,7 @@ abstract class Item {
 					this.minecraftMeta == i.minecraftMeta &&
 					this.pocketMeta == i.pocketMeta &&
 					this.customName == i.customName &&
+					this.lore == i.lore &&
 					this.enchantments == i.enchantments;
 		}
 		return false;
@@ -696,7 +793,6 @@ abstract class Item {
 		return Slot(this);
 	}
 
-	/// ditto
 	alias slot this;
 
 }
