@@ -19,13 +19,14 @@ import std.conv : to;
 import common.sel;
 
 import sel.settings;
-import sel.player : Player;
-import sel.block;
+import sel.block.block;
 import sel.entity.entity;
 import sel.entity.interfaces;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
-import sel.util : call;
+import sel.player.minecraft : MinecraftPlayerImpl;
+import sel.player.player : Player;
+import sel.util.util : call;
 import sel.world.world : World;
 
 class ItemEntity : Entity, Collectable {

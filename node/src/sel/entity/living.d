@@ -20,13 +20,13 @@ import std.math : round, isNaN;
 import common.sel;
 
 import sel.settings;
-import sel.player : Player;
 import sel.entity.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
 import sel.entity.metadata;
 import sel.event.world;
 import sel.math.vector;
-import sel.util;
+import sel.player.player : Player;
+import sel.util.util;
 import sel.util.color : Color;
 import sel.world.world : World;
 

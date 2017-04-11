@@ -19,6 +19,8 @@
 module sel.player.player;
 import std.algorithm : count, max, min, reverse, sort, canFind, clamp;
 
+mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
+
 import std.array : join, split;
 static import std.bitmanip;
 import std.concurrency : Tid, thisTid, send, receiveOnly;
@@ -53,7 +55,7 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network : Handler;
 import sel.server : server;
-import sel.util;
+import sel.util.util;
 import sel.util.command : Command;
 import sel.util.concurrency : thread, Thread;
 import sel.util.format : centre;
@@ -64,8 +66,6 @@ import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.particle : Particle, Particles;
 import sel.world.world : Rules, World;
-
-mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 
 enum Gamemode : ubyte {
 	

@@ -25,7 +25,7 @@ import sel.entity.effect : Effect;
 import sel.event.world : EntityDamageByCommandEvent;
 import sel.item : Item, Slot;
 import sel.math.vector;
-import sel.player : Player, Gamemode;
+import sel.player.player : Player, Gamemode;
 import sel.plugin.plugin : arguments;
 import sel.util.lang : translate;
 import sel.util.log;

@@ -14,7 +14,7 @@
  */
 module sel.world.particle;
 
-import sel.block;
+import sel.block.block;
 import sel.math.vector : EntityPosition;
 import sel.util.color : Color;
 

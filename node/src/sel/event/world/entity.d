@@ -17,7 +17,6 @@ module sel.event.world.entity;
 import std.algorithm : max;
 import std.conv : to;
 
-import sel.player : Player;
 import sel.entity.effect : Effects;
 import sel.entity.entity : Entity;
 import sel.entity.interfaces : Undead, Arthropods;
@@ -30,6 +29,7 @@ import sel.item.enchanting : Enchantments;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
 import sel.math.vector : EntityPosition;
+import sel.player.player : Player;
 import sel.world.world : World;
 
 interface EntityEvent : WorldEvent {

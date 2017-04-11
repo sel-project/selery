@@ -25,7 +25,7 @@ import sel.item.item : Item, SimpleItem;
 import sel.item.items : Items;
 import sel.math.vector;
 import sel.player.player : Player;
-import sel.util : roman;
+import sel.util.util : roman;
 import sel.world.world : World;
 
 static import sul.effects;

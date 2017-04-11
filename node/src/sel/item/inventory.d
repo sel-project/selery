@@ -24,7 +24,6 @@ import std.typecons : Tuple;
 
 import common.sel;
 
-import sel.player : Player;
 import sel.entity.human : Human;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
@@ -519,7 +518,7 @@ class Inventory {
 
 unittest {
 
-	import sel.item : Items;
+	import sel.item.items : Items;
 
 	// creation
 	auto inventory = new Inventory(10);
@@ -613,7 +612,7 @@ class InventoryRange : Inventory {
 
 unittest {
 
-	import sel.item : Items;
+	import sel.item.items : Items;
 
 	auto inventory = new Inventory(10);
 	auto range = inventory[2..4];
@@ -692,7 +691,7 @@ class InventoryGroup : Inventory {
 
 unittest {
 
-	import sel.item : Items;
+	import sel.item.items : Items;
 
 	auto inventory = new Inventory(10);
 	auto igroup = new InventoryGroup(inventory[4..$], inventory[0..4]);

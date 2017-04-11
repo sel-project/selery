@@ -458,7 +458,7 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 				}
 				index += 4;
 			}
-			if(length <= payload.length - index) return parseJSON(payload[index..index+length]);
+			if(length <= payload.length - index) return parseJSON(cast(string)payload[index..index+length]);
 		}
 		return JSONValue.init;
 	}

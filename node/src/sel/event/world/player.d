@@ -14,7 +14,6 @@
  */
 module sel.event.world.player;
 
-import sel.player : Player;
 import sel.block.block : Block;
 import sel.entity : Entity, ItemEntity;
 import sel.event.event : Cancellable;
@@ -23,7 +22,8 @@ import sel.event.world.entity : EntityDeathEvent;
 import sel.event.world.world;
 import sel.item : Slot, Item;
 import sel.math.vector : BlockPosition, EntityPosition, ChunkPosition;
-import sel.util : between;
+import sel.player.player : Player;
+import sel.util.util : between;
 import sel.world.world : World;
 
 /**

@@ -21,13 +21,13 @@ import common.sel;
 
 import nbt.tags;
 
-import sel.player : Player;
 import sel.block.block : Block, Faces;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.living : Living;
-import sel.item.item;
+import sel.item.item : Item;
 import sel.math.vector : BlockPosition;
+import sel.player.player : Player;
 import sel.util.color : Color, Colorable;
 
 static import sul.items;

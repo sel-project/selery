@@ -27,15 +27,14 @@ import std.string : split, join, capitalize;
 
 import common.sel;
 
-import sel.player : Player;
 import sel.entity.entity : Entity;
 import sel.event.event : EventListener;
 import sel.event.world.world : WorldEvent;
 import sel.item.enchanting : Enchantments;
-import sel.item.item;
+import sel.item.item : Item;
 import sel.item.slot : Slot;
-import sel.item.tool : Tools;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
+import sel.player.player : Player;
 import sel.world.chunk : Chunk;
 import sel.world.world : World;
 

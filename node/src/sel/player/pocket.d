@@ -35,6 +35,8 @@ import common.sel;
 import nbt.stream;
 import nbt.tags;
 
+import sel.server : server;
+import sel.settings;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect, Effects;
@@ -47,8 +49,6 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
-import sel.server : server;
-import sel.settings;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.command : Command;
 import sel.util.lang;

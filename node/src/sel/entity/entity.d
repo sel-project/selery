@@ -24,7 +24,6 @@ import std.uuid : UUID;
 
 import common.sel;
 
-import sel.player : Player;
 import sel.server : server;
 import sel.settings;
 import sel.block.block : Block, blockInto;
@@ -36,8 +35,9 @@ import sel.event.world.damage;
 import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.player.player : Player;
 import sel.plugin.plugin : Plugin, PluginException;
-import sel.util;
+import sel.util.util;
 import sel.world.world : World, Rules;
 
 static import sul.entities;

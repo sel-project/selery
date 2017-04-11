@@ -18,7 +18,6 @@ import std.math : isNaN, sin, cos, PI;
 
 import common.sel;
 
-import sel.player : Player;
 import sel.entity.effect : Effect, Effects;
 import sel.entity.entity : Entities, Rotation;
 import sel.entity.interfaces;
@@ -29,7 +28,8 @@ import sel.item.enchanting : Enchantments;
 import sel.item.inventory : PlayerInventory;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
-import sel.util : call;
+import sel.player.player : Player;
+import sel.util.util : call;
 import sel.world.world : Difficulty, World;
 
 class Human : Living, Collector, Shooter, PotionThrower {

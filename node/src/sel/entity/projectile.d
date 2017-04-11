@@ -19,14 +19,15 @@ import std.math : abs, sqrt, atan2, PI;
 
 import common.sel;
 
-import sel.player : Player;
-import sel.block;
+import sel.block.block : Block, blockInto;
+import sel.block.blocks : Blocks;
 import sel.entity.effect;
 import sel.entity.entity : Entity, Entities;
 import sel.entity.living : Living;
 import sel.entity.metadata;
 import sel.event.world;
 import sel.math.vector;
+import sel.player.player : Player;
 import sel.util.color : Color;
 import sel.world.particle : Particles;
 import sel.world.world : World;

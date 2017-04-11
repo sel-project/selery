@@ -848,5 +848,5 @@ private uint[] acknowledgePackets(Types.Acknowledge[] acks) {
 
 private JSONValue decodeJwt(string encoded) {
 	while(encoded.length % 4 != 0) encoded ~= "=";
-	return parseJSON(Base64URL.decode(encoded));
+	return parseJSON(cast(string)Base64URL.decode(encoded));
 }

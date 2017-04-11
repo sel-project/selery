@@ -25,7 +25,6 @@ import std.typecons : Tuple;
 
 import common.sel;
 
-import sel.player;
 import sel.plugin;
 import sel.server : server;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
@@ -44,7 +43,9 @@ import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
-import sel.util;
+import sel.player.player : Player;
+import sel.plugin.plugin;
+import sel.util.util;
 import sel.util.color : Color;
 import sel.util.command : Command;
 import sel.util.lang : translate, ITranslatable;
@@ -465,7 +466,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					}
 					if(this.m_weather.rain != 0 && this.random.probability(.03125f * this.m_weather.intensity)) {
 						auto xz = chunk.nextSnow;
-						int y = chunk.firstBlock(xz.x, xz.z);
+						auto y = chunk.firstBlock(xz.x, xz.z);
 						if(y > 0) {
 							enum drop = .05f / 30;
 							float temperature = chunk.biomes[xz.z << 4 | xz.x].temperature - drop * min(0, y - 64);

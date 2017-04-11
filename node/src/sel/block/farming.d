@@ -21,7 +21,6 @@ import std.traits : isNumeric;
 
 import common.sel;
 
-import sel.player : Player;
 import sel.block.block : Block, SimpleBlock, Update;
 import sel.block.blocks : Blocks;
 import sel.block.solid;
@@ -31,6 +30,7 @@ import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition;
+import sel.player.player : Player;
 import sel.world.world : World;
 
 static import sul.blocks;

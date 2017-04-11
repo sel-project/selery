@@ -30,7 +30,7 @@ import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition;
-import sel.player : Player;
+import sel.player.player : Player;
 import sel.util.random : Random;
 import sel.world.world : World;
 

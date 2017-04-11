@@ -29,7 +29,7 @@ import common.sel;
 
 import nbt.tags;
 
-import sel.player : Player;
+import sel.settings;
 import sel.block.block;
 import sel.block.blocks : Blocks;
 import sel.block.solid : Facing;
@@ -40,7 +40,7 @@ import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
-import sel.settings;
+import sel.player.player : Player;
 import sel.util.color : Color, Colors;
 import sel.util.lang : GenericTranslatable = Translatable;
 import sel.world.particle : Particles;
