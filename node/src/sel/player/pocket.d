@@ -142,59 +142,9 @@ abstract class PocketPlayer : Player {
 		return this.n_device_model;
 	}
 
-	public override void tick() {
-		super.tick();
-		//send tips and popups
-		if(this.m_title.duration != 0 && --this.m_title.duration == 0) this.updateTitles();
-		if(this.m_subtitle.duration != 0 && --this.m_subtitle.duration == 0) this.updateTitles();
-		if(this.m_tip.duration != 0 && --this.m_tip.duration == 0) this.updateTitles();
-		if(this.m_title.duration || this.m_subtitle.duration || this.m_tip.duration) this.sendTitles();
-	}
-
 	public final override pure nothrow @property @safe @nogc byte dimension() {
 		return this.world.dimension.pe;
 	}
-
-	alias title = super.title;
-
-	public override @property Message title(Message title, string[] args=[]) {
-		super.title(title, args);
-		this.updateTitles();
-		this.sendTitles();
-		return this.m_title;
-	}
-
-	alias subtitle = super.subtitle;
-
-	public override @property Message subtitle(Message subtitle, string[] args=[]) {
-		super.subtitle(subtitle, args);
-		this.updateTitles();
-		this.sendTitles();
-		return this.m_subtitle;
-	}
-
-	alias tip = super.tip;
-
-	public override @property Message tip(Message tip, string[] args=[]) {
-		super.tip(tip, args);
-		this.updateTitles();
-		this.sendTitles();
-		return this.m_tip;
-	}
-
-	protected void updateTitles() {
-		Message message;
-		if(this.m_title.duration) message ~= this.m_title;
-		message ~= "\n";
-		if(this.m_subtitle.duration) message ~= this.m_subtitle;
-		message ~= "\n";
-		message ~= "\n\n";
-		if(this.m_tip.duration) message ~= this.m_tip;
-		message.center();
-		this.n_titles = message ~ "\n\n";
-	}
-
-	protected abstract void sendTitles();
 
 	alias operator = super.operator;
 
@@ -405,7 +355,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	alias world = super.world;
 
 	public override @property World world(World world) {
-		this.send_commands = false; // world-related commands and removed but no packet is needed as they are updated at respawn
+		this.send_commands = false; // world-related commands are removed but no packet is needed as they are updated at respawn
 		return super.world(world);
 	}
 
@@ -422,20 +372,26 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		// unsupported
 	}
 	
-	public override void sendChatMessage(string message) {
+	protected override void sendChatMessage(string message) {
 		this.sendPacket(new Play.Text().new Raw(message));
 	}
+	
+	protected override void sendTipMessage(string message) {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_ACTION_BAR, message));
+	}
 
-	protected override void sendTitleMessage() {}
+	protected override void sendTitleMessage(Title message) {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TITLE, message.title));
+		if(message.subtitle.length) this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_SUBTITLE, message.subtitle));
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TIMINGS, "", message.fadeIn.to!uint, message.stay.to!uint, message.fadeOut.to!uint));
+	}
 
-	protected override void sendSubtitleMessage() {}
+	protected override void sendHideTitles() {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.HIDE));
+	}
 
-	protected override void sendTipMessage() {}
-
-	protected override void sendResetTitles() {}
-
-	protected override void sendTitles() {
-		this.sendPacket(new Play.Text().new Tip(this.n_titles));
+	protected override void sendResetTitles() {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.RESET));
 	}
 
 	public override void sendMovementUpdates(Entity[] entities) {
@@ -535,7 +491,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			data.sections ~= section;
 		}
 		//data.heights = chunk.lights;
-		data.biomes = chunk.biomes;
+		foreach(i, biome; chunk.biomes) {
+			data.biomes[i] = biome.id;
+		}
 		//TODO extra data
 
 		networkStream.buffer.length = 0;
@@ -837,7 +795,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 						params ~= JSONValue(p);
 					}
 					foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
-					overloads[to!string(i)] = JSONValue(["input": ["parameters": JSONValue(params)], "output": (JSONValue[string]).init]);
+					overloads[to!string(i)] = JSONValue([
+						"input": ["parameters": JSONValue(params)],
+						"output": (JSONValue[string]).init
+					]);
 				}
 				current["overloads"] = overloads;
 				if(command.hidden) {
@@ -847,6 +808,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			}
 		}
 		this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
+
 	}
 
 	mixin generateHandlers!(Play.Packets);

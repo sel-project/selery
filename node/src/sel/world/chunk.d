@@ -37,13 +37,15 @@ import sel.util.lang : ITranslatable;
 import sel.world.io;
 import sel.world.world : World;
 
+import sul.biomes;
+
 /**
  * Classic chunk with the size of 16 * 16.
  */
 class Chunk {
 
 	// default height
-	public static immutable uint HEIGHT = 256;
+	public enum uint HEIGHT = 256;
 	
 	private ChunkPosition n_position;
 	private World n_world;
@@ -53,7 +55,7 @@ class Chunk {
 	private size_t highest_section;
 
 	public ubyte[16 * 16 * 2] lights = 255;
-	public ubyte[16 * 16] biomes = 1;
+	public const(Biome)[16 * 16] biomes = Biomes.PLAINS;
 
 	public bool saveChangedBlocks = false;
 	public BlockPosition[] changed_blocks;

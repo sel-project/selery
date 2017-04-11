@@ -201,7 +201,7 @@ final class Server : EventListener!ServerEvent {
 		
 		n_server = this;
 
-		static if(__oneNode) {
+		static if(__oneNode && !__noSocket) {
 			ubyte tries = 255;
 			while(--tries) {
 				if(std.file.exists(Paths.hidden ~ "handshake")) {
@@ -227,7 +227,7 @@ final class Server : EventListener!ServerEvent {
 			}
 			if(tries == 0) {
 				// it waited 30 seconds
-				//TODO log error (no reply from the hub)
+				error_log("Could not connect to the hub!");
 				return;
 			}
 		}

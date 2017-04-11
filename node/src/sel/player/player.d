@@ -130,7 +130,9 @@ abstract class Player : Human {
 	
 	public Rules rules;
 	
-	protected Message m_title, m_subtitle, m_tip;
+	private string m_title;
+	private string m_subtitle;
+	private string m_actionbar;
 	
 	public size_t viewDistance;
 	public ChunkPosition[] loaded_chunks;
@@ -459,11 +461,8 @@ abstract class Player : Human {
 
 			if(this.n_world !is null && !world.hasChild(this.n_world) && !this.n_world.hasChild(world)) {
 
-				// reset titles (title, subtitle, tip)
-				this.m_title = Message.init;
-				this.m_subtitle = Message.init;
-				this.m_tip = Message.init;
-				this.sendResetTitles();
+				// reset titles
+				this.clearTitle();
 
 				this.m_gamemode = world.rules.gamemode;
 
@@ -535,85 +534,74 @@ abstract class Player : Human {
 
 	// *** PLAYER-RELATED METHODS ***
 	
-	/// Sends a direct text message and its paramaters.
-	public final @trusted void sendMessage(string message, string[] args=[]) {
-		message = translate(message, this.lang, args, server.variables, this.variables);
-		/*foreach(string sp ; message.split("\n")) {
-			this.sendChatMessage(sp);
-		}*/
-		this.sendChatMessage(message);
-	}
-	
 	/**
-	 * Gets/sets the current title message.
+	 * Sends a direct message to the player that will be displayed in its chat box.
+	 * Example:
+	 * ---
+	 * player.sendMessage("Hello!");
+	 * player.sendMessage("{red}You cannot enter here!");
+	 * player.sendMessage("Translated stuff: {0}", "a", "b", "c");
+	 * ---
 	 */
-	public pure nothrow @property @safe @nogc Message title() {
-		return this.m_title;
+	public void sendMessage(string message, string[] args...) {
+		this.sendChatMessage(translate(message, this.lang, args, server.variables, this.variables));
 	}
-	
-	/// ditto
-	public @property Message title(Message title, string[] args=[]) {
-		if(title.message !is null && title.message.length) {
-			title.message = translate(title.message, this.lang, args, server.variables, this.variables);
-			this.m_title = title;
-		} else {
-			this.m_title = Message.init;
-		}
-		this.sendTitleMessage();
-		return this.m_title;
-	}
-	
-	/// ditto
-	public @property Message title(string message, string[] args=[]) {
-		return this.title(Message(message), args);
-	}
-	
+
 	/**
-	 * Gets/sets the current subtitle message.
+	 * Sends a tip message that will be displayed above the hotbar for two
+	 * seconds before fading out.
+	 * Example:
+	 * ---
+	 * player.sendTip("Hello there!");
+	 * @event move(PlayerMoveEvent event) {
+	 *    with(event.position)
+	 *       event.player.sendTip("{0},{1},{2}", x.to!string, y.to!string, z.to!string);
+	 * }
+	 * ---
 	 */
-	public pure nothrow @property @safe @nogc Message subtitle() {
-		return this.m_subtitle;
+	public void sendTip(string message, string[] args...) {
+		this.sendTipMessage(translate(message, this.lang, args, server.variables, this.variables));
 	}
-	
+
 	/// ditto
-	public @property Message subtitle(Message subtitle, string[] args=[]) {
-		if(subtitle.message !is null && subtitle.message.length) {
-			subtitle.message = translate(subtitle.message, this.lang, args, server.variables, this.variables);
-			this.m_subtitle = subtitle;
-		} else {
-			this.m_subtitle = Message.init;
-		}
-		this.sendSubtitleMessage();
-		return this.m_subtitle;
-	}
-	
-	/// ditto
-	public @property Message subtitle(string message, string[] args=[]) {
-		return this.subtitle(Message(message), args);
-	}
-	
+	alias tip = sendTip;
+
 	/**
-	 * Gets/sets the current tip message.
+	 * Sends a title message that will be displayed at the centre of the screen.
+	 * The Title struct can be used to control the title message, the subtitle and
+	 * the timing for the animations (fade in, stay and fade out).
+	 * Example:
+	 * ---
+	 * // fade in, display title and subtitle and fade out
+	 * player.title = Title("title", "subtitle");
+	 *
+	 * // display a title for 3 seconds
+	 * player.title = Title("{green}green title", 60);
+	 *
+	 * // display a subtitle for 10 seconds and fade out in 5 seconds
+	 * player.title = Title("", "subtitle", 0, 200, 100);
+	 * ---
 	 */
-	public pure nothrow @property @safe @nogc Message tip() {
-		return this.m_tip;
+	public Title title(Title title, string[] args...) {
+		if(title.title.length) title.title = translate(title.title, this.lang, args, server.variables, this.variables);
+		if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args, server.variables, this.variables);
+		this.sendTitleMessage(title);
+		return title;
 	}
-	
-	/// ditto
-	public @property Message tip(Message tip, string[] args=[]) {
-		if(tip.message !is null && tip.message.length) {
-			tip.message = translate(tip.message, this.lang, args, server.variables, this.variables);
-			this.m_tip = tip;
-		} else {
-			this.m_tip = Message.init;
-		}
-		this.sendTipMessage();
-		return this.m_tip;
+
+	/**
+	 * Hides the title displayed with the title property without
+	 * resetting it.
+	 */
+	public void hideTitle() {
+		this.sendHideTitles();
 	}
-	
-	/// ditto
-	public @property Message tip(string message, string[] args=[]) {
-		return this.tip(Message(message), args);
+
+	/**
+	 * Removes the title displayed with the title property.
+	 */
+	public void clearTitle() {
+		this.sendResetTitles();
 	}
 	
 	// Sends the movements of the entities in the player's watchlist
@@ -1026,12 +1014,12 @@ abstract class Player : Human {
 	protected abstract void sendCompletedMessages(string[] messages);
 
 	protected abstract void sendChatMessage(string message);
+	
+	protected abstract void sendTipMessage(string message);
 
-	protected abstract void sendTitleMessage();
+	protected abstract void sendTitleMessage(Title message);
 
-	protected abstract void sendSubtitleMessage();
-
-	protected abstract void sendTipMessage();
+	protected abstract void sendHideTitles();
 
 	protected abstract void sendResetTitles();
 
@@ -1727,13 +1715,13 @@ class Puppet : Player {
 	
 	protected override @safe @nogc void sendChatMessage(string message) {}
 	
-	protected override @safe @nogc void sendTitleMessage() {}
+	protected override @safe @nogc void sendTitleMessage(Title message) {}
 	
-	protected override @safe @nogc void sendSubtitleMessage() {}
-
-	protected override @safe @nogc void sendTipMessage() {}
-
+	protected override @safe @nogc void sendHideTitles() {}
+	
 	protected override @safe @nogc void sendResetTitles() {}
+
+	protected override @safe @nogc void sendTipMessage(string message) {}
 
 	protected override @safe @nogc void sendOpStatus() {}
 	
@@ -1809,24 +1797,31 @@ class Puppet : Player {
 	
 }
 
-struct Message {
-	
-	public string message;
-	public tick_t duration;
-	
-	public pure nothrow @safe @nogc this(string message, tick_t duration=630720000) {
-		this.message = message;
-		this.duration = duration;
-	}
-	
-	public @safe void center() {
-		if(this.message.indexOf("\n") >= 0) {
-			this.message = this.message.split("\n").centre.join("\n");
-		}
+struct Title {
+
+	public string title, subtitle;
+	public tick_t fadeIn, stay, fadeOut;
+
+	public this(string title, string subtitle="", tick_t fadeIn=10, tick_t stay=40, tick_t fadeOut=10) {
+		this.title = title;
+		this.subtitle = subtitle;
+		this.fadeIn = fadeIn;
+		this.stay = stay;
+		this.fadeOut = fadeOut;
 	}
 
-	alias message this;
-	
+	public this(string title, tick_t fadeIn, tick_t stay, tick_t fadeOut) {
+		this(title, "", fadeIn, stay, fadeOut);
+	}
+
+	public this(string title, string subtitle, tick_t stay) {
+		this(title, subtitle, 0, stay, 0);
+	}
+
+	public this(string title, tick_t stay) {
+		this(title, "", stay);
+	}
+
 }
 
 string verifyVersion(string given, string[] accepted) {

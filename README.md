@@ -10,7 +10,7 @@ The server is still in development and some features are not supported yet.
 
 ### Structure
 
-SEL is based built on the [hub-node communication protocol](https://sel-project.github.io/sel-utils/hncom/1.html), which means that it must always run as two separate softwares (hub and node), which are connected through sockets.
+SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/hncom/2.html), which means that it must always run as two separate softwares (hub and node), which are connected through sockets.
 
 ### Create a server
 
@@ -75,6 +75,7 @@ The available plugins are published at [sel-plugins](https://github.com/sel-proj
 	- [x] Support for multiple protocols
 	- [x] Multiworld
 	- [x] Chat
+	- [x] Commands
 	- [x] Events
 	- [x] PVP
 	- [ ] Inventory (partial on Minecraft)

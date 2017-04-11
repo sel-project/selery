@@ -213,13 +213,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		return this.full_version;
 	}
 
-	public override void tick() {
-		super.tick();
-		static if(__protocol < 305) {
-			if(this.m_tip.duration != 0 && --this.m_tip.duration != 0) this.sendTipMessage();
-		}
-	}
-
 	protected void sendPacket(T)(T packet) if(is(typeof(T.encode))) {
 		ubyte[] payload = packet.encode();
 		if(payload.length > 1024) {
@@ -234,36 +227,31 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 	protected override void sendCompletedMessages(string[] messages) {
 		static if(__protocol < 307) {
-			sort!"a.toLower < b.toLower"(messages);
+			sort!"a < b"(messages);
 		}
 		this.sendPacket(new Clientbound.TabComplete(messages));
 	}
 	
-	public override void sendChatMessage(string message) {
+	protected override void sendChatMessage(string message) {
 		this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.CHAT));
 	}
 	
-	protected override void sendTitleMessage() {
-		this.sendPacket(new Clientbound.Title().new SetTitle(JSONValue(["text": this.m_title.message]).toString()));
-		this.sendTimer(this.m_title.duration);
-	}
-	
-	protected override void sendSubtitleMessage() {
-		this.sendPacket(new Clientbound.Title().new SetSubtitle(JSONValue(["text": this.m_subtitle.message]).toString()));
-		this.sendTimer(this.m_subtitle.duration);
-	}
-
-	protected override void sendTipMessage() {
+	protected override void sendTipMessage(string message) {
 		static if(__protocol >= 305) {
-			this.sendPacket(new Clientbound.Title().new SetActionBar(JSONValue(["text": this.m_tip.message]).toString()));
-			this.sendTimer(this.m_tip.duration);
+			this.sendPacket(new Clientbound.Title().new SetActionBar(JSONValue(["text": message]).toString()));
 		} else {
-			this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": this.m_tip.message]).toString(), Clientbound.ChatMessage.ABOVE_HOTBAR));
+			this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.ABOVE_HOTBAR));
 		}
 	}
 	
-	private void sendTimer(tick_t duration) {
-		this.sendPacket(new Clientbound.Title().new SetTimings(0, duration.to!uint, 0));
+	protected override void sendTitleMessage(Title message) {
+		this.sendPacket(new Clientbound.Title().new SetTitle(JSONValue(["text": message.title]).toString()));
+		if(message.subtitle.length) this.sendPacket(new Clientbound.Title().new SetSubtitle(JSONValue(["text": message.subtitle]).toString()));
+		this.sendPacket(new Clientbound.Title().new SetTimings(message.fadeIn.to!uint, message.stay.to!uint, message.fadeOut.to!uint));
+	}
+
+	protected override void sendHideTitles() {
+		this.sendPacket(new Clientbound.Title().new Hide());
 	}
 
 	protected override void sendResetTitles() {
@@ -398,7 +386,12 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			}
 		}
 
-		writer ~= chunk.biomes;
+		ubyte[16 * 16] biomes;
+		foreach(i, biome; chunk.biomes) {
+			biomes[i] = biome.id;
+		}
+
+		writer ~= biomes;
 
 		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, writer);
 

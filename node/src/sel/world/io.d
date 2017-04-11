@@ -141,7 +141,11 @@ struct Sel(Endian endianness) {
 
 		// biomes (256 bytes)
 		{
-			writeSection(Sections.biomes, chunk.biomes);
+			ubyte[16 * 16] biomes;
+			foreach(i, biome; chunk.biomes) {
+				biomes[i] = biome.id;
+			}
+			writeSection(Sections.biomes, biomes);
 		}
 
 		// lights (512 bytes)
@@ -241,8 +245,7 @@ struct Sel(Endian endianness) {
 					}
 					break;
 				case Sections.biomes:
-					ubyte[256] biomes = next.read(256);
-					chunk.biomes = biomes;
+					//TODO search biome in enum
 					break;
 				case Sections.lights:
 					ubyte[512] lights = next.read(512);
@@ -371,7 +374,8 @@ struct AnvilImpl(immutable(char)[3] order) {
 					}
 				}
 				if(compound.has!(ByteArray)("Biomes")) {
-					chunk.biomes = cast(ubyte[])(compound.get!(ByteArray)("Biomes")[]);
+					//TODO search biome in enum
+					//chunk.biomes = cast(ubyte[])(compound.get!(ByteArray)("Biomes")[]);
 				}
 				world[] = chunk;
 			}

@@ -33,6 +33,16 @@ version(OneNode) {
 	enum bool __oneNode = false;
 }
 
+version(NoSocket) {
+
+	enum __noSocket = true;
+
+} else {
+
+	enum __noSocket = false;
+
+}
+
 static if(__oneNode) {
 
 	// try to read supported protocols from hub.txt

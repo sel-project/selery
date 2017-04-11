@@ -465,15 +465,28 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					}
 					if(this.m_weather.rain != 0 && this.random.probability(.03125f * this.m_weather.intensity)) {
 						auto xz = chunk.nextSnow;
-						auto y = chunk.firstBlock(xz.x, xz.z);
-						//TODO fill a cauldron or freeze a water block
+						int y = chunk.firstBlock(xz.x, xz.z);
 						if(y > 0) {
-							//TODO check biome (cold for snow, non-desert for rain)
-							BlockPosition position = BlockPosition(cx | xz.x, y, cz | xz.z);
-							Block dest = this[position];
-							//TODO check whether the snow can lay on the block
-							if(dest.fullUpperShape && dest.opacity == 15) {
-								this[position + [0, 1, 0]] = Blocks.snowLayer0;
+							enum drop = .05f / 30;
+							float temperature = chunk.biomes[xz.z << 4 | xz.x].temperature - drop * min(0, y - 64);
+							if(temperature <= .95) {
+								BlockPosition position = BlockPosition(cx | xz.x, y, cz | xz.z);
+								Block dest = this[position];
+								if(temperature > .15) {
+									if(dest == Blocks.cauldron[0..$-1]) {
+										//TODO add 1 water level to cauldron
+									}
+								} else {
+									if(dest == Blocks.flowingWater0 || dest == Blocks.stillWater0) {
+										//TODO check block's light level (less than 13)
+										// change water into ice
+										this[position] = Blocks.ice;
+									} else if(dest.fullUpperShape && dest.opacity == 15) {
+										//TODO check block's light level
+										// add a snow layer
+										this[position + [0, 1, 0]] = Blocks.snowLayer0;
+									}
+								}
 							}
 						}
 					}
