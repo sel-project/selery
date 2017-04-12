@@ -32,9 +32,9 @@ import std.string;
 import std.uuid : randomUUID;
 import std.zlib : compress, UnCompress;
 
+import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
-import common.util.format : Text, writeln;
 
 enum size_t __GENERATOR__ = 4;
 

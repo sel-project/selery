@@ -35,12 +35,11 @@ import std.typecons;
 import std.uuid : parseUUID, UUID;
 import std.utf : UTFException;
 
+import common.format : Text;
+import common.lang;
 import common.path : Paths;
 import common.sel;
-import common.util.format : Text;
-import common.util.lang;
-import common.util.os : os, gui;
-import common.util.time : milliseconds;
+import common.util : milliseconds;
 
 import sel.settings;
 import sel.network.handler : Handler;
@@ -174,11 +173,9 @@ class Server {
 			login["lang"] = this.n_settings.language;
 			login["bits"] = size_t.sizeof * 8;
 			login["endianness"] = cast(int)endian;
-			login["os"] = os;
-			login["gui"] = gui;
 			login["processor"] = processor;
 			login["cores"] = coresPerCPU;
-			log(JSONValue(login).toString(), "\n");
+			//log(JSONValue(login).toString(), "\n");
 			id = to!ulong(post("http://snoop." ~ Software.website ~ "/login", JSONValue(login).toString()));
 		} catch(Throwable) {
 			id = uniform!"[]"(ulong.min, ulong.max);

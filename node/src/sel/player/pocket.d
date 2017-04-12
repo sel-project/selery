@@ -49,7 +49,6 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
-import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.command : Command;
 import sel.util.lang;
 import sel.util.log;

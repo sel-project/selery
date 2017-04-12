@@ -34,7 +34,7 @@ import std.string : toLower;
 import std.uuid;
 
 import common.sel;
-import common.util.time : milliseconds;
+import common.util : milliseconds;
 
 import sel.constants;
 import sel.server;

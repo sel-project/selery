@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,44 +12,34 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/**
- * Miscellaneous of various useful function to be
- * used by SEL and the plugins.
- */
-module sel.util.util;
+module common.util;
 
-import std.algorithm : canFind;
-import std.array : split;
 import std.conv : to, ConvException;
-import std.string : toUpper, capitalize;
+import std.datetime : Clock, UTC;
+import std.string : toUpper;
 import std.traits : isArray, isAssociativeArray, isSafe;
 
-/**
- * Check if all elements of values are in array.
- * Params:
- * 		values = the values that should be in the array
- * 		array = the array where the values should be into
- * Returns: true if all the values are in the array, false otherwise
- * Example:
- * ---
- * string pattern = "abcdefghijklmnopqrstuvwxyz";
- * assert(array_in_array("ciao", pattern));
- * assert(!array_in_array("Ciao!", pattern));
- * ---
+ /**
+ * Gets the seconds from January 1st, 1970.
  */
-public deprecated @property @trusted bool array_in_array(T, E)(T[] values, E[] array) /*if(__traits(compiles, T.init == E.init))*/ {
-	foreach(T value ; values) {
-		if(!array.canFind(value)) return false;
-	}
-	return true;
+public @property @safe uint seconds() {
+	return Clock.currTime(UTC()).toUnixTime!int;
 }
 
-unittest {
+/**
+ * Gets the milliseconds from January 1st, 1970.
+ */
+public @property @safe ulong milliseconds() {
+	auto t = Clock.currTime(UTC());
+	return t.toUnixTime!long * 1000 + t.fracSecs.total!"msecs";
+}
 
-	auto pattern = "abcdefghijklmonpqrstuvwxyz";
-	assert(array_in_array("ciao", pattern));
-	assert(!array_in_array("ciao!", pattern));
-
+/**
+ * Gets the microseconds from January 1st, 1970.
+ */
+public @property @safe ulong microseconds() {
+	auto t = Clock.currTime(UTC());
+	return t.toUnixTime!long * 1000 + t.fracSecs.total!"usecs";
 }
 
 /**
@@ -108,43 +98,12 @@ public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(_
 	return -1;
 }
 
-/// ditto
-public deprecated @property ptrdiff_t indexOf(E, T)(E[] array, T value) {
-	return array_index(value, array);
-}
-
 unittest {
 
 	assert(array_index(8, [0, 8, 8]) == 1);
 	assert(array_index(7, [0, 8, 8]) == -1);
 	assert([8, 9, 10].indexOf(10) == 2);
 
-}
-
-/**
- * Removes duplicates from an array.
- * Example:
- * ---
- * assert(uniq([1, 1, 2, 3, 3, 4]) == [1, 2, 3, 4]);
- * ---
- */
-public deprecated @property @safe T[] uniq(T)(T[] array) {
-	T[] ret;
-	foreach(T value ; array) {
-		if(!ret.canFind(value)) ret ~= value;
-	}
-	return ret;
-}
-
-unittest {
-
-	assert(uniq([1, 2, 3, 3]) == [1, 2, 3]);
-
-}
-
-/** Transform an object/value in a string by appending an empty string to it */
-public deprecated @property @safe string str(T)(T value) {
-	return value ~ "";
 }
 
 /** 
@@ -160,25 +119,25 @@ public deprecated @property @safe string str(T)(T value) {
  * ---
  */
 public @property @safe uint roman(string str) {
-	return str.toUpper.proman;
+	return str.toUpper.romanImpl;
 }
 
 /// ditto
-private @property @safe uint proman(string str) {
+private @property @safe uint romanImpl(string str) {
 	if(str == "") return 0;
-	if(str[0..1] == "M") return 1000 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "CM") return 900 + str[2..$].proman;
-	if(str[0..1] == "D") return 500 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "CD") return 400 + str[2..$].proman;
-	if(str[0..1] == "C") return 100 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "XC") return 90 + str[2..$].proman;
-	if(str[0..1] == "L") return 50 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "XL") return 40 + str[2..$].proman;
-	if(str[0..1] == "X") return 10 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "IX") return 9 + str[2..$].proman;
-	if(str[0..1] == "V") return 5 + str[1..$].proman;
-	if(str.length > 1 && str[0..2] == "IV") return 4 + str[2..$].proman;
-	if(str[0..1] == "I") return 1 + str[1..$].proman;
+	if(str[0..1] == "M") return 1000 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "CM") return 900 + str[2..$].romanImpl;
+	if(str[0..1] == "D") return 500 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "CD") return 400 + str[2..$].romanImpl;
+	if(str[0..1] == "C") return 100 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "XC") return 90 + str[2..$].romanImpl;
+	if(str[0..1] == "L") return 50 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "XL") return 40 + str[2..$].romanImpl;
+	if(str[0..1] == "X") return 10 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "IX") return 9 + str[2..$].romanImpl;
+	if(str[0..1] == "V") return 5 + str[1..$].romanImpl;
+	if(str.length > 1 && str[0..2] == "IV") return 4 + str[2..$].romanImpl;
+	if(str[0..1] == "I") return 1 + str[1..$].romanImpl;
 	return 0;
 }
 
@@ -273,39 +232,6 @@ public @property @safe T safe(T, E)(E value) {
 	} catch(ConvException e) {
 		return T.init;
 	}
-}
-
-/**
- * Searches for an instance of a type in a typetuple.
- * Returns: the index if found, -1 otherwise
- */
-public @property @safe ptrdiff_t staticInstanceIndex(T, E...)() {
-	int f = -1;
-	foreach(size_t index, F; E) {
-		static if(is(typeof(F) == T)) {
-			f = index;
-			break;
-		}
-	}
-	return f;
-}
-
-///
-unittest {
-
-	import std.typetuple;
-
-	alias Z = TypeTuple!("string", string, 44u);
-	static assert(staticInstanceIndex!(string, Z) == 0);
-	static assert(staticInstanceIndex!(int, Z) == -1);
-	static assert(staticInstanceIndex!(uint, Z) == 2);
-
-	struct Test { uint i; }
-	alias A = TypeTuple!();
-	alias B = TypeTuple!(Test, Test(1));
-	static assert(staticInstanceIndex!(Test, A) == -1);
-	static assert(staticInstanceIndex!(Test, B) == 1);
-
 }
 
 class UnloggedException : Exception {

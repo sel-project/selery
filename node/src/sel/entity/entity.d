@@ -23,6 +23,7 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 
 import common.sel;
+import common.util : safe, call;
 
 import sel.server : server;
 import sel.settings;
@@ -34,7 +35,6 @@ import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player : Player;
-import sel.util.util;
 import sel.world.world : World, Rules;
 
 static import sul.entities;

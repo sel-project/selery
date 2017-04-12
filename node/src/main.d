@@ -22,10 +22,10 @@ import std.string : split, replace, join;
 
 import common.path : Paths;
 import common.sel;
+import common.util : UnloggedException;
 
 import sel.settings;
 import sel.server;
-import sel.util;
 import sel.util.crash;
 import sel.util.log;
 

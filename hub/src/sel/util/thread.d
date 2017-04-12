@@ -27,7 +27,7 @@ import std.datetime : dur;
 import std.file : exists, write, mkdirRecurse;
 
 import common.path : Paths;
-import common.util.time : seconds;
+import common.util : seconds;
 
 import sel.util.log;
 

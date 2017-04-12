@@ -23,7 +23,6 @@ import sel.event.world.world;
 import sel.item : Slot, Item;
 import sel.math.vector : BlockPosition, EntityPosition, ChunkPosition;
 import sel.player.player : Player;
-import sel.util.util : between;
 import sel.world.world : World;
 
 /**

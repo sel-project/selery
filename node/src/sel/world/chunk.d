@@ -32,7 +32,6 @@ import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.block.tile : Tile;
 import sel.math.vector;
-import sel.util.util;
 import sel.util.lang : ITranslatable;
 import sel.world.io;
 import sel.world.world : World;

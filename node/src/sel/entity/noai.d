@@ -17,6 +17,7 @@ module sel.entity.noai;
 import std.conv : to;
 
 import common.sel;
+import common.util : call;
 
 import sel.settings;
 import sel.block.block;
@@ -25,7 +26,6 @@ import sel.entity.interfaces;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
 import sel.player.player : Player;
-import sel.util.util : call;
 import sel.world.world : World;
 
 static import sul.entities;

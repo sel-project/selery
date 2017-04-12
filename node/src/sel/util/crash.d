@@ -22,7 +22,7 @@ import std.string : split;
 
 import common.path : Paths;
 import common.sel;
-import common.util.time : seconds;
+import common.util : seconds;
 
 import sel.server : server;
 import sel.util.lang : translate;

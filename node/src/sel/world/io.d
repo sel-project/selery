@@ -23,14 +23,13 @@ import std.system;
 import std.zlib;
 
 import common.sel : Software;
-import common.util.time : seconds;
+import common.util : seconds;
 
 import nbt.stream : ClassicStream;
 import nbt.tags;
 
 import sel.block.block : Block;
 import sel.math.vector;
-import sel.util.util;
 import sel.util.buffers;
 import sel.world.chunk : Chunk, Section;
 import sel.world.world : World;

@@ -21,8 +21,6 @@ import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple;
 
-import sel.util;
-
 alias size_t class_t;
 
 private @safe class_t hash(T)() if(is(T == class) || is(T == interface)) {

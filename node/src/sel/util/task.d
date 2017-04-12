@@ -16,8 +16,6 @@ module sel.util.task;
 
 import common.sel;
 
-import sel.util : array_remove;
-
 enum areValidTaskArgs(E...) = E.length == 0 || (E.length == 1 && is(E[0] : tick_t));
 
 final class TaskManager {
@@ -37,7 +35,7 @@ final class TaskManager {
 	}
 
 	public @safe void remove(size_t tid) {
-		foreach(uint index, Task task; this.tasks) {
+		foreach(index, task; this.tasks) {
 			if(task.id == tid) {
 				this.tasks = this.tasks[0..index] ~ this.tasks[index+1..$];
 				break;
@@ -46,8 +44,8 @@ final class TaskManager {
 	}
 
 	public void tick(tick_t tick) {
-		foreach(task ; this.tasks) {
-			if(task.expired) array_remove(task, this.tasks);
+		foreach(index, task; this.tasks) {
+			if(task.expired) this.tasks = this.tasks[0..index] ~ this.tasks[index+1..$];
 			else task.execute(tick);
 		}
 	}

@@ -19,8 +19,9 @@ import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLink
 import std.conv : to;
 import std.exception : enforce;
 
+import common.util : UnloggedException;
+
 import sel.server : isServerRunning;
-import sel.util : UnloggedException;
 import sel.util.crash;
 
 Tid thread(T:Thread)() {

@@ -27,6 +27,7 @@ import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
 import common.sel;
+import common.util : array_index;
 
 import nbt.stream;
 import nbt.tags;
@@ -45,7 +46,6 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
-import sel.util.util;
 import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.lang : translate;
 import sel.util.log;

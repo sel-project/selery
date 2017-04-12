@@ -38,10 +38,11 @@ import std.traits : Parameters;
 import std.uuid : UUID;
 import std.zlib : UnCompress;
 
+import common.format : Text;
+import common.memory : Memory;
 import common.path : Paths;
 import common.sel;
-import common.util.format : Text;
-import common.util.time : milliseconds, microseconds;
+import common.util : milliseconds, microseconds;
 
 import resusage.memory;
 import resusage.cpu;
@@ -56,12 +57,10 @@ import sel.event.world.world : WorldEvent;
 import sel.player.player : Player;
 import sel.plugin.plugin : Plugin;
 import sel.util.command : Command, Commands;
-import sel.util.concurrency : thread;
-import sel.util.console : Console;
+import sel.util.concurrency : thread, Thread;
 import sel.util.lang : Lang, translate, Variables;
 import sel.util.langfromip : LangSearcher;
 import sel.util.log;
-import sel.util.memory;
 import sel.util.node : Node;
 import sel.util.task;
 import sel.world.world : World;
@@ -428,6 +427,22 @@ final class Server : EventListener!ServerEvent {
 		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Alex.bin"));
 
 		version(DoNotCollect) {} else {
+
+			import core.memory : GC;
+
+			static class Collector : Thread {
+				
+				public override void run() {
+					auto duration = dur!"seconds"(14);
+					while(this.running) {
+						Thr.sleep(duration);
+						GC.collect();
+						GC.minimize();
+					}
+				}
+				
+			}
+
 			auto collector = thread!Collector();
 			send(collector, thisTid);
 		}
@@ -439,10 +454,6 @@ final class Server : EventListener!ServerEvent {
 			}
 			this.lang_searcher.load();
 		}
-
-		// this breaks the running cycle
-		/*auto console = thread!Console();
-		send(console, thisTid);*/
 		
 		this.tasks = new TaskManager();
 

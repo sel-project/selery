@@ -30,7 +30,7 @@ import std.zlib : Compress, HeaderFormat;
 
 import common.path : Paths;
 import common.sel;
-import common.util.time : seconds;
+import common.util : seconds;
 
 import sel.constants;
 import sel.server : Server;

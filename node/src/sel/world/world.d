@@ -24,6 +24,7 @@ import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
 import common.sel;
+import common.util : call;
 
 import sel.plugin;
 import sel.server : server;
@@ -45,7 +46,6 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.plugin.plugin;
-import sel.util.util;
 import sel.util.color : Color;
 import sel.util.command : Command;
 import sel.util.lang : translate, ITranslatable;

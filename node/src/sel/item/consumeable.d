@@ -17,6 +17,7 @@ module sel.item.consumeable;
 import std.typecons : Tuple;
 
 import common.sel;
+import common.util : roman;
 
 import sel.block.block : compareBlock, blockInto;
 import sel.block.blocks : Blocks;
@@ -25,7 +26,6 @@ import sel.item.item : Item, SimpleItem;
 import sel.item.items : Items;
 import sel.math.vector;
 import sel.player.player : Player;
-import sel.util.util : roman;
 import sel.world.world : World;
 
 static import sul.effects;

@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.util.format;
+deprecated module sel.util.format;
 
 import std.algorithm : canFind;
 import std.conv : to;
@@ -20,9 +20,7 @@ import std.regex : replaceAll, ctRegex;
 import std.string : replace, toLower, strip;
 import std.traits : EnumMembers;
 
-import common.util.format : Text;
-
-import sel.util : str;
+import common.format : Text;
 
 /**
  * Formats two or more arrays to be centred, adding blank
@@ -33,7 +31,7 @@ import sel.util : str;
  * 		string = array of the string to be centred
  * Returns: an array with the same length of the given one with the formatted strings
  */
-public @safe string[] centre(string[] strings) {
+public @safe string[] center(string[] strings) {
 	//trim all the strings
 	foreach(uint i ; 0..strings.length.to!uint) {
 		strings[i] = strings[i].strip;

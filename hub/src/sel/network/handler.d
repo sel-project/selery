@@ -21,9 +21,9 @@ import std.json : JSONValue;
 import std.socket;
 import std.string;
 
+import common.lang : translate;
+import common.format : Text;
 import common.sel;
-import common.util.format : Text;
-import common.util.lang : translate;
 
 import sel.constants;
 import sel.settings;

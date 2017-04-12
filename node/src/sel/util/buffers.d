@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.util.buffers;
+deprecated module sel.util.buffers;
 
 static import std.bitmanip;
 import std.meta : staticIndexOf;

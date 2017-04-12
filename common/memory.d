@@ -12,101 +12,12 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.util.memory;
+module common.memory;
 
-import core.memory : GC;
-import core.thread : dur, Thr = Thread;
 import std.array : split;
-import std.conv : ConvException, to;
-import std.datetime : StopWatch;
-import std.file : read;
+import std.conv : to;
 import std.math : isNaN, round;
-import std.process : executeShell, thisProcessID;
 import std.string;
-
-import sel.util.concurrency : Thread;
-
-/**
- * Collection thread that does the actions of collection
- * an minimization every x seconds.
- */
-class Collector : Thread {
-
-	public override void run() {
-
-		auto duration = dur!"seconds"(14);
-
-		while(this.running) {
-			Thr.sleep(duration);
-			GC.collect();
-			GC.minimize();
-		}
-
-	}
-
-}
-
-/**
- * Gets the current RAM usage.
- * Returns: the memory in bytes or nan if it was impossible to read the memory usage
- */
-public @property ulong memory() {
-	version(linux) {
-		try {
-			string[] output = split(split(cast(string)read("/proc/self/status"), "VmRSS")[1], " ");
-			uint index = 0;
-			while(index < output.length) {
-				try {
-					return to!ulong(round(to!float(output[index++])*1000));
-				} catch(ConvException e) {}
-			}
-		} catch(Exception e) {}
-	} else version(Windows) {
-		foreach(string line ; split(executeShell("tasklist /fi \"pid eq " ~ to!string(thisProcessID) ~ "\"").output, "\n")) {
-			if(line.indexOf("K") > 0) {
-				string number = line[0..line.indexOf("K")-1];
-				return to!ulong(number[number.lastIndexOf(" ")+1..$].replace(".", "")) * 1000;
-			}
-		}
-	}
-	//return float.nan;
-	throw new Exception("Can't read memory");
-}
-
-/**
- * Gets the current CPU usage(0..cpus*100).
- * Doesn't work yet on Windows.
- * Returns: the used CPU as a percentage or nan if it was impossible to read the CPU usage
- */
-public @property float cpu() {
-	version(linux) {
-		try {
-			return to!float(strip(chomp(executeShell("ps -p " ~ to!string(thisProcessID) ~ " -o %cpu=").output)));
-		} catch(Exception e) {}
-	}
-	return float.nan;
-}
-
-/**
- * Gets the highest amount of available RAM on the machine.
- * Doesn't work yet on Windows.
- * Returns: the highest amount of available memory in bytes or ulong.max if it was impossible to read it
- */
-public @property ulong maxmemory(ulong mem) {
-	ulong max = ulong.max;
-	version(linux) {
-		import std.file : read;
-		string[] m = (cast(string)read("/proc/meminfo")).split("MemTotal:");
-		if(m.length > 0) {
-			m = m[1].split("kB");
-			try {
-				max = to!ulong(m[0].strip) * 1000;
-			} catch(ConvException e) {}
-		}
-	}
-	//get the indicated memory
-	return mem < max ? mem : max;
-}
 
 /**
  * Gets the memory in bytes from a string.

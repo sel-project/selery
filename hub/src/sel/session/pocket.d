@@ -39,7 +39,7 @@ import std.uuid : UUID;
 import std.zlib;
 
 import common.sel;
-import common.util.time : milliseconds;
+import common.util : milliseconds;
 
 import sel.constants;
 import sel.server;

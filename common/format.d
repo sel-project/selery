@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.util.format;
+module common.format;
 
 enum Text : string {
 

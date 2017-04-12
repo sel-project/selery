@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.util.lang;
+module common.lang;
 
 import std.conv : to;
 import std.file : exists, read;
@@ -20,7 +20,7 @@ import std.string;
 import std.traits : EnumMembers;
 
 import common.path : Paths;
-import common.util.format : Text;
+import common.format : Text;
 
 struct Lang {
 	

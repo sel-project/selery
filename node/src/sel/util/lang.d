@@ -16,7 +16,7 @@ module sel.util.lang;
 
 import std.conv : to;
 
-public import common.util.lang;
+public import common.lang;
 
 struct Variables(string n_name, E...) {
 

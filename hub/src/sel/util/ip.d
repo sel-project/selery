@@ -26,7 +26,7 @@ import std.string : split, strip, indexOf;
 import std.typecons : Tuple;
 
 import common.path : Paths;
-import common.util.time : seconds;
+import common.util : seconds;
 
 alias Cache = Tuple!(uint, "time", string, "ip");
 
