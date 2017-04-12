@@ -396,7 +396,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	public override void sendMovementUpdates(Entity[] entities) {
 		foreach(Entity entity ; entities) {
-			this.sendPacket(new Play.MoveEntity(entity.id, tuple!(typeof(Play.MoveEntity.position))(entity.position + [0, entity.eyeHeight, 0]), entity.anglePitch, entity.angleYaw, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw));
+			this.sendPacket(new Play.MoveEntity(entity.id, tuple!(typeof(Play.MoveEntity.position))(entity.position + [0, entity.eyeHeight, 0]), entity.anglePitch, entity.angleYaw, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, entity.onGround));
 		}
 	}
 	
@@ -415,7 +415,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void sendGamemode() {
-		this.sendPacket(new Play.SetPlayerGameType(this.gamemode & 1));
+		this.sendPacket(new Play.SetPlayerGameType(this.gamemode == 3 ? 1 : this.gamemode));
 		if(this.creative) {
 			if(!this.has_creative_inventory) {
 				this.sendPacketPayload(creative_inventory);
@@ -424,7 +424,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		} else if(this.spectator) {
 			if(has_creative_inventory) {
 				//TODO remove armor and inventory
-				this.sendPacket(new Play.ContainerSetContent(121));
+				this.sendPacket(new Play.ContainerSetContent(121, this.id));
 				this.has_creative_inventory = false;
 			}
 		}
@@ -598,11 +598,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void sendSpawnEntity(Entity entity) {
-		if(entity.type.pe) {
-			if(cast(Player)entity) this.sendAddPlayer(cast(Player)entity);
-			else if(cast(ItemEntity)entity) this.sendAddItemEntity(cast(ItemEntity)entity);
-			else this.sendAddEntity(entity);
-		}
+		if(cast(Player)entity) this.sendAddPlayer(cast(Player)entity);
+		else if(cast(ItemEntity)entity) this.sendAddItemEntity(cast(ItemEntity)entity);
+		else if(entity.pocket) this.sendAddEntity(entity);
 	}
 
 	public override void sendDespawnEntity(Entity entity) {
@@ -610,7 +608,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected void sendAddPlayer(Player player) {
-		//TODO metadata
 		this.sendPacket(new Play.AddPlayer(player.uuid, player.name, player.id, player.id, tuple!(typeof(Play.AddPlayer.position))(player.position), tuple!(typeof(Play.AddPlayer.motion))(player.motion), player.pitch, player.bodyYaw, player.yaw, toSlot(player.inventory.held), metadataOf(player.metadata)));
 	}
 	
@@ -620,7 +617,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected void sendAddEntity(Entity entity) {
-		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.type.pe, tuple!(typeof(Play.AddEntity.position))(entity.position), tuple!(typeof(Play.AddEntity.motion))(entity.motion), entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
+		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.pocketId, tuple!(typeof(Play.AddEntity.position))(entity.position), tuple!(typeof(Play.AddEntity.motion))(entity.motion), entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
 	}
 
 	public override @trusted void healthUpdated() {
@@ -655,13 +652,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	public override void sendJoinPacket() {
-		// the time is set by SetTime packet, sent after this one
 		// send thunders if enabled
-		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode & 1, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode == 3 ? 1 : this.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
 	}
 	
 	public override void sendTimePacket() {
-		this.sendPacket(new Play.SetTime(this.world.time.to!uint, this.world.rules.daylightCycle));
+		this.sendPacket(new Play.SetTime(this.world.time.to!uint));
+		this.sendPacket(new Play.GameRulesChanged([Types.Rule(Types.Rule.DO_DAYLIGHT_CYCLE, this.world.rules.daylightCycle)]));
 	}
 	
 	public override void sendDifficultyPacket() {
@@ -963,8 +960,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	//protected void handlePlayerInputPacket(typeof(Play.PlayerInput.motion) motion, ushort flags, bool unknown) {}
 
 	protected void handleSetPlayerGameTypePacket(int gamemode) {
-		if(this.op) {
-			this.gamemode = gamemode & 1;
+		if(this.op && gamemode >= 0 && gamemode <= 2) {
+			this.gamemode = gamemode & 2;
 		} else {
 			this.sendGamemode();
 		}

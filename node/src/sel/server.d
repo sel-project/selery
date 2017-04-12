@@ -24,19 +24,18 @@ import std.algorithm : canFind;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
 import std.concurrency : receiveTimeout, send, Tid, thisTid;
-import std.conv : ConvException, to;
+import std.conv : to;
 import std.datetime : dur, StopWatch, Duration;
 static import std.file;
 import std.json;
 import std.math : round;
-import std.path : dirSeparator;
 import std.process : executeShell;
-import std.socket;
+import std.socket : SocketException, Address, InternetAddress, Internet6Address;
 import std.string;
 import std.typecons : Tuple, tuple;
 import std.typetuple : TypeTuple;
-import std.traits : isAbstractClass, Parameters;
-import std.uuid;
+import std.traits : Parameters;
+import std.uuid : UUID;
 import std.zlib : UnCompress;
 
 import common.path : Paths;
@@ -46,18 +45,14 @@ import common.util.time : milliseconds, microseconds;
 
 import sel.network : Handler;
 import sel.settings;
-import sel.entity.effect;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;
 import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
-import sel.math.vector : entityPosition;
 import sel.player.player : Player;
-import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
-import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
 import sel.plugin.plugin : Plugin;
-import sel.util.command : areValidCommandArgs, Command, Commands;
+import sel.util.command : Command, Commands;
 import sel.util.concurrency : thread;
 import sel.util.console : Console;
 import sel.util.lang : Lang, translate, Variables;
@@ -67,7 +62,6 @@ import sel.util.memory;
 import sel.util.node : Node;
 import sel.util.task;
 import sel.world.world : World;
-//import sel.world.vanilla.world : Overworld;
 
 private import plugins;
 
@@ -444,10 +438,13 @@ final class Server : EventListener!ServerEvent {
 		this.tasks = new TaskManager();
 
 		// load creative inventories
-		foreach(immutable protocol ; __pocketProtocolsTuple) {
-			mixin("alias P = PocketPlayerImpl!" ~ protocol.to!string ~ ";");
-			if(!P.loadCreativeInventory()) {
-				//TODO print a warning
+		static if(__pocket) {
+			import sel.player.pocket : PocketPlayerImpl;
+			foreach(immutable protocol ; __pocketProtocolsTuple) {
+				mixin("alias P = PocketPlayerImpl!" ~ protocol.to!string ~ ";");
+				if(!P.loadCreativeInventory()) {
+					//TODO print a warning
+				}
 			}
 		}
 
@@ -1345,6 +1342,7 @@ final class Server : EventListener!ServerEvent {
 			switch(packet.type) {
 				static if(__pocket) {
 					case HncomPlayer.Add.Pocket.TYPE:
+						import sel.player.pocket : PocketPlayerImpl;
 						auto pocket = packet.new Pocket();
 						pocket.decode();
 						foreach(immutable p ; __pocketProtocolsTuple) {
@@ -1355,6 +1353,7 @@ final class Server : EventListener!ServerEvent {
 				}
 				static if(__minecraft) {
 					case HncomPlayer.Add.Minecraft.TYPE:
+						import sel.player.minecraft : MinecraftPlayerImpl;
 						auto minecraft = packet.new Minecraft();
 						minecraft.decode();
 						foreach(immutable p ; __minecraftProtocolsTuple) {

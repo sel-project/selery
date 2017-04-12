@@ -27,80 +27,18 @@ import common.sel;
 import sel.server : server;
 import sel.settings;
 import sel.block.block : Block, blockInto;
-import sel.entity.living : Living;
 import sel.entity.metadata : Metadata;
-import sel.entity.noai : ItemEntity, PaintingEntity = Painting;
-import sel.event.event;
+import sel.event.event : EventListener;
 import sel.event.world.damage;
 import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player : Player;
-import sel.plugin.plugin : Plugin, PluginException;
 import sel.util.util;
 import sel.world.world : World, Rules;
 
 static import sul.entities;
-
-/** minecraft pocket edition's entities' network id */
-enum Entities : bytegroup {
-
-	CHICKEN = bytegroup(10, 93),
-	COW = bytegroup(11, 92),
-	PIG = bytegroup(12, 90),
-	SHEEP = bytegroup(13, 91),
-	WOLF = bytegroup(14, 95),
-	VILLAGER = bytegroup(15, 120),
-	MOOSHROOM = bytegroup(16, 96),
-	SQUID = bytegroup(17, 94),
-	RABBIT = bytegroup(18, 101),
-	BAT = bytegroup(19, 65),
-	IRON_GOLEM = bytegroup(20, 99),
-	SNOW_GOLEM = bytegroup(21, 97),
-	OCELOT = bytegroup(22, 98),
-
-	ZOMBIE = bytegroup(32, 54),
-	CREEPER = bytegroup(33, 50),
-	SKELETON = bytegroup(34, 51),
-	SPIDER = bytegroup(35, 52),
-	ZOMBIE_PIGMAN = bytegroup(36, 57),
-	SLIME = bytegroup(37, 55),
-	ENDERMAN = bytegroup(38, 58),
-	SILVERFISH = bytegroup(39, 60),
-	CAVE_SPIDER = bytegroup(40, 59),
-	GHAST = bytegroup(41, 56),
-	MAGMA_CUBE = bytegroup(42, 62),
-	BLAZE = bytegroup(43, 61),
-	ZOMBIE_VILLAGER = bytegroup(44, 54),
-	WITCH = bytegroup(45, 66),
-
-	PLAYER = bytegroup(63, 63),
-
-	ITEM_ENTITY = bytegroup(64, 2),
-	PRIMED_TNT = bytegroup(65, 50),
-	FALLING_BLOCK = bytegroup(66, 70),
-	EXPERIENCE_BOTTLE = bytegroup(68, 75),
-	EXPERIENCE_ORB = bytegroup(69, 2),
-	HOOK = bytegroup(77, ubyte.init), //what's the id?
-	ARROW = bytegroup(80, 60),
-	SNOWBALL = bytegroup(81, 61),
-	EGG = bytegroup(82, 62),
-	PAINTING = bytegroup(83, ubyte.max),
-	MINECART = bytegroup(84, 10),
-	FIREBALL = bytegroup(85, 63),
-	SPLASH_POTION = bytegroup(86, 73),
-	ENDERPEARL = bytegroup(ubyte.max, 65),
-	BOAT = bytegroup(90, 1),
-	LIGHTNING = bytegroup(93, ubyte.max),
-	SMALL_FIREBALL = bytegroup(94, 64),
-
-	MINECART_HOPPER = bytegroup(96, 10),
-	MINECART_TNT = bytegroup(97, 10),
-	MINECART_CHEST = bytegroup(98, 10),
-
-	ITEM_FRAME = bytegroup(ubyte.max, 71),
-
-}
+public import sul.entities : Entities;
 
 /**
  * Base abstract class for every entity.
@@ -177,9 +115,61 @@ abstract class Entity : EventListener!WorldEvent {
 		this.metadata = new Metadata(); //TODO custom
 	}
 
-	public abstract pure nothrow @property @safe @nogc bytegroup type();
-	
-	public final pure nothrow @property @safe @nogc uint data() {
+	public pure nothrow @property @safe @nogc sul.entities.Entity data() {
+		return sul.entities.Entity.init;
+	}
+
+	/**
+	 * Indicates whether the entity exists in Minecraft.
+	 */
+	public pure nothrow @property @safe @nogc bool minecraft() {
+		return this.data.minecraft.exists;
+	}
+
+	public pure nothrow @property @safe @nogc ubyte minecraftId() {
+		return this.data.minecraft.id;
+	}
+
+	/**
+	 * Indicates whether the entity exists in Minecraft: Pocket Edition.
+	 */
+	public pure nothrow @property @safe @nogc bool pocket() {
+		return this.data.pocket.exists;
+	}
+
+	public pure nothrow @property @safe @nogc ubyte pocketId() {
+		return this.data.pocket.id;
+	}
+
+	/**
+	 * Gets the item's width.
+	 * Returns: a number higher than 0 or double.nan if the entity has no size
+	 */
+	public pure nothrow @property @safe @nogc double width() {
+		return this.data.width;
+	}
+
+	/**
+	 * Gets the item's height.
+	 * Returns: a number higher than 0 or double.nan if the entity has no size
+	 */
+	public pure nothrow @property @safe @nogc double height() {
+		return this.data.height;
+	}
+
+	/**
+	 * Indicates whether the entity is an object. If not the entity is
+	 * a mob (living entity).
+	 */
+	public pure nothrow @property @safe @nogc bool object() {
+		return this.data.object;
+	}
+
+	/**
+	 * If the entity is an object gets the object's extra data used
+	 * in Minecraft's SpawnObject packet.
+	 */
+	public final pure nothrow @property @safe @nogc int objectData() {
 		return this.n_data;
 	}
 

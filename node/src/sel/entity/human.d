@@ -68,10 +68,6 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		this.setSize(.6f, 1.8f);
 	}
 
-	public final override @property @safe @nogc bytegroup type() {
-		return Entities.PLAYER;
-	}
-
 	public override void tick() {
 		super.tick();
 		if(this.starvation_tick != 0 && this.ticks % 80 == this.starvation_tick) {

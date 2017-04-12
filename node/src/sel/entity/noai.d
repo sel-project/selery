@@ -24,10 +24,11 @@ import sel.entity.entity;
 import sel.entity.interfaces;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
-import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player;
 import sel.util.util : call;
 import sel.world.world : World;
+
+static import sul.entities;
 
 class ItemEntity : Entity, Collectable {
 
@@ -65,8 +66,8 @@ class ItemEntity : Entity, Collectable {
 		this.drag = .99;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
-		return Entities.ITEM_ENTITY;
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
+		return Entities.DROPPED_ITEM;
 	}
 
 	public override void tick() {
@@ -113,7 +114,7 @@ final class Lightning : Entity {
 		super(world, position);
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.LIGHTNING;
 	}
 
@@ -168,7 +169,7 @@ final class Painting : Entity {
 		this.n_direction = direction;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.PAINTING;
 	}
 

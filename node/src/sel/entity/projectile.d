@@ -32,6 +32,8 @@ import sel.util.color : Color;
 import sel.world.particle : Particles;
 import sel.world.world : World;
 
+static import sul.entities;
+
 abstract class Projectile : Entity {
 
 	private Living n_shooter;
@@ -151,7 +153,7 @@ class Arrow : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.ARROW;
 	}
 
@@ -191,7 +193,7 @@ class Snowball : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.SNOWBALL;
 	}
 
@@ -233,7 +235,7 @@ class Egg : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.EGG;
 	}
 
@@ -275,7 +277,7 @@ class Enderpearl : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.ENDERPEARL;
 	}
 
@@ -327,8 +329,8 @@ class Fireball : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
-		return Entities.FIREBALL;
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
+		return Entities.GHAST_FIREBALL;
 	}
 
 	public override void tick() {
@@ -359,8 +361,8 @@ class SmallFireball : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
-		return Entities.SMALL_FIREBALL;
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
+		return Entities.BLAZE_FIREBALL;
 	}
 
 	public override void tick() {
@@ -415,7 +417,7 @@ class Orb : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.EXPERIENCE_ORB;
 	}
 
@@ -445,7 +447,7 @@ class Potion : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.SPLASH_POTION;
 	}
 
@@ -510,7 +512,7 @@ class FallingBlock : Projectile {
 		this.n_data = block.minecraftId | block.minecraftMeta << 12;
 	}
 
-	public override pure nothrow @property @safe @nogc bytegroup type() {
+	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return Entities.FALLING_BLOCK;
 	}
 

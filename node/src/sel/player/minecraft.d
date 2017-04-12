@@ -500,10 +500,11 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	protected void sendAddEntity(Entity entity) {
-		if(cast(Living)entity) this.sendPacket(new Clientbound.SpawnMob(entity.id, entity.uuid, entity.type.pc, tuple!(typeof(Clientbound.SpawnMob.position))(entity.position), entity.angleYaw, entity.anglePitch, (cast(Living)entity).angleBodyYaw, tuple!(typeof(Clientbound.SpawnMob.velocity))(entity.velocity), metadataOf(entity.metadata)));
-		//else if(cast(ExperienceOrb) this.sendPacket(new Clientbound.SpawnExperienceOrb(entity.id, tuple!(typeof(Clientbound.SpawnExperienceOrb.position))(entity.position), (cast(ExperienceOrb)entity).count));
-		else {
-			this.sendPacket(new Clientbound.SpawnObject(entity.id, entity.uuid, entity.type.pc, tuple!(typeof(Clientbound.SpawnObject.position))(entity.position), entity.anglePitch, entity.angleYaw, entity.data, tuple!(typeof(Clientbound.SpawnObject.velocity))(entity.velocity)));
+		//TODO xp orb
+		//TODO painting
+		if(entity.minecraft) {
+			if(entity.object) this.sendPacket(new Clientbound.SpawnObject(entity.id, entity.uuid, entity.minecraftId, tuple!(typeof(Clientbound.SpawnObject.position))(entity.position), entity.anglePitch, entity.angleYaw, entity.objectData, tuple!(typeof(Clientbound.SpawnObject.velocity))(entity.velocity)));
+			else this.sendPacket(new Clientbound.SpawnMob(entity.id, entity.uuid, entity.minecraftId, tuple!(typeof(Clientbound.SpawnMob.position))(entity.position), entity.angleYaw, entity.anglePitch, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, tuple!(typeof(Clientbound.SpawnMob.velocity))(entity.velocity), metadataOf(entity.metadata)));
 			if(cast(ItemEntity)entity) this.sendMetadata(entity);
 		}
 	}

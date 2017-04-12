@@ -17,7 +17,7 @@ module sel.util.node;
 import std.algorithm : canFind;
 
 import sel.server : server;
-import sel.player : Player;
+import sel.player.player : Player;
 
 /**
  * A node connected to the hub where players can be transferred to.

@@ -80,11 +80,11 @@ abstract class Living : Entity {
 		}
 	}
 
-	public @property @safe @nogc float bodyYaw() {
+	public pure nothrow @property @safe @nogc float bodyYaw() {
 		return this.m_body_yaw;
 	}
 	
-	public @property @safe float bodyYaw(float bodyYaw) {
+	public pure nothrow @property @safe float bodyYaw(float bodyYaw) {
 		return this.m_body_yaw = bodyYaw;
 	}
 
