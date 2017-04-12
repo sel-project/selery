@@ -26,10 +26,11 @@ import std.conv : to;
 import std.datetime : dur;
 import std.file : exists, write, mkdirRecurse;
 
+import common.crash : logCrash;
 import common.path : Paths;
 import common.util : seconds;
 
-import sel.util.log;
+import sel.settings : Settings;
 
 /**
  * Safe thread that handles errors and exceptions
@@ -42,8 +43,10 @@ class SafeThread : Thread {
 			try {
 				fn();
 			} catch(Throwable t) {
-				log("Thread ", this.name, " has crashed: ", t.msg);
-				crash(this.name, t);
+					try {logCrash("hub", Settings.defaultLanguage, t);} catch(Throwable t2) {
+						import sel.util.log;
+						log(t2);
+					}
 			}
 		});
 	}
@@ -53,14 +56,4 @@ class SafeThread : Thread {
 		this.name = name;
 	}
 
-}
-
-/**
- * Saves the details of a crash into a file.
- */
-public void crash(string name, Throwable t) {
-	string data = "Error in thread " ~ name ~ ": " ~ t.msg ~ newline ~ newline;
-	data ~= t.info.toString() ~ newline;
-	if(!exists(Paths.crash)) mkdirRecurse(Paths.crash);
-	write(Paths.crash ~ "hub_" ~ to!string(seconds) ~ ".txt", data);
 }

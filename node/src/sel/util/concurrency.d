@@ -19,10 +19,10 @@ import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLink
 import std.conv : to;
 import std.exception : enforce;
 
+import common.crash : logCrash;
 import common.util : UnloggedException;
 
-import sel.server : isServerRunning;
-import sel.util.crash;
+import sel.server : isServerRunning, server;
 
 Tid thread(T:Thread)() {
 	return spawnLinked(&_thread!T);
@@ -53,7 +53,7 @@ class Thread {
 		} catch(Throwable e) {
 			if(isServerRunning) {
 				// only log exceptions thrown when the server is running
-				crash(e);
+				logCrash("node", server is null ? "en_GB" : server.settings.language, e);
 				throw e;
 			}
 		}

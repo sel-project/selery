@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,39 +12,32 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.util.crash;
+module common.crash;
 
 import std.algorithm : min, max;
 import std.ascii : newline;
 import std.conv : to;
-import std.file : read, exists, mkdirRecurse, write;
-import std.string : split;
+import std.datetime : Clock;
+import std.file : write, read, exists, mkdirRecurse;
+import std.string : split, replace;
 
+import common.format : Text, writeln;
+import common.lang : translate;
 import common.path : Paths;
 import common.sel;
-import common.util : seconds;
 
-import sel.server : server;
-import sel.util.lang : translate;
-import sel.util.log;
+public string logCrash(string type, string lang, Throwable e) {
 
-/**
- * Creates a crash-log file from a Throwable, usually throwed
- * during the execution of SEL.
- * The file is saved in crash/crash_(uinx date in seconds).txt
- */
-public @trusted void crash(Throwable e) {
+	string filename = Paths.crash ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
 
-	error_log(translate("{warning.crash}", server.settings.language, [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
-
-	string filename = Paths.crash ~ "node_" ~ seconds.to!string ~ ".txt";
+	writeln(translate("{red}{warning.crash}", lang, [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
 
 	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
-	file ~= "MESSAGE: " ~ e.msg ~ newline;
-	file ~= "TYPE: " ~ typeid(e).to!string.split(".")[$-1] ~ newline;
-	file ~= "FILE: " ~ e.file ~ newline;
-	file ~= "LINE: " ~ e.line.to!string ~ newline ~ newline;
-	file ~= e.info.to!string ~ newline;
+	file ~= "Message: " ~ e.msg ~ newline;
+	file ~= "Type: " ~ typeid(e).to!string.split(".")[$-1] ~ newline;
+	file ~= "File: " ~ e.file ~ newline;
+	file ~= "Line: " ~ e.line.to!string ~ newline ~ newline;
+	file ~= e.info.to!string.replace("\n", newline) ~ newline;
 	if(exists(e.file)) {
 		file ~= newline;
 		string[] errfile = (cast(string)read(e.file)).split(newline);
@@ -53,10 +46,10 @@ public @trusted void crash(Throwable e) {
 		}
 	}
 	if(!exists(Paths.crash)) mkdirRecurse(Paths.crash);
-	if(!exists(Paths.hidden)) mkdirRecurse(Paths.hidden);
 	write(filename, file);
-	write(Paths.hidden ~ "crash", filename);
 
-	error_log(translate("{warning.savedCrash}", server.settings.language, [filename]));
+	writeln(translate("{red}{warning.savedCrash}", lang, [filename]));
+
+	return filename;
 
 }

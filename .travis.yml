@@ -11,3 +11,6 @@ script:
  - cd hub && dub build --compiler=$DC --build=release
  - cd ../node && dub init.d --compiler=$DC
  - dub build --compiler=$DC --build=release
+
+notifications:
+ - email: false

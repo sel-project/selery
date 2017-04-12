@@ -3,8 +3,9 @@
 *.userprefs
 *.dproj
 *.obj
-*.lib
 *.o
+*.lib
+*.a
 common/.dub
 node/.config
 node/.hidden

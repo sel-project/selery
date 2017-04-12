@@ -20,13 +20,13 @@ import std.conv : to;
 import std.socket;
 import std.string : split, replace, join;
 
+import common.crash : logCrash;
 import common.path : Paths;
 import common.sel;
 import common.util : UnloggedException;
 
 import sel.settings;
 import sel.server;
-import sel.util.crash;
 import sel.util.log;
 
 // prevents linking errors when building with RDMD
@@ -105,7 +105,7 @@ void main(string[] args) {
 			
 		} catch(Throwable e) {
 			
-			crash(e);
+			logCrash("node", server is null ? "en_GB" : server.settings.language, e);
 
 		} finally {
 			
