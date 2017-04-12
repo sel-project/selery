@@ -164,7 +164,7 @@ class Server {
 		bool snoop_enabled = true;
 		try {
 			JSONValue[string] login;
-			with(Software) login["software"] = ["name": JSONValue(name), "version": JSONValue([major, minor, revision]), "stable": JSONValue(stable)];
+			with(Software) login["software"] = ["name": JSONValue(name), "version": JSONValue([major, minor, patch]), "stable": JSONValue(stable)];
 			login["online"] = __onlineMode;
 			if(this.n_settings.minecraft) login["minecraft"] = this.n_settings.minecraftProtocols;
 			if(this.n_settings.pocket) login["pocket"] = this.n_settings.pocketProtocols;

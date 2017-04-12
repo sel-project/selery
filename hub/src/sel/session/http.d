@@ -99,7 +99,7 @@ class HttpHandler : HandlerThread {
 			software["name"] = JSONValue(name);
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
-			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "revision": JSONValue(revision), "stable": JSONValue(stable)]);
+			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "stable": JSONValue(stable)]);
 			if(settings.pocket) protocols["pocket"] = JSONValue(settings.pocketProtocols);
 			if(settings.minecraft) protocols["minecraft"] = JSONValue(settings.minecraftProtocols);
 			json["software"] = JSONValue(software);

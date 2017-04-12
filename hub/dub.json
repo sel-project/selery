@@ -2,6 +2,9 @@
 	"name": "sel-hub",
 	"authors": ["sel-project"],
 	"dependencies": {
+		"sel-common": {
+			"path": "../common"
+		},
 		"sel-utils": "~>1.0.602"
 	},
 	"stringImportPaths": [

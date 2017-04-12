@@ -1,3 +1,14 @@
+/+ dub.json:
+{
+	"name": "sel-node-init",
+	"authors": ["sel-project"],
+	"dependencies": {
+		"sel-common": {
+			"path": "../common"
+		}
+	}
+}
++/
 /*
  * Copyright (c) 2016-2017 SEL
  * 

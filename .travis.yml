@@ -5,11 +5,9 @@ d:
  - ldc
  
 install:
- - cp -r common hub/src
- - cp -r common node/src
  - mkdir -p hub/resources
  
 script:
  - cd hub && dub build --compiler=$DC --build=release
- - cd ../node && $DC init.d src/common/sel.d src/common/path.d src/common/format.d && ./init
+ - cd ../node && dub init.d --compiler=$DC
  - dub build --compiler=$DC --build=release

@@ -20,15 +20,15 @@ import std.string : toLower, split, join, startsWith;
 import std.typecons : Tuple;
 
 
+alias suuid_t = immutable(ubyte)[17];
+
 alias tick_t = size_t;
 
 alias block_t = ushort;
 
 alias item_t = size_t;
 
-alias suuid_t = immutable(ubyte)[17];
-
-alias group(T) = Tuple!(T, "pe", T, "pc");
+public struct group(T) { T pe, pc; } // using a tuple causes a dmd segfault
 alias bytegroup = group!ubyte;
 alias shortgroup = group!ushort;
 alias intgroup = group!uint;
@@ -100,10 +100,10 @@ const struct Software {
 	enum ubyte minor = 1;
 
 	/// ditto
-	enum ubyte revision = 0;
+	enum ubyte patch = 0;
 
 	/// ditto
-	enum ubyte[3] versions = [major, minor, revision];
+	enum ubyte[3] versions = [major, minor, patch];
 
 	/**
 	 * Indicates whether the current state of the software is stable.
@@ -113,10 +113,11 @@ const struct Software {
 	enum bool stable = false;
 
 	/**
-	 * Version of the software in format major.minor.revision (for example
+	 * Version of the software in format major.minor.patch following the
+	 * $(HTTP http://semver.org, Semantic Version 2.0.0) (for example
 	 * `1.1.0`) for display purposes.
 	 */
-	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(revision);
+	enum string displayVersion = to!string(major) ~ "." ~ to!string(minor) ~ "." ~ to!string(patch);
 
 	/**
 	 * Full version of the software prefixed with a `v` and suffixed

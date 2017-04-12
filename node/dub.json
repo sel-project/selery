@@ -2,6 +2,9 @@
 	"name": "sel-node",
 	"authors": ["sel-project"],
 	"dependencies": {
+		"sel-common": {
+			"path": "../common"
+		},
 		"sel-utils": "~>1.0.603",
 		"nbt-d": "~>1.0.1",
 		"resusage": "~>0.2.4"
