@@ -43,6 +43,9 @@ import common.sel;
 import common.util.format : Text;
 import common.util.time : milliseconds, microseconds;
 
+import resusage.memory;
+import resusage.cpu;
+
 import sel.network : Handler;
 import sel.settings;
 import sel.entity.human : Skin;
@@ -168,6 +171,9 @@ final class Server : EventListener!ServerEvent {
 	private size_t tps_pointer = 0;
 	private ubyte warn = 0;
 	private size_t last_warn = 0;
+
+	private ProcessMemInfo resuage_ram;
+	private ProcessCPUWatcher resuage_cpu;
 
 	private ulong last_ram;
 	private float last_cpu;
@@ -399,6 +405,9 @@ final class Server : EventListener!ServerEvent {
 
 	private void finishConstruction() {
 
+		this.resuage_ram = processMemInfo(getpid);
+		this.resuage_cpu = new ProcessCPUWatcher(getpid);
+
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
 		log(translate("{startup.running}", this.n_settings.language, [Text.white ~ __VENDOR__ ~ Text.reset ~ " v" ~ Text.white ~ to!string(__VERSION__) ~ Text.reset, __DATE__ ~ " " ~ __TIME__, processor() ~ " (" ~ to!string(coresPerCPU) ~ " core" ~ (coresPerCPU() != 1 ? "s" : "") ~ ", " ~ to!string(threadsPerCPU()) ~ " thread" ~ (threadsPerCPU() != 1 ? "s" : "") ~ ")"]));
@@ -539,9 +548,8 @@ final class Server : EventListener!ServerEvent {
 
 
 			if(this.ticks % 100 == 1) {
-				try { this.last_ram = memory; } catch(Exception e) {}
-				try { this.last_cpu = sel.util.memory.cpu; } catch(Exception e) {}
-				this.sendPacket(new HncomStatus.ResourcesUsage(this.tps, this.last_ram, this.last_cpu).encode());
+				this.resuage_ram.update();
+				this.sendPacket(new HncomStatus.ResourcesUsage(this.tps, this.resuage_ram.usedRAM, this.resuage_cpu.current()).encode());
 			}
 
 			watch.reset();

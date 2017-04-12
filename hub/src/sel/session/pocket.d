@@ -566,7 +566,7 @@ final class PocketSession : PlayerSession {
 
 	private shared void handleLogin(Login login) {
 		bool accepted = false;
-		this.edu = login.edition == Login.EDUCATION;
+		this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
 		auto protocols = this.server.settings.pocketProtocols;
 		if(login.protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
