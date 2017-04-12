@@ -11,5 +11,5 @@ install:
  
 script:
  - cd hub && dub build --compiler=$DC --build=release
- - cd ../node && $DC init.d src/common/sel.d src/common/path.d src/common/util/format.d && ./init
+ - cd ../node && $DC init.d src/common/sel.d src/common/path.d src/common/format.d && ./init
  - dub build --compiler=$DC --build=release

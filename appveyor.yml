@@ -88,7 +88,7 @@ before_build:
 
 build_script:
  - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC% --build=release
- - cd ..\node && %DC% init.d src\common\sel.d src\common\path.d src\common\util\format.d && .\init
+ - cd ..\node && %DC% init.d src\common\sel.d src\common\path.d src\common\format.d && .\init
  - dub build --arch=%Darch% --compiler=%DC% --build=release
 
 test_script:
