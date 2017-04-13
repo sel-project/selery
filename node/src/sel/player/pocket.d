@@ -218,7 +218,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 							auto eobj = e.object;
 							list ~= new Compound(new Named!Short("id", eobj["id"].integer.to!short), new Named!Short("lvl", eobj["level"].integer.to!short));
 						}
-						stream.writeNamedTag("", new Compound(list));
+						stream.writeTag(new Compound(list));
 						slot.nbt = stream.buffer.dup;
 					}
 					slots ~= slot;
@@ -254,7 +254,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		} else {
 			stream.buffer.length = 0;
 			if(!slot.empty && slot.item.pocketCompound !is null) {
-				stream.writeNamedTag("", slot.item.pocketCompound);
+				stream.writeTag(slot.item.pocketCompound);
 			}
 			return Types.Slot(slot.item.pocketId, slot.item.pocketMeta << 8 | slot.count, stream.buffer);
 		}
@@ -268,7 +268,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			if(slot.nbt.length) {
 				stream.buffer = slot.nbt;
 				//TODO verify that this is right
-				auto tag = stream.readNamedTag();
+				auto tag = stream.readTag();
 				if(cast(Compound)tag) item.parsePocketCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.metaAndCount & 255);
@@ -503,7 +503,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
-				networkStream.writeNamedTag("", compound);
+				networkStream.writeTag(compound);
 			}
 		}
 		data.blockEntities = networkStream.buffer;
@@ -730,7 +730,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		auto packet = new Play.BlockEntityData(toBlockPosition(tile.position));
 		if(tile.compound.pe !is null) {
 			networkStream.buffer.length = 0;
-			networkStream.writeNamedTag("", tile.compound.pe);
+			networkStream.writeTag(tile.compound.pe);
 			packet.nbt = networkStream.buffer;
 		} else {
 			packet.nbt ~= NBT_TYPE.END;

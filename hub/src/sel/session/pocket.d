@@ -119,8 +119,7 @@ class PocketHandler : UnconnectedHandler {
 				case Unconnected.Ping.ID:
 					auto ping = Unconnected.Ping.fromBuffer(payload);
 					this.sendTo(socket, new Unconnected.Pong(ping.pingId, this.server.id, magic, this.status[0] ~ to!string(this.server.onlinePlayers) ~ ";" ~ to!string(this.server.maxPlayers) ~ this.status[1]).encode(), address);
-
-					throw new Exception("EEEEEEEEEEEEE");
+					break;
 				case Unconnected.OpenConnectionRequest1.ID:
 					auto ocr = Unconnected.OpenConnectionRequest1.fromBuffer(payload);
 					//TODO check magic and protocol

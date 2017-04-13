@@ -139,7 +139,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			auto ret = Types.Slot(slot.item.minecraftId, slot.count, slot.item.minecraftMeta, [NBT_TYPE.END]);
 			if(slot.item.minecraftCompound !is null) {
 				stream.buffer.length = 0;
-				stream.writeNamedTag("", cast(Tag)slot.item.minecraftCompound);
+				stream.writeTag(cast(Tag)slot.item.minecraftCompound);
 				ret.nbt = stream.buffer;
 			}
 			return ret;
@@ -153,7 +153,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			auto item = this.world.items.fromMinecraft(slot.id, slot.damage);
 			if(slot.nbt.length) {
 				stream.buffer = slot.nbt;
-				auto tag = stream.readNamedTag();
+				auto tag = stream.readTag();
 				if(cast(Compound)tag) item.parseMinecraftCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.count);
@@ -403,7 +403,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
-				stream.writeNamedTag("", compound);
+				stream.writeTag(compound);
 			}
 		}
 		packet.tiles = stream.buffer;
@@ -610,7 +610,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			compound["x"] = new Int(tile.position.x);
 			compound["y"] = new Int(tile.position.y);
 			compound["z"] = new Int(tile.position.z);
-			stream.writeNamedTag("", compound);
+			stream.writeTag(compound);
 			packet.nbt = stream.buffer;
 		} else {
 			packet.nbt ~= 0;
