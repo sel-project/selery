@@ -538,7 +538,6 @@ final class PocketSession : PlayerSession {
 
 	private shared void handleUncompressedPlay(ubyte[] payload) {
 		if(payload.length && this.n_node !is null) {
-			log(payload[0]);
 			this.n_node.sendTo(this, payload);
 		}
 	}

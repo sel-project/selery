@@ -80,7 +80,7 @@ public class Items {
 	}
 	
 	public Item get(size_t index, ushort damage=0) {
-		return this.indexes.length < index ? this.indexes[index](damage) : null;
+		return index < this.indexes.length ? this.indexes[index](damage) : null;
 	}
 	
 	public Item fromMinecraft(ushort id, ushort damage=0) {

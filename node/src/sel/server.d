@@ -65,8 +65,6 @@ import sel.util.node : Node;
 import sel.util.task;
 import sel.world.world : World;
 
-private import plugins;
-
 /*mixin((){
 	string imports;
 	foreach(mod ; ["util", "types", "login", "status", "player", "world", "tracking"]) {
@@ -193,10 +191,12 @@ final class Server : EventListener!ServerEvent {
 
 	private LangSearcher lang_searcher;
 
-	public this(Address hub, string password, string name, bool main) {
+	public this(Address hub, string password, string name, bool main, Plugin[] plugins) {
 
 		this.node_name = name;
 		this.node_main = main;
+
+		this.n_plugins = plugins;
 		
 		n_server = this;
 
@@ -341,7 +341,8 @@ final class Server : EventListener!ServerEvent {
 			// reload languages and save cache
 			string[] paths;
 			if(!this.n_settings.realm) {
-				paths = __plugin_lang_paths;
+				//TODO
+				//paths = __plugin_lang_paths;
 			}
 			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.lang);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
@@ -473,7 +474,6 @@ final class Server : EventListener!ServerEvent {
 		this.start_time = milliseconds;
 
 		if(!this.n_settings.realm) {
-			this.n_plugins = __plugin_load();
 			string plugs = Software.name ~ " " ~ Software.displayVersion ~ (this.n_plugins.length > 0 ? ": " : "");
 			foreach(size_t i, Plugin plugin; this.n_plugins) {
 				auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ plugin.author ~ Text.reset, Text.white ~ plugin.vers];

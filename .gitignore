@@ -18,6 +18,7 @@ node/plugins
 node/resources
 node/crash
 node/worlds
+node/main.d
 hub/.config
 hub/.hidden
 hub/.dub

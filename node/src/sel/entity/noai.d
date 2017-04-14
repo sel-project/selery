@@ -44,7 +44,7 @@ class ItemEntity : Entity, Collectable {
 	public bool pickUp = true;
 	public uint delay = PICKUP_DELAY;
 
-	public this(World world, EntityPosition position, EntityPosition motion, Slot item, bool noai=false) {
+	public this(World world, EntityPosition position, EntityPosition motion, Slot item) {
 		super(world, position);
 		assert(!item.empty, "Can't drop an empty slot!");
 		this.n_data = 1;
@@ -55,10 +55,6 @@ class ItemEntity : Entity, Collectable {
 			foreach(immutable i ; __minecraftProtocolsTuple) {
 				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = MinecraftPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
 			}
-		}
-		if(noai) {
-			this.noai = true;
-			this.ticking = false;
 		}
 		this.setSize(WIDTH, HEIGHT);
 		this.acceleration = .05;

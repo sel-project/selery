@@ -32,7 +32,7 @@ import sel.world.world : World;
 
 static import sul.effects;
 
-abstract class Living : Entity {
+public class Living : Entity {
 
 	protected Health m_health;
 	protected Effect[ubyte] effects;

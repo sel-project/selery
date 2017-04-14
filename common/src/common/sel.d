@@ -94,10 +94,10 @@ const struct Software {
 	/**
 	 * Version of the software.
 	 */
-	enum ubyte major = 1;
+	enum ubyte major = 2;
 
 	/// ditto
-	enum ubyte minor = 1;
+	enum ubyte minor = 0;
 
 	/// ditto
 	enum ubyte patch = 0;
