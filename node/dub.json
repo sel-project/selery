@@ -1,7 +1,6 @@
 {
 	"name": "sel-node",
 	"authors": ["sel-project"],
-	"targetType": "library",
 	"dependencies": {
 		"sel-common": {
 			"path": "../common"

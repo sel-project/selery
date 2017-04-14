@@ -47,7 +47,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 5;
+enum size_t __GENERATOR__ = 6;
 
 void main(string[] args) {
 
@@ -251,16 +251,6 @@ void main(string[] args) {
 
 		string[] fimports;
 
-		version(Windows) {
-			immutable a = executeShell("cd . && cd").output.strip.replace("\\", "/");
-		} else {
-			immutable a = executeShell("cd . && pwd").output.strip;
-		}
-
-		JSONValue[string] deps;
-		deps["sel-node"] = ["path": "."];
-		deps["sel-common"] = ["path": "../common"];
-
 		foreach(Info value ; ordered) {
 			if(value.active) {
 				auto lang = value.path ~ "lang" ~ dirSeparator;
@@ -278,12 +268,6 @@ void main(string[] args) {
 					imports ~= "static import " ~ value.mod ~ ";" ~ newline;
 				}
 				loads ~= newline ~ "\t\tPlugin.create!(" ~ (value.main.length ? value.main : "Object") ~ ")(Plugin(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ")),";
-				deps["plugin-" ~ value.id] = ["path": value.path.replace("\\", "/")];
-				// rewrite dub.json
-				value.json["name"] = "plugin-" ~ value.id;
-				if("dependencies" !in value.json) value.json["dependencies"] = (JSONValue[string]).init;
-				value.json["dependencies"]["sel-node"] = ["path": a];
-				write(value.path ~ "/dub.json", value.json.toString());
 			}
 		}
 
@@ -298,7 +282,7 @@ void main(string[] args) {
 			mkdirRecurse("src" ~ dirSeparator ~ "plugins");
 		}
 
-		write("src" ~ dirSeparator ~ "plugins" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __plugin_load() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+		write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
 		// copy plugins into src/plugins
 		foreach(p ; ordered) {
@@ -311,107 +295,6 @@ void main(string[] args) {
 				}
 			}
 		}
-
-		// create main.d that loads sel-node and the plugins as libraries
-		auto dub = JSONValue([
-			"name": JSONValue("sel-node-runnable"),
-			"dependencies": JSONValue(deps)
-		]);
-
-string main = q{
-module main;
-
-import std.algorithm : max, min;
-import std.concurrency : LinkTerminated;
-import std.conv : to;
-import std.socket;
-import std.string : split, replace, join;
-
-import common.crash : logCrash;
-import common.path : Paths;
-import common.sel;
-import common.util : UnloggedException;
-
-import sel.plugin;
-import sel.settings;
-import sel.server;
-import sel.util.log;
-
-void main(string[] args) {
-	
-	args = args[1..$];
-	
-	if(args.length && args[0] == "about") {
-
-		import std.json : JSONValue;
-		import std.stdio : writeln;
-
-		auto json = JSONValue([
-			"type": JSONValue("node"),
-			"software": JSONValue([
-				"name": JSONValue(Software.name),
-				"version": JSONValue(Software.displayVersion),
-				"stable": JSONValue(Software.stable)
-			]),
-			"minecraft": JSONValue(__minecraftProtocols),
-			"pocket": JSONValue(__pocketProtocols)
-		]);
-
-		writeln(json.toString());
-
-	} else {
-
-		import std.file : exists, remove;
-		if(exists(Paths.hidden ~ "crash")) remove(Paths.hidden ~ "crash");
-
-		Server server;
-		
-		try {
-
-			string name = args.length > 0 ? args[0] : "node";
-			Address address;
-			ushort port = args.length > 2 ? to!ushort(args[2]) : 28232;
-			bool main = args.length > 3 ? to!bool(args[3]) : true;
-			string password = args.length > 4 ? args[4..$].join(" ") : "";
-			
-			if(args.length > 1) {
-				string ip = args[1];
-				try {
-					address = getAddress(ip, port)[0];
-				} catch(SocketException e) {
-					version(Posix) {
-						// assume it's a unix address
-						address = new UnixAddress(ip);
-					} else {
-						throw e;
-					}
-				}
-			} else {
-				address = new InternetAddress("127.0.0.1", port);
-			}
-			
-			server = new Server(address, password, name, main, new Plugin[0]);
-
-		} catch(LinkTerminated) {
-
-		} catch(UnloggedException) {
-			
-		} catch(Throwable e) {
-			
-			logCrash("node", server is null ? "en_GB" : server.settings.language, e);
-
-		} finally {
-			
-			import std.c.stdlib : exit;
-			exit(12014);
-			
-		}
-	}
-	
-}
-};
-
-	write("main.d", "/+ dub.json:" ~ newline ~ dub.toPrettyString() ~ newline ~ "+/" ~ main);
 
 	}
 
