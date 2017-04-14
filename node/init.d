@@ -47,7 +47,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 6;
+enum size_t __GENERATOR__ = 8;
 
 void main(string[] args) {
 
@@ -262,12 +262,14 @@ void main(string[] args) {
 						lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
 					}
 					if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
-					if(exists(lang)) paths ~= "`" ~ lang ~ "`, ";
+					if(exists(lang)) lang = "`" ~ lang ~ "`";
+				} else {
+					lang = "null";
 				}
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";" ~ newline;
 				}
-				loads ~= newline ~ "\t\tPlugin.create!(" ~ (value.main.length ? value.main : "Object") ~ ")(Plugin(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ")),";
+				loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
 			}
 		}
 
@@ -282,7 +284,7 @@ void main(string[] args) {
 			mkdirRecurse("src" ~ dirSeparator ~ "plugins");
 		}
 
-		write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin;" ~ newline ~ newline ~ imports ~ newline ~ "enum string[] __plugin_lang_paths = [" ~ paths ~ "];" ~ newline ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+		write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
 		// copy plugins into src/plugins
 		foreach(p ; ordered) {

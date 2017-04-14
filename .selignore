@@ -4,6 +4,7 @@
 .editorconfig
 .travis.yml
 .latest
+appveyor.yml
 CONTRIBUTING.md
 README.md
 LICENSE
@@ -13,9 +14,11 @@ compress.d
 copy.d
 release.d
 refactor_ids.d
+common/.dub/
 common/sel-common.lib
 common/src/common.dproj
 common/src/common.sln
+common/src/common.userprefs
 node/sel-node.exe
 node/dub.selections.json
 node/.config
@@ -24,6 +27,8 @@ node/.hidden/
 node/worlds/
 node/plugins/
 node/resources/
+node/crash/
+node/src/plugins.d
 node/src/plugins/
 node/src/common/
 node/src/res/
@@ -36,6 +41,7 @@ hub/.config
 hub/.dub/
 hub/.hidden/
 hub/resources/
+hub/crash/
 hub/src/common/
 hub/src/res/
 hub/src/sel-hub.dproj

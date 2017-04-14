@@ -337,9 +337,8 @@ final class Server : EventListener!ServerEvent {
 
 			// reload languages and save cache
 			string[] paths;
-			if(!this.n_settings.realm) {
-				//TODO
-				//paths = __plugin_lang_paths;
+			foreach(plugin ; this.n_plugins) {
+				if(plugin.language !is null) paths ~= plugin.language;
 			}
 			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.lang);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
@@ -451,10 +450,7 @@ final class Server : EventListener!ServerEvent {
 		static if(__pocket) {
 			import sel.player.pocket : PocketPlayerImpl;
 			foreach(immutable protocol ; __pocketProtocolsTuple) {
-				mixin("alias P = PocketPlayerImpl!" ~ protocol.to!string ~ ";");
-				if(!P.loadCreativeInventory()) {
-					//TODO print a warning
-				}
+				mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory();");
 			}
 		}
 
@@ -462,18 +458,15 @@ final class Server : EventListener!ServerEvent {
 
 		this.start_time = milliseconds;
 
-		if(!this.n_settings.realm) {
-			string plugs = Software.name ~ " " ~ Software.displayVersion ~ (this.n_plugins.length > 0 ? ": " : "");
-			foreach(size_t i, Plugin plugin; this.n_plugins) {
-				auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ plugin.author ~ Text.reset, Text.white ~ plugin.vers];
-				string s = "{startup.plugin.enabled}";
-				if(plugin.api && plugin.hasMain) s = "{startup.plugin.enabled.asapi}";
-				else if(plugin.api) s = "{startup.plugin.enabled.withapi}";
-				s = s.translate(this.n_settings.language, args);
-				s = s.replace("API", Text.lightPurple ~ "API" ~ Text.reset);
-				log(s);
-				plugs ~= plugin.name ~ " " ~ plugin.vers ~ (i < this.n_plugins.length - 1 ? "; " : "");
-			}
+		foreach(plugin ; this.n_plugins) {
+			plugin.load();
+			auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ plugin.author ~ Text.reset, Text.white ~ plugin.vers];
+			string s = "{startup.plugin.enabled}";
+			if(plugin.api && plugin.hasMain) s = "{startup.plugin.enabled.asapi}";
+			else if(plugin.api) s = "{startup.plugin.enabled.withapi}";
+			s = s.translate(this.n_settings.language, args);
+			s = s.replace("API", Text.lightPurple ~ "API" ~ Text.reset);
+			log(s);
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection

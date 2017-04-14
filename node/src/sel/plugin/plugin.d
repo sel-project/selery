@@ -25,11 +25,12 @@ import sel.server : server;
  * Informations about a plugin and registration-related
  * utilities.
  */
-struct Plugin {
+class Plugin {
 
-	public string n_namespace, n_name, n_author, n_version;
-	public bool n_api;
+	protected string n_namespace, n_name, n_author, n_version;
+	protected bool n_api;
 	public bool hasMain;
+	protected string n_language;
 
 	public void delegate()[] onstart, onreload, onstop;
 
@@ -82,34 +83,52 @@ struct Plugin {
 		return this.n_api;
 	}
 
-	public static Plugin create(T)(Plugin info) if(is(T == class) && !isAbstractClass!T || is(T == struct)) {
+	public pure nothrow @property @safe @nogc string language() {
+		return this.n_language;
+	}
+
+	public abstract void load();
+
+}
+
+class PluginOf(T) : Plugin if(!isAbstractClass!T || is(T == struct)) {
+
+	public this(string namespace, string name, string author, string vers, bool api, string language) {
+		this.n_namespace = namespace;
+		this.n_name = name;
+		this.n_author = author;
+		this.n_version = vers;
+		this.n_api = api;
+		this.n_language = language;
+		static if(!is(T : Object)) this.hasMain = true;
+	}
+
+	public override void load() {
 		static if(!is(T == Object)) {
+			T main;
 			static if(is(T == class)) {
-				T main = new T();
-			} else {
-				T main = T();
+				main = new T();
 			}
-			info.hasMain = true;
 			foreach(t ; __traits(allMembers, T)) {
 				static if(is(typeof(__traits(getMember, T, t)) == function)) {
 					mixin("alias func = T." ~ t ~ ";");
 					mixin("auto del = &main." ~ t ~ ";");
 					// start/stop
 					static if(hasUDA!(func, start)) {
-						info.onstart ~= del;
+						this.onstart ~= del;
 					}
 					static if(hasUDA!(func, reload)) {
-						info.onreload ~= del;
+						this.onreload ~= del;
 					}
 					static if(hasUDA!(func, stop)) {
-						info.onstop ~= del;
+						this.onstop ~= del;
 					}
 					// events
 					static if(hasUDA!(func, event)) {
-						registerEvent!(false, hasUDA!(func, cancel))(del);
+						this.registerEvent!(false, hasUDA!(func, cancel))(del);
 					}
 					static if(hasUDA!(func, global)) {
-						registerEvent!(true, hasUDA!(func, cancel))(del);
+						this.registerEvent!(true, hasUDA!(func, cancel))(del);
 					}
 					// commands
 					static if(hasUDA!(func, command)) {
@@ -136,13 +155,10 @@ struct Plugin {
 					}
 				}
 			}
-		} else {
-			info.hasMain = false;
 		}
-		return info;
 	}
 
-	private static void registerEvent(bool isGlobal, bool isCancelled, T)(void delegate(T) event) {
+	private void registerEvent(bool isGlobal, bool isCancelled, T)(void delegate(T) event) {
 		static if(isCancelled) {
 			event = (T e){ e.cancel(); };
 		}

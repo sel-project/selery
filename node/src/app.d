@@ -28,22 +28,19 @@ void main(string[] args) {
 		import std.stdio : writeln;
 		
 		auto json = JSONValue([
-				"type": JSONValue("node"),
-				"software": JSONValue([
-						"name": JSONValue(Software.name),
-						"version": JSONValue(Software.displayVersion),
-						"stable": JSONValue(Software.stable)
-					]),
-				"minecraft": JSONValue(__minecraftProtocols),
-				"pocket": JSONValue(__pocketProtocols)
-			]);
+			"type": JSONValue("node"),
+			"software": JSONValue([
+					"name": JSONValue(Software.name),
+					"version": JSONValue(Software.displayVersion),
+					"stable": JSONValue(Software.stable)
+				]),
+			"minecraft": JSONValue(__minecraftProtocols),
+			"pocket": JSONValue(__pocketProtocols)
+		]);
 		
 		writeln(json.toString());
 		
 	} else {
-		
-		import std.file : exists, remove;
-		if(exists(Paths.hidden ~ "crash")) remove(Paths.hidden ~ "crash");
 		
 		Server server;
 		
