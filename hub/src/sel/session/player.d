@@ -26,6 +26,7 @@ import std.uuid : UUID;
 import common.sel;
 
 import sel.server : Server;
+import sel.settings : Settings;
 import sel.network.session : Session;
 import sel.session.hncom : Node;
 import sel.util.world : World;
@@ -68,6 +69,7 @@ abstract class PlayerSession : Session {
 	
 	public shared this(shared Server server) {
 		super(server);
+		this.n_language = Settings.defaultLanguage;
 	}
 	
 	/**

@@ -38,6 +38,7 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib;
 
+import common.lang : Lang;
 import common.sel;
 import common.util : milliseconds;
 
@@ -629,6 +630,7 @@ final class PocketSession : PlayerSession {
 					auto os = "DeviceOS" in cd;
 					auto model = "DeviceModel" in cd;
 					auto input = "CurrentInputMode" in cd;
+					auto lang = "LanguageCode" in cd;
 					// TenantId for edu
 
 					if(serverAddress && serverAddress.type == JSON_TYPE.STRING) {
@@ -671,6 +673,9 @@ final class PocketSession : PlayerSession {
 						}();
 					} else {
 						this.n_input_mode = HncomAdd.TOUCH;
+					}
+					if(lang && lang.type == JSON_TYPE.STRING) {
+						this.language = Lang.getBestLanguage(lang.str);
 					}
 
 					// check whitelist and blacklist with username and UUID (if authenticated)

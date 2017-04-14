@@ -13,8 +13,9 @@ compress.d
 copy.d
 release.d
 refactor_ids.d
-utils/
-res/
+common/sel-common.lib
+common/src/common.dproj
+common/src/common.sln
 node/sel-node.exe
 node/dub.selections.json
 node/.config

@@ -83,10 +83,10 @@ const struct Software {
 	 * the group of versions of the software.
 	 * Used only for display purposes.
 	 */
-	enum string codename = "Banana";
+	enum string codename = "Cookie";
 
 	/// ditto
-	enum string codenameEmoji = "🍌";
+	enum string codenameEmoji = "🍪";
 
 	/// ditto
 	enum string fullCodename = codename ~ " (" ~ codenameEmoji ~ ")";

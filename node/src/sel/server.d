@@ -59,7 +59,6 @@ import sel.plugin.plugin : Plugin;
 import sel.util.command : Command, Commands;
 import sel.util.concurrency : thread, Thread;
 import sel.util.lang : Lang, translate, Variables;
-import sel.util.langfromip : LangSearcher;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.util.task;
@@ -188,8 +187,6 @@ final class Server : EventListener!ServerEvent {
 	public EventListener!WorldEvent globalListener;
 
 	private Command[string] commands;
-
-	private LangSearcher lang_searcher;
 
 	public this(Address hub, string password, string name, bool main, Plugin[] plugins) {
 
@@ -446,14 +443,6 @@ final class Server : EventListener!ServerEvent {
 
 			auto collector = thread!Collector();
 			send(collector, thisTid);
-		}
-
-		if(this.n_settings.acceptedLanguages.length > 1) {
-			this.lang_searcher = new LangSearcher(this.n_settings.language, this.n_settings.acceptedLanguages);
-			version(UpdateLang) {
-				this.lang_searcher.convert();
-			}
-			this.lang_searcher.load();
 		}
 		
 		this.tasks = new TaskManager();
@@ -1343,12 +1332,6 @@ final class Server : EventListener!ServerEvent {
 
 		Address address = this.convertAddress(packet.clientAddress);
 		Skin skin = Skin(packet.skin.name, packet.skin.data);
-
-		// this is fast as lightning (~1 microsecond)
-		if(packet.language == "") {
-			packet.language = this.n_settings.acceptedLanguages.length > 1 ? this.lang_searcher.langFor(address) : this.n_settings.language;
-			this.sendPacket(new HncomPlayer.UpdateLanguage(packet.hubId, packet.language).encode());
-		}
 
 		if(!skin.valid) {
 			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394

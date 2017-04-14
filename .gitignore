@@ -27,8 +27,6 @@ hub/src/common
 hub/src/res
 hub/resources
 hub/crash
-res/dbip-country.csv
-res/dbip-country-uncompressed.bin
 
 res/lang/es_ES.lang
 res/lang/fur_IT.lang

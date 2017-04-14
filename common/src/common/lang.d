@@ -14,6 +14,7 @@
  */
 module common.lang;
 
+import std.algorithm : canFind;
 import std.conv : to;
 import std.file : exists, read;
 import std.string;
@@ -24,16 +25,18 @@ import common.format : Text;
 
 struct Lang {
 	
-	private static Lang instance;
+	private static shared(Lang) instance;
 
 	public static void init(string[] langs, string[] dirs) {
-		instance = Lang(langs, dirs);
+		instance = shared(Lang)(langs, dirs);
 	}
-	
-	private string[string][string] langs;
+
+	private shared string[] supported;
+	private shared string[string][string] langs;
 
 	// ["../res/lang/", "resources/plugins/example/res/lang/"]
-	private this(string[] langs, string[] dirs) {
+	private shared this(string[] langs, string[] dirs) {
+		this.supported = cast(shared)langs;
 		foreach(string lang ; langs) {
 			foreach(string ppath ; dirs) {
 				string realpath = (ppath ~ lang ~ ".lang");
@@ -51,19 +54,19 @@ struct Lang {
 			mixin("colors[\"" ~ color.to!string ~ "\"] = \"" ~ color ~ "\";");
 			mixin("colors[\"" ~ color.to!string.toLower ~ "\"] = \"" ~ color ~ "\";");
 		}
-		foreach(string lang, string[string] val; this.langs) {
-			foreach(string cname, string color; colors) {
+		foreach(lang, val; this.langs) {
+			foreach(cname, color; colors) {
 				this.langs[lang][cname] = color;
 			}
 		}
 	}
-	
-	private @safe bool hasImpl(string lang, string str) {
+
+	private shared bool hasImpl(string lang, string str) {
 		auto ptr = lang in this.langs;
 		return ptr && str in *ptr;
 	}
 	
-	private @safe string getImpl(string lang, string str) {
+	private shared string getImpl(string lang, string str) {
 		return this.langs[lang][str];
 	}
 	
@@ -71,7 +74,7 @@ struct Lang {
 	 * Checks if a string is loaded.
 	 * Returns: true if the string was found, false otherwise
 	 */
-	public static @safe bool has(string lang, string str) {
+	public static bool has(string lang, string str) {
 		return instance.hasImpl(lang, str);
 	}
 	
@@ -79,8 +82,19 @@ struct Lang {
 	 * Gets a string from the pool.
 	 * Throws: RangeError if has(lang, str) is false
 	 */
-	public static @safe string get(string lang, string str) {
+	public static string get(string lang, string str) {
 		return instance.getImpl(lang, str);
+	}
+
+	public static string getBestLanguage(string lang) {
+		if(lang.length < 5 || lang[2] != '_') return instance.supported[0];
+		else if(instance.supported.canFind(lang)) return lang;
+		else {
+			foreach(supp ; instance.supported) {
+				if(lang.startsWith(supp[0..2])) return supp;
+			}
+			return instance.supported[0];
+		}
 	}
 	
 }
@@ -109,7 +123,7 @@ struct Lang {
  * assert(notranslate.translate("en_GB") == "Don't! {language.name}");
  * ---
  */
-public @safe string translate(E...)(string message, string lang, string[] params, E variables) {
+public string translate(E...)(string message, string lang, string[] params, E variables) {
 	size_t open = -1;
 	for(size_t index=0; index<message.length; index++) {
 		switch(message[index]) {
