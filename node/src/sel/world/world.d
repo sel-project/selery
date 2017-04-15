@@ -952,6 +952,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	}
 
+	public void explode(bool breakBlocks=true)(BlockPosition position, float power, Living damager=null) {
+		return this.explode!(breakBlocks)(position.entityPosition, power, damager);
+	}
+
 	/**
 	 * Gets an entity from an id.
 	 */

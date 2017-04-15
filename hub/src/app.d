@@ -17,7 +17,7 @@
  * 
  * Source: $(HTTP www.github.com/sel-project/sel-server/blob/master/hub/sel/main.d, main.d)
  */
-module main;
+module app;
 
 import std.conv : to;
 import std.string : replace, toLower;

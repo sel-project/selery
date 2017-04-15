@@ -27,6 +27,7 @@ hub/src/common
 hub/src/res
 hub/resources
 hub/crash
+hub/logs
 
 res/lang/es_ES.lang
 res/lang/fur_IT.lang

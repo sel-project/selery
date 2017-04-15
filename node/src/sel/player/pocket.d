@@ -223,7 +223,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					}
 					slots ~= slot;
 				}
-				ubyte[] encoded = new Play.ContainerSetContent(121, 0, slots).encode(); // warning! the 0 (3rd byte) shold be replaced with the entity's id when sending
+				ubyte[] encoded = new Play.ContainerSetContent(121, 0, slots).encode();
 				Compress c = new Compress(9);
 				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
 				creative_inventory ~= cast(ubyte[])c.flush();
@@ -231,7 +231,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				write(cached, creative_inventory);
 				return true;
 			} catch(CurlException e) {
-				warning_log("Could not download creative inventory for pocket ", __protocol);
+				warning_log("Could not download creative inventory for pocket", __protocol);
 				return false;
 			}
 		} else {
@@ -651,8 +651,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	public override void sendJoinPacket() {
-		// send thunders if enabled
-		this.sendPacket(new Play.StartGame(this.id, this.id, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.gamemode == 3 ? 1 : this.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
+		//TODO send thunders
+		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
 	}
 	
 	public override void sendTimePacket() {
@@ -691,7 +691,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			this.sendLevelEvent(Play.LevelEvent.STOP_RAIN, EntityPosition(0), 0);
 			this.sendLevelEvent(Play.LevelEvent.STOP_THUNDER, EntityPosition(0), 0);
 		} else {
-			this.sendLevelEvent(Play.LevelEvent.START_RAIN, EntityPosition(0), to!uint(/*this.world.weather.rain +*/ (this.world.weather.intensity /*- 1*/) * 24000));
+			this.sendLevelEvent(Play.LevelEvent.START_RAIN, EntityPosition(0), to!uint(this.world.weather.intensity * 24000));
 			this.sendLevelEvent(Play.LevelEvent.START_THUNDER, EntityPosition(0), this.world.weather.rain.to!uint);
 		}
 	}
@@ -815,7 +815,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.handleTextMessage(message);
 	}
 
-	protected void handleMovePlayerPacket(long eid, typeof(Play.MovePlayer.position) position, float pitch, float bodyYaw, float yaw, ubyte mode, bool onGround) {
+	protected void handleMovePlayerPacket(long eid, typeof(Play.MovePlayer.position) position, float pitch, float bodyYaw, float yaw, ubyte mode, bool onGround, long unknown7) {
 		position.y -= this.eyeHeight;
 		this.handleMovementPacket(vector!(EntityPosition)(position), yaw, bodyYaw, pitch);
 	}

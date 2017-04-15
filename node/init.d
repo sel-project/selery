@@ -231,73 +231,62 @@ void main(string[] args) {
 			}
 		}
 	}
+	
+	size_t count = 0;
+		
+	string imports = "";
+	string loads = "";
 
-	string cfile = "";
+	string paths = "";
+
+	string[] fimports;
+
 	foreach(Info value ; ordered) {
-		cfile ~= value.path ~ ";" ~ (value.active ? "+" : "-") ~ ";" ~ value.prior.to!string ~ ";" ~ value.name ~ ";" ~ value.author ~ ";" ~ value.vers ~ ";" ~ value.main ~ ";";
+		if(value.active) {
+			count++;
+			auto lang = value.path ~ "lang" ~ dirSeparator;
+			if((value.main.length || value.api) && exists(lang) && lang.isDir) {
+				// use full path
+				version(Windows) {
+					lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
+				} else {
+					lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
+				}
+				if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
+				if(exists(lang)) lang = "`" ~ lang ~ "`";
+			} else {
+				lang = "null";
+			}
+			if(value.main.length) {
+				imports ~= "static import " ~ value.mod ~ ";" ~ newline;
+			}
+			loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
+		}
 	}
 
-	auto file = new ubyte[size_t.sizeof] ~ cast(ubyte[])compress(cfile);
-	std.bitmanip.write(file, __GENERATOR__, 0);
-
-	if(!exists(Paths.hidden ~ "data") || file != read(Paths.hidden ~ "data")) {
-
-		write(Paths.hidden ~ "data", file);
-		
-		string imports = "";
-		string loads = "";
-
-		string paths = "";
-
-		string[] fimports;
-
-		foreach(Info value ; ordered) {
-			if(value.active) {
-				auto lang = value.path ~ "lang" ~ dirSeparator;
-				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
-					// use full path
-					version(Windows) {
-						lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
-					} else {
-						lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
-					}
-					if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
-					if(exists(lang)) lang = "`" ~ lang ~ "`";
-				} else {
-					lang = "null";
-				}
-				if(value.main.length) {
-					imports ~= "static import " ~ value.mod ~ ";" ~ newline;
-				}
-				loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
-			}
+	if(paths.length > 2) paths = paths[0..$-2];
+	
+	// reset src/plugins
+	if(exists("src" ~ dirSeparator ~ "plugins")) {
+		foreach(string f ; dirEntries("src" ~ dirSeparator ~ "plugins", SpanMode.breadth)) {
+			if(f.isFile) remove(f);
 		}
+	} else {
+		mkdirRecurse("src" ~ dirSeparator ~ "plugins");
+	}
 
-		if(paths.length > 2) paths = paths[0..$-2];
-		
-		// reset src/plugins
-		if(exists("src" ~ dirSeparator ~ "plugins")) {
-			foreach(string f ; dirEntries("src" ~ dirSeparator ~ "plugins", SpanMode.breadth)) {
-				if(f.isFile) remove(f);
-			}
-		} else {
-			mkdirRecurse("src" ~ dirSeparator ~ "plugins");
-		}
+	write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(count) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
-		write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(info.length) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
-
-		// copy plugins into src/plugins
-		foreach(p ; ordered) {
-			if(p.active) {
-				foreach(string f ; dirEntries(p.path, SpanMode.breadth)) {
-					if(f.isFile) {
-						mkdirRecurse("src" ~ dirSeparator ~ f[0..f.lastIndexOf(dirSeparator)]);
-						write("src" ~ dirSeparator ~ f, read(f));
-					}
+	// copy plugins into src/plugins
+	foreach(p ; ordered) {
+		if(p.active) {
+			foreach(string f ; dirEntries(p.path, SpanMode.breadth)) {
+				if(f.isFile) {
+					mkdirRecurse("src" ~ dirSeparator ~ f[0..f.lastIndexOf(dirSeparator)]);
+					write("src" ~ dirSeparator ~ f, read(f));
 				}
 			}
 		}
-
 	}
 
 }

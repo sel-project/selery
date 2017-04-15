@@ -35,6 +35,7 @@ import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player : Player;
+import sel.util.command : Position;
 import sel.world.world : World, Rules;
 
 static import sul.entities;
@@ -554,6 +555,23 @@ abstract class Entity : EventListener!WorldEvent {
 		if(!yaw.isNaN) this.m_yaw = yaw;
 		if(!pitch.isNaN) this.m_pitch = pitch;
 		this.moved = true;
+	}
+
+	/**
+	 * Teleports the entity.
+	 */
+	public @trusted void teleport(EntityPosition position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.move(position, yaw, pitch);
+	}
+
+	/// ditto
+	public void teleport(BlockPosition position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.teleport(position.entityPosition, yaw, pitch);
+	}
+
+	/// ditto
+	public void teleport(Position position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.teleport(position.from(cast(BlockPosition)this.position), yaw, pitch);
 	}
 
 	/**

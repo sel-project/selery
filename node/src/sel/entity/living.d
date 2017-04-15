@@ -28,6 +28,7 @@ import sel.event.world;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.util.color : Color;
+import sel.util.command : Position;
 import sel.world.world : World;
 
 static import sul.effects;
@@ -195,9 +196,23 @@ public class Living : Entity {
 
 	alias move = super.move;
 
-	public @safe void move(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+	public void move(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
 		if(!bodyYaw.isNaN) this.m_body_yaw = bodyYaw;
 		super.move(position, yaw, pitch);
+	}
+
+	alias teleport = super.teleport;
+	
+	public void teleport(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.move(position, yaw, bodyYaw, pitch);
+	}
+
+	public void teleport(BlockPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.teleport(position.entityPosition, yaw, bodyYaw, pitch);
+	}
+	
+	public void teleport(Position position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+		this.teleport(position.from(cast(BlockPosition)this.position), yaw, bodyYaw, pitch);
 	}
 
 	/**

@@ -835,9 +835,10 @@ abstract class Player : Human {
 			super.respawn();
 		}
 	}
-	
-	/// Teleports a player to a new position in its current world.
-	public void teleport(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+
+	alias teleport = super.teleport;
+
+	public override void teleport(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
 		this.move(position, yaw, bodyYaw, pitch);
 		this.sendPosition();
 	}

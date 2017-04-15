@@ -22,6 +22,7 @@ import std.typecons : Tuple;
 
 import sel.server : server;
 import sel.entity.effect : Effect;
+import sel.entity.entity : Entity;
 import sel.event.world : EntityDamageByCommandEvent;
 import sel.item : Item, Slot;
 import sel.math.vector;
@@ -31,13 +32,13 @@ import sel.util.lang : translate;
 import sel.util.log;
 import sel.world.world : World;
 
-bool areValidCommandArgs(E...)() {
+/*bool areValidCommandArgs(E...)() {
 	static if(E.length == 1 && (is(E[0] == arguments) || is(E[0] == string[]))) return true;
 	foreach(T ; E) {
-		static if(!is(T == string) && !is(T == long) && !is(T == ulong) && !is(T == bool) && !is(T == BlockPosition) && !is(T == EntityPosition)) return false;
+		static if(!is(T == string) && !is(T == long) && !is(T == ulong) && !is(T == bool) && !is(T == Position)) return false;
 	}
 	return true;
-}
+}*/
 
 class Command {
 	
@@ -84,8 +85,11 @@ class Command {
 		public override string typeOf(size_t i) {
 			foreach(immutable j, T; Args) {
 				if(i == j) {
-					static if(is(T == Player)) return "player";
-					else static if(is(T == BlockPosition) || is(T == EntityPosition)) return "position";
+					static if(is(T == Target)) return "target";
+					else static if(is(T == Entity[])) return "entities";
+					else static if(is(T == Player[])) return "players";
+					else static if(is(T == Player)) return "player";
+					else static if(is(T == Position)) return "position";
 					else static if(is(T == arguments) || is(T == string[])) return "args";
 					else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return "int";
 					else static if(is(T == float) || is(T == double) || is(T == real)) return "float";
@@ -99,10 +103,10 @@ class Command {
 			foreach(immutable j, T; Args) {
 				if(i == j) {
 					static if(is(T == enum)) return "stringenum";
-					else static if(is(T == Player)) return "target";
+					else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return "target";
 					else static if(is(T == string)) return j == Args.length - 1 ? "rawtext" : "string";
 					else static if(is(T == bool)) return "bool";
-					else static if(is(T == BlockPosition) || is(T == EntityPosition)) return "blockpos";
+					else static if(is(T == Position)) return "blockpos";
 					else static if(is(T == float) || is(T == double) || is(T == real)) return "float";
 					else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return "int";
 					else return "rawtext";
@@ -142,39 +146,24 @@ class Command {
 								}
 							}
 							if(!found) return false;
-						} else static if(is(T == Player)) {
-							switch(args[j]) {
-								case "@p":
-									auto players = sender.watchlist!Player;
-									if(players.length) {
-										Player player;
-										double dist = double.infinity;
-										foreach(p ; players) {
-											double d = distance(sender.position, p.position);
-											if(d < dist) {
-												dist = d;
-												player = p;
-											}
-										}
-										cargs[i] = player;
-									}
-									break;
-								case "@r":
-									auto players = sender.world.players;
-									if(players.length) cargs[i] = players[sender.world.random.next($)];
-									break;
-								default:
-									// first player with the given name
-									auto list = server.playersWithName(args[j]);
-									if(list.length) cargs[i] = list[0];
-									break;
+						} else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) {
+							auto target = Target.fromString(sender.world, sender.position.blockPosition, args[j]);
+							static if(is(T == Player)) {
+								if(target.players.length) cargs[i] = target.players[0];
+							} else static if(is(T == Player[])) {
+								cargs[i] = target.players;
+							} else static if(is(T == Entity[])) {
+								cargs[i] = target.entities;
+							} else {
+								cargs[i] = target;
 							}
 						} else {
 							try {
-								static if(is(T == BlockPosition) || is(T == EntityPosition)) {
+								static if(is(T == Position)) {
 									if(j + 3 > args.length) return false;
-									cargs[i] = sender.commandPosition!(T.Type)(args[j++], args[j++], args[j]);
+									cargs[i] = Position(Position.Point.fromString(args[j++]), Position.Point.fromString(args[j++]), Position.Point.fromString(args[j]));
 								} else {
+									// bool, int, float, string
 									cargs[i] = to!T(args[j]);
 								}
 							} catch(ConvException) {
@@ -243,6 +232,135 @@ class Command {
 		return false;
 	}
 	
+}
+
+struct PositionImpl(T) if(isVector!T) {
+
+	static struct Point {
+
+		private T.Type _value;
+		private T.Type function(T.Type, T.Type) _apply;
+
+		public this(bool absolute, immutable T.Type v) {
+			this._value = v;
+			if(absolute) {
+				this._apply = &applyAbsolute;
+			} else {
+				this._apply = &applyRelative;
+			}
+		}
+
+		private static T.Type applyAbsolute(T.Type a, T.Type b) {
+			return a;
+		}
+
+		private static T.Type applyRelative(T.Type a, T.Type b) {
+			return b + a;
+		}
+
+		public T.Type apply(T.Type value) {
+			return this._apply(this._value, value);
+		}
+
+		public static Point fromString(string str) {
+			if(str.length) {
+				if(str[0] == '~') {
+					if(str.length == 1) {
+						return Point(false, 0);
+					} else {
+						return Point(false, to!(T.Type)(str[1..$]));
+					}
+				} else {
+					return Point(true, to!(T.Type)(str));
+				}
+			} else {
+				return Point(true, T.Type.init);
+			}
+		}
+
+	}
+
+	mixin((){
+		string ret;
+		foreach(c ; T.coords) {
+			ret ~= "public Point " ~ c ~ ";";
+		}
+		return ret;
+	}());
+
+	public @property T from(T position) {
+		T.Type[T.coords.length] ret;
+		foreach(i, c; T.coords) {
+			mixin("ret[i] = this." ~ c ~ ".apply(position." ~ c ~ ");");
+		}
+		return T(ret);
+	}
+
+}
+
+alias Position = PositionImpl!BlockPosition;
+
+struct Target {
+
+	public string input;
+
+	public Entity[] entities;
+	public Player[] players;
+
+	public this(string input) {
+		this.input = input;
+	}
+
+	public this(string input, Entity[] entities) {
+		this(input);
+		this.entities = entities;
+		foreach(entity ; entities) {
+			if(cast(Player)entity) this.players ~= cast(Player)entity;
+		}
+	}
+
+	public this(string input, Player[] players) {
+		this(input);
+		this.entities = cast(Entity[])players;
+		this.players = players;
+	}
+
+	public static Target fromString(World world, BlockPosition pos, string str) {
+		if(str.length >= 2 && str[0] == '@') {
+			string[string] selectors;
+			if(str.length >= 4 && str[2] == '[' && str[$-1] == ']') {
+				foreach(sel ; str[3..$-1].split(",")) {
+					auto spl = sel.split("=");
+					if(spl.length == 2) selectors[spl[0]] = spl[1];
+				}
+			}
+			switch(str[1]) {
+				case 'p':
+					if(world.players.length) {
+						//TODO
+						return Target(str);
+					} else {
+						return Target(str);
+					}
+				case 'r': 
+					return Target(str,[world.players[world.random.next($)]]);
+				case 'a':
+					return Target(str, world.players);
+				case 'e':
+					return Target(str, world.entities);
+				default:
+					return Target(str);
+			}
+		} else {
+			immutable sel = str.toLower.replace("-", " ");
+			Player[] ret;
+			foreach(player ; world.players) {
+				if(player.iname == sel) ret ~= player;
+			}
+			return Target(str, ret);
+		}
+	}
+
 }
 
 /**
