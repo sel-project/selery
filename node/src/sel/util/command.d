@@ -238,12 +238,6 @@ class Command {
 		}
 		return false;
 	}
-
-	public Command dup(C:CommandSender=CommandSender)() {
-		Command ret = new Command(this.command, this.description, this.aliases, this.op, this.hidden);
-		ret.overloads = this.overloads;
-		return ret;
-	}
 	
 }
 

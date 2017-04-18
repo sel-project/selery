@@ -17,4 +17,4 @@ module sel.event.server;
 
 public import sel.event.server.node : NodeAddedEvent, NodeRemovedEvent, NodeMessageEvent;
 public import sel.event.server.player : PlayerJoinEvent, PlayerLeftEvent, PlayerLanguageUpdatedEvent, PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
-public import sel.event.server.server : ServerEvent, ServerCommandEvent;
+public import sel.event.server.server : ServerEvent;
