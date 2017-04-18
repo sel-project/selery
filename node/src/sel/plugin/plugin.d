@@ -27,7 +27,10 @@ import sel.server : server;
  */
 class Plugin {
 
-	protected string n_namespace, n_name, n_author, n_version;
+	protected string n_namespace;
+	protected string n_name;
+	protected string[] n_authors;
+	protected string n_version;
 	protected bool n_api;
 	public bool hasMain;
 	protected string n_language;
@@ -52,11 +55,11 @@ class Plugin {
 	}
 
 	/**
-	 * Gets the plugin's author as indicated in the plugin's
+	 * Gets the plugin's authors as indicated in the plugin's
 	 * package.json file.
 	 */
-	public pure nothrow @property @safe @nogc string author() {
-		return this.n_author;
+	public pure nothrow @property @safe @nogc string[] authors() {
+		return this.n_authors;
 	}
 
 	/**
@@ -93,10 +96,10 @@ class Plugin {
 
 class PluginOf(T) : Plugin if(!isAbstractClass!T || is(T == struct)) {
 
-	public this(string namespace, string name, string author, string vers, bool api, string language) {
+	public this(string namespace, string name, string[] authors, string vers, bool api, string language) {
 		this.n_namespace = namespace;
 		this.n_name = name;
-		this.n_author = author;
+		this.n_authors = authors;
 		this.n_version = vers;
 		this.n_api = api;
 		this.n_language = language;

@@ -439,12 +439,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					this.no_rain = this.random.next(12000, 180000); // .5 to 7.5 days
 				}
 			} else if(--this.no_rain == 0) {
-				//toggle downfall
+				// toggle downfall
 				this.m_weather.rain = this.random.next(12000, 24000); // .5 to 1 day
 				this.m_weather.thunder = this.random.probability(.25f);
 				this.m_weather.intensity = this.random.range!ubyte(1, 3);
 				update = true;
-				log("started ", this.m_weather);
 			}
 			if(update) {
 				this.w_players.call!"sendWeather"();

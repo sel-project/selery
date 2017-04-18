@@ -55,7 +55,7 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network : Handler;
 import sel.server : server;
-import sel.util.command : Command;
+import sel.util.command : Command, CommandSender;
 import sel.util.concurrency : thread, Thread;
 import sel.util.lang;
 import sel.util.log;
@@ -95,7 +95,7 @@ alias PlayerVariables = Variables!("player", string, "name", string, "iname", st
  * Abstract class with abstract packet-related functions.
  * It's implemented as another class by every version of Minecraft.
  */
-abstract class Player : Human {
+abstract class Player : Human, CommandSender {
 	
 	public immutable bool pe;
 	public immutable bool pc;
@@ -541,7 +541,7 @@ abstract class Player : Human {
 	 * player.sendMessage("Translated stuff: {0}", "a", "b", "c");
 	 * ---
 	 */
-	public void sendMessage(string message, string[] args...) {
+	public override void sendMessage(string message, string[] args=[]) {
 		this.sendChatMessage(translate(message, this.lang, args, server.variables, this.variables));
 	}
 
@@ -557,7 +557,7 @@ abstract class Player : Human {
 	 * }
 	 * ---
 	 */
-	public void sendTip(string message, string[] args...) {
+	public void sendTip(string message, string[] args=[]) {
 		this.sendTipMessage(translate(message, this.lang, args, server.variables, this.variables));
 	}
 
@@ -580,7 +580,7 @@ abstract class Player : Human {
 	 * player.title = Title("", "subtitle", 0, 200, 100);
 	 * ---
 	 */
-	public Title title(Title title, string[] args...) {
+	public Title title(Title title, string[] args=[]) {
 		if(title.title.length) title.title = translate(title.title, this.lang, args, server.variables, this.variables);
 		if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args, server.variables, this.variables);
 		this.sendTitleMessage(title);
@@ -964,23 +964,16 @@ abstract class Player : Human {
 		}
 	}
 
-	public Vector3!T commandPosition(T)(string x, string y, string z) {
-		T[3] ret;
-		foreach(i, c; TypeTuple!("x", "y", "z")) {
-			{
-				mixin("alias a = " ~ c ~ ";");
-				T value = 0;
-				if(a.length && a[0] == '~') {
-					mixin("value = cast(T)this.position." ~ c ~ ";");
-					a = a[1..$];
-				}
-				if(a.length) {
-					value += to!T(a);
-				}
-				mixin("ret[" ~ to!string(i) ~ "] = value;");
-			}
-		}
-		return Vector3!T(ret);
+	public override BlockPosition startingPosition() {
+		return cast(BlockPosition)this.position;
+	}
+
+	public override Entity[] visibleEntities() {
+		return this.watchlist;
+	}
+
+	public override Player[] visiblePlayers() {
+		return this.world.players;
 	}
 	
 	public override @trusted bool onCollect(Collectable collectable) {

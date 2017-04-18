@@ -21,12 +21,12 @@ public import common.util;
 
 public import sel.settings;
 
-public import sel.server : server;
+public import sel.server : Server, server;
 public import sel.player;
 
 public import sel.plugin.config : Config, _, Value, value;
 public import sel.plugin.file : exists, isDir, isFile, read, write, remove;
 public import sel.plugin.plugin : start, reload, stop, event, global, inherit, cancel, command, description, aliases, params, op, hidden, task, arguments;
 
-public import sel.util.command : Position, Target;
+public import sel.util.command : CommandSender, Position, Target;
 public import sel.util.log : log, debug_log, warning_log, error_log;

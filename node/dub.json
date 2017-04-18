@@ -11,5 +11,8 @@
 	},
 	"stringImportPaths": [
 		".hidden"
+	],
+	"preBuildCommands": [
+		"dub init.d"
 	]
 }

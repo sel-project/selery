@@ -16,6 +16,7 @@ module sel.util.command;
 
 import std.conv : ConvException, to;
 import std.json : parseJSON;
+import std.random : uniform;
 import std.string : join, split, replace, toLower;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
 import std.typecons : Tuple;
@@ -60,20 +61,20 @@ class Command {
 			return new string[0];
 		}
 		
-		abstract bool callArgs(Player sender, arguments args);
+		abstract bool callArgs(CommandSender sender, arguments args);
 		
 	}
 	
-	private class CmdOf(E...) : Cmd {
+	private class CmdOf(C:CommandSender, E...) : Cmd {
 
 		private alias Args = E[0..$/2];
 		private alias Params = E[$/2..$];
 
 		mixin("private enum size_t minArgs = " ~ to!string(staticIndexOf!(void, Params) != -1 ? (Params.length - staticIndexOf!(void, Reverse!Params)) : 0) ~ ";");
 
-		public void delegate(Player, Args) del;
+		public void delegate(C, Args) del;
 		
-		public this(void delegate(Player, Args) del, string[] params) {
+		public this(void delegate(C, Args) del, string[] params) {
 			this.del = del;
 			this.params = params;
 		}
@@ -124,12 +125,18 @@ class Command {
 			}
 			return new string[0];
 		}
-		
-		public override bool callArgs(Player sender, arguments args) {
+
+		public override bool callArgs(CommandSender sender, arguments args) {
+			static if(!is(C == CommandSender)) {
+				C senderc = cast(C)sender;
+				if(senderc is null) return false;
+			} else {
+				alias senderc = sender;
+			}
 			static if(Args.length == 1 && is(Args[0] == arguments))  {
-				this.del(sender, args);
+				this.del(senderc, args);
 			} else static if(Args.length == 1 && is(Args[0] == string[])) {
-				this.del(sender, args.dup);
+				this.del(senderc, args.dup);
 			} else {
 				Args cargs;
 				size_t j = 0;
@@ -147,7 +154,7 @@ class Command {
 							}
 							if(!found) return false;
 						} else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) {
-							auto target = Target.fromString(sender.world, sender.position.blockPosition, args[j]);
+							auto target = Target.fromString(sender, args[j]);
 							static if(is(T == Player)) {
 								if(target.players.length) cargs[i] = target.players[0];
 							} else static if(is(T == Player[])) {
@@ -176,7 +183,7 @@ class Command {
 					}
 					j++;
 				}
-				this.del(sender, cargs);
+				this.del(senderc, cargs);
 			}
 			return true;
 		}
@@ -205,15 +212,15 @@ class Command {
 		this.hidden = hidden;
 	}
 
-	void add(alias func)(void delegate(Parameters!func) del, string[] params) if(Parameters!func.length >= 1 && is(Parameters!func[0] == Player)) {
+	void add(alias func)(void delegate(Parameters!func) del, string[] params) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
 		while(params.length < Parameters!func.length - 1) params ~= [ParameterIdentifierTuple!func][params.length + 1];
-		this.overloads ~= new CmdOf!(Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
+		this.overloads ~= new CmdOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
 	
 	/**
-	 * Returns: true if the command has been executed, false otherwise
+	 * Returns: true if the command has been executed, false otherwise.
 	 */
-	bool call(E...)(Player sender, E args) {
+	bool call(C:CommandSender, E...)(C sender, E args) {
 		foreach(cmd ; this.overloads) {
 			auto c = cast(CmdOf!E)cmd;
 			if(c) {
@@ -225,15 +232,59 @@ class Command {
 	}
 	
 	/// ditto
-	bool callArgs(Player sender, arguments args) {
+	bool callArgs(C:CommandSender)(C sender, arguments args) {
 		foreach(cmd ; this.overloads) {
 			if(cmd.callArgs(sender, args)) return true;
 		}
 		return false;
 	}
+
+	public Command dup(C:CommandSender=CommandSender)() {
+		Command ret = new Command(this.command, this.description, this.aliases, this.op, this.hidden);
+		ret.overloads = this.overloads;
+		return ret;
+	}
 	
 }
 
+/**
+ * Interface for command senders.
+ */
+interface CommandSender {
+
+	/**
+	 * Gets the command sender's current position.
+	 */
+	public BlockPosition startingPosition();
+
+	/**
+	 * Gets the list of the entities visible by the
+	 * command sender.
+	 */
+	public Entity[] visibleEntities();
+
+	/**
+	 * Gets the list of the players visible by the
+	 * command sender.
+	 */
+	public Player[] visiblePlayers();
+
+	/**
+	 * Sends a translatable message to the command sender.
+	 */
+	public void sendMessage(string, string[]=[]);
+
+}
+
+/**
+ * Indicates a position with abslutes and/or relatives coordinates.
+ * Example:
+ * ---
+ * auto pos = Position(Position.Point.fromString("~"), Position.Point.fromString("1"), Position.Point.fromString("~10"));
+ * auto res = pos.from(BlockPosition(1, 10, 100));
+ * assert(res == BlockPosition(1, 1, 110));
+ * ---
+ */
 struct PositionImpl(T) if(isVector!T) {
 
 	static struct Point {
@@ -288,6 +339,10 @@ struct PositionImpl(T) if(isVector!T) {
 		return ret;
 	}());
 
+	/**
+	 * Creates a vector from an initial position (used for
+	 * relative values).
+	 */
 	public @property T from(T position) {
 		T.Type[T.coords.length] ret;
 		foreach(i, c; T.coords) {
@@ -298,8 +353,13 @@ struct PositionImpl(T) if(isVector!T) {
 
 }
 
+/// ditto
 alias Position = PositionImpl!BlockPosition;
 
+/**
+ * Indicates a target selected using a username or a target selector.
+ * For reference see $(LINK2 https://minecraft.gamepedia.com/Commands#Target_selector_variables, Command on Minecraft Wiki).
+ */
 struct Target {
 
 	public string input;
@@ -325,7 +385,10 @@ struct Target {
 		this.players = players;
 	}
 
-	public static Target fromString(World world, BlockPosition pos, string str) {
+	/**
+	 * Creates a target from a username or a selector string.
+	 */
+	public static Target fromString(CommandSender sender, string str) {
 		if(str.length >= 2 && str[0] == '@') {
 			string[string] selectors;
 			if(str.length >= 4 && str[2] == '[' && str[$-1] == ']') {
@@ -336,407 +399,30 @@ struct Target {
 			}
 			switch(str[1]) {
 				case 'p':
-					if(world.players.length) {
+					auto players = sender.visiblePlayers;
+					if(players.length) {
 						//TODO
 						return Target(str);
 					} else {
 						return Target(str);
 					}
 				case 'r': 
-					return Target(str,[world.players[world.random.next($)]]);
+					return Target(str, [sender.visiblePlayers[uniform(0, $)]]);
 				case 'a':
-					return Target(str, world.players);
+					return Target(str, sender.visiblePlayers);
 				case 'e':
-					return Target(str, world.entities);
+					return Target(str, sender.visibleEntities);
 				default:
 					return Target(str);
 			}
 		} else {
 			immutable sel = str.toLower.replace("-", " ");
 			Player[] ret;
-			foreach(player ; world.players) {
+			foreach(player ; sender.visiblePlayers) {
 				if(player.iname == sel) ret ~= player;
 			}
 			return Target(str, ret);
 		}
 	}
-
-}
-
-/**
- * Collection of useful and vanilla-like commands that can
- * be used by the console and the players.
- */
-final class Commands {
-	
-	alias Message = Tuple!(string, "message", string[], "args");
-
-	/**
-	 * Sends a command as the console.
-	 * Example:
-	 * ---
-	 * // this will print "Hello from the console!" in every world
-	 * Commands.console(&Commands.say, ["Hello", "from", "the", "console!"].idup);
-	 * 
-	 * // this will kick every player from the server
-	 * Commands.console(&Commands.kickall);
-	 * ---
-	 */
-	public static void console(Message function(arguments args) command, arguments args=[], int id=-1) {
-		Message mx = command(args);
-		if(mx.message != "") {
-			command_log(id, mx.message.translate(server.settings.language, mx.args));
-		}
-	}
-
-	/**
-	 * Sends a commands as a player (passed as the first argument).
-	 * Example:
-	 * ---
-	 * // this will send a message to the player with the info about world's entities
-	 * if(server.playersWithName("steve").length) {
-	 *    Commands.player(server.playersWithName("steve")[0], &Commands.entities);
-	 * }
-	 * ---
-	 */
-	public static void player(Player player, Message function(arguments args) command, arguments args=[]) {
-		Message mx = command(args);
-		if(mx.message != "") {
-			player.sendMessage(mx.message, mx.args);
-		}
-	}
-
-	public static Message effect(arguments args) {
-		if(args.length < 2) return Message("{red}{commands.effect.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		ubyte id = 255;
-		try {
-			id = to!ubyte(args[1]);
-		} catch(ConvException) {
-			//TODO
-		}
-		uint duration = args.length > 2 ? to!uint(args[2]) : 30;
-		ubyte level = args.length > 3 ? to!ubyte(args[3]) : 0;
-		//TODO
-		return Message("{green}{commands.effect.success}", []);
-	}
-
-	/**
-	 * Bans a player from the server.
-	 * Params:
-	 * 		player: the name of the player to be banned
-	 * Example:
-	 * ---
-	 * if("steve".online) {
-	 *    Commands.ban(["steve"]);
-	 *    assert(!"steve".online);
-	 * }
-	 * ---
-	 */
-	/*public static @safe Message ban(arguments args) {
-		if(args.length != 1) return Message("{red}{commands.ban.usage}", []);
-		return Message(server.ban(args[0].replace("-", " ")) ? "{green}{commands.ban.banned}" : "{red}{commands.ban.already_banned}", args.dup);
-	}*/
-
-	/**
-	 * Changes the gamemode of a player.
-	 * Params:
-	 * 		player: the name of the player to change the gamemode
-	 * 		gamemode: the new gamemode for the player
-	 */
-	public static Message gamemode(arguments args) {
-		if(args.length != 2) return Message("{red}{commands.gamemode.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		string gm = args[1].toLower;
-		ubyte gamemode;
-		switch(args[1].toLower) {
-			case "survival":
-			case "0":
-				gamemode = Gamemode.survival;
-				break;
-			case "creative":
-			case "1":
-				gamemode = Gamemode.creative;
-				break;
-			case "adventure":
-			case "2":
-				gamemode = Gamemode.adventure;
-				break;
-			case "spectator":
-			case "3":
-				gamemode = Gamemode.spectator;
-				break;
-			default:
-				return Message("{red}{commands.gamemode.usage}", []);
-		}
-		foreach(player ; players) player.gamemode = gamemode;
-		return Message("{green}{commands.gamemode.success}", []);
-	}
-
-	/**
-	 * Gives an item to a player.
-	 * Params:
-	 * 		player: the name of the player, must be online
-	 * 		item: the name of the item to be given to the player in the format "name" or "name:damage"
-	 * 		count: count of the item
-	 * 		data: extra data as json
-	 * Example:
-	 * ---
-	 * // gives 64x beetroots
-	 * Commands.give(["steve", "beetroot"].idup);
-	 * 
-	 * // gives 12x apples
-	 * Commands.give(["steve", "apple", "12"].idup);
-	 * 
-	 * // gives a stack of random coloured wool
-	 * Commands.give(["steve", "wool:" ~ to!string(uniform(0, 16) & 15)].idup);
-	 * 
-	 * // gives a consumed sword
-	 * Commands.give(["steve", "diamondSword:1500"].idup);
-	 * ---
-	 */
-	public static Message give(arguments args) {
-		if(args.length < 2) return Message("{red}{commands.give.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		string itemstr;
-		ushort itemmeta;
-		ubyte count = 0;
-		if(args[1].split(":").length == 1) {
-			itemstr = args[1];
-			itemmeta = 0;
-		} else {
-			itemstr = args[1].split(":")[0];
-			try {
-				itemmeta = args[1].split(":")[1].to!ushort;
-			} catch(ConvException e) {
-				return Message("{red}{commands.give.metaerr}", [args[1].split(":")[1]]);
-			}
-		}
-		if(args.length > 2) {
-			try {
-				count = args[2].to!ubyte;
-			} catch(ConvException e) {
-				return Message("{red}{commands.give.counterr}", [args[2]]);
-			}
-		}
-		Slot given;
-		foreach(player ; players) {
-			Item item = player.world.items.fromString(itemstr, itemmeta);
-			if(item is null) return Message("{red}{commands.give.noitem}", [itemstr]);
-			if(args.length > 3) {
-				try {
-					item.parseJSON(parseJSON(args[3..$].join(" ")));
-				} catch(Throwable t) {}
-			}
-			given = count == 0 ? Slot(item) : Slot(item, count);
-			player.inventory += given;
-		}
-		return Message("{green}{commands.give.given}", [given.toString()]);
-	}
-
-	/**
-	 * Kicks a player from the server.
-	 * Params:
-	 * 		player = name of the player to be kicked
-	 * 		reason = reason of the disconnection
-	 */
-	public static Message kick(arguments args) {
-		if(args.length < 1) return Message("{red}{commands.kick.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		if(args.length == 1) {
-			foreach(player ; players) player.kick();
-		} else {
-			foreach(player ; players) player.kick(args[1..$].join(" "));
-		}
-		return Message("{green}{commands.kick.success}", []);
-	}
-
-	/**
-	 * Kills a player with reason Damage.UNKNOWN.
-	 * The damage can be cancelled by EntityDamageEvent.
-	 * Params:
-	 * 		player: the name of the player, must be online
-	 * Example:
-	 * ---
-	 * @event damage(EntityDamageEvent event) {
-	 *    if(event.cause == Damage.UNKNOWN) {
-	 *       // probably a kill command
-	 *       event.cancel();
-	 *    }
-	 * }
-	 * ---
-	 */
-	public static Message kill(arguments args) {
-		if(args.length < 1) return Message("{red}{commands.kill.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		foreach(player ; players) player.attack(new EntityDamageByCommandEvent(player));
-		return Message("{green}{commands.kill.killed}", []);
-	}
-
-	public static Message op(arguments args) {
-		if(args.length < 1) return Message("{red}{commands.op.usage}", []);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		foreach(player ; players) player.operator = true;
-		return Message("{green}{commands.op.success}", []);
-	}
-
-	/**
-	 * Broadcasts a message to every world.
-	 * N.B. that the worlds can override the broadcast function and block this message
-	 * Params:
-	 * 		message: the string to be broadcasted
-	 * Example:
-	 * ---
-	 * // print "Hello from console!"
-	 * Commands.say(["Hello", "from", "console!"].idup);
-	 * 
-	 * // send translations for {commands.help}
-	 * Commands.say(["{commands.help}"].idup);
-	 * 
-	 * class Example : World {
-	 * 
-	 *    public override void broadcast(string message, string[] params) {
-	 *       // block every world's message
-	 * 	  }
-	 * 
-	 * }
-	 * ---
-	 */
-	public static Message say(arguments args) {
-		if(args.length > 0) {
-			server.broadcast("{lightpurple}server: " ~ args.join(" "));
-		}
-		return Message.init;
-	}
-
-	/**
-	 * Summons an entity in a world.
-	 * Params:
-	 * 		entity = the name of the entity to be summoned
-	 * 		world = the name of the world where the entity will be spawned
-	 * 		position = position of the entity
-	 * 		motion = motion on the entity
-	 * Example:
-	 * ---
-	 * // spawn a cow at the spawn point
-	 * Commands.summon("cow world");
-	 * 
-	 * // spawn an arrow at 0 64 0 going up
-	 * Commands.summon("arrow world 0 64 0 0 10 0");
-	 * ---
-	 */
-	/*public static Message summon(arguments args) {
-		if(args.length != 2 && args.length != 5 && args.length != 8) return Message("{red}{commands.summon.usage}", []);
-		if(!server.has(args[1])) return Message("{red}{commands.noworld}", []);
-		try {
-			World world = server[args[1]];
-			EntityPosition position = args.length == 5 ? new EntityPosition(to!float(args[2]), to!float(args[3]), to!float(args[4])) : world.spawnPoint;
-			Entity entity = world.entities.get(args[0], world, position);
-			if(args.length == 8) {
-				entity.motion = new EntityPosition(to!float(args[5]), to!float(args[6]), to!float(args[7]));
-			}
-			world.spawn(entity);
-			return Message("{green}{commands.summon.success}");
-		} catch(ConvException e) {
-			return Message("{red}{commands.summon.usage}");
-		}
-	}*/
-
-	/**
-	 * Toggles downfall.
-	 */
-	public static Message toggledownfall(arguments args) {
-		if(args.length < 1) return Message("{red}{commands.toggledownfall.usage}", []);
-		auto worlds = server.worldsWithNameIns(args[0]);
-		if(!worlds.length) return Message("{red}{commands.noworld}", []);
-		foreach(world ; worlds) world.downfall = !world.downfall;
-		return Message("{green}{commands.toggledownfall.success}", []);
-	}
-
-	/**
-	 * Transfers a player to another node.
-	 */
-	public static Message transfer(arguments args) {
-		if(args.length < 2) return Message("{red}{commands.transfer.usage}", []);
-		auto node = server.nodeWithName(args[1]);
-		if(node is null) return Message("{red}{commands.transfer.nonode}", [args[1]]);
-		auto players = server.playersWithName(args[0]);
-		if(!players.length) return Message("{red}{commands.notonline}", []);
-		foreach(player ; players) {
-			player.transfer(node);
-		}
-		return Message("{green}{commands.transfer.success}", []);
-	}
-
-	/**
-	 * Completion for commands, used when a PC player uses the tab button
-	 * whilst writing a command.
-	 * Params:
-	 * 		sender = Player instance of the player who's requesting the completions
-	 * 		args = Previous arguments (e.g. in /give: ["Steve", "diamondSword"])
-	 */
-	//TODO this class causes a segmentation error using LDC on Linux
-	/++public final class Complete {
-
-		@disable this();
-
-		/** Gets the list of players as a string in the whole server. */
-		public static string[] serverPlayers() {
-			string[] ret;
-			foreach(string name ; server.playersNames) {
-				ret ~= name.replace(" ", "-");
-			}
-			return ret;
-		}
-
-		/** Gets the list of players as a string in a player's world. */
-		public static string[] worldPlayers(Player sender) {
-			string[] ret;
-			foreach(Player player ; sender.world.online!Player) {
-				ret ~= player.name.replace(" ", "-");
-			}
-			return ret;
-		}
-
-		/**
-		 * Arguments for the ban command.
-		 * Returns: the list of the online player (in the whole server)
-		 */
-		public static const(string[] delegate(Player, string[])[]) ban = [
-			(Player sender, string[] commands) {
-				return serverPlayers();
-			}
-		];
-
-		/**
-		 * Arguments for the gamemode command.
-		 * Returns: a a list of world's players and a list of available gamemodes
-		 */
-		public static const(string[] delegate(Player, string[])[]) gamemode = [
-			(Player sender, string[] commands) {
-				return serverPlayers();
-			},
-			(Player sender, string[] commands) {
-				return ["survival", "creative", "adventure", "spectator"];
-			}
-		];
-
-		/**
-		 * Arguments for the kill command.
-		 * Returns: a list of the player in the sender'w world.
-		 */
-		public static const(string[] delegate(Player, string[])[]) kill = [
-			(Player sender, string[] commands) {
-				return worldPlayers(sender);
-			}
-		];
-
-	}++/
 
 }

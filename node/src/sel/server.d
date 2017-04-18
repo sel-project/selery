@@ -49,14 +49,16 @@ import resusage.cpu;
 
 import sel.network : Handler;
 import sel.settings;
+import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;
 import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
+import sel.math.vector : BlockPosition;
 import sel.player.player : Player;
 import sel.plugin.plugin : Plugin;
-import sel.util.command : Command, Commands;
+import sel.util.command : Command, CommandSender;
 import sel.util.concurrency : thread, Thread;
 import sel.util.lang : Lang, translate, Variables;
 import sel.util.log;
@@ -131,7 +133,7 @@ version(Windows) {
 }
 
 /** Singleton for the server instance. */
-final class Server : EventListener!ServerEvent {
+final class Server : EventListener!ServerEvent, CommandSender {
 
 	private ulong start_time;
 
@@ -460,7 +462,7 @@ final class Server : EventListener!ServerEvent {
 
 		foreach(plugin ; this.n_plugins) {
 			plugin.load();
-			auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ plugin.author ~ Text.reset, Text.white ~ plugin.vers];
+			auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset, Text.white ~ plugin.vers];
 			string s = "{startup.plugin.enabled}";
 			if(plugin.api && plugin.hasMain) s = "{startup.plugin.enabled.asapi}";
 			else if(plugin.api) s = "{startup.plugin.enabled.withapi}";
@@ -1152,6 +1154,26 @@ final class Server : EventListener!ServerEvent {
 		(*ptr).add!func(del, params);
 	}
 
+	public override BlockPosition startingPosition() {
+		return BlockPosition(0);
+	}
+
+	public override Entity[] visibleEntities() {
+		Entity[] ret;
+		foreach(world ; this.worlds) {
+			ret ~= world.entities;
+		}
+		return ret;
+	}
+
+	public override Player[] visiblePlayers() {
+		return this.players;
+	}
+
+	public override void sendMessage(string message, string[] args=[]) {
+		log(translate(message, this.settings.language, args));
+	}
+
 	// hub-node communication and related methods
 
 	private void sendPacket(ubyte[] packet) {
@@ -1505,64 +1527,12 @@ final class Server : EventListener!ServerEvent {
 	}
 
 	// handles a command from various sources.
-	// also calls the event.
 	private void handleCommand(ubyte origin, Address address, string command, int id=-1) {
-		command = command.strip;
-		if(command.length == 0) return;
-		if(origin == ServerCommandEvent.Origin.hub) address = this.hubAddress;
-		string[] s = command.split(" ");
-		command = s[0].toLower;
-		immutable(string)[] args = s.length > 1 ? s[1..$].idup : [];
-		if(!this.callCancellableIfExists!ServerCommandEvent(origin, address, command, args)) {
-			switch(command) {
-				case "chunks":
-					string[] chunks;
-					foreach(world ; this.m_worlds) {
-						chunks ~= world.name ~ ": " ~ to!string(world.loadedChunks);
-					}
-					command_log(id, "Chunks (children are included): ", chunks.join(", "));
-					break;
-				case "effect":
-					Commands.console(&Commands.effect, args, id);
-					break;
-				case "gm":
-				case "gamemode":
-					Commands.console(&Commands.gamemode, args, id);
-					break;
-				case "kick":
-					Commands.console(&Commands.kick, args, id);
-					break;
-				case "kill":
-					Commands.console(&Commands.kill, args, id);
-					break;
-				case "nodes":
-					string[] nodes;
-					foreach(node ; this.nodes_hubid) {
-						nodes ~= node.name ~ " (" ~ node.hubId.to!string ~ ")";
-					}
-					command_log(id, "Nodes: ", nodes.join(", "));
-					break;
-				case "op":
-					Commands.console(&Commands.op, args, id);
-					break;
-				case "say":
-					this.broadcast("{lightpurple}" ~ args.join(" "));
-					break;
-				case "shutdown":
-				case "stop":
-					this.shutdown();
-					break;
-				case "toggledownfall":
-					Commands.console(&Commands.toggledownfall, args, id);
-					break;
-				case "transfer":
-					Commands.console(&Commands.transfer, args, id);
-					break;
-				case "worlds":
-					command_log(id, "Worlds: ", to!string(this.m_worlds));
-					break;
-				default:
-					break;
+		auto spl = command.strip.split(" ");
+		if(spl.length) {
+			auto c = spl[0] in this.commands; //TODO aliases
+			if(c) {
+				(*c).callArgs(this, spl[1..$].idup);
 			}
 		}
 	}

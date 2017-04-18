@@ -47,7 +47,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 8;
+enum size_t __GENERATOR__ = 10;
 
 void main(string[] args) {
 
@@ -145,7 +145,14 @@ void main(string[] args) {
 				info[index].name = value["name"].str;
 			}
 			if("author" in value && value["author"].type == JSON_TYPE.STRING) {
-				info[index].author = value["author"].str;
+				info[index].authors = [value["author"].str];
+			}
+			if("authors" in value && value["authors"].type == JSON_TYPE.ARRAY) {
+				foreach(author ; value["authors"].array) {
+					if(author.type == JSON_TYPE.STRING) {
+						info[index].authors ~= author.str;
+					}
+				}
 			}
 			if("version" in value && value["version"].type == JSON_TYPE.STRING) {
 				info[index].vers = value["version"].str;
@@ -224,7 +231,7 @@ void main(string[] args) {
 				}
 			}
 			if(api.canFind(Software.api)) {
-				writeln(Text.white ~ "Loading plugin " ~ Text.blue ~ inf.name ~ Text.white ~ " by " ~ Text.aqua ~ inf.author ~ Text.white ~ " version " ~ Text.aqua ~ inf.vers);
+				//writeln(Text.white ~ "Loading plugin " ~ Text.blue ~ inf.name ~ Text.white ~ " version " ~ Text.aqua ~ inf.vers);
 			} else {
 				writeln(Text.white ~ "Cannot load plugin " ~ Text.red ~ inf.name ~ Text.white ~ " because it has a different target API than the one required by this version of " ~ Software.name);
 				inf.active = false;
@@ -260,7 +267,7 @@ void main(string[] args) {
 			if(value.main.length) {
 				imports ~= "static import " ~ value.mod ~ ";" ~ newline;
 			}
-			loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, `" ~ value.author ~ "`, `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
+			loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
 		}
 	}
 
@@ -303,7 +310,7 @@ struct Info {
 	public bool api;
 
 	public string name = "Unknown plugin";
-	public string author = "Unknown author";
+	public string[] authors = [];
 	public string vers = "1.0.0";
 
 	public string id;

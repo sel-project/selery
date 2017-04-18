@@ -5,7 +5,7 @@
 		"sel-common": {
 			"path": "../common"
 		},
-		"sel-utils": "~>1.0.603"
+		"sel-utils": "~>1.0.608"
 	},
 	"stringImportPaths": [
 		"resources"
