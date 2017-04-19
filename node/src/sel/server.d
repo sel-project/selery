@@ -351,10 +351,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			foreach(game ; info.gamesInfo) {
 				this.handleGameInfo(game);
 			}
-			
-			// save for the next building
-			saveProtocols(PE, this.n_settings.pocket.protocols);
-			saveProtocols(PC, this.n_settings.minecraft.protocols);
 
 			bool conflict = false;
 

@@ -1,6 +1,7 @@
 ﻿module common.config;
 
-import std.algorithm : sort;
+import std.algorithm : sort, uniq, filter, canFind;
+import std.array : array;
 import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
@@ -188,7 +189,7 @@ struct Config {
 			if(type != ConfigType.node) file ~= "\t\t\"motd\": " ~ JSONValue(this.minecraft.motd).toString() ~ "," ~ newline;
 			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": " ~ to!string(this.minecraft.onlineMode) ~ "," ~ newline;
 			if(type != ConfigType.node) file ~= "\t\t\"addresses\": " ~ JSONValue(this.minecraft.addresses).toString() ~ "," ~ newline;
-			file ~= "\t\t\"accepted-protcols\": " ~ to!string(this.minecraft.protocols) ~ newline;
+			file ~= "\t\t\"accepted-protocols\": " ~ to!string(this.minecraft.protocols) ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		{
@@ -197,7 +198,7 @@ struct Config {
 			if(type != ConfigType.node) file ~= "\t\t\"motd\": " ~ JSONValue(this.pocket.motd).toString() ~ "," ~ newline;
 			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": " ~ to!string(this.pocket.onlineMode) ~ "," ~ newline;
 			if(type != ConfigType.node) file ~= "\t\t\"addresses\": " ~ JSONValue(this.pocket.addresses).toString() ~ "," ~ newline;
-			file ~= "\t\t\"accepted-protcols\": " ~ to!string(this.pocket.protocols);
+			file ~= "\t\t\"accepted-protocols\": " ~ to!string(this.pocket.protocols);
 			if(type != ConfigType.node && edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": " ~ to!string(this.allowVanillaPlayers);
 			file ~= newline ~ "\t}," ~ newline;
 		}
@@ -218,9 +219,9 @@ struct Config {
 			file ~= "\t\t\"do-weather-cycle\": " ~ to!string(this.doWeatherCycle) ~ "," ~ newline;
 			file ~= "\t\t\"random-tick-speed\": " ~ to!string(this.randomTickSpeed) ~ "," ~ newline;
 			file ~= "\t\t\"do-scheduled-ticks\": " ~ to!string(this.doScheduledTicks) ~ newline;
-			file ~= "\n}," ~ newline;
+			file ~= "\t}," ~ newline;
 		}
-		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins: []," ~ newline;
+		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": []," ~ newline;
 		/*if(type != ConfigType.node) {
 			file ~= "\t\"panel\": {" ~ newline;
 			file ~= "\t\t\"enabled\": " ~ to!string(this.panel) ~ "," ~ newline;
@@ -352,7 +353,7 @@ struct Config {
 			set!"world.do-weather-cycle"(this.doWeatherCycle);
 			set!"world.random-tick-speed"(this.randomTickSpeed);
 			set!"world.do-scheduled-ticks"(this.doScheduledTicks);
-			//set!"plugins"(this.plugins); // used in init.d
+			set!"plugins"(this.plugins);
 			set!"panel.enabled"(this.panel);
 			set!"panel.users"(this.panelUsers);
 			set!"panel.addresses"(this.panelAddresses);
@@ -375,7 +376,18 @@ struct Config {
 			set!"hncom.unix-socket-address"(this.hncomUnixSocketAddress);
 			set!"google-analytics"(this.googleAnalytics);
 			set!"social"(this.social);
-			
+
+			void checkProtocols(ref uint[] protocols, uint[] accepted) {
+				sort(protocols);
+				protocols = protocols.uniq.filter!(a => accepted.canFind(a)).array;
+			}
+
+			checkProtocols(this.minecraft.protocols, supportedMinecraftProtocols.keys);
+			if(this.minecraft.protocols.length == 0) this.minecraft.enabled = false;
+
+			checkProtocols(this.pocket.protocols, supportedPocketProtocols.keys);
+			if(this.pocket.protocols.length == 0) this.pocket.enabled = false;
+
 			if("max-players" in json && json["max-players"].type == JSON_TYPE.STRING && json["max-players"].str.toLower == "unlimited") this.maxPlayers = 0;
 			
 			if("max-nodes" in json && json["max-nodes"].type == JSON_TYPE.STRING && json["max-nodes"].str.toLower == "unlimited") this.maxNodes = 0;

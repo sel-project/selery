@@ -86,8 +86,7 @@ before_build:
 
 build_script:
  - cd hub && mkdir resources && dub build --arch=%Darch% --compiler=%DC% --build=release
- - cd ..\node && dub init.d --compiler=%CD%
- - dub build --arch=%Darch% --compiler=%DC% --build=release
+ - cd ..\node && dub build --arch=%Darch% --compiler=%DC% --build=release
 
 test_script:
  - echo %PLATFORM%

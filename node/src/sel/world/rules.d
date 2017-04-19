@@ -17,6 +17,7 @@ module sel.world.rules;
 import std.conv : to;
 import std.typecons : Tuple, tuple;
 
+import common.config : Config;
 import common.path : Paths;
 
 import sel.world.world : Gamemode, Difficulty;
@@ -29,35 +30,16 @@ struct Rules {
 		return def;
 	}
 
-	public static void reload(string[string] data) {
-		void set(T)(string key, ref T dest) {
-			auto p = key in data;
-			if(p) {
-				try {
-					dest = to!T(*p);
-				} catch(Exception) {}
-			}
-		}
+	public static void reload(Config config) {
 		Rules rules;
-		Gamemode g;
-		Difficulty d;
-		with(rules) {
-			set("gamemode", g);
-			set("difficulty", d);
-			set("immutable-world", immutableWorld);
-			set("pvp", pvp);
-			set("pvm", pvm);
-			set("daylight-cycle", daylightCycle);
-			set("toggle-downfall", toggledownfall);
-			set("chunk-tick", chunkTick);
-			set("random-tick", randomTick);
-			set("scheduled-ticks", scheduledTicks);
-			set("thunders", thunders);
-			set("chunks-autosending", chunksAutosending);
-			set("view-distance", viewDistance);
-		}
-		rules.gamemode = g;
-		rules.difficulty = d;
+		rules.gamemode = to!Gamemode(config.gamemode);
+		rules.difficulty = to!Difficulty(config.difficulty);
+		rules.pvp = config.pvp;
+		rules.pvm = config.pvm;
+		rules.daylightCycle = config.doDaylightCycle;
+		rules.toggledownfall = config.doWeatherCycle;
+		rules.randomTick = config.randomTickSpeed;
+		rules.scheduledTicks = config.doScheduledTicks;
 		def = rules;
 	}
 	
@@ -95,24 +77,6 @@ struct Rules {
 			this.thunders, this.difficulty,
 			this.chunksAutosending, this.viewDistance,
 			this.entityDrops, this.fireTick, this.mobLoot, this.mobSpawning, this.tileDrops, this.keepInventory, this.mobGriefing, this.naturalRegeneration, this.depleteHunger);
-	}
-
-	public inout @safe Tuple!(string, string)[] serialize() {
-		return [
-			tuple("gamemode", to!string(cast(Gamemode)this.gamemode)),
-			tuple("difficulty", to!string(cast(Difficulty)this.difficulty)),
-			tuple("immutable-world", to!string(this.immutableWorld)),
-			tuple("pvp", to!string(this.pvp)),
-			tuple("pvm", to!string(this.pvm)),
-			tuple("daylight-cycle", to!string(this.daylightCycle)),
-			tuple("toggle-downfall", to!string(this.toggledownfall)),
-			tuple("chunk-tick", to!string(this.chunkTick)),
-			tuple("random-tick", to!string(this.randomTick)),
-			tuple("scheduled-ticks", to!string(this.scheduledTicks)),
-			tuple("thunders", to!string(this.thunders)),
-			tuple("chunks-autosending", to!string(this.chunksAutosending)),
-			tuple("view-distance", to!string(this.viewDistance)),
-		];
 	}
 	
 }

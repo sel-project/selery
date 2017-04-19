@@ -43,15 +43,27 @@ import std.string;
 import std.uuid : randomUUID;
 import std.zlib : compress, UnCompress;
 
+import common.config;
 import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 14;
+enum size_t __GENERATOR__ = 20;
 
 void main(string[] args) {
 
 	mkdirRecurse(Paths.hidden);
+
+	Config config = Config(ConfigType.node, false, false);
+	config.load();
+	config.save();
+
+	string[] protocols = ["module __protocols;"];
+
+	protocols ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
+	protocols ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
+
+	write("src" ~ dirSeparator ~ "__protocols.d", protocols.join(newline));
 
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 
@@ -81,33 +93,35 @@ void main(string[] args) {
 		}
 	}
 
-	//TODO load plugins from sel.json:plugins
+	//TODO load plugins from config.plugins
 
 	// load plugins
-	foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
-		if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
-			if(ppath.isDir) {
-				loadPlugin(ppath);
-			} else if(ppath.isFile && ppath.endsWith(".ssa")) {
-				string name = ppath[Paths.plugins.length..$-4];
-				ubyte[] file = cast(ubyte[])read(ppath);
-				if(file.length > 5 && cast(string)file[0..5] == "plugn") {
-					file = file[5..$];
-					auto pack = readPluginArchive(file);
-					if(pack.type == JSON_TYPE.OBJECT) {
-						auto vers = "version" in pack.object;
-						if(vers && (*vers).type == JSON_TYPE.STRING) {
-							bool copy = !exists(temp ~ name ~ dirSeparator ~ "package.json");
-							if(!copy) {
-								try {
-									auto v = "version" in parseJSON(cast(string)read(temp ~ name ~ dirSeparator ~ "package.json"));
-									copy = v && (*v).type == JSON_TYPE.STRING && (*v).str != (*vers).str;
-								} catch(JSONException) {}
-							}
-							if(copy) {
-								write(temp ~ name ~ ".sa", file);
-								executeShell("cd " ~ temp ~ " && sel uncompress " ~ name ~ ".sa " ~ name);
-								remove(temp ~ name ~ ".sa");
+	if(exists(Paths.plugins)) {
+		foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
+			if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
+				if(ppath.isDir) {
+					loadPlugin(ppath);
+				} else if(ppath.isFile && ppath.endsWith(".ssa")) {
+					string name = ppath[Paths.plugins.length..$-4];
+					ubyte[] file = cast(ubyte[])read(ppath);
+					if(file.length > 5 && cast(string)file[0..5] == "plugn") {
+						file = file[5..$];
+						auto pack = readPluginArchive(file);
+						if(pack.type == JSON_TYPE.OBJECT) {
+							auto vers = "version" in pack.object;
+							if(vers && (*vers).type == JSON_TYPE.STRING) {
+								bool copy = !exists(temp ~ name ~ dirSeparator ~ "package.json");
+								if(!copy) {
+									try {
+										auto v = "version" in parseJSON(cast(string)read(temp ~ name ~ dirSeparator ~ "package.json"));
+										copy = v && (*v).type == JSON_TYPE.STRING && (*v).str != (*vers).str;
+									} catch(JSONException) {}
+								}
+								if(copy) {
+									write(temp ~ name ~ ".sa", file);
+									executeShell("cd " ~ temp ~ " && sel uncompress " ~ name ~ ".sa " ~ name);
+									remove(temp ~ name ~ ".sa");
+								}
 							}
 						}
 					}
@@ -131,7 +145,7 @@ void main(string[] args) {
 		if(index !in info || info[index].path.startsWith(temp)) {
 			info[index] = Info();
 			info[index].json = value;
-			info[index].id = index;
+			info[index].id = index[index.lastIndexOf("/")+1..$];
 			info[index].path = path;
 			if("priority" in value && value["priority"].type == JSON_TYPE.STRING) {
 				info[index].priority = value["priority"].str;
@@ -271,17 +285,28 @@ void main(string[] args) {
 	}
 
 	if(paths.length > 2) paths = paths[0..$-2];
-	
-	// reset src/plugins
-	if(exists("src" ~ dirSeparator ~ "plugins")) {
-		foreach(string f ; dirEntries("src" ~ dirSeparator ~ "plugins", SpanMode.breadth)) {
-			if(f.isFile) remove(f);
+
+	write("src" ~ dirSeparator ~ "__plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(count) ~ newline ~ "module __plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+
+	// delete every folder that is not sel (so dub will not include it)
+	foreach(string file ; dirEntries("src", SpanMode.breadth)) {
+		if(file.isFile && !file.startsWith("src" ~ dirSeparator ~ "sel") && !file.split(dirSeparator).length >= 2) {
+			remove(file);
 		}
-	} else {
-		mkdirRecurse("src" ~ dirSeparator ~ "plugins");
 	}
 
-	write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(count) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+	// copy to src
+	foreach(plug ; ordered) {
+		if(plug.active) {
+			foreach(string file ; dirEntries(plug.path, SpanMode.breadth)) {
+				if(file.isFile && file.endsWith(".d")) {
+					immutable p = file[plug.path.length..$];
+					mkdirRecurse("src" ~ dirSeparator ~ plug.id ~ dirSeparator ~ p[0..p.lastIndexOf(dirSeparator)+1]);
+					write("src" ~ dirSeparator ~ plug.id ~ dirSeparator ~ p, read(file));
+				}
+			}
+		}
+	}
 
 }
 

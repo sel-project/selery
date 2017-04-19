@@ -25,6 +25,8 @@ import common.config;
 import common.path : Paths;
 import common.sel;
 
+import sel.world.rules : Rules;
+
 version(OneNode) {
 
 	enum bool __oneNode = true;
@@ -44,61 +46,11 @@ version(NoSocket) {
 
 }
 
-static if(!is(typeof(__minecraftProtocols)) && __traits(compiles, import("protocols." ~ to!string(PC)))) {
-
-	enum uint[] __minecraftProtocols = parse(import("protocols." ~ to!string(PC)), supportedMinecraftProtocols.keys);
-
-}
-
-static if(!is(typeof(__pocketProtocols)) && __traits(compiles, import("protocols." ~ to!string(PE)))) {
-
-	enum uint[] __pocketProtocols = parse(import("protocols." ~ to!string(PE)), supportedPocketProtocols.keys);
-
-}
-
-private uint[] parse(string str, uint[] check, uint[] def=[]) {
-	uint[] protocols;
-	foreach(string s ; str.split(",")) {
-		try {
-			uint protocol = to!uint(s.strip);
-			if(!protocols.canFind(protocol)) protocols ~= protocol;
-		} catch(Exception) {}
-	}
-	uint[] ret;
-	foreach(protocol ; protocols) {
-		if(check.canFind(protocol)) ret ~= protocol;
-	}
-	if(ret.length) {
-		return sort(ret).release();
-	} else {
-		return def;
-	}
-}
-
-static if(!is(typeof(__minecraftProtocols))) {
-
-	enum uint[] __minecraftProtocols = latestMinecraftProtocols;
-
-}
-
-static if(!is(typeof(__pocketProtocols))) {
-
-	enum uint[] __pocketProtocols = latestPocketProtocols;
-
-}
+public import __protocols;
 
 enum bool __minecraft = __minecraftProtocols.length != 0;
 
 enum bool __pocket = __pocketProtocols.length != 0;
-
-void saveProtocols(ubyte type, uint[] protocols) {
-	string[] str;
-	foreach(protocol ; protocols) {
-		str ~= to!string(protocol);
-	}
-	mkdirRecurse(Paths.hidden);
-	write(Paths.hidden ~ "protocols." ~ to!string(type), join(str, ","));
-}
 
 mixin("alias __minecraftProtocolsTuple = TypeTuple!(" ~ __minecraftProtocols.to!string[1..$-1] ~ ");");
 
@@ -148,6 +100,8 @@ struct Settings {
 
 		this.config = Config(__oneNode ? ConfigType.full : ConfigType.node, false, false);
 		this.config.load();
+
+		Rules.reload(this.config);
 
 	}
 	

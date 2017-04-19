@@ -142,8 +142,6 @@ class Server {
 
 		this.n_settings = cast(shared)Settings.reload();
 
-		log(this.n_settings);
-
 		version(Windows) {
 			import std.process : executeShell;
 			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (__oneNode ? "" : "hub ^| ") ~ Software.display);

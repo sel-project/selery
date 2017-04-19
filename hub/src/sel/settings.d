@@ -134,12 +134,6 @@ struct Settings {
 		settings.config.minecraft.motd = unpad(settings.config.minecraft.motd);
 		settings.config.pocket.motd = unpad(settings.config.pocket.motd.replace(";", ""));
 
-		filter(settings.config.minecraft.protocols, supportedMinecraftProtocols.keys);
-		filter(settings.config.pocket.protocols, supportedPocketProtocols.keys);
-
-		if(!settings.config.minecraft.protocols.length) settings.config.minecraft.enabled = false;
-		if(!settings.config.pocket.protocols.length) settings.config.pocket.enabled = false;
-
 		// icon
 		//TODO check file header to match PNG and size (64x64)
 		if(exists(Paths.home ~ settings.config.icon)) settings.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.home ~ settings.config.icon)).idup;
@@ -371,13 +365,4 @@ struct AddressRange {
 
 	}
 
-}
-
-void filter(ref uint[] protocols, uint[] valids) {
-	sort(protocols);
-	uint[] ret;
-	foreach(p ; protocols) {
-		if((!ret.length || p != ret[$-1]) && valids.canFind(p)) ret ~= p;
-	}
-	protocols = ret;
 }

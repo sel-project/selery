@@ -8,5 +8,8 @@
 		"sel-utils": "~>1.0.609",
 		"nbt-d": "~>1.1.0",
 		"resusage": "~>0.2.4"
-	}
+	},
+	"preBuildCommands": [
+		"dub init.d"
+	]
 }
