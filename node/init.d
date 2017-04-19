@@ -48,7 +48,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 20;
+enum size_t __GENERATOR__ = 21;
 
 void main(string[] args) {
 
@@ -187,32 +187,6 @@ void main(string[] args) {
 			info[index].api = exists(path ~ "api.d");
 		}
 	}
-
-	// read activation file
-	string active = Paths.resources ~ "plugins.txt";
-	if(exists(active) && active.isFile) {
-		foreach(string line ; (cast(string)read(active)).split("\n")) {
-			string[] lsp = line.split(":");
-			if(lsp.length == 2) {
-				auto plugin = lsp[0].strip in info;
-				if(plugin && lsp[1].strip.toLower == "off") {
-					(*plugin).main.length = 0;
-					(*plugin).active = false;
-				}
-			}
-		}
-	}
-
-	// rewrite activation file
-	string[] rewrite;
-	foreach(string name ; sort(info.keys).release()) {
-		auto plugin = *(name in info);
-		if(!plugin.api || plugin.mod.length) {
-			rewrite ~= plugin.id ~ ": " ~ (plugin.active ? "on" : "off");
-		}
-	}
-	write(active, rewrite.join(newline) ~ newline);
-
 
 	// order
 	Info[] ordered = info.values;
