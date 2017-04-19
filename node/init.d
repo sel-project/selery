@@ -62,7 +62,7 @@ void main(string[] args) {
 
 	data ~= "// This file has been automatically generated and it shouldn't be edited";
 	data ~= "// Generator: " ~ to!string(__GENERATOR__);
-	data ~= "module initdata;";
+	data ~= "module data;";
 	data ~= "";
 	data ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
 	data ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
@@ -263,7 +263,7 @@ void main(string[] args) {
 
 	if(paths.length > 2) paths = paths[0..$-2];
 
-	write("src" ~ dirSeparator ~ "initdata.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+	write("src" ~ dirSeparator ~ "data.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
 	// delete every folder that is not sel (so dub will not include it)
 	foreach(string file ; dirEntries("src", SpanMode.breadth)) {

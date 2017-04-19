@@ -12,7 +12,7 @@ node/dub.selections.json
 node/src/chatfilter
 node/src/commands
 node/src/example
-node/src/initdata.d
+node/src/data.d
 hub/.dub
 hub/dub.selections.json
 

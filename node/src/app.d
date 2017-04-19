@@ -16,7 +16,7 @@ import sel.settings;
 import sel.server;
 import sel.util.log;
 
-import initdata : __loadPlugins;
+import data : __loadPlugins;
 
 void main(string[] args) {
 	

@@ -9,7 +9,7 @@
 		"nbt-d": "~>1.1.0",
 		"resusage": "~>0.2.4"
 	},
-	"preGenerateCommands": [
+	"preBuildCommands": [
 		"dub init.d"
 	]
 }

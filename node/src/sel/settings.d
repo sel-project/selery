@@ -46,7 +46,7 @@ version(NoSocket) {
 
 }
 
-public import initdata : __minecraftProtocols, __pocketProtocols;
+public import data : __minecraftProtocols, __pocketProtocols;
 
 enum bool __minecraft = __minecraftProtocols.length != 0;
 
