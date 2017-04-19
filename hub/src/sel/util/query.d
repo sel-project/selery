@@ -68,14 +68,14 @@ class Queries : Thread {
 					} catch(Exception) {}
 				}
 			}
-			foreach(string address ; pocketAddresses) {
+			foreach(string address ; pocket.addresses) {
 				parse(address, this.pocketIp, this.pocketPort, 19132);
 			}
-			foreach(string address ; minecraftAddresses) {
+			foreach(string address ; minecraft.addresses) {
 				parse(address, this.minecraftIp, this.minecraftPort, 25565);
 			}
-			if(forcedIp.length) {
-				this.pocketIp = this.minecraftIp = forcedIp;
+			if(serverIp.length) {
+				this.pocketIp = this.minecraftIp = serverIp;
 			}
 		}
 	}
@@ -124,7 +124,7 @@ class Queries : Thread {
 		/* new (since 1.4) */ {
 			ubyte[] payload = [0, 167, 0, 49, 0, 0];
 			with(this.server.settings) {
-				foreach(string status ; [to!string(minecraftProtocols[$-1]), supportedMinecraftProtocols[minecraftProtocols[$-1]][0], minecraftMotd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
+				foreach(string status ; [to!string(minecraft.protocols[$-1]), supportedMinecraftProtocols[minecraft.protocols[$-1]][0], minecraft.motd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
 					foreach(wchar wc ; to!wstring(status)) {
 						ushort s = cast(ushort)wc;
 						payload ~= [(s >> 8) & 255, s & 255];
@@ -139,7 +139,7 @@ class Queries : Thread {
 		/* old (from beta 1.8 to 1.3) */ {
 			ubyte[] payload;
 			with(this.server.settings) {
-				foreach(wchar wc ; to!wstring(minecraftMotd ~ "§" ~ to!string(this.server.onlinePlayers) ~ "§" ~ to!string(this.server.maxPlayers))) {
+				foreach(wchar wc ; to!wstring(minecraft.motd ~ "§" ~ to!string(this.server.onlinePlayers) ~ "§" ~ to!string(this.server.maxPlayers))) {
 					ushort s = cast(ushort)wc;
 					payload ~= [(s >> 8) & 255, s & 255];
 				}
@@ -202,11 +202,11 @@ class Queries : Thread {
 			add("whitelist", whitelist ? "on" : "off");
 			if(pocket) {
 				addTo(pe, "game_id", "MINECRAFTPE");
-				addTo(pe, "version", supportedPocketProtocols[pocketProtocols[$-1]][0]);
+				addTo(pe, "version", supportedPocketProtocols[pocket.protocols[$-1]][0]);
 			}
 			if(minecraft) {
 				addTo(pc, "game_id", "MINECRAFT");
-				addTo(pc, "version", supportedMinecraftProtocols[minecraftProtocols[$-1]][0]);
+				addTo(pc, "version", supportedMinecraftProtocols[minecraft.protocols[$-1]][0]);
 			}
 			string[] plugins = this.server.plugins;
 			add("plugins", Software.name ~ " " ~ Software.displayVersion ~ (plugins.length ? ": " ~ plugins.join("; ") : ""));

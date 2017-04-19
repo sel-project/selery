@@ -50,6 +50,8 @@ class HttpHandler : HandlerThread {
 	
 	private shared string* socialJson;
 
+	private shared string website;
+
 	private immutable ushort pocketPort, minecraftPort;
 	
 	private shared time_t lastStatusUpdate;
@@ -100,8 +102,8 @@ class HttpHandler : HandlerThread {
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
 			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "stable": JSONValue(stable)]);
-			if(settings.pocket) protocols["pocket"] = JSONValue(settings.pocketProtocols);
-			if(settings.minecraft) protocols["minecraft"] = JSONValue(settings.minecraftProtocols);
+			if(settings.pocket) protocols["pocket"] = JSONValue(settings.pocket.protocols);
+			if(settings.minecraft) protocols["minecraft"] = JSONValue(settings.minecraft.protocols);
 			json["software"] = JSONValue(software);
 			json["protocols"] = JSONValue(protocols);
 			json["online"] = JSONValue(__onlineMode);
@@ -112,6 +114,9 @@ class HttpHandler : HandlerThread {
 	public void reloadWebResources() {
 		
 		auto settings = this.server.settings;
+
+		this.website = "";
+		try { this.website = (cast()settings.social)["website"].str; } catch(JSONException) {}
 		
 		// index
 		string index = cast(string)read(Paths.res ~ "index.html");
@@ -120,8 +125,8 @@ class HttpHandler : HandlerThread {
 		index = index.replace("{SOFTWARE}", Software.display);
 		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(this.minecraftPort) ~ "</p>") : "");
 		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (__edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(this.pocketPort) ~ "</p>") : "");
-		if(settings.forcedIp.length) index = index.replace("{IP}", settings.forcedIp);
-		index = index.replace("{WEBSITE}", settings.website);
+		if(settings.serverIp.length) index = index.replace("{IP}", settings.serverIp);
+		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;
 		this.index.compress();
 		
@@ -193,8 +198,8 @@ class HttpHandler : HandlerThread {
 			case "software":
 				return Response(301, "Moved Permanently", ["Location": "//" ~ Software.website]);
 			case "website":
-				if(this.server.settings.website.length) {
-					return Response(301, "Moved Permanently", ["Location": "//" ~ this.server.settings.website]);
+				if(this.website.length) {
+					return Response(301, "Moved Permanently", ["Location": "//" ~ this.website]);
 				} else {
 					return this.returnWebError(404, "Not Found");
 				}

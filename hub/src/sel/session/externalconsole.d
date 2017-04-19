@@ -58,7 +58,7 @@ class ExternalConsoleHandler : HandlerThread {
 	
 	public this(shared Server server) {
 		immutable password = cast(immutable(ubyte)[])server.settings.externalConsolePassword;
-		switch(server.settings.externalConsoleHash) {
+		switch(server.settings.externalConsoleHashAlgorithm) {
 			case "":
 				this.auth = (ubyte[] hash, ubyte[] payload){ return hash == password; };
 				break;
@@ -81,7 +81,7 @@ class ExternalConsoleHandler : HandlerThread {
 				this.auth = (ubyte[] hash, ubyte[] payload){ return md5Of(password ~ payload) == hash; };
 				break;
 			default:
-				throw new Exception("Unsopported hash: " ~ server.settings.externalConsoleHash);
+				throw new Exception("Unsopported hash: " ~ server.settings.externalConsoleHashAlgorithm);
 		}
 		with(server.settings) super(server, createSockets!TcpSocket("externalConsole", externalConsoleAddresses, EXTERNAL_CONSOLE_BACKLOG));
 	}
@@ -192,7 +192,7 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 		super(server, sharedSocket);
 		Socket socket = cast()sharedSocket;
 		ubyte[16] payload = this.generatePayload();
-		with(server.settings) this.send(new Login.AuthCredentials(Software.externalConsole, externalConsoleHash != "", externalConsoleHash, payload).encode());
+		with(server.settings) this.send(new Login.AuthCredentials(Software.externalConsole, externalConsoleHashAlgorithm != "", externalConsoleHashAlgorithm, payload).encode());
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(EXTERNAL_CONSOLE_AUTH_TIMEOUT));
 		auto receiver = new Receiver!(ushort, Endian.littleEndian)();
 		ubyte[] buffer = new ubyte[512];
@@ -205,8 +205,8 @@ class ClassicExternalConsoleSession : ExternalConsoleSession {
 				if(auth(pk.hash, payload)) {
 					Types.Game[] games;
 					with(server.settings) {
-						if(pocket) games ~= Types.Game(Types.Game.POCKET, cast(uint[])pocketProtocols);
-						if(minecraft) games ~= Types.Game(Types.Game.MINECRAFT, cast(uint[])minecraftProtocols);
+						if(pocket) games ~= Types.Game(Types.Game.POCKET, cast(uint[])pocket.protocols);
+						if(minecraft) games ~= Types.Game(Types.Game.MINECRAFT, cast(uint[])minecraft.protocols);
 						with(Software) this.send(new Login.Welcome().new Accepted(this.commands, name, versions, displayName, games, server.nodeNames).encode());
 					}
 					server.add(this);
@@ -293,8 +293,8 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 		// send AuthCredentials
 		this.send(Login.AuthCredentials.ID, [
 			"protocol": JSONValue(Software.externalConsole),
-			"hash": JSONValue(server.settings.externalConsoleHash != ""),
-			"hash_algorithm": JSONValue(server.settings.externalConsoleHash),
+			"hash": JSONValue(server.settings.externalConsoleHashAlgorithm != ""),
+			"hash_algorithm": JSONValue(server.settings.externalConsoleHashAlgorithm),
 			"payload": JSONValue(payload)
 		]);
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(EXTERNAL_CONSOLE_AUTH_TIMEOUT));
@@ -310,8 +310,8 @@ class WebExternalConsoleSession : ExternalConsoleSession {
 						// accepted!
 						with(server.settings) {
 						JSONValue[] games;
-							if(pocket) games ~= JSONValue(["type": JSONValue(Types.Game.POCKET), "protocols": JSONValue(pocketProtocols)]);
-							if(minecraft) games ~= JSONValue(["type": JSONValue(Types.Game.MINECRAFT), "protocols": JSONValue(minecraftProtocols)]);
+							if(pocket) games ~= JSONValue(["type": JSONValue(Types.Game.POCKET), "protocols": JSONValue(pocket.protocols)]);
+							if(minecraft) games ~= JSONValue(["type": JSONValue(Types.Game.MINECRAFT), "protocols": JSONValue(minecraft.protocols)]);
 							this.send(Login.Welcome.ID, [
 								"status": JSONValue(Login.Welcome.Accepted.STATUS),
 								"remote_commands": JSONValue(this.commands),

@@ -95,7 +95,7 @@ class PocketHandler : UnconnectedHandler {
 	private __gshared Condition condition;
 	
 	public this(shared Server server, shared string* socialJson, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("pocket", pocketAddresses, -1), POCKET_BUFFER_SIZE);
+		with(server.settings) super(server, createSockets!UdpSocket("pocket", pocket.addresses, -1), POCKET_BUFFER_SIZE);
 		this.socialJson = socialJson;
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
@@ -214,9 +214,9 @@ class PocketHandler : UnconnectedHandler {
 			this.status = [
 				std.array.join([
 					"MCPE",
-					settings.pocketMotd,
-					to!string(settings.pocketProtocols[$-1]),
-					supportedPocketProtocols[settings.pocketProtocols[$-1]][0],
+					settings.pocket.motd,
+					to!string(settings.pocket.protocols[$-1]),
+					supportedPocketProtocols[settings.pocket.protocols[$-1]][0],
 					""
 				], ";"),
 				std.array.join([
@@ -568,7 +568,7 @@ final class PocketSession : PlayerSession {
 		bool accepted = false;
 		this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
-		auto protocols = this.server.settings.pocketProtocols;
+		auto protocols = this.server.settings.pocket.protocols;
 		if(login.protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
 		else if(!protocols.canFind(login.protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
 		else {

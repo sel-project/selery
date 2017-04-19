@@ -142,6 +142,8 @@ class Server {
 
 		this.n_settings = cast(shared)Settings.reload();
 
+		log(this.n_settings);
+
 		version(Windows) {
 			import std.process : executeShell;
 			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (__oneNode ? "" : "hub ^| ") ~ Software.display);
@@ -149,8 +151,8 @@ class Server {
 
 		Lang.init([this.n_settings.language], [Paths.lang]);
 
-		this.n_settings.minecraftMotd = translate(this.n_settings.minecraftMotd, this.n_settings.language, []);
-		this.n_settings.pocketMotd = translate(this.n_settings.pocketMotd, this.n_settings.language, []);
+		this.n_settings.minecraft.motd = translate(this.n_settings.minecraft.motd, this.n_settings.language, []);
+		this.n_settings.pocket.motd = translate(this.n_settings.pocket.motd, this.n_settings.language, []);
 
 		log(translate("{startup.starting}", this.n_settings.language, ["{green}" ~ Software.name ~ "{reset} " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
 		log(translate("{startup.started}", this.n_settings.language, []));
@@ -166,8 +168,8 @@ class Server {
 			JSONValue[string] login;
 			with(Software) login["software"] = ["name": JSONValue(name), "version": JSONValue([major, minor, patch]), "stable": JSONValue(stable)];
 			login["online"] = __onlineMode;
-			if(this.n_settings.minecraft) login["minecraft"] = this.n_settings.minecraftProtocols;
-			if(this.n_settings.pocket) login["pocket"] = this.n_settings.pocketProtocols;
+			if(this.n_settings.minecraft) login["minecraft"] = this.n_settings.minecraft.protocols;
+			if(this.n_settings.pocket) login["pocket"] = this.n_settings.pocket.protocols;
 			login["edu"] = __edu;
 			login["realm"] = __realm;
 			login["lang"] = this.n_settings.language;
@@ -195,7 +197,7 @@ class Server {
 			this.n_blacklist.save();
 		}
 		
-		try {
+		/*try {
 			log("Public ip (ipv4): ", publicIpv4);
 		} catch(Exception) {}
 		try {
@@ -207,7 +209,7 @@ class Server {
 		try {
 			log("Local ip (ipv6): ", localIpv6);
 		} catch(Exception) {}
-		log("");
+		log("");*/
 		
 		this.blocks = new Blocks();
 
@@ -884,7 +886,7 @@ struct List {
 		foreach(player ; this.players) {
 			lines ~= (cast()player).toString();
 		}
-		write(Paths.resources ~ this.name ~ ".txt", lines.join(newline) ~ newline);
+		write(Paths.home ~ this.name ~ ".txt", lines.join(newline) ~ newline);
 	}
 
 	static class Player {

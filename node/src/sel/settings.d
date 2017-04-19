@@ -21,6 +21,7 @@ import std.file;
 import std.string : join, split, strip;
 import std.typetuple : TypeTuple;
 
+import common.config;
 import common.path : Paths;
 import common.sel;
 
@@ -40,25 +41,6 @@ version(NoSocket) {
 } else {
 
 	enum __noSocket = false;
-
-}
-
-static if(__oneNode) {
-
-	// try to read supported protocols from hub.txt
-	static if(__traits(compiles, import("hub.txt"))) {
-
-		private enum __hub = (){ string[string] ret;foreach(line;split(import("hub.txt"), "\n")){auto s=line.split(":");if(s.length>=2){ret[s[0].strip]=s[1..$].join("=").strip;}}return ret; }();
-
-		static if(("minecraft" !in __hub || __hub["minecraft"] != "false") && "minecraft-accepted-protocols" in __hub) {
-			enum uint[] __minecraftProtocols = parse(__hub["minecraft-accepted-protocols"], supportedMinecraftProtocols.keys, latestMinecraftProtocols);
-		}
-
-		static if(("pocket" !in __hub || __hub["pocket"] != "false") && "pocket-accepted-protocols" in __hub) {
-			enum uint[] __pocketProtocols = parse(__hub["pocket-accepted-protocols"], supportedPocketProtocols.keys, latestPocketProtocols);
-		}
-
-	}
 
 }
 
@@ -158,68 +140,17 @@ enum __pocketSupportedBetween(uint a, uint b) = __pocketSupportedHigherEquals!a 
 
 struct Settings {
 	
-	public bool onlineMode;
-	
-	public string name;
-	
-	public GameInfo pocket;
-	public GameInfo minecraft;
+	public Config config;
 
 	public bool edu, realm;
-	
-	public string language;
-	public string[] acceptedLanguages;
-	
-	private static struct GameInfo {
-		
-		public bool accepted;
-		
-		public string motd;
-		public ushort port;
-		public uint[] protocols;
-		
-		alias accepted this;
-		
+
+	public void load() {
+
+		this.config = Config(__oneNode ? ConfigType.full : ConfigType.node, false, false);
+		this.config.load();
+
 	}
 	
-}
-
-/**
- * Returns: the maximum number of players accepted by the node
- */
-uint reloadSettings() {
-
-	uint ret = cast(uint)size_t.sizeof * 8;
-
-	import sel.world.rules : Rules;
-
-	if(exists(Paths.resources ~ "node.txt")) {
-		string[string] data;
-		foreach(line ; split(cast(string)read(Paths.resources ~ "node.txt"), "\n")) {
-			string[] spl = line.split(":");
-			if(spl.length >= 2) {
-				data[spl[0].strip] = spl[1..$].join(":").strip;
-			}
-		}
-		Rules.reload(data);
-		auto m = "max-players" in data;
-		if(m) {
-			try {
-				ret = to!uint(*m);
-			} catch(Exception) {
-				if(*m == "unlimited") ret = 0;
-			}
-		}
-	}
-
-	mkdirRecurse(Paths.resources);
-
-	string data = "max-players: " ~ (ret == 0 ? "unlimited" : to!string(ret)) ~ newline;
-	foreach(line ; Rules.defaultRules.serialize()) {
-		data ~= line[0] ~ ": " ~ line[1] ~ newline;
-	}
-	write(Paths.resources ~ "node.txt", data);
-
-	return ret;
+	alias config this;
 
 }

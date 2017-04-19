@@ -38,6 +38,7 @@ import std.traits : Parameters;
 import std.uuid : UUID;
 import std.zlib : UnCompress;
 
+import common.config : Config;
 import common.format : Text;
 import common.memory : Memory;
 import common.path : Paths;
@@ -229,6 +230,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				return;
 			}
 		}
+
+		this.n_settings.load();
 		
 		{
 			// load language from the last execution (or default language)
@@ -305,8 +308,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			this.n_id = info.serverId;
 			this.uuid_count = info.reservedUuids;
 
-			this.n_settings.onlineMode = info.onlineMode;
-			this.n_settings.name = info.displayName;
+			this.n_settings.displayName = info.displayName;
 			this.n_settings.language = info.language;
 			this.n_settings.acceptedLanguages = info.acceptedLanguages;
 
@@ -329,7 +331,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 					if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
 					if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
 					if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
-					if("google_plus" in *social) this.n_social.googlePlus = (*social)["google_plus"].str;
+					if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
 				}
 			} catch(JSONException) {}
 
@@ -386,16 +388,16 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	}
 
 	private void handleGameInfo(HncomTypes.GameInfo info) {
-		void set(ref bool accepted, ref uint[] r_protocols, ref string r_motd, ref ushort r_port) {
-			accepted = true;
-			r_protocols = info.game.protocols;
-			r_motd = info.motd;
-			r_port = info.port;
+		void set(ref Config.Game game) {
+			game.enabled = true;
+			game.protocols = info.game.protocols;
+			game.motd = info.motd;
+			game.onlineMode = info.onlineMode;
 		}
 		if(info.game.type == HncomTypes.Game.POCKET) {
-			set(this.n_settings.pocket.accepted, this.n_settings.pocket.protocols, this.n_settings.pocket.motd, this.n_settings.pocket.port);
+			set(this.n_settings.pocket);
 		} else if(info.game.type == HncomTypes.Game.MINECRAFT) {
-			set(this.n_settings.minecraft.accepted, this.n_settings.minecraft.protocols, this.n_settings.minecraft.motd, this.n_settings.minecraft.port);
+			set(this.n_settings.minecraft);
 		} else {
 			error_log(translate("{warning.invalidGame}", this.n_settings.language, [to!string(info.game.type), Software.name]));
 		}
@@ -415,7 +417,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
 		}
 
-		this.n_variables = ServerVariables(&this.n_settings.name, &this.n_ticks, &this.n_online, &this.n_max);
+		this.n_variables = ServerVariables(&this.n_settings.displayName, &this.n_ticks, &this.n_online, &this.n_max);
 
 		this.globalListener = new EventListener!WorldEvent();
 
@@ -456,7 +458,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			}
 		}
 
-		this.n_node_max = reloadSettings();
+		this.n_node_max = this.n_settings.maxPlayers;
 
 		this.start_time = milliseconds;
 
@@ -693,15 +695,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * ---
 	 */
 	public pure nothrow @property @safe @nogc string name() {
-		return this.n_settings.name;
-	}
-
-	/**
-	 * Indicates whether or not the server is running in
-	 * online mode.
-	 */
-	public pure nothrow @property @safe @nogc bool onlineMode() {
-		return this.n_settings.onlineMode;
+		return this.n_settings.displayName;
 	}
 	
 	/**

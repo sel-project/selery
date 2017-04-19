@@ -69,7 +69,7 @@ class MinecraftHandler : HandlerThread {
 	private __gshared Condition condition;
 	
 	public this(shared Server server, shared string* socialJson, bool delegate(string ip) acceptIp, shared ubyte[]* legacyStatus, shared ubyte[]* legacyStatusOld) {
-		with(server.settings) super(server, createSockets!TcpSocket("minecraft", minecraftAddresses, MINECRAFT_BACKLOG));
+		with(server.settings) super(server, createSockets!TcpSocket("minecraft", minecraft.addresses, MINECRAFT_BACKLOG));
 		this.socialJson = socialJson;
 		this.acceptIp = acceptIp;
 		this.legacyStatus = legacyStatus;
@@ -229,7 +229,7 @@ class MinecraftHandler : HandlerThread {
 		JSONValue[string] status;
 		with(this.server.settings) {
 			// version.protocol, version.name, players.online and players.max will be set by the session
-			status["description"] = ["text": JSONValue(minecraftMotd)];
+			status["description"] = ["text": JSONValue(minecraft.motd)];
 			if(iconData.length) status["favicon"] = iconData;
 			this.status = cast(shared)status;
 		}
@@ -244,7 +244,7 @@ class MinecraftQueryHandler : UnconnectedHandler {
 	private shared ubyte[]* shortQuery, longQuery;
 	
 	public this(shared Server server, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("minecraftQuery", minecraftAddresses, -1), 15);
+		with(server.settings) super(server, createSockets!UdpSocket("minecraftQuery", minecraft.addresses, -1), 15);
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
 		this.longQuery = longQuery;
@@ -341,7 +341,7 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 		immutable length = varuint.fromBuffer(payload);
 		if(length && varuint.fromBuffer(payload) == Status.Request.ID) {
 			auto status = cast(JSONValue[string])this.handler.status;
-			uint protocol = this.server.settings.minecraftProtocols.canFind(this.protocol) ? this.protocol : this.server.settings.minecraftProtocols[$-1];
+			uint protocol = this.server.settings.minecraft.protocols.canFind(this.protocol) ? this.protocol : this.server.settings.minecraft.protocols[$-1];
 			status["version"] = JSONValue(["protocol": JSONValue(protocol), "name": JSONValue(supportedMinecraftProtocols[protocol][0])]);
 			status["players"] = JSONValue(["online": JSONValue(this.server.onlinePlayers), "max": JSONValue(this.server.maxPlayers)]);
 			this.send(new Status.Response(JSONValue(status).toString()).encode());
@@ -470,7 +470,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		this.n_username = this.m_display_name = Login.LoginStart.fromBuffer(payload).username.idup;
 		this.send(new Login.SetCompression(1024).encode());
 		// disconnect if wrong protocol or name
-		auto protocols = this.server.settings.minecraftProtocols;
+		auto protocols = this.server.settings.minecraft.protocols;
 		string message = "";
 		if(this.protocol > protocols[$-1]) {
 			message = "Could not connect: Outdated server!";

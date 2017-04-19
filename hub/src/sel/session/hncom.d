@@ -73,7 +73,7 @@ class HncomHandler : HandlerThread {
 			string ip = "::1";
 		} else {
 			string ip = "::";
-			string[] nodes = cast(string[])server.settings.acceptedNodesRaw;
+			string[] nodes = cast(string[])server.settings.config.acceptedNodes;
 			if(nodes.length) {
 				if(nodes.length == 1) {
 					if(nodes[0] == "::1") ip = "::1";
@@ -228,7 +228,7 @@ class Node : Session {
 		if(receiver.has) {
 			ubyte[] payload = receiver.next;
 			if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
-				immutable password = server.settings.nodesPassword;
+				immutable password = server.settings.hncomPassword;
 				auto request = Login.ConnectionRequest.fromBuffer(payload);
 				this.n_name = request.name.idup;
 				this.n_main = request.main;
@@ -246,9 +246,9 @@ class Node : Session {
 					// send info packets
 					with(cast()server.settings) {
 						Types.GameInfo[] games;
-						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocketProtocols), pocketMotd, pocket_port);
-						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraftProtocols), minecraftMotd, minecraft_port);
-						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, __onlineMode, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
+						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocket.protocols), pocket.motd, pocket.onlineMode, pocket_port);
+						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraft.protocols), minecraft.motd, minecraft.onlineMode, minecraft_port);
+						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
 					}
 					socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
 					while(true) {
@@ -704,8 +704,8 @@ class Node : Session {
 	public shared void reload() {
 		with(this.server.settings) {
 			Types.Motd[] motds;
-			if(pocket) motds ~= Types.Motd(Types.Motd.POCKET, pocketMotd);
-			if(minecraft) motds ~= Types.Motd(Types.Motd.MINECRAFT, minecraftMotd);
+			if(pocket) motds ~= Types.Motd(Types.Motd.POCKET, pocket.motd);
+			if(minecraft) motds ~= Types.Motd(Types.Motd.MINECRAFT, minecraft.motd);
 			this.send(new Status.Reload(cast(string)displayName, motds, cast(string)language, cast(string[])acceptedLanguages, cast(string)*this.socialJson).encode());
 		}
 	}

@@ -16,61 +16,29 @@ module common.path;
 
 import std.path : dirSeparator;
 
-/*version(OneNode) {
-	version = ResBack;
-	version = ResourcesBack;
-}*/
-
-version(ResBack) {
-
-	private enum string __res = ".." ~ dirSeparator;
-
-} else {
-
-	private enum string __res = "";
-
-}
-
-version(ResourcesBack) {
-
-	private enum string __resources = ".." ~ dirSeparator;
-
-} else {
-
-	private enum string __resources = "";
-
-}
-
 class Paths {
 
 	@disable this();
-	
-	version(ResNoSrc) {
-		
-		enum string res = __res ~ dirSeparator ~ "res" ~ dirSeparator;
-	
-	} else {
 
-		enum string res = __res ~ "src" ~ dirSeparator ~ "res" ~ dirSeparator;
-		
+	public shared static immutable string home, res, lang, music, skin, plugins, resources, logs, crash, worlds, hidden;
+
+	public shared static this() {
+
+		home = "../"; // exe should be in node/ or hub/
+
+		res = "../res/";
+		lang = res ~ "lang/";
+		music = res ~ "music/";
+		skin = res ~ "skin/";
+	
+		plugins = "../plugins/";
+		resources = "../resources/";
+		logs = "../logs/";
+		crash = "../crash/";
+		worlds = "../worlds/";
+
+		hidden = "../.hidden/";
+
 	}
-
-	enum string crash = __res ~ "crash" ~ dirSeparator;
-
-	enum string lang = res ~ "lang" ~ dirSeparator;
-
-	enum string music = res ~ "music" ~ dirSeparator;
-
-	enum string skin = res ~ "skin" ~ dirSeparator;
-
-	enum string resources = __resources ~ "resources" ~ dirSeparator;
-
-	enum string plugins = __resources ~ "plugins" ~ dirSeparator;
-
-	enum string logs = __resources ~ "logs" ~ dirSeparator;
-
-	enum string hidden = __res ~ ".hidden" ~ dirSeparator;
-
-	enum string worlds = __res ~ "worlds" ~ dirSeparator;
 
 }

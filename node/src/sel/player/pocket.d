@@ -199,7 +199,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private static ubyte[] creative_inventory;
 
 	public static bool loadCreativeInventory() {
-		enum cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
+		immutable cached = Paths.hidden ~ "creative" ~ __protocol.to!string;
 		if(!exists(cached)) {
 			try {
 				auto http = HTTP();

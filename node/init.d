@@ -47,16 +47,13 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 10;
+enum size_t __GENERATOR__ = 14;
 
 void main(string[] args) {
 
-	mkdirRecurse(Paths.worlds);
-	mkdirRecurse(Paths.resources);
-	mkdirRecurse(Paths.plugins);
 	mkdirRecurse(Paths.hidden);
 
-	JSONValue[string] plugs; //plugs[location] = settingsfile
+	JSONValue[string] plugs; // plugs[location] = settingsfile
 
 	version(Windows) {
 		setAttributes(Paths.hidden, FILE_ATTRIBUTE_HIDDEN);
@@ -84,7 +81,9 @@ void main(string[] args) {
 		}
 	}
 
-	//load plugins
+	//TODO load plugins from sel.json:plugins
+
+	// load plugins
 	foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
 		if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
 			if(ppath.isDir) {
@@ -284,18 +283,6 @@ void main(string[] args) {
 
 	write("src" ~ dirSeparator ~ "plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(count) ~ newline ~ "module plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
-	// copy plugins into src/plugins
-	foreach(p ; ordered) {
-		if(p.active) {
-			foreach(string f ; dirEntries(p.path, SpanMode.breadth)) {
-				if(f.isFile) {
-					mkdirRecurse("src" ~ dirSeparator ~ f[0..f.lastIndexOf(dirSeparator)]);
-					write("src" ~ dirSeparator ~ f, read(f));
-				}
-			}
-		}
-	}
-
 }
 
 struct Info {
@@ -309,7 +296,7 @@ struct Info {
 	public size_t order;
 	public bool api;
 
-	public string name = "Unknown plugin";
+	public string name = "?";
 	public string[] authors = [];
 	public string vers = "1.0.0";
 

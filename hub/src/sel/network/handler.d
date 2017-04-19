@@ -67,7 +67,7 @@ class Handler {
 		this.queries = this.startThread!Queries(server, &this.socialJson);
 
 		bool delegate(string ip) acceptIp;
-		immutable forcedIp = server.settings.forcedIp.toLower;
+		immutable forcedIp = server.settings.serverIp.toLower;
 		if(forcedIp.length) {
 			acceptIp = (string ip){ return ip.toLower == forcedIp; };
 		} else {
@@ -157,18 +157,9 @@ class Handler {
 	 * for each social field that is not empty in the settings.
 	 */
 	private shared void regenerateSocialJson() {
-		JSONValue[string] social;
-		with(this.server.settings) {
-			if(website.length) social["website"] = website;
-			if(facebook.length) social["facebook"] = facebook;
-			if(twitter.length) social["twitter"] = twitter;
-			if(youtube.length) social["youtube"] = youtube;
-			if(instagram.length) social["instagram"] = instagram;
-			if(googlePlus.length) social["google_plus"] = googlePlus;
-		}
-		this.socialJson = cast(shared)JSONValue(social).toString();
+		this.socialJson = cast(shared)(cast()this.server.settings.social).toString();
 		JSONValue[string] additional;
-		additional["social"] = social;
+		additional["social"] = this.server.settings.social;
 		additional["minecraft"] = ["edu": __edu, "realm": __realm];
 		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
 		this.additionalJson = cast(shared)JSONValue(additional).toString();
