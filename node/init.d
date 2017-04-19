@@ -48,7 +48,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 21;
+enum size_t __GENERATOR__ = 22;
 
 void main(string[] args) {
 
@@ -58,12 +58,15 @@ void main(string[] args) {
 	config.load();
 	config.save();
 
-	string[] protocols = ["module __protocols;"];
+	string[] data;
 
-	protocols ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
-	protocols ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
-
-	write("src" ~ dirSeparator ~ "__protocols.d", protocols.join(newline));
+	data ~= "// This file has been automatically generated and it shouldn't be edited";
+	data ~= "// Generator: " ~ to!string(__GENERATOR__);
+	data ~= "module initdata;";
+	data ~= "";
+	data ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
+	data ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
+	data ~= "";
 
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 
@@ -260,7 +263,7 @@ void main(string[] args) {
 
 	if(paths.length > 2) paths = paths[0..$-2];
 
-	write("src" ~ dirSeparator ~ "__plugins.d", "// This file has been automatically generated and it shouldn't be edited." ~ newline ~ "// date: " ~ Clock.currTime().toSimpleString().split(".")[0] ~ " " ~ Clock.currTime().timezone.dstName ~ newline ~ "// generator: " ~ to!string(__GENERATOR__) ~ newline ~ "// plugins: " ~ to!string(count) ~ newline ~ "module __plugins;" ~ newline ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __load_plugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+	write("src" ~ dirSeparator ~ "initdata.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
 	// delete every folder that is not sel (so dub will not include it)
 	foreach(string file ; dirEntries("src", SpanMode.breadth)) {

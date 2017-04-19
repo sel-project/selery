@@ -16,7 +16,7 @@ import sel.settings;
 import sel.server;
 import sel.util.log;
 
-import __plugins;
+import initdata : __loadPlugins;
 
 void main(string[] args) {
 	
@@ -68,7 +68,7 @@ void main(string[] args) {
 				address = new InternetAddress("127.0.0.1", port);
 			}
 			
-			server = new Server(address, password, name, main, __load_plugins());
+			server = new Server(address, password, name, main, __loadPlugins());
 			
 		} catch(LinkTerminated) {
 			
