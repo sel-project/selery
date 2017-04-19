@@ -65,7 +65,7 @@ void main(string[] args) {
 					}
 				}
 			} else {
-				address = new InternetAddress("127.0.0.1", port);
+				address = getAddress("localhost", port)[0];
 			}
 			
 			server = new Server(address, password, name, main, __loadPlugins());

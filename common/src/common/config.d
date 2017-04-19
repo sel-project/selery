@@ -109,7 +109,7 @@ struct Config {
 
 	string googleAnalytics;
 
-	JSONValue social = parseJSON("{}");
+	JSONValue social;
 
 	string[] acceptedNodes;
 
@@ -142,6 +142,8 @@ struct Config {
 		this.externalConsolePassword = randomPassword;
 		this.rconPassword = randomPassword;
 		this.hncomUnixSocketAddress = "/tmp/sel/" ~ randomPassword;
+
+		this.social = JSONValue((JSONValue[string]).init);
 
 	}
 
