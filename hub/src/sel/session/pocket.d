@@ -498,6 +498,7 @@ final class PocketSession : PlayerSession {
 					} catch(ZlibException) {
 						// before 1.1, disconnect as outdated client
 						this.encapsulate(cast(ubyte[])[254, 2, 0, 0, 0, 1], false);
+						this.close();
 					}
 				} else {
 					this.close();
@@ -526,6 +527,7 @@ final class PocketSession : PlayerSession {
 	private shared void handlePlay(ubyte[] payload) {
 		if(payload[0] == Encapsulated.Mcpe.ID && payload.length > 1) {
 			try {
+				//TODO decompress in another thread
 				foreach(packet ; readBatch(payload[1..$])) {
 					this.handleUncompressedPlay(packet);
 				}
@@ -578,7 +580,7 @@ final class PocketSession : PlayerSession {
 			// kick if the server is edu and the client is not
 			static if(__edu) {
 				auto error = (){
-					if(!this.edu && !this.server.settings.allowMcpePlayers) return PlayStatus.EDITION_MISMATCH;
+					if(!this.edu && !this.server.settings.allowVanillaPlayers) return PlayStatus.EDITION_MISMATCH_EDU_TO_VANILLA;
 					//TODO implement invalidTenant
 					else return PlayStatus.OK;
 				}();

@@ -48,7 +48,7 @@ import common.format : Text, writeln;
 import common.path : Paths;
 import common.sel;
 
-enum size_t __GENERATOR__ = 22;
+enum size_t __GENERATOR__ = 24;
 
 void main(string[] args) {
 
@@ -56,7 +56,6 @@ void main(string[] args) {
 
 	Config config = Config(ConfigType.node, false, false);
 	config.load();
-	config.save();
 
 	string[] data;
 

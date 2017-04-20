@@ -94,11 +94,9 @@ struct Settings {
 	
 	public Config config;
 
-	public bool edu, realm;
+	public void load(bool edu, bool realm) {
 
-	public void load() {
-
-		this.config = Config(__oneNode ? ConfigType.full : ConfigType.node, false, false);
+		this.config = Config(__oneNode ? ConfigType.full : ConfigType.node, edu, realm);
 		this.config.load();
 
 		Rules.reload(this.config);

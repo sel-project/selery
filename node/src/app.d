@@ -8,15 +8,13 @@ import std.string : split, replace, join;
 
 import common.crash : logCrash;
 import common.path : Paths;
-import common.sel;
+import common.sel : Software;
 import common.util : UnloggedException;
 
-import sel.plugin;
-import sel.settings;
-import sel.server;
-import sel.util.log;
+import sel.plugin; // it seems that not importing this causes compiler errors
+import sel.server : Server, server;
 
-import data : __loadPlugins;
+import data : __minecraftProtocols, __pocketProtocols, __loadPlugins;
 
 void main(string[] args) {
 	
@@ -30,10 +28,10 @@ void main(string[] args) {
 		auto json = JSONValue([
 			"type": JSONValue("node"),
 			"software": JSONValue([
-					"name": JSONValue(Software.name),
-					"version": JSONValue(Software.displayVersion),
-					"stable": JSONValue(Software.stable)
-				]),
+				"name": JSONValue(Software.name),
+				"version": JSONValue(Software.displayVersion),
+				"stable": JSONValue(Software.stable)
+			]),
 			"minecraft": JSONValue(__minecraftProtocols),
 			"pocket": JSONValue(__pocketProtocols)
 		]);
@@ -41,8 +39,6 @@ void main(string[] args) {
 		writeln(json.toString());
 		
 	} else {
-		
-		Server server;
 		
 		try {
 			
@@ -68,14 +64,14 @@ void main(string[] args) {
 				address = getAddress("localhost", port)[0];
 			}
 			
-			server = new Server(address, password, name, main, __loadPlugins());
+			new Server(address, password, name, main, __loadPlugins());
 			
 		} catch(LinkTerminated) {
 			
 		} catch(UnloggedException) {
 			
 		} catch(Throwable e) {
-			
+
 			logCrash("node", server is null ? "en_GB" : server.settings.language, e);
 			
 		} finally {

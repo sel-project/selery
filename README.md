@@ -10,11 +10,15 @@ The server is still in development and some features are not supported yet.
 
 ### Structure
 
-SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/hncom/2.html), which means that it must always run as two separate softwares (hub and node), which are connected through sockets.
+SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/hncom/2.html), which means that it must always run as two separate instances (hub and node), which are connected through a socket.
 
-### Create a server
+## Create a server
+
+### Using SEL Manager
 
 SEL uses a manager to create, compile, run and delete servers. The instructions for the installation can be found at [sel-manager](https://github.com/sel-project/sel-manager)'s [README](https://github.com/sel-project/sel-manager/blob/master/README.md) file.
+
+SEL Manager does not support SEL 2.0 yet.
 
 #### Full
 
@@ -22,17 +26,17 @@ A full server is composed by an hub and a node automatically connected to each o
 
 ```
 sel init <server> full [-version=latest] [-path=auto] [-edu] [-realm]
-sel build <server> [dmd-options]
+sel build <server> [dub-options]
 sel start <server>
 ```
 
 #### Hub
 
-An hub is the network of the server. It handles the new connections, performs checks on the ips, does uncompression, handles queries and external consoles. An hub alone can be seen in the players' server list and can also accep players, but it will kick them because the server is full. To work properly at least one main node should be connected to the hub.
+An hub is the network of the server. It handles the new connections, performs checks on the ips, does uncompression, handles queries and external consoles. An hub alone can be seen in the players' server list and can also accept players, but it will kick them because the server is full. To work properly at least one main node should be connected to the hub.
 
 ```
 sel init <server> hub [-version=latest] [-path=auto] [-edu] [-realm]
-sel build <server> [dmd-options]
+sel build <server> [dub-options]
 sel start <server>
 ```
 
@@ -40,45 +44,37 @@ sel start <server>
 
 ```
 sel init <server> node [-version=latest] [-path=auto]
-sel build <server> [dmd-options]
-sel connect <server> [-ip=localhost] [-port=28232] [-name=<server>] [-password=] [-main=true]
+sel build <server> [dub-options]
+sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=] [-main=true]
 ```
 
-### Installing a plugin
+### Using DUB
 
-Plugins can be added, updated and removed using the manager.
+#### Hub
 
-`sel <server> plugin add <plugin>`
-`sel <server> plugin update <plugin>`
-`sel <server> plugin remove <plugin>`
+```
+cd hub
+dub build
+./sel-hub
+```
 
-The available plugins are published at [sel-plugins](https://github.com/sel-project/sel-plugins).
+Available configurations:
 
-### Features
+	`--config=<configuration>`
 
-* hub
+	- full
+	- edu
+	- realm
+	- full-edu
+	- full-realm
+	- full-edu-realm
 
-	- [x] Support for multiple protocols
-	- [x] Minecraft
-	- [ ] Minecraft's authentication
-	- [ ] Minecraft's encryption
-	- [x] Minecraft: Pocket Edition
-	- [ ] Minecraft: Pocket Edition's authentication
-	- [ ] Minecraft: Pocket Edition's encryption
-	- [x] External Console
-	- [x] RCON
-	- [x] Google Analytics
-	- [x] Web page with server's informations and players
-	
-* node
+#### Node
 
-	- [x] Support for multiple protocols
-	- [x] Multiworld
-	- [x] Chat
-	- [x] Commands
-	- [x] Events
-	- [x] PVP
-	- [ ] Inventory (partial on Minecraft)
-	- [x] Block's breaking
-	- [ ] Block's placing
-	
+```
+cd node
+dub build --build=release
+./sel-node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
+```
+
+The configuration `full` can be used to create a node of type full.

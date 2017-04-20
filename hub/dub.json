@@ -1,10 +1,44 @@
 {
 	"name": "sel-hub",
 	"authors": ["sel-project"],
+	"targetType": "executable",
 	"dependencies": {
 		"sel-common": {
 			"path": "../common"
 		},
 		"sel-utils": "~>1.0.611"
-	}
+	},
+	"configurations": [
+		{
+			"name": "default"
+		},
+		{
+			"name": "full",
+			"versions": ["OneNode"]
+		},
+		{
+			"name": "edu",
+			"versions": ["Edu"]
+		},
+		{
+			"name": "realm",
+			"versions": ["Realm"]
+		},
+		{
+			"name": "full-edu",
+			"versions": ["OneNode", "Edu"]
+		},
+		{
+			"name": "full-realm",
+			"versions": ["OneNode", "Realm"]
+		},
+		{
+			"name": "edu-realm",
+			"versions": ["Edu", "Realm"]
+		},
+		{
+			"name": "full-edu-realm",
+			"versions": ["OneNode", "Edu", "Realm"]
+		}
+	]
 }

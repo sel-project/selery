@@ -164,7 +164,7 @@ struct Config {
 		if(edu) {
 			file ~= "//  Minecraft: Education Edition supported protocols/versions:" ~ newline;
 			protocols(supportedPocketProtocols);
-			file ~= "*" ~ newline;
+			file ~= "//" ~ newline;
 		} else {
 			file ~= "//  Minecraft supported protocols/versions:" ~ newline;
 			protocols(supportedMinecraftProtocols);
@@ -206,11 +206,12 @@ struct Config {
 		}
 		if(type != ConfigType.hub) file ~= "\t\"max-players\": " ~ to!string(this.maxPlayers) ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"whitelist\": " ~ to!string(this.whitelist) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"query\": " ~ to!string(this.query) ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"blacklist\": " ~ to!string(this.blacklist) ~ "," ~ newline;
+		if(type != ConfigType.node && !realm) file ~= "\t\"query\": " ~ to!string(this.query) ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"language\": " ~ JSONValue(this.language).toString() ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"accepted-languages\": " ~ to!string(this.acceptedLanguages) ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"server-ip\": " ~ JSONValue(this.serverIp).toString() ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"icon\": " ~ JSONValue(this.icon).toString() ~ "," ~ newline;
+		if(type != ConfigType.node && !edu) file ~= "\t\"icon\": " ~ JSONValue(this.icon).toString() ~ "," ~ newline;
 		if(type != ConfigType.hub) {
 			file ~= "\t\"world\": {" ~ newline;
 			file ~= "\t\t\"gamemode\": \"" ~ this.gamemode ~ "\"," ~ newline;
@@ -223,7 +224,7 @@ struct Config {
 			file ~= "\t\t\"do-scheduled-ticks\": " ~ to!string(this.doScheduledTicks) ~ newline;
 			file ~= "\t}," ~ newline;
 		}
-		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": []," ~ newline;
+		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": {" ~ newline ~ "\t\t\"commands\": \"latest\"" ~ newline ~ "\t}," ~ newline;
 		/*if(type != ConfigType.node) {
 			file ~= "\t\"panel\": {" ~ newline;
 			file ~= "\t\t\"enabled\": " ~ to!string(this.panel) ~ "," ~ newline;
@@ -399,7 +400,9 @@ struct Config {
 			}
 
 		} else {
+
 			this.save();
+
 		}
 
 	}

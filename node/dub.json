@@ -1,6 +1,7 @@
 {
 	"name": "sel-node",
 	"authors": ["sel-project"],
+	"targetType": "executable",
 	"dependencies": {
 		"sel-common": {
 			"path": "../common"
@@ -9,6 +10,15 @@
 		"nbt-d": "~>1.1.0",
 		"resusage": "~>0.2.4"
 	},
+	"configurations": [
+		{
+			"name": "default"
+		},
+		{
+			"name": "full",
+			"versions": ["OneNode"]
+		}
+	],
 	"preGenerateCommands": [
 		"dub init.d"
 	]

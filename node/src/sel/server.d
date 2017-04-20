@@ -230,8 +230,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				return;
 			}
 		}
-
-		this.n_settings.load();
 		
 		{
 			// load language from the last execution (or default language)
@@ -308,6 +306,16 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			this.n_id = info.serverId;
 			this.uuid_count = info.reservedUuids;
 
+			auto additional = parseJSON(info.additionalJson);
+			auto minecraft = "minecraft" in additional;
+			if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
+				auto edu = "edu" in *minecraft;
+				auto realm = "realm" in *minecraft;
+				this.n_settings.load(edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
+			} else {
+				this.n_settings.load(false, false);
+			}
+
 			this.n_settings.displayName = info.displayName;
 			this.n_settings.language = info.language;
 			this.n_settings.acceptedLanguages = info.acceptedLanguages;
@@ -315,25 +323,15 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			this.n_online = info.online;
 			this.n_max = info.max;
 
-			try {
-				auto additional = parseJSON(info.additionalJson).object;
-				auto minecraft = "minecraft" in additional;
-				auto social = "social" in additional;
-				if(minecraft && (*minecraft).type == JSON_TYPE.OBJECT) {
-					auto edu = "edu" in *minecraft;
-					auto realm = "realm" in *minecraft;
-					this.n_settings.edu = edu && (*edu).type == JSON_TYPE.TRUE;
-					this.n_settings.realm = realm && (*realm).type == JSON_TYPE.TRUE;
-				}
-				if(social && (*social).type == JSON_TYPE.OBJECT) {
-					if("website" in *social) this.n_social.website = (*social)["website"].str;
-					if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
-					if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
-					if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
-					if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
-					if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
-				}
-			} catch(JSONException) {}
+			auto social = "social" in additional;
+			if(social && social.type == JSON_TYPE.OBJECT) {
+				if("website" in *social) this.n_social.website = (*social)["website"].str;
+				if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
+				if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
+				if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
+				if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
+				if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
+			}
 
 			version(Windows) {
 				executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
