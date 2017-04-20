@@ -5,6 +5,6 @@
 		"sel-common": {
 			"path": "../common"
 		},
-		"sel-utils": "~>1.0.609"
+		"sel-utils": "~>1.0.611"
 	}
 }

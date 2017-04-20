@@ -596,10 +596,7 @@ final class PocketSession : PlayerSession {
 				bool valid = false;
 				try {
 
-					uint chain_l = read!(uint, Endian.littleEndian)(login.body_);
-					JSONValue[] chain = parseJSON(cast(string)login.body_[0..chain_l]).object["chain"].array;
-					login.body_ = login.body_[chain_l..$];
-					uint client_data_l = read!(uint, Endian.littleEndian)(login.body_);
+					JSONValue[] chain = parseJSON(cast(string)login.body_.chain).object["chain"].array;
 					auto info = decodeJwt(chain[$-1].str.split(".")[1]);
 
 					/*static if(__onlineMode) {
@@ -616,7 +613,7 @@ final class PocketSession : PlayerSession {
 					if(username.length < 1 || username.length > 15 || username.matchFirst(ctRegex!"[^a-zA-Z0-9 ]") || username[0] == ' ' || username[$-1] == ' ') throw new Exception("disconnectionScreen.invalidName");
 					
 					// skin
-					auto cd = decodeJwt((cast(string)login.body_).split(".")[1]).object;
+					auto cd = decodeJwt((cast(string)login.body_.clientData).split(".")[1]).object;
 					string skinName = cd["SkinId"].str;
 					ubyte[] skinData = Base64.decode(cd["SkinData"].str);
 					if(!skinName.length || (skinData.length != 8192 && skinData.length != 16384)) throw new Exception("disconnectionScreen.invalidSkin");
