@@ -591,25 +591,22 @@ final class PocketSession : PlayerSession {
 			// valid version and protocol
 			accepted = true;
 			this.encapsulateUncompressed(new PlayStatus(PlayStatus.OK));
-			// decompress the body and check validate more parameters
+			// the skin decoding is kinda slow (~8 ms) and it needs to be done in a dedicated thread
 			new Thread({
 				bool valid = false;
 				try {
-					
-					UnCompress u = new UnCompress(HeaderFormat.deflate);
-					auto data = cast(ubyte[])u.uncompress(login.body_);
-					data ~= cast(ubyte[])u.flush();
-					uint chain_l = read!(uint, Endian.littleEndian)(data);
-					JSONValue[] chain = parseJSON(cast(string)data[0..chain_l]).object["chain"].array;
-					data = data[chain_l..$];
-					uint client_data_l = read!(uint, Endian.littleEndian)(data);
+
+					uint chain_l = read!(uint, Endian.littleEndian)(login.body_);
+					JSONValue[] chain = parseJSON(cast(string)login.body_[0..chain_l]).object["chain"].array;
+					login.body_ = login.body_[chain_l..$];
+					uint client_data_l = read!(uint, Endian.littleEndian)(login.body_);
 					auto info = decodeJwt(chain[$-1].str.split(".")[1]);
 
-					static if(__onlineMode) {
+					/*static if(__onlineMode) {
 						if(chain.length != 3) throw new Exception("disconnectionScreen.notAuthenticated");
 						//TODO validate JWTs using Mojang's public key and kick if invalid
 						throw new Exception("disconnect.loginFailed");
-					}
+					}*/
 
 					// basic info
 					string username = info.object["extraData"].object["displayName"].str;
@@ -619,7 +616,7 @@ final class PocketSession : PlayerSession {
 					if(username.length < 1 || username.length > 15 || username.matchFirst(ctRegex!"[^a-zA-Z0-9 ]") || username[0] == ' ' || username[$-1] == ' ') throw new Exception("disconnectionScreen.invalidName");
 					
 					// skin
-					auto cd = decodeJwt((cast(string)data).split(".")[1]).object;
+					auto cd = decodeJwt((cast(string)login.body_).split(".")[1]).object;
 					string skinName = cd["SkinId"].str;
 					ubyte[] skinData = Base64.decode(cd["SkinData"].str);
 					if(!skinName.length || (skinData.length != 8192 && skinData.length != 16384)) throw new Exception("disconnectionScreen.invalidSkin");
@@ -643,7 +640,7 @@ final class PocketSession : PlayerSession {
 						}
 					}
 					if(vers && vers.type == JSON_TYPE.STRING) {
-						// verify major.minor.path[.build]
+						// verify major.minor.patch[.build]
 						auto spl = vers.str.split(".");
 						if(spl.length >= 3) {
 							spl.length = 3;
@@ -682,14 +679,14 @@ final class PocketSession : PlayerSession {
 					if(this.server.settings.whitelist) {
 						with(this.server.whitelist) {
 							bool v = contains(username);
-							static if(__onlineMode) v = v || contains(PE, uuid);
-							if(!v) throw new Exception("disconnectionScreen.notAllowed");
+							//static if(__onlineMode) v = v || contains(PE, uuid);
+							if(!v) throw new Exception("disconnectionScreen.notAllowed"); // You're not invited to play on this server
 						}
 					}
 					if(this.server.settings.blacklist) {
 						with(this.server.blacklist) {
 							bool v = !contains(username);
-							static if(__onlineMode) v = v && contains(PE, uuid);
+							//static if(__onlineMode) v = v && contains(PE, uuid);
 							if(!v) throw new Exception("You're not allowed to play on this server.");
 						}
 					}
@@ -711,10 +708,6 @@ final class PocketSession : PlayerSession {
 
 					this.n_username = this.m_display_name = username.idup;
 					cast()this.n_uuid = uuid;
-
-					static if(__pocketEncryption) {
-						//TODO send encryption packet, wait for response and start encrypt encapsulated body
-					}
 
 					this.n_game_name = "Minecraft: " ~ (){
 						if(this.edu) {
