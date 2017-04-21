@@ -53,6 +53,7 @@ public class Living : Entity {
 	public this(World world, EntityPosition position, uint health, uint max) {
 		super(world, position);
 		this.m_health = Health(health, max);
+		this.metadata.set!"canClimb"(true);
 	}
 
 	public override void tick() {
@@ -285,6 +286,7 @@ public class Living : Entity {
 
 	/**
 	 * Removes an effect from the entity.
+	 * Returns: whether the effect has been removed
 	 */
 	public bool removeEffect(sul.effects.Effect effect) {
 		auto e = effect.minecraft.id in this.effects;
@@ -313,11 +315,14 @@ public class Living : Entity {
 
 	/**
 	 * Removes every effect.
+	 * Returns: whether one or more effect has been removed
 	 */
-	public void clearEffects() {
-		foreach(Effect effect; this.effects) {
-			this.removeEffect(effect);
+	public bool clearEffects() {
+		bool ret = false;
+		foreach(effect ; this.effects) {
+			ret |= this.removeEffect(effect);
 		}
+		return ret;
 	}
 
 	protected void recalculateColors() {

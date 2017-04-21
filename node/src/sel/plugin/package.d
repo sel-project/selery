@@ -28,5 +28,5 @@ public import sel.plugin.config : Config, _, Value, value;
 public import sel.plugin.file : exists, isDir, isFile, read, write, remove;
 public import sel.plugin.plugin : start, reload, stop, event, global, inherit, cancel, command, description, aliases, params, op, hidden, task, arguments;
 
-public import sel.util.command : CommandSender, Position, Target;
+public import sel.util.command : CommandSender, WorldCommandSender, SingleEnum, Position, Target;
 public import sel.util.log : log, debug_log, warning_log, error_log;

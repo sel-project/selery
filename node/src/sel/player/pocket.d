@@ -141,10 +141,6 @@ abstract class PocketPlayer : Player {
 		return this.n_device_model;
 	}
 
-	public final override pure nothrow @property @safe @nogc byte dimension() {
-		return this.world.dimension.pe;
-	}
-
 	alias operator = super.operator;
 
 	public override @property bool operator(bool op) {
@@ -201,11 +197,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public static bool loadCreativeInventory() {
 		immutable cached = Paths.hidden ~ "creative" ~ __protocol.to!string;
 		if(!exists(cached)) {
+			auto packet = new Play.ContainerSetContent(121, 0);
 			try {
 				auto http = HTTP();
 				http.handle.set(CurlOption.ssl_verifypeer, false);
 				http.handle.set(CurlOption.timeout, 5);
-				Types.Slot[] slots;
 				foreach(item ; parseJSON(get("https://raw.githubusercontent.com/sel-utils/sel-utils.github.io/master/json/creative/pocket" ~ __protocol.to!string ~ ".min.json", http).idup)["items"].array) {
 					auto obj = item.object;
 					auto meta = "meta" in obj;
@@ -221,17 +217,21 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 						stream.writeTag(new Compound(list));
 						slot.nbt = stream.buffer.dup;
 					}
-					slots ~= slot;
+					packet.slots ~= slot;
 				}
-				ubyte[] encoded = new Play.ContainerSetContent(121, 0, slots).encode();
-				Compress c = new Compress(9);
-				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
-				creative_inventory ~= cast(ubyte[])c.flush();
-				mkdirRecurse(Paths.hidden ~ "creative");
-				write(cached, creative_inventory);
 				return true;
 			} catch(CurlException e) {
 				warning_log("Could not download creative inventory for pocket", __protocol);
+			}
+			ubyte[] encoded = packet.encode();
+			Compress c = new Compress(9);
+			creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
+			creative_inventory ~= cast(ubyte[])c.flush();
+			if(packet.slots.length) {
+				mkdirRecurse(Paths.hidden ~ "creative");
+				write(cached, creative_inventory);
+				return true;
+			} else {
 				return false;
 			}
 		} else {
@@ -611,8 +611,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected void sendAddItemEntity(ItemEntity item) {
-		this.sendPacket(new Play.AddItemEntity(item.id, item.id, toSlot(item.item), tuple!(typeof(Play.AddItemEntity.position))(item.position), tuple!(typeof(Play.AddItemEntity.motion))(item.motion)));
-		this.sendMetadata(item);
+		this.sendPacket(new Play.AddItemEntity(item.id, item.id, toSlot(item.item), tuple!(typeof(Play.AddItemEntity.position))(item.position), tuple!(typeof(Play.AddItemEntity.motion))(item.motion), metadataOf(item.metadata)));
 	}
 	
 	protected void sendAddEntity(Entity entity) {
@@ -786,8 +785,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 						JSONValue[string] p;
 						p["name"] = name_type[0];
 						p["type"] = name_type[1];
+						/*if(name_type[1] == "target") {
+							immutable target = overload.typeOf(j);
+							if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
+						}*/
 						if(j >= overload.requiredArgs) p["optional"] = true;
-						if(overload.pocketTypeOf(i) == "stringenum") p["enum_values"] = overload.enumMembers(j);
+						if(overload.pocketTypeOf(j) == "stringenum") p["enum_values"] = overload.enumMembers(j);
 						params ~= JSONValue(p);
 					}
 					foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
@@ -982,6 +985,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		auto cmd = command in this.sent_commands;
 		if(cmd) {
 			try {
+				// BROKEN IN 1.1.0.5 for commands with the same args of the singleplayer ones
 				auto overload = to!size_t(overload_str);
 				if(overload < (*cmd).length) {
 					auto data = parseJSON(input);
@@ -1004,40 +1008,52 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 										break;
 									case "blockpos":
 										auto bp = (*search).object;
+										/*foreach(c ; TypeTuple!("x", "y", "z")) {
+											auto cc = c in bp;
+											if(cc && (*cc).type == JSON_TYPE.STRING) {
+
+											}
+										}*/
+										log(bp);
 										args ~= [bp["x"].integer.to!string, bp["y"].integer.to!string, bp["z"].integer.to!string];
 										break;
 									case "target":
 										auto rules = "rules" in *search;
 										auto selector = "selector" in *search;
-										size_t expected = args.length + 1;
-										if(rules && (*rules).type == JSON_TYPE.ARRAY) {
-											auto array = (*rules).array;
-											if(array.length == 1 && array[0].type == JSON_TYPE.OBJECT) {
-												auto name = "value" in array[0].object;
-												if(name && (*name).type == JSON_TYPE.STRING) {
-													args ~= (*name).str.replace(" ", "-");
-												}
-											}
-										} else if(selector && (*selector).type == JSON_TYPE.STRING) {
-											auto list = this.watchlist!Player;
-											if(list.length) {
+										string target = "";
+										if(selector && (*selector).type == JSON_TYPE.STRING) {
+											target = (){
 												switch((*selector).str) {
-													case "nearestPlayer":
-														args ~= "@p";
-														break;
-													case "randomPlayer":
-														args ~= "@r";
-														break;
-													default:
-														break;
+													case "nearestPlayer": return "@p";
+													case "randomPlayer": return "@r";
+													case "allPlayers": return "@a";
+													case "allEntities": return "@e";
+													default: throw new Exception("Invalid target selector");
 												}
+											}();
+										}
+										if(rules && (*rules).type == JSON_TYPE.ARRAY) {
+											Tuple!(string, bool)[string] res;
+											foreach(a ; (*rules).array) {
+												auto name = "name" in a;
+												auto value = "value" in a;
+												auto inverted = "inverted" in a;
+												if(name && (*name).type == JSON_TYPE.STRING && value && (*value).type == JSON_TYPE.STRING) {
+													res[(*name).str] = Tuple!(string, bool)((*value).str, inverted && (*inverted).type == JSON_TYPE.TRUE);
+												}
+											}
+											auto name = "name" in res;
+											if(name && !(*name)[1] && target == "@p") {
+												target = (*name)[0];
 											} else {
-												args ~= this.cname;
+												string[] r;
+												foreach(n, value; res) {
+													r ~= n ~ "=" ~ (value[1] ? "!" : "") ~ value[0];
+												}
+												target ~= "[" ~ r.join(",") ~ "]";
 											}
 										}
-										if(args.length != expected) {
-											args ~= "";
-										}
+										args ~= target;
 										break;
 									default:
 										args ~= (*search).str;
@@ -1050,7 +1066,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					}
 					this.callCommandOverload(command, overload, args.idup);
 				}
-			} catch(Exception) {}
+			} catch(Exception e) {
+				error_log(e);
+			}
 		}
 	}
 	

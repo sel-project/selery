@@ -145,7 +145,6 @@ class Command {
 						static if(is(T == enum)) {
 							bool found = false;
 							foreach(immutable member ; __traits(allMembers, T)) {
-								//TODO convert member to snake case
 								if(!found && member == args[j]) {
 									mixin("cargs[i] = T." ~ member ~ ";");
 									found = true;
@@ -267,6 +266,18 @@ interface CommandSender {
 	 * Sends a translatable message to the command sender.
 	 */
 	public void sendMessage(string, string[]=[]);
+
+}
+
+interface WorldCommandSender : CommandSender {
+
+	public pure nothrow @property @safe @nogc World world();
+
+}
+
+template SingleEnum(string value) {
+
+	mixin("enum SingleEnum { " ~ value ~ " }");
 
 }
 

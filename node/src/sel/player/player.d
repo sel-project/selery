@@ -55,7 +55,7 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network : Handler;
 import sel.server : server;
-import sel.util.command : Command, CommandSender;
+import sel.util.command : Command, WorldCommandSender;
 import sel.util.concurrency : thread, Thread;
 import sel.util.lang;
 import sel.util.log;
@@ -95,7 +95,7 @@ alias PlayerVariables = Variables!("player", string, "name", string, "iname", st
  * Abstract class with abstract packet-related functions.
  * It's implemented as another class by every version of Minecraft.
  */
-abstract class Player : Human, CommandSender {
+abstract class Player : Human, WorldCommandSender {
 	
 	public immutable bool pe;
 	public immutable bool pc;
@@ -445,6 +445,10 @@ abstract class Player : Human, CommandSender {
 			this.inventory.update_viewers = 0;
 		}
 	}
+
+	public override pure nothrow @property @safe @nogc World world() {
+		return super.world();
+	}
 	
 	/**
 	 * Teleports the player to another world.
@@ -496,10 +500,13 @@ abstract class Player : Human, CommandSender {
 		return world;
 
 	}
-	
-	alias world = super.world;
 
-	public abstract pure nothrow @property @safe @nogc byte dimension();
+	/**
+	 * Gets hncom's dimension.
+	 */
+	public pure nothrow @property @safe @nogc ubyte dimension() {
+		return this.world.dimension.pe;
+	}
 	
 	// overrides the attack function for the self hurt animation.
 	protected override void attackImpl(EntityDamageEvent event) {
@@ -712,7 +719,7 @@ abstract class Player : Human, CommandSender {
 	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
 	public void disconnect(string reason="disconnect.closed", string[] args=[], bool translation=true) {
-		server.disconnect(this, reason.translate(this.lang, args, server.variables, this.variables));
+		server.disconnect(this, reason.translate(this.lang, args, server.variables, this.variables), translation);
 	}
 
 	/// ditto

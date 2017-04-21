@@ -599,8 +599,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * Stops the server setting the running variable to false and kicks every
 	 * player from the server.
 	 */
-	public void shutdown(string message="Server closed") {
-		foreach(player ; this.players_hubid) player.kick(message);
+	public void shutdown() {
+		//foreach(player ; this.players_hubid) player.kick(message);
 		running = false;
 	}
 

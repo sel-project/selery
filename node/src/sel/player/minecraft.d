@@ -99,10 +99,6 @@ abstract class MinecraftPlayer : Player {
 		return super.world(world);
 	}
 
-	public final override pure nothrow @property @safe @nogc byte dimension() {
-		return this.world.dimension.pc;
-	}
-
 	protected void handleClientSettings(ubyte viewDistance, string language) {
 		if(viewDistance != this.viewDistance) {
 			this.viewDistance = min(this.world.rules.viewDistance, viewDistance);
