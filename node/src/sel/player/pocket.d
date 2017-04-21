@@ -941,7 +941,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	//protected void handlePlayerFallPacket(float distance) {}
 
-	protected void handleAnimatePacket(uint action, long eid) {
+	protected void handleAnimatePacket(uint action, long eid, float unknown2) {
 		if(action == Play.Animate.BREAKING) this.handleArmSwing();
 	}
 
