@@ -7,9 +7,10 @@ import std.conv : to;
 import std.datetime : Clock;
 import std.file : read, write, exists;
 import std.json;
+import std.process : environment;
 import std.random : uniform;
 import std.socket : getAddress, AddressFamily;
-import std.string : split, join, strip, replace, startsWith, toLower;
+import std.string;
 import std.traits : isArray, isAssociativeArray;
 
 import common.sel;
@@ -135,6 +136,9 @@ struct Config {
 		this.whitelist = edu || realm;
 		this.blacklist = !edu && !realm;
 		this.query = !edu && !realm;
+
+		this.acceptedLanguages = availableLanguages();
+		this.language = bestLanguage(environment.get("LANG", "en_GB"), this.acceptedLanguages); //TODO windows does not have the variable
 
 		this.acceptedNodes ~= getAddress("localhost", 0)[0].addressFamily == AddressFamily.INET6 ? "::1" : "127.0.*.*";
 		
@@ -409,11 +413,33 @@ struct Config {
 
 }
 
-private @property string randomPassword() {
+public @property string randomPassword() {
 	char[] password = new char[uniform!"[]"(8, 12)];
 	foreach(ref char c ; password) {
 		c = uniform!"[]"('a', 'z');
 		if(!uniform!"[]"(0, 4)) c -= 32;
 	}
 	return password.idup;
+}
+
+public @property string[] availableLanguages() {
+	string[] ret;
+	import std.file : dirEntries, SpanMode, isFile;
+	foreach(string path ; dirEntries(Paths.langSystem, SpanMode.breadth)) {
+		if(path.isFile && path.endsWith(".lang")) {
+			if((cast(string)read(path)).indexOf(" COMPLETE") != -1) {
+				ret ~= path[path.lastIndexOf("/")+1..$-5];
+			}
+		}
+	}
+	return ret;
+}
+
+public string bestLanguage(string lang, string[] accepted) {
+	if(accepted.canFind(lang)) return lang;
+	string similar = lang.split("_")[0] ~ "_";
+	foreach(al ; accepted) {
+		if(al.startsWith(similar)) return al;
+	}
+	return accepted.canFind("en_GB") ? "en_GB" : accepted[0];
 }

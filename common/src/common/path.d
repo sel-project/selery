@@ -20,14 +20,15 @@ class Paths {
 
 	@disable this();
 
-	public shared static immutable string home, res, lang, music, skin, plugins, resources, logs, crash, worlds, hidden;
+	public shared static immutable string home, res, langSystem, langMessages, music, skin, plugins, resources, logs, crash, worlds, hidden;
 
 	public shared static this() {
 
 		home = "../"; // exe should be in node/ or hub/
 
 		res = "../res/";
-		lang = res ~ "lang/";
+		langSystem = res ~ "lang/system/";
+		langMessages = res ~ "lang/messages/";
 		music = res ~ "music/";
 		skin = res ~ "skin/";
 	

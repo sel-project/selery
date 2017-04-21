@@ -16,5 +16,5 @@ node/src/data.d
 hub/.dub
 hub/dub.selections.json
 
-res/lang/es_ES.lang
-res/lang/fur_IT.lang
+res/lang/system/es_ES.lang
+res/lang/system/fur_IT.lang

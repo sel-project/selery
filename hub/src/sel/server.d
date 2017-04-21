@@ -147,7 +147,7 @@ class Server {
 			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (__oneNode ? "" : "hub ^| ") ~ Software.display);
 		}
 
-		Lang.init([this.n_settings.language], [Paths.lang]);
+		Lang.init([this.n_settings.language], [Paths.langSystem]);
 
 		this.n_settings.minecraft.motd = translate(this.n_settings.minecraft.motd, this.n_settings.language, []);
 		this.n_settings.pocket.motd = translate(this.n_settings.pocket.motd, this.n_settings.language, []);

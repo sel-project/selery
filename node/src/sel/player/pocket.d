@@ -220,8 +220,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					packet.slots ~= slot;
 				}
 				return true;
-			} catch(CurlException e) {
-				warning_log("Could not download creative inventory for pocket", __protocol);
+			} catch(CurlException) {
+				warning_log(translate("{warning.creativeFailed}", server.settings.language, ["pocket", __protocol]));
 			}
 			ubyte[] encoded = packet.encode();
 			Compress c = new Compress(9);

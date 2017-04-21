@@ -67,10 +67,10 @@ import sel.world.world : Rules, World;
 
 enum Gamemode : ubyte {
 	
-	survival = 0,
-	creative = 1,
-	adventure = 2,
-	spectator = 3,
+	survival = 0, s = 0,
+	creative = 1, c = 1,
+	adventure = 2, a = 2,
+	spectator = 3, sp = 3,
 	
 }
 

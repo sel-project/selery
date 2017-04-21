@@ -34,7 +34,7 @@ struct Lang {
 	private shared string[] supported;
 	private shared string[string][string] langs;
 
-	// ["../res/lang/", "resources/plugins/example/res/lang/"]
+	// ["../res/lang/system/", "resources/plugins/example/res/lang/"]
 	private shared this(string[] langs, string[] dirs) {
 		this.supported = cast(shared)langs;
 		foreach(string lang ; langs) {

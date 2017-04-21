@@ -30,6 +30,7 @@ warning.crash = {0}: {1} in {2} alla linea {3}
 warning.savedCrash = Un file con i dettagli del problema è stato salvato in {0}
 warning.blocked = {0} è stato bloccato per {1} secondi
 warning.unknownWorld = Il mondo {0} non può essere letto perchè in un formato sconosciuto a {1}
+warning.creativeFailed = Impossibile scaricare l'inventario della modalità creativa per {0}
 
 status.outdatedHub = Impossibile connettersi! Hub obsoleta
 status.outdatedNode = Impossibile connettersi! Nodo obsoleto
@@ -93,23 +94,3 @@ death.attack.fall = {0} ha colpito il terreno troppo violentemente
 death.attack.outOfWorld = {0} è caduto fuori dal mondo
 death.attack.outOfWorld.player = {0} è stato spinto fuori dal mondo da {1}
 death.attack.lightning = {0} è stato folgorato
-
-commands.notonline = Il giocatore selezionato non è in linea
-commands.noworld = Il mondo selezionato non è disponibile
-commands.ban.usage = Uso: /ban <giocatore>
-commands.ban.description = Bandisci un giocatore dal server
-commands.ban.already_banned = Questo giocatore è già stato bandito dal server
-commands.ban.banned = {0} è stato bandito dal server
-commands.give.usage = Uso: /give <giocatore> <oggetto[:meta]> [<conto=oggetto.max>]
-commands.give.description = Aggiunge oggetti all'inventario di un giocatore
-commands.give.metaerr = "{0}" non è un valido meta/danno
-commands.give.counterr = "{0}" non è un numero valido per il conto
-commands.give.noitem = Non c'è nessun oggetto col nome "{0}"
-commands.give.full = {0} non può essere aggiunto all'inventario in quanto pieno
-commands.give.given = {0} è stato aggiunto all'inventario
-commands.kill.usage = Uso: /kill <giocatore>
-commands.kill.description = Uccide un giocatore
-commands.kill.killed = {0} è stato ucciso
-commands.toggledownfall.usage = Uso: /toggledownfall <mondo>
-commands.toggledownfall.description = Abilita/Disabilita le precipitazioni un mondo
-commands.toggledownfall.success = Le precipitazioni sono state invertite

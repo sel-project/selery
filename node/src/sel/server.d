@@ -240,7 +240,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				this.n_settings.language = "en_GB";
 			}
 			this.n_settings.acceptedLanguages = [this.n_settings.language];
-			Lang.init(this.n_settings.acceptedLanguages, [Paths.lang]);
+			Lang.init(this.n_settings.acceptedLanguages, [Paths.langSystem]);
 		}
 
 		static if(!__oneNode) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
@@ -342,7 +342,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			foreach(plugin ; this.n_plugins) {
 				if(plugin.language !is null) paths ~= plugin.language;
 			}
-			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.lang);
+			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
 			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
 

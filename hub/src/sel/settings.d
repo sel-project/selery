@@ -151,19 +151,7 @@ struct Settings {
 		} else {
 			settings.config.acceptedLanguages = accepted;
 		}
-
-		if(!settings.config.acceptedLanguages.canFind(settings.config.language)) {
-			string similar = settings.config.language.split("_")[0] ~ "_";
-			bool found = false;
-			foreach(al ; settings.config.acceptedLanguages) {
-				if(al.startsWith(similar)) {
-					found = true;
-					settings.config.language = al;
-					break;
-				}
-			}
-			if(!found) settings.config.language = settings.config.acceptedLanguages.canFind("en_GB") ? "en_GB" : settings.config.acceptedLanguages[0];
-		}
+		settings.language = bestLanguage(settings.language, settings.acceptedLanguages);
 
 		n_default_language = settings.config.language;
 
@@ -182,19 +170,6 @@ struct Settings {
 private string unpad(string str) {
 	if(str.length >= 2 && str.startsWith("\"") && str.endsWith("\"")) return str[1..$-1];
 	else return str;
-}
-
-private @property string[] availableLanguages() {
-	string[] ret;
-	import std.file : dirEntries, SpanMode, isFile;
-	foreach(string path ; dirEntries(Paths.lang, SpanMode.breadth)) {
-		if(path.isFile && path.endsWith(".lang")) {
-			if((cast(string)read(path)).indexOf(" COMPLETE") != -1) {
-				ret ~= path[path.lastIndexOf("/")+1..$-5];
-			}
-		}
-	}
-	return ret;
 }
 
 /**
