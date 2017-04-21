@@ -68,6 +68,10 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		this.setSize(.6f, 1.8f);
 	}
 
+	public override pure nothrow @property @safe @nogc string type() {
+		return "player";
+	}
+
 	public override void tick() {
 		super.tick();
 		if(this.starvation_tick != 0 && this.ticks % 80 == this.starvation_tick) {

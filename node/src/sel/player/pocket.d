@@ -1008,14 +1008,15 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 										break;
 									case "blockpos":
 										auto bp = (*search).object;
-										/*foreach(c ; TypeTuple!("x", "y", "z")) {
-											auto cc = c in bp;
-											if(cc && (*cc).type == JSON_TYPE.STRING) {
-
+										foreach(immutable c ; ["x", "y", "z"]) {
+											auto coord = c in bp;
+											auto rel = c ~ "relative" in bp;
+											if(coord && (*coord).type == JSON_TYPE.INTEGER) {
+												args ~= ((rel && (*rel).type == JSON_TYPE.TRUE ? "~" : "") ~ to!string((*coord).integer));
+											} else {
+												args ~= "~";
 											}
-										}*/
-										log(bp);
-										args ~= [bp["x"].integer.to!string, bp["y"].integer.to!string, bp["z"].integer.to!string];
+										}
 										break;
 									case "target":
 										auto rules = "rules" in *search;

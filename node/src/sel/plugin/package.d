@@ -30,3 +30,5 @@ public import sel.plugin.plugin : start, reload, stop, event, global, inherit, c
 
 public import sel.util.command : CommandSender, WorldCommandSender, SingleEnum, Position, Target;
 public import sel.util.log : log, debug_log, warning_log, error_log;
+
+public import sel.world : World;

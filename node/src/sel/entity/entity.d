@@ -17,7 +17,7 @@ module sel.entity.entity;
 import std.algorithm : clamp;
 import std.conv : to;
 import std.math;
-import std.string : split;
+import std.string : split, replace;
 import std.traits : isArray, isAbstractClass;
 import std.typecons : Tuple;
 import std.uuid : UUID;
@@ -118,6 +118,18 @@ abstract class Entity : EventListener!WorldEvent {
 
 	public pure nothrow @property @safe @nogc sul.entities.Entity data() {
 		return sul.entities.Entity.init;
+	}
+
+	/**
+	 * Gets the entity's type in a string format.
+	 * Example:
+	 * ---
+	 * assert(creeper.type == "creeper");
+	 * assert(witherSkull.type == "wither_skull");
+	 * ---
+	 */
+	public pure nothrow @property @safe string type() {
+		return this.data.name.replace(" ", "_");
 	}
 
 	/**

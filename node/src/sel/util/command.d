@@ -14,10 +14,12 @@
  */
 module sel.util.command;
 
+import std.algorithm : sort;
 import std.conv : ConvException, to;
 import std.json : parseJSON;
+static import std.math;
 import std.random : uniform;
-import std.string : join, split, replace, toLower;
+import std.string : join, split, replace, toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
 import std.typecons : Tuple;
 
@@ -269,8 +271,14 @@ interface CommandSender {
 
 }
 
+/**
+ * Interface for a command sender that is spawned in a world.
+ */
 interface WorldCommandSender : CommandSender {
 
+	/**
+	 * Gets the command sender's world.
+	 */
 	public pure nothrow @property @safe @nogc World world();
 
 }
@@ -406,17 +414,52 @@ struct Target {
 				case 'p':
 					auto players = sender.visiblePlayers;
 					if(players.length) {
-						//TODO
+						if("c" !in selectors) {
+							selectors["c"] = "1";
+						}
+						filter(sender, players, selectors);
+						//TODO sort per distance
 						return Target(str);
 					} else {
 						return Target(str);
 					}
-				case 'r': 
-					return Target(str, [sender.visiblePlayers[uniform(0, $)]]);
+				case 'r':
+					size_t amount = 1;
+					auto c = "c" in selectors;
+					if(c) {
+						try {
+							amount = to!size_t(*c);
+						} catch(ConvException) {}
+						selectors.remove("c");
+					}
+					Target rImpl(T:Entity)(T[] data) {
+						filter(sender, data, selectors);
+						if(amount >= data.length) {
+							return Target(str, data);
+						} else {
+							T[] selected;
+							while(--amount) {
+								size_t index = uniform(0, data.length);
+								selected ~= data[index];
+								data = data[0..index] ~ data[index+1..$];
+							}
+							return Target(str, selected);
+						}
+					}
+					auto type = "type" in selectors;
+					if(type && *type != "player") {
+						return rImpl(sender.visibleEntities);
+					} else {
+						return rImpl(sender.visiblePlayers);
+					}
 				case 'a':
-					return Target(str, sender.visiblePlayers);
+					auto players = sender.visiblePlayers;
+					filter(sender, players, selectors);
+					return Target(str, players);
 				case 'e':
-					return Target(str, sender.visibleEntities);
+					auto entities = sender.visibleEntities;
+					filter(sender, entities, selectors);
+					return Target(str, entities);
 				default:
 					return Target(str);
 			}
@@ -430,4 +473,140 @@ struct Target {
 		}
 	}
 
+}
+
+private struct Res {
+
+	bool exists;
+	bool inverted;
+	string value;
+
+	alias exists this;
+
+}
+
+private void filter(T:Entity)(CommandSender sender, ref T[] entities, string[string] selectors) {
+	Res data(string key) {
+		auto p = key in selectors;
+		if(p) {
+			if((*p).startsWith("!")) return Res(true, true, (*p)[1..$]);
+			else return Res(true, false, *p);
+		} else {
+			return Res(false);
+		}
+	}
+	auto type = data("type");
+	if(type) {
+		// filter type
+		if(!type.inverted) filterImpl!("entity.type == a")(entities, type.value);
+		else filterImpl!("entity.type != a")(entities, type.value);
+	}
+	auto name = data("name");
+	if(name) {
+		// filter by nametag
+		if(!name.inverted) filterImpl!("entity.nametag == a")(entities, name.value);
+		else filterImpl!("entity.nametag != a")(entities, name.value);
+	}
+	auto rx = data("rx");
+	if(rx) {
+		// filter by max pitch
+		try { filterImpl!("entity.pitch <= a")(entities, to!float(name.value)); } catch(ConvException) {}
+	}
+	auto rxm = data("rxm");
+	if(rxm) {
+		// filter by min pitch
+		try { filterImpl!("entity.pitch >= a")(entities, to!float(name.value)); } catch(ConvException) {}
+	}
+	auto ry = data("ry");
+	if(ry) {
+		// filter by max yaw
+		try { filterImpl!("entity.yaw <= a")(entities, to!float(name.value)); } catch(ConvException) {}
+	}
+	auto rym = data("rym");
+	if(rym) {
+		// filter by min yaw
+		try { filterImpl!("entity.yaw >= a")(entities, to!float(name.value)); } catch(ConvException) {}
+	}
+	auto m = data("m");
+	auto l = data("l");
+	auto lm = data("lm");
+	if(m || l || lm) {
+		static if(is(T : Player)) {
+			alias players = entities;
+		} else {
+			// filter out non-players
+			Player[] players;
+			foreach(entity ; entities) {
+				auto player = cast(Player)entity;
+				if(player !is null) players ~= player;
+			}
+		}
+		if(m) {
+			// filter gamemode
+			int gamemode = (){
+				switch(m.value) {
+					case "0": case "s": case "survival": return 0;
+					case "1": case "c": case "creative": return 1;
+					case "2": case "a": case "adventure": return 2;
+					case "3": case "sp": case "spectator": return 3;
+					default: return -1;
+				}
+			}();
+			if(gamemode >= 0) {
+				if(!m.inverted) filterImpl!("entity.gamemode == a")(players, gamemode);
+				else filterImpl!("entity.gamemode != a")(players, gamemode);
+			}
+		}
+		if(l) {
+			// filter xp (min)
+			try {
+				filterImpl!("entity.level <= a")(players, to!uint(l.value));
+			} catch(ConvException) {}
+		}
+		if(lm) {
+			// filter xp (max)
+			try {
+				filterImpl!("entity.level >= a")(players, to!uint(l.value));
+			} catch(ConvException) {}
+		}
+		static if(!is(T : Player)) {
+			entities = cast(Entity[])players;
+		}
+	}
+	auto c = data("c");
+	if(c) {
+		try {
+			auto amount = to!ptrdiff_t(c.value);
+			if(amount > 0) {
+				entities = filterDistance!false(sender.startingPosition, entities, amount);
+			} else if(amount < 0) {
+				entities = filterDistance!true(sender.startingPosition, entities, -amount);
+			} else {
+				entities.length = 0;
+			}
+		} catch(ConvException) {}
+	}
+}
+
+private void filterImpl(string query, T:Entity, A)(ref T[] entities, A a) {
+	T[] ret;
+	foreach(entity ; entities) {
+		if(mixin(query)) ret ~= entity;
+	}
+	if(ret.length != entities.length) entities = ret;
+}
+
+private T[] filterDistance(bool inverted, T:Entity)(BlockPosition position, T[] entities, size_t count) {
+	if(count >= entities.length) return entities;
+	Tuple!(T, double)[] distances;
+	foreach(entity ; entities) {
+		distances ~= Tuple!(T, double)(entity, distance(position, entity.position));
+	}
+	sort!((a, b) => a[1] == b[1] ? a[0].id < b[0].id : a[1] < b[1])(distances);
+	T[] ret;
+	foreach(i ; 0..count) {
+		static if(inverted) ret ~= distances[$-i-1][0];
+		else ret ~= distances[i][0];
+	}
+	return ret;
 }
