@@ -221,7 +221,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				}
 				return true;
 			} catch(CurlException) {
-				warning_log(translate("{warning.creativeFailed}", server.settings.language, ["pocket", __protocol]));
+				warning_log(translate("{warning.creativeFailed}", server.settings.language, ["pocket" ~ __protocol.to!string]));
 			}
 			ubyte[] encoded = packet.encode();
 			Compress c = new Compress(9);
