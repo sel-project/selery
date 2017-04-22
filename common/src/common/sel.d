@@ -164,7 +164,7 @@ enum supportedMinecraftProtocols = cast(string[][uint])[
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	110: ["1.1.0"],
+	111: ["1.1.0"],
 ];
 
 /**

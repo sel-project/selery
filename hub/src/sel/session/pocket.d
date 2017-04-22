@@ -571,10 +571,10 @@ final class PocketSession : PlayerSession {
 		this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
 		auto protocols = this.server.settings.pocket.protocols;
-		if(login.protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
-		else if(!protocols.canFind(login.protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
+		if(this.n_protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
+		else if(!protocols.canFind(this.n_protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
 		else {
-			this.n_version = supportedPocketProtocols[login.protocol][0];
+			this.n_version = supportedPocketProtocols[this.n_protocol][0];
 			this.functionHandler = &this.handleFail;
 			this.acceptSplit = false;
 			// kick if the server is edu and the client is not
