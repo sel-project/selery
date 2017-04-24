@@ -138,7 +138,18 @@ struct Config {
 		this.query = !edu && !realm;
 
 		this.acceptedLanguages = availableLanguages();
-		this.language = bestLanguage(environment.get("LANG", "en_GB"), this.acceptedLanguages); //TODO windows does not have the variable
+		version(Windows) {
+			import std.utf : toUTF8;
+			import core.sys.windows.winnls;
+			wchar[] lang = new wchar[3];
+			wchar[] country = new wchar[3];
+			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO639LANGNAME, lang.ptr, 3);
+			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
+			this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
+		} else {
+			this.language = environment.get("LANG", "en_GB");
+		}
+		this.language = bestLanguage(this.language, this.acceptedLanguages);
 
 		this.acceptedNodes ~= getAddress("localhost", 0)[0].addressFamily == AddressFamily.INET6 ? "::1" : "127.0.*.*";
 		
