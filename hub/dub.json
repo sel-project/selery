@@ -1,7 +1,7 @@
 {
 	"name": "sel-hub",
-	"authors": ["sel-project"],
-	"targetType": "executable",
+	"authors": ["Kripth"],
+	"targetType": "library",
 	"dependencies": {
 		"sel-common": {
 			"path": "../common"

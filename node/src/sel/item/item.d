@@ -37,7 +37,7 @@ static import sul.items;
 
 
 /**
- * Base abstract class for an Item.
+ * Base class for an Item.
  */
 class Item {
 

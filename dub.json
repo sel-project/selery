@@ -1,0 +1,10 @@
+{
+	"name": "sel-server",
+	"authors": ["Kripth"],
+	"targetType": "none",
+	"subPackages": [
+		"common",
+		"hub",
+		"node"
+	]
+}

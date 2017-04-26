@@ -3,13 +3,11 @@ language: d
 d:
  - dmd-2.073.2
  - ldc
- 
-install:
- - mkdir -p hub/resources
- 
+
 script:
- - cd hub && dub build --compiler=$DC --build=release
- - cd ../node && dub build --compiler=$DC --build=release
+ - cd build
+ - dub build --single --compiler=$DC --build=release hub.d
+ - dub build --single --compiler=$DC --build=release node.d
 
 notifications:
  - email: false

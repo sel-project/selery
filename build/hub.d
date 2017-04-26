@@ -1,3 +1,18 @@
+/+ dub.json:
+{
+	"name": "hub",
+	"authors": ["Kripth"],
+	"targetType": "executable",
+	"dependencies": {
+		"sel-common": {
+			"path": "../common"
+		},
+		"sel-hub": {
+			"path": "../hub"
+		}
+	}
+}
++/
 /*
  * Copyright (c) 2016-2017 SEL
  * 
@@ -12,12 +27,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/**
- * License: $(HTTP www.gnu.org/licenses/lgpl-3.0.html, GNU General Lesser Public License v3).
- * 
- * Source: $(HTTP www.github.com/sel-project/sel-server/blob/master/hub/sel/main.d, main.d)
- */
-module app;
+module hub;
 
 import std.conv : to;
 import std.string : replace, toLower;

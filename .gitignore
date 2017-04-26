@@ -6,15 +6,12 @@
 *.o
 *.lib
 *.a
-common/.dub
-node/.dub
-node/dub.selections.json
+*.selections.json
+.dub
 node/src/chatfilter
 node/src/commands
 node/src/example
 node/src/data.d
-hub/.dub
-hub/dub.selections.json
 
 res/lang/system/es_ES.lang
 res/lang/system/fur_IT.lang
