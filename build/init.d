@@ -1,13 +1,7 @@
-/+ dub.json:
-{
-	"name": "init",
-	"authors": ["sel-project"],
-	"dependencies": {
-		"sel-common": {
-			"path": "../common"
-		}
-	}
-}
+/+ dub.sdl:
+   name "init"
+   authors "sel-project"
+   dependency "sel-common" path="../src/common"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -238,13 +232,13 @@ void main(string[] args) {
 	string[] fimports;
 
 	JSONValue[string] dub;
-	dub["sel-node"] = JSONValue(["path": "../../node"]);
+	dub["sel-node"] = JSONValue(["path": "../../src/node"]);
 
 	foreach(Info value ; ordered) {
 		if(value.active) {
 			count++;
 			dub[value.id] = ["path": "../../plugins/" ~ value.id];
-			JSONValue[string] deps = ["sel-node": JSONValue(["path": "../../node"])];
+			JSONValue[string] deps = ["sel-node": JSONValue(["path": "../../src/node"])];
 			auto dptr = "dependencies" in value.json;
 			if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 				foreach(name, d; dptr.object) {

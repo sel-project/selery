@@ -1,19 +1,19 @@
 /+ dub.sdl:
-	name "hub"
-	authors "Kripth"
-	targetType "executable"
-	dependency "sel-common" path="../common"
-	dependency "sel-hub" path="../hub"
-	configuration "default"
-	configuration "edu" {
-		versions "Edu"
-	}
-	configuration "realm" {
-		versions "Realm"
-	}
-	configuration "edu-realm" {
-		versions "Edu" "Realm"
-	}
+   name "hub"
+   authors "Kripth"
+   targetType "executable"
+   dependency "sel-common" path="../src/common"
+   dependency "sel-hub" path="../src/hub"
+   configuration "default"
+   configuration "edu" {
+   	versions "Edu"
+   }
+   configuration "realm" {
+   	versions "Realm"
+   }
+   configuration "edu-realm" {
+   	versions "Edu" "Realm"
+   }
 +/
 /*
  * Copyright (c) 2016-2017 SEL

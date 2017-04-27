@@ -53,28 +53,26 @@ sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=]
 #### Hub
 
 ```
-cd hub
-dub build
-./sel-hub
+cd build
+dub build --single hub.d
+./hub
 ```
 
 Available configurations:
 
-	`--config=<configuration>`
+`--config=<configuration>`
 
-	- full
-	- edu
-	- realm
-	- full-edu
-	- full-realm
-	- full-edu-realm
+- edu
+- realm
+- edu-realm
 
 #### Node
 
-```
-cd node
-dub build --build=release
-./sel-node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
-```
+:warning: does not work with DMD 2.074
 
-The configuration `full` can be used to create a node of type full.
+```
+cd build
+dub init.d
+dub build --single node.d
+./node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
+```

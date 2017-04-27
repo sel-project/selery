@@ -1,10 +1,10 @@
 /+ dub.sdl:
-	name "node"
-	authors "Kripth"
-	targetType "executable"
-	dependency "sel-common" path="../common"
-	dependency "sel-node" path="../node"
-	dependency "data" path="../.hidden/data"
+   name "node"
+   authors "sel-project"
+   targetType "executable"
+   dependency "sel-common" path="../src/common"
+   dependency "sel-node" path="../src/node"
+   dependency "data" path="../.hidden/data"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
