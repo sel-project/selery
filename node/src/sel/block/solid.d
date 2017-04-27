@@ -18,9 +18,9 @@ import std.algorithm : canFind, min;
 import std.conv : to;
 import std.math : ceil;
 
-import common.sel;
+import com.sel;
 
-import sel.block.block : Update, Remove, Block, SimpleBlock;
+import sel.block.block : Update, Remove, Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.projectile : FallingBlock;
@@ -54,11 +54,7 @@ enum Facing : ubyte {
 
 }
 
-/**
- * Class for a block that drops one or more items when mined.
- * ---
- */
-class MineableBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] cdrops, Experience exp=Experience.init) : SimpleBlock!(sb) {
+/+class MineableBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] cdrops, Experience exp=Experience.init) : SimpleBlock!(sb) {
 
 	static if(cdrops.length) {
 
@@ -172,10 +168,7 @@ class MineableBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] cdrops, E
 		return cast(tick_t)ceil(time * 20);
 	}
 	
-}
-
-/// ditto
-alias MineableBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop, Experience exp=Experience.init) = MineableBlock!(sb, miningTool, [drop], exp);
+}+/
 
 struct MiningTool {
 
@@ -201,11 +194,11 @@ struct Drop {
 
 	public item_t silkTouch;
 
-	ubyte function(ref ubyte, ubyte, ref Random) fortune = null;
+	void function(ref ubyte, ubyte, ref Random) fortune = null;
 
-	/*static ubyte plusOne(ref ubyte amount, ubyte level, ref Random random) {
-		amount += min(level, 3);
-	}*/
+	static void plusOne(ref ubyte amount, ubyte level, ref Random random) {
+		amount += level > 3 ? 3 : level;
+	}
 
 }
 
@@ -215,9 +208,112 @@ struct Experience {
 
 }
 
-alias StoneBlock(sul.blocks.Block sb, item_t item, item_t silkTouch=0) = MineableBlock!(sb, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(item, 1, 1, silkTouch));
+class MineableBlock : Block {
 
-class RedstoneOreBlock(sul.blocks.Block sb, bool lit, block_t change) : MineableBlock!(sb, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.redstoneDust, 4, 5, Items.redstoneOre), Experience(1, 5, 1)) {
+	private MiningTool _miningTool;
+	private Drop[] _drops;
+	private Experience _exp;
+
+	private bool delegate(Item) validateTool;
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop[] drops, Experience exp=Experience.init) {
+		super(data);
+		this._miningTool = miningTool;
+		this._drops = drops;
+		this._exp = exp;
+		if(miningTool.material == Tools.none || drops.length == 0) {
+			this.validateTool = &validateToolNo;
+		} else {
+			this.validateTool = &validateToolYes;
+		}
+	}
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop drop, Experience exp=Experience.init) {
+		this(data, miningTool, [drop], exp);
+	}
+
+	public override Slot[] drops(World world, Player player, Item item) {
+		if(this.validateTool(item)) {
+			bool silkTouch = item !is null && Enchantments.silkTouch in item; //TODO only calculate if needed
+			ubyte[item_t] ret;
+			foreach(drop ; this._drops) {
+				if(drop.silkTouch && silkTouch) {
+					ret[drop.silkTouch] = 1;
+				} else if(drop.item) {
+					if(drop.max) {
+						auto res = world.random.range(drop.min, drop.max);
+						if(res > 0) ret[drop.item] = cast(ubyte)res;
+					} else {
+						ret[drop.item] = cast(ubyte)drop.min;
+					}
+				}
+			}
+			if(ret.length) {
+				Slot[] slots;
+				foreach(item, amount; ret) {
+					auto func = world.items.getConstructor(item);
+					if(func !is null) {
+						//TODO do not drop more than 3/4 items (group them)
+						foreach(i ; 0..amount) {
+							slots ~= Slot(func(0), 1);
+						}
+					}
+				}
+				return slots;
+			}
+		}
+		return [];
+	}
+
+	//TODO exp
+
+	//TODO mining time
+
+	// functions
+
+	private bool validateToolNo(Item item) {
+		return true;
+	}
+
+	private bool validateToolYes(Item item) {
+		return item !is null && item.toolType == this._miningTool.type && item.toolMaterial >= this._miningTool.material;
+	}
+
+}
+
+class StoneBlock : Block {
+
+	private immutable item_t drop, silk_touch;
+
+	public this(sul.blocks.Block data, item_t item, item_t silkTouch=0) {
+		super(data);
+		this.drop = item;
+		this.silk_touch = silkTouch;
+	}
+
+	public override Slot[] drops(World world, Player player, Item item) {
+		if(item !is null) {
+			if(Enchantments.silkTouch in item) {
+				return [Slot(world.items.get(this.silk_touch))]; //TODO may be 0
+			} else if(item.toolType == Tools.pickaxe) {
+				return [Slot(world.items.get(this.drop))];
+			}
+		}
+		return [];
+	}
+
+	//TODO mining time
+
+}
+
+class RedstoneOreBlock(bool lit) : MineableBlock {
+
+	private block_t change;
+
+	public this(sul.blocks.Block data, block_t change) {
+		super(data, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.redstoneDust, 4, 5, Items.redstoneOre), Experience(1, 5, 1));
+		this.change = change;
+	}
 
 	//TODO +1 with fortune
 
@@ -228,17 +324,17 @@ class RedstoneOreBlock(sul.blocks.Block sb, bool lit, block_t change) : Mineable
 		}
 
 		public final override void onRandomTick(World world, BlockPosition position) {
-			world[position] = change;
+			world[position] = this.change;
 		}
 
 	} else {
 
 		public override void onEntityStep(Entity entity, BlockPosition position, float fallDistance) {
-			entity.world[position] = change;
+			entity.world[position] = this.change;
 		}
 
 		public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
-			player.world[position] = change;
+			player.world[position] = this.change;
 			return false;
 		}
 
@@ -246,32 +342,35 @@ class RedstoneOreBlock(sul.blocks.Block sb, bool lit, block_t change) : Mineable
 	
 }
 
-class SpreadingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] drops, block_t[] spreadTo, uint r_x, uint r_z, uint r_y_down, uint r_y_up, block_t suffocation) : MineableBlock!(sb, miningTool, drops) {
+class SpreadingBlock : MineableBlock {
+
+	private block_t[] spreadTo;
+
+	private BlockPosition[] positions;
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop[] drops, block_t[] spreadTo, uint r_x, uint r_z, uint r_y_down, uint r_y_up) {
+		super(data, miningTool, drops);
+		this.spreadTo = spreadTo;
+		// instantiate positions here instead of instatiate them every time onRandomTick is called
+		BlockPosition[] positions;
+		foreach(int x ; r_x..r_x+1) {
+			foreach(int y ; r_y_down..r_y_up+1) {
+				foreach(int z ; r_z..r_z+1) {
+					this.positions ~= BlockPosition(x, y, z);
+				}
+			}
+		}
+	}
 
 	public final override pure nothrow @property @safe @nogc bool doRandomTick() {
 		return true;
 	}
 
 	public override void onRandomTick(World world, BlockPosition position) {
-		static if(suffocation != 0) {
-			//checks for suffocation
-			auto up = world[position + [0, 1, 0]];
-			if(up.opacity == 15) { //TODO also fluids
-				world[position] = suffocation;
-				return;
-			}
-		}
-		//grow
-		BlockPosition[] positions; //TODO calculate at compile time
-		foreach(int x ; position.x-r_x..position.x+r_x+1) {
-			foreach(int y ; position.y-r_y_down..position.y+r_y_up+1) {
-				foreach(int z ; position.z-r_z..position.z+r_z+1) {
-					if(y >= 0) positions ~= BlockPosition(x, y, z);
-				}
-			}
-		}
-		world.random.shuffle(positions);
-		foreach(BlockPosition target ; positions) {
+		// spread
+		world.random.shuffle(this.positions);
+		foreach(check ; this.positions) {
+			BlockPosition target = position + check;
 			Block b = world[target];
 			if(b == spreadTo) {
 				auto sup = world[target + [0, 1, 0]];
@@ -285,13 +384,48 @@ class SpreadingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] drops, b
 
 }
 
-alias SimpleSpreadingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop[] drops, block_t[] spreadTo, uint r_x, uint r_z, uint r_y, block_t suffocation) = SpreadingBlock!(sb, miningTool, drops, spreadTo, r_x, r_z, r_y, r_y, suffocation);
+class SuffocatingSpreadingBlock : SpreadingBlock {
 
-class SaplingBlock(sul.blocks.Block sb, size_t drop, block_t[] logs, block_t[] leaves) : MineableBlock!(sb, MiningTool.init, Drop(drop, 1)) if(logs.length == 4 && leaves.length == 4) {
+	private block_t suffocation;
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop[] drops, block_t[] spreadTo, uint r_x, uint r_z, uint r_y_down, uint r_y_up, block_t suffocation) {
+		super(data, miningTool, drops, spreadTo, r_x, r_z, r_y_down, r_y_up);
+	}
+
+	public override void onRandomTick(World world, BlockPosition position) {
+		auto up = world[position + [0, 1, 0]];
+		if(up.opacity == 15 || up.fluid) {
+			world[position] = this.suffocation;
+			return;
+		}
+		super.onRandomTick(world, position);
+	}
 
 }
 
-class GravityBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop) : MineableBlock!(sb, miningTool, drop) {
+class SaplingBlock : MineableBlock {
+
+	private block_t[4] logs, leaves;
+
+	public this(sul.blocks.Block data, size_t drop, block_t[] logs, block_t[4] leaves) {
+		super(data, MiningTool.init, Drop(drop, 1));
+		this.logs = logs;
+		this.leaves = leaves;
+	}
+
+	//TODO grow with bone meal
+
+}
+
+class GravityBlock : MineableBlock {
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop[] drops) {
+		super(data, miningTool, drops);
+	}
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop drop) {
+		this(data, miningTool, [drop]);
+	}
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
 		if(!world[position].solid) {
@@ -302,7 +436,11 @@ class GravityBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop) : Mine
 
 }
 
-final class GravelBlock(sul.blocks.Block sb) : GravityBlock!(sb, MiningTool.init, Drop.init) {
+final class GravelBlock : GravityBlock {
+
+	public this(sul.blocks.Block data) {
+		super(data, MiningTool.init, []);
+	}
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] impl(float prob) {
@@ -323,40 +461,57 @@ final class GravelBlock(sul.blocks.Block sb) : GravityBlock!(sb, MiningTool.init
 
 }
 
-alias WoodBlock(sul.blocks.Block sb, item_t drop) = MineableBlock!(sb, MiningTool(false, Tools.axe, Tools.wood), Drop(drop, 1));
+class WoodBlock : MineableBlock {
 
-class LeavesBlock(sul.blocks.Block sb, bool decayable, item_t drop, item_t sapling, float smallDrop, bool dropApples) : SimpleBlock!(sb) {
-
-	static if(smallDrop) {
-		enum float[] saplingDrop = [.05, .0625, .0833, .1];
-	} else {
-		enum float[] saplingDrop = [.025, .0278, .03125, .0417];
+	public this(sul.blocks.Block data, item_t drop) {
+		super(data, MiningTool(false, Tools.axe, Tools.wood), Drop(drop, 1));
 	}
 
-	enum float[] appleDrop = [.005, .00556, .00625, .0833];
+}
+
+class LeavesBlock(bool decayable, bool dropApples) : Block {
+
+	private enum ubyte[4] bigSaplingDrop = [20, 16, 12, 10];
+	private enum ubyte[4] smallSaplingDrop = [40, 36, 32, 24];
+	private enum ubyte[4] appleDrop = [200, 180, 160, 120];
+
+	private immutable item_t drop, sapling;
+
+	private ubyte[4] saplingDrop;
+
+	public this(sul.blocks.Block data, item_t drop, item_t sapling, bool smallDrop) {
+		super(data);
+		this.drop = drop;
+		this.sapling = sapling;
+		if(smallDrop) {
+			this.saplingDrop = smallSaplingDrop;
+		} else {
+			this.saplingDrop = bigSaplingDrop;
+		}
+	}
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		if(item !is null && item == Items.shears) {
-			return [Slot(world.items.get(drop), 1)];
+			return [Slot(world.items.get(this.drop), 1)];
 		} else if(player !is null) {
 			size_t lvl = 0;
 			if(item !is null) {
 				auto fortune = Enchantments.fortune in item;
 				if(fortune) lvl = min(3, (*fortune).level);
 			}
-			return this.decayDrop(world, saplingDrop[lvl], appleDrop[lvl]);
+			return this.decayDrop(world, this.saplingDrop[lvl], appleDrop[lvl]);
 		} else {
 			return [];
 		}
 	}
 
-	private Slot[] decayDrop(World world, float sp, float ap) {
+	private Slot[] decayDrop(World world, ubyte sp, ubyte ap) {
 		Slot[] ret;
-		if(world.random.next!float <= sp) {
-			ret ~= Slot(world.items.get(sapling), 1);
+		if(world.random.next(sp) == 0) {
+			ret ~= Slot(world.items.get(this.sapling), 1);
 		}
 		static if(dropApples) {
-			if(world.random.next!float <= ap) {
+			if(world.random.next(ap) == 0) {
 				ret ~= Slot(world.items.get(Items.apple), 1);
 			}
 		}
@@ -377,7 +532,11 @@ class LeavesBlock(sul.blocks.Block sb, bool decayable, item_t drop, item_t sapli
 
 }
 
-class AbsorbingBlock(sul.blocks.Block sb, item_t drop, block_t wet, block_t[] absorb, size_t maxDistance, size_t maxBlocks) : MineableBlock!(sb, MiningTool.init, Drop(drop, 1)) {
+class AbsorbingBlock : MineableBlock {
+
+	public this(sul.blocks.Block data, item_t drop, block_t wet, block_t[] absorb, size_t maxDistance, size_t maxBlocks) {
+		super(data, MiningTool.init, Drop(drop, 1));
+	}
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
 		// also called when the block is placed
@@ -386,41 +545,80 @@ class AbsorbingBlock(sul.blocks.Block sb, item_t drop, block_t wet, block_t[] ab
 
 }
 
-alias FlowerBlock(sul.blocks.Block sb, item_t drop) = MineableBlock!(sb, MiningTool.init, Drop(drop, 1));
+class FlowerBlock : MineableBlock {
 
-class DoublePlantBlock(sul.blocks.Block sb, bool top, block_t other, item_t drop, bool isGrass=false) : SimpleBlock!(sb) {
+	public this(sul.blocks.Block data, item_t drop) {
+		super(data, MiningTool.init, Drop(drop, 1));
+	}
 
-	enum count = isGrass ? 2 : 1;
+}
+
+class DoublePlantBlock : Block {
+
+	private int y;
+	private block_t other;
+	private item_t drop;
+	private ubyte count;
+
+	public this(sul.blocks.Block data, bool top, block_t other, item_t drop, ubyte count=1) {
+		super(data);
+		this.count = count;
+		this.y = top ? -1 : 1;
+		this.other = other;
+		this.drop = drop;
+		this.count = count;
+	}
 
 	public override Slot[] drops(World world, Player player, Item item) {
-		static if(isGrass) {
-			if(item is null || item.toolType != Tools.shears) return [];
-		}
-		return [Slot(world.items.get(drop), count)];
+		return [Slot(world.items.get(this.drop), this.count)];
 	}
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
-		static if(top) {
-			auto pos = position - [0, 1, 0];
-		} else {
-			auto pos = position + [0, 1, 0];
-		}
-		if(world[pos] != other) {
+		auto pos = position + [0, this.y, 0];
+		if(world[pos] != this.other) {
 			world[pos] = Blocks.air;
 		}
 	}
 
 }
 
-class PlantBlock(sul.blocks.Block sb, item_t shears, Drop hand) : SimpleBlock!(sb) {
+class GrassDoublePlantBlock : DoublePlantBlock {
+
+	public this(sul.blocks.Block data, bool top, block_t other, item_t drop) {
+		super(data, top, other, drop, 2);
+	}
+
+	public override Slot[] drops(World world, Player player, Item item) {
+		if(item !is null && item.toolType == Tools.shears) return super.drops(world, player, item);
+		else return [];
+	}
+
+}
+
+class PlantBlock : Block {
+
+	private item_t shears;
+	private Drop hand;
+
+	public this(sul.blocks.Block data, item_t shears, Drop hand) {
+		super(data);
+		this.shears = shears;
+		this.hand = hand;
+	}
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] ret;
 		if(item !is null && item.toolType == Tools.shears) {
-			ret ~= Slot(world.items.get(shears), 1);
+			ret ~= Slot(world.items.get(this.shears), 1);
 		} else {
-			foreach(i ; 0..world.random.range(hand.min, hand.max)) {
-				ret ~= Slot(world.items.get(hand.item), 1);
+			ubyte count = cast(ubyte)world.random.range(this.hand.min, this.hand.max);
+			if(count) {
+				auto f = world.items.getConstructor(this.hand.item);
+				if(f !is null) {
+					foreach(i ; 0..count) {
+						ret ~= Slot(f(0), 1);
+					}
+				}
 			}
 		}
 		return ret;
@@ -428,18 +626,29 @@ class PlantBlock(sul.blocks.Block sb, item_t shears, Drop hand) : SimpleBlock!(s
 
 }
 
-class StairsBlock(sul.blocks.Block sb, ubyte facing, bool upsideDown, MiningTool miningTool, item_t drop) : MineableBlock!(sb, miningTool, Drop(drop, 1)) {
+class StairsBlock : MineableBlock {
+
+	public this(sul.blocks.Block data, ubyte facing, bool upsideDown, MiningTool miningTool, item_t drop) {
+		super(data, miningTool, Drop(drop, 1));
+	}
 
 	//TODO
 
 }
 
-class CakeBlock(sul.blocks.Block sb, block_t next) : SimpleBlock!(sb) {
+class CakeBlock : Block {
+
+	private block_t next;
+
+	public this(sul.blocks.Block data, block_t next) {
+		super(data);
+		this.next = next;
+	}
 
 	public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
 		player.hunger = player.hunger + 2;
 		player.saturate(.4f);
-		player.world[position] = next;
+		player.world[position] = this.next;
 		return true;
 	}
 
@@ -449,24 +658,53 @@ class CakeBlock(sul.blocks.Block sb, block_t next) : SimpleBlock!(sb) {
 
 }
 
-class MonsterEggBlock(sul.blocks.Block sb, block_t disguise) : MineableBlock!(sb, MiningTool.init, Drop(0, 0, 0, disguise)) {
+class MonsterEggBlock : Block {
+
+	private block_t disguise;
+
+	private bool silkTouch = false;
+
+	public this(sul.blocks.Block data, block_t disguise) {
+		super(data);
+		this.disguise = disguise;
+	}
+
+	public override Slot[] drops(World world, Player player, Item item) {
+		this.silkTouch = item !is null && Enchantments.silkTouch in item;
+		if(this.silkTouch) {
+			return [Slot(world.items.get(this.disguise), 1)];
+		} else {
+			return [];
+		}
+	}
+
+	//TODO mining time
 
 	public override void onRemoved(World world, BlockPosition position, Remove type) {
-		if(type == Remove.broken || type == Remove.exploded) {
+		if(type == Remove.broken && !this.silkTouch || type == Remove.exploded) {
+			//world.spawn!Silverfish(position.entityPosition + .5);
 			//TODO spawn silverfish
-			//TODO only if not silk touch
 		}
 	}
 
 }
 
-class InactiveEndPortalBlock(sul.blocks.Block sb, block_t active, ubyte dir) : SimpleBlock!(sb) {
+class InactiveEndPortalBlock : Block {
+
+	private block_t active;
+	public immutable ubyte direction;
+
+	public this(sul.blocks.Block data, block_t active, ubyte direction) {
+		super(data);
+		this.active = active;
+		this.direction = direction;
+	}
 
 	public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
 		if(!player.inventory.held.empty && player.inventory.held.item == Items.eyeOfEnder) {
 			player.inventory.held = player.inventory.held.count == 1 ? Slot(null) : Slot(player.inventory.held.item, cast(ubyte)(player.inventory.held.count - 1));
-			player.world[position] = active;
-			//TODO check for portal creation
+			player.world[position] = this.active;
+			//TODO check for portal creation (or check when active is placed)
 			return true;
 		} else {
 			return false;

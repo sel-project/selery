@@ -14,7 +14,7 @@
  */
 module sel.item.recipe;
 
-import common.sel;
+import com.sel;
 
 class Recipe {}
 

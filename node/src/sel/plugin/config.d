@@ -19,7 +19,7 @@ import std.conv : to, ConvException;
 import std.string : split, join, strip, indexOf;
 import std.traits : isArray;
 
-import common.path : Paths;
+import com.path : Paths;
 
 import sel.plugin.file;
 

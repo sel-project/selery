@@ -17,7 +17,7 @@ module sel.plugin.plugin;
 import std.conv : to;
 import std.traits : isAbstractClass, getUDAs, hasUDA;
 
-import common.sel;
+import com.sel;
 
 import sel.server : server;
 

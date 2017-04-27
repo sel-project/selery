@@ -22,8 +22,8 @@ import std.string;
 import std.system;
 import std.zlib;
 
-import common.sel : Software;
-import common.util : seconds;
+import com.sel : Software;
+import com.util : seconds;
 
 import nbt.stream : ClassicStream;
 import nbt.tags;

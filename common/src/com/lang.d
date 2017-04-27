@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.lang;
+module com.lang;
 
 import std.algorithm : canFind;
 import std.conv : to;
@@ -20,8 +20,8 @@ import std.file : exists, read;
 import std.string;
 import std.traits : EnumMembers;
 
-import common.path : Paths;
-import common.format : Text;
+import com.path : Paths;
+import com.format : Text;
 
 struct Lang {
 	

@@ -33,8 +33,8 @@ import std.socket;
 import std.string : toLower;
 import std.uuid;
 
-import common.sel;
-import common.util : milliseconds;
+import com.sel;
+import com.util : milliseconds;
 
 import sel.constants;
 import sel.server;

@@ -1,17 +1,10 @@
-/+ dub.json:
-{
-	"name": "node",
-	"authors": ["Kripth"],
-	"targetType": "executable",
-	"dependencies": {
-		"sel-common": {
-			"path": "../common"
-		},
-		"sel-node": {
-			"path": "../node"
-		}
-	}
-}
+/+ dub.sdl:
+	name "node"
+	authors "Kripth"
+	targetType "executable"
+	dependency "sel-common" path="../common"
+	dependency "sel-node" path="../node"
+	dependency "data" path="../.hidden/data"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -35,15 +28,15 @@ import std.conv : to;
 import std.socket;
 import std.string : split, replace, join;
 
-import common.crash : logCrash;
-import common.path : Paths;
-import common.sel : Software;
-import common.util : UnloggedException;
+import com.crash : logCrash;
+import com.path : Paths;
+import com.sel : Software;
+import com.util : UnloggedException;
 
 import sel.plugin; // it seems that not importing this causes compiler errors
 import sel.server : Server, server;
 
-import data : __minecraftProtocols, __pocketProtocols, __loadPlugins;
+import data : __loadPlugins;
 
 void main(string[] args) {
 	
@@ -60,9 +53,9 @@ void main(string[] args) {
 				"name": JSONValue(Software.name),
 				"version": JSONValue(Software.displayVersion),
 				"stable": JSONValue(Software.stable)
-			]),
+			])/*,
 			"minecraft": JSONValue(__minecraftProtocols),
-			"pocket": JSONValue(__pocketProtocols)
+			"pocket": JSONValue(__pocketProtocols)*/
 		]);
 		
 		writeln(json.toString());
@@ -106,7 +99,7 @@ void main(string[] args) {
 		} finally {
 			
 			import std.c.stdlib : exit;
-			exit(12014);
+			exit(1);
 			
 		}
 	}

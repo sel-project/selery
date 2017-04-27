@@ -38,9 +38,9 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib;
 
-import common.lang : Lang;
-import common.sel;
-import common.util : milliseconds;
+import com.lang : Lang;
+import com.sel;
+import com.util : milliseconds;
 
 import sel.constants;
 import sel.server;

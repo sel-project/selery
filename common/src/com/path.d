@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.path;
+module com.path;
 
 import std.path : dirSeparator;
 

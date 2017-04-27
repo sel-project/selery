@@ -14,7 +14,7 @@
  */
 module sel.entity.effect;
 
-import common.sel;
+import com.sel : tick_t;
 
 import sel.entity.human : Human;
 import sel.entity.living : Living;
@@ -23,57 +23,25 @@ import sel.event.world.entity : EntityHealEvent;
 import sel.player.player : isPlayerInstance;
 
 static import sul.effects;
-import sul.effects : _ = Effects;
-
-enum Effects : sul.effects.Effect {
-
-	speed = _.SPEED,
-	slowness = _.SLOWNESS,
-	haste = _.HASTE,
-	miningFatigue = _.MINING_FATIGUE,
-	strength = _.STRENGTH,
-	instantHealth = _.INSTANT_HEALTH,
-	instantDamage = _.INSTANT_DAMAGE,
-	jumpBoost = _.JUMP_BOOST,
-	nausea = _.NAUSEA,
-	regeneration = _.REGENERATION,
-	resistance = _.RESISTANCE,
-	fireResistance = _.FIRE_RESISTANCE,
-	waterBreathing = _.WATER_BREATHING,
-	invisibility = _.INVISIBILITY,
-	blindness = _.BLINDNESS,
-	nightVision = _.NIGHT_VISION,
-	hunger = _.HUNGER,
-	weakness = _.WEAKNESS,
-	poison = _.POISON,
-	wither = _.WITHER,
-	healthBoost = _.HEALTH_BOOST,
-	absorption = _.ABSORPTION,
-	saturation = _.SATURATION,
-	glowing = _.GLOWING,
-	levitation = _.LEVITATION,
-	luck = _.LUCK,
-	badLuck = _.BAD_LUCK,
-
-}
+public import sul.effects : Effects;
 
 class Effect {
 
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker=null) {
 		switch(effect.minecraft.id) {
-			case _.SPEED.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
-			case _.SLOWNESS.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
-			case _.INSTANT_HEALTH.minecraft.id: return new InstantHealth(effect, victim, level, attacker);
-			case _.INSTANT_DAMAGE.minecraft.id: return new InstantDamage(effect, victim, level, attacker);
-			case _.REGENERATION.minecraft.id: return new Regeneration(effect, victim, level, duration, attacker);
-			case _.INVISIBILITY.minecraft.id: return new Invisibility(effect, victim, level, duration, attacker);
-			case _.HUNGER.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
-			case _.POISON.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
-			case _.WITHER.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
+			case Effects.speed.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case Effects.slowness.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case Effects.instantHealth.minecraft.id: return new InstantHealth(effect, victim, level, attacker);
+			case Effects.instantDamage.minecraft.id: return new InstantDamage(effect, victim, level, attacker);
+			case Effects.regeneration.minecraft.id: return new Regeneration(effect, victim, level, duration, attacker);
+			case Effects.invisibility.minecraft.id: return new Invisibility(effect, victim, level, duration, attacker);
+			case Effects.hunger.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
+			case Effects.poison.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
+			case Effects.wither.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
 			//TODO health boost
 			//TODO absorption
-			case _.SATURATION.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
-			case _.LEVITATION.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
+			case Effects.saturation.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
+			case Effects.levitation.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
 			default: return new Effect(effect, victim, level, duration, attacker);
 		}
 	}

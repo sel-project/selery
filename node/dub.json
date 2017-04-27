@@ -1,26 +1,13 @@
 {
 	"name": "sel-node",
-	"authors": ["Kripth"],
+	"authors": ["sel-project"],
 	"targetType": "library",
 	"dependencies": {
 		"sel-common": {
 			"path": "../common"
 		},
-		"sel-utils": "~>1.1.82",
-		"nbt-d": "~>1.1.0",
-		"resusage": "~>0.2.4"
-	},
-	"configurations": [
-		{
-			"name": "default"
-		},
-		{
-			"name": "full",
-			"versions": ["OneNode"]
-		}
-	],
-	"preGenerateCommands": [
-		"dub init.d"
-	],
-	"dflags": ["-v"]
+		"sel-utils": "==1.2.2",
+		"nbt-d": "==1.1.0",
+		"resusage": "==0.2.4"
+	}
 }

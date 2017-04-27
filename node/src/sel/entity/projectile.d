@@ -17,7 +17,7 @@ module sel.entity.projectile;
 import std.conv : to;
 import std.math : abs, sqrt, atan2, PI;
 
-import common.sel;
+import com.sel;
 
 import sel.block.block : Block, blockInto;
 import sel.block.blocks : Blocks;
@@ -154,7 +154,7 @@ class Arrow : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.ARROW;
+		return Entities.arrow;
 	}
 
 	public override bool onCollide(Entity entity) {
@@ -194,7 +194,7 @@ class Snowball : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.SNOWBALL;
+		return Entities.snowball;
 	}
 
 	public override void tick() {
@@ -236,7 +236,7 @@ class Egg : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.EGG;
+		return Entities.egg;
 	}
 
 	public override void tick() {
@@ -278,7 +278,7 @@ class Enderpearl : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.ENDERPEARL;
+		return Entities.enderpearl;
 	}
 
 	public override bool onCollide(Entity entity) {
@@ -330,7 +330,7 @@ class Fireball : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.GHAST_FIREBALL;
+		return Entities.ghastFireball;
 	}
 
 	public override void tick() {
@@ -362,7 +362,7 @@ class SmallFireball : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.BLAZE_FIREBALL;
+		return Entities.blazeFireball;
 	}
 
 	public override void tick() {
@@ -418,7 +418,7 @@ class Orb : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.EXPERIENCE_ORB;
+		return Entities.experienceOrb;
 	}
 
 }
@@ -448,7 +448,7 @@ class Potion : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.SPLASH_POTION;
+		return Entities.splashPotion;
 	}
 
 	public override bool onCollide(Entity entity) {
@@ -513,7 +513,7 @@ class FallingBlock : Projectile {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.FALLING_BLOCK;
+		return Entities.fallingBlock;
 	}
 
 	public override @property @safe bool motionless() {

@@ -17,7 +17,7 @@ module sel.item.miscellaneous;
 import std.conv : to, ConvException;
 import std.traits : isIntegral;
 
-import common.sel;
+import com.sel;
 
 import nbt.tags;
 

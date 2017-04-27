@@ -17,8 +17,8 @@ module sel.entity.living;
 import std.conv : to;
 import std.math : round, isNaN;
 
-import common.sel;
-import common.util : safe, call;
+import com.sel;
+import com.util : safe, call;
 
 import sel.settings;
 import sel.entity.effect : Effect, Effects;

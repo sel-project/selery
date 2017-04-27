@@ -16,8 +16,8 @@ module sel.entity.noai;
 
 import std.conv : to;
 
-import common.sel;
-import common.util : call;
+import com.sel;
+import com.util : call;
 
 import sel.settings;
 import sel.block.block;
@@ -63,7 +63,7 @@ class ItemEntity : Entity, Collectable {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.DROPPED_ITEM;
+		return Entities.droppedItem;
 	}
 
 	public override void tick() {
@@ -111,7 +111,7 @@ final class Lightning : Entity {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.LIGHTNING;
+		return Entities.lightning;
 	}
 
 	public override void tick() {
@@ -166,7 +166,7 @@ final class Painting : Entity {
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {
-		return Entities.PAINTING;
+		return Entities.painting;
 	}
 
 	public pure nothrow @property @safe @nogc string title() {

@@ -25,18 +25,18 @@ import std.math : abs, ceil, log2;
 import std.path : dirSeparator;
 import std.string : split, join, endsWith;
 
-import common.path : Paths;
-import common.sel;
+import com.path : Paths;
+import com.sel : block_t;
 
 import sel.block.block : Block;
-import sel.block.blocks : Blocks;
+import sel.block.blocks : BlockStorage;
 import sel.block.tile : Tile;
 import sel.math.vector;
 import sel.util.lang : ITranslatable;
 import sel.world.io;
 import sel.world.world : World;
 
-import sul.biomes;
+import sul.biomes : Biome, Biomes;
 
 /**
  * Classic chunk with the size of 16 * 16.
@@ -54,7 +54,7 @@ class Chunk {
 	private size_t highest_section;
 
 	public ubyte[16 * 16 * 2] lights = 255;
-	public const(Biome)[16 * 16] biomes = Biomes.PLAINS;
+	public const(Biome)[16 * 16] biomes = Biomes.plains;
 
 	public bool saveChangedBlocks = false;
 	public BlockPosition[] changed_blocks;
@@ -101,7 +101,7 @@ class Chunk {
 	}
 	
 	/// Gets the world's blocks
-	public final pure nothrow @property @safe @nogc Blocks blocks() {
+	public final pure nothrow @property @safe @nogc BlockStorage blocks() {
 		return this.world.blocks;
 	}
 

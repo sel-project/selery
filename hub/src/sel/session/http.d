@@ -28,9 +28,9 @@ import std.system : Endian;
 import std.uri : decode;
 import std.zlib : Compress, HeaderFormat;
 
-import common.path : Paths;
-import common.sel;
-import common.util : seconds;
+import com.path : Paths;
+import com.sel;
+import com.util : seconds;
 
 import sel.constants;
 import sel.server : Server;

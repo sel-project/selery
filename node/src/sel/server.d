@@ -38,12 +38,12 @@ import std.traits : Parameters;
 import std.uuid : UUID;
 import std.zlib : UnCompress;
 
-import common.config : Config;
-import common.format : Text;
-import common.memory : Memory;
-import common.path : Paths;
-import common.sel;
-import common.util : milliseconds, microseconds;
+import com.config : Config;
+import com.format : Text;
+import com.memory : Memory;
+import com.path : Paths;
+import com.sel;
+import com.util : milliseconds, microseconds;
 
 import resusage.memory;
 import resusage.cpu;

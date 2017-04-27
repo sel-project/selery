@@ -18,7 +18,7 @@ static import std.file;
 import std.path : dirSeparator;
 import std.string : split, join, replace;
 
-import common.path : Paths;
+import com.path : Paths;
 
 enum path(string mod) = "../resources/" ~ mod.split(".")[0] ~ dirSeparator;
 

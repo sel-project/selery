@@ -14,7 +14,7 @@
  */
 module sel.block.redstone;
 
-import common.sel;
+import com.sel;
 
 import sel.block.block;
 import sel.block.solid;
@@ -25,11 +25,18 @@ import sel.player.player : Player;
 
 static import sul.blocks;
 
-class SwitchingBlock(sul.blocks.Block sb, MiningTool miningTool, Drop drop, block_t change, bool restoneOnly=false) : MineableBlock!(sb, miningTool, drop) {
-	
+class SwitchingBlock(bool restoneOnly=false) : MineableBlock {
+
+	private block_t change;
+
+	public this(sul.blocks.Block data, MiningTool miningTool, Drop drop, block_t change) {
+		super(data, miningTool, drop);
+		this.change = change;
+	}
+
 	static if(!restoneOnly) {
 		public override bool onInteract(Player player, Item item, BlockPosition position, ubyte face) {
-			player.world[position] = change;
+			player.world[position] = this.change;
 			return true;
 		}
 	}

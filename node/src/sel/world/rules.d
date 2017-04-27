@@ -17,8 +17,8 @@ module sel.world.rules;
 import std.conv : to;
 import std.typecons : Tuple, tuple;
 
-import common.config : Config;
-import common.path : Paths;
+import com.config : Config;
+import com.path : Paths;
 
 import sel.world.world : Gamemode, Difficulty;
 

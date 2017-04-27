@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.util;
+module com.util;
 
 import std.conv : to, ConvException;
 import std.datetime : Clock, UTC;

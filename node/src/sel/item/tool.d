@@ -17,7 +17,7 @@ module sel.item.tool;
 import std.conv : ConvException;
 import std.json : JSONValue, JSON_TYPE;
 
-import common.sel;
+import com.sel;
 
 import nbt.tags;
 

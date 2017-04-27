@@ -35,11 +35,11 @@ import std.typecons;
 import std.uuid : parseUUID, UUID;
 import std.utf : UTFException;
 
-import common.format : Text;
-import common.lang;
-import common.path : Paths;
-import common.sel;
-import common.util : milliseconds;
+import com.format : Text;
+import com.lang;
+import com.path : Paths;
+import com.sel;
+import com.util : milliseconds;
 
 import sel.settings;
 import sel.network.handler : Handler;

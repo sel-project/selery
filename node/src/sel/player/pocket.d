@@ -29,8 +29,8 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import common.path : Paths;
-import common.sel;
+import com.path : Paths;
+import com.sel;
 
 import nbt.stream;
 import nbt.tags;

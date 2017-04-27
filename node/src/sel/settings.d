@@ -21,9 +21,9 @@ import std.file;
 import std.string : join, split, strip;
 import std.typetuple : TypeTuple;
 
-import common.config;
-import common.path : Paths;
-import common.sel;
+import com.config;
+import com.path : Paths;
+import com.sel;
 
 import sel.world.rules : Rules;
 
@@ -46,7 +46,13 @@ version(NoSocket) {
 
 }
 
-public import data : __minecraftProtocols, __pocketProtocols;
+//public import data : __minecraftProtocols, __pocketProtocols;
+
+//TODO read during compilation
+
+enum __minecraftProtocols = supportedMinecraftProtocols.keys.sort().release;
+
+enum __pocketProtocols = supportedPocketProtocols.keys.sort().release;
 
 enum bool __minecraft = __minecraftProtocols.length != 0;
 

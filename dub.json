@@ -1,7 +1,15 @@
 {
 	"name": "sel-server",
-	"authors": ["Kripth"],
+	"description": "Server for Minecraft and Minecraft: Pocket Edition written in D",
+	"authors": ["sel-project"],
+	"license": "LGPL-3.0",
+	"copyright": "Copyright © 2017 SEL",
 	"targetType": "none",
+	"dependencies": {
+		"sel-utils": "*",
+		"nbt-d": "*",
+		"resusage": "*"
+	},
 	"subPackages": [
 		"common",
 		"hub",

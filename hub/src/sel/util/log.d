@@ -21,7 +21,7 @@ module sel.util.log;
 
 import std.conv : to;
 
-import common.format : writeln;
+import com.format : writeln;
 
 void log(E...)(E args) {
 	string message;

@@ -15,9 +15,9 @@
 /// DDOC_EXCLUDE
 module sel.plugin;
 
-public import common.format : Text;
-public import common.sel;
-public import common.util;
+public import com.format : Text;
+public import com.sel;
+public import com.util;
 
 public import sel.settings;
 

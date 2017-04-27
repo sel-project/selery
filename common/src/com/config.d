@@ -1,4 +1,4 @@
-﻿module common.config;
+﻿module com.config;
 
 import std.algorithm : sort, uniq, filter, canFind;
 import std.array : array;
@@ -13,8 +13,8 @@ import std.socket : getAddress, AddressFamily;
 import std.string;
 import std.traits : isArray, isAssociativeArray;
 
-import common.sel;
-import common.path : Paths;
+import com.sel;
+import com.path : Paths;
 
 enum ConfigType {
 
@@ -166,7 +166,7 @@ struct Config {
 
 		string file;
 
-		with(Software) file ~= "//" ~ newline ~ "//  " ~ name ~ " " ~ displayVersion ~ (stable ? " " : "-dev ") ~ fullCodename ~ newline;
+		with(Software) file ~= "//" ~ newline ~ "//  " ~ name ~ " " ~ displayVersion ~ (stable ? " " : "-dev ") ~ codename ~ " " ~ codenameEmoji ~ newline;
 		with(Clock.currTime()) file ~= "//  " ~ toSimpleString().split(".")[0] ~ " " ~ timezone.dstName ~ newline ~ "//" ~ newline;
 		
 		void protocols(string[][uint] s) {

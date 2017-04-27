@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.sel;
+module com.sel;
 
 import std.algorithm : sort, reverse;
 import std.conv : to;
@@ -164,7 +164,7 @@ enum supportedMinecraftProtocols = cast(string[][uint])[
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	111: ["1.1.0"],
+	112: ["1.1.0"],
 ];
 
 /**

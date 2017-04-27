@@ -21,7 +21,7 @@ import std.conv : to;
 import std.datetime : dur;
 import std.string : split, join;
 
-import common.sel;
+import com.sel;
 
 import sel.constants;
 import sel.server;

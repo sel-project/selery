@@ -36,9 +36,9 @@ import std.string;
 import std.system : Endian;
 import std.zlib;
 
-import common.lang : translate;
-import common.sel;
-import common.util : microseconds;
+import com.lang : translate;
+import com.sel;
+import com.util : microseconds;
 
 import sel.constants;
 import sel.server : Server, List;

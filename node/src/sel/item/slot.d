@@ -16,7 +16,7 @@ module sel.item.slot;
 
 import std.conv : to;
 
-import common.sel;
+import com.sel;
 
 import sel.item.item : Item;
 import sel.item.items : Items;

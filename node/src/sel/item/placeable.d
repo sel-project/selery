@@ -14,7 +14,7 @@
  */
 module sel.item.placeable;
 
-import common.sel;
+import com.sel;
 
 import sel.block.block : compareBlock;
 import sel.block.blocks : Blocks;
@@ -40,14 +40,14 @@ class PlaceableItem(sul.items.Item si, block_t block, E...) : SimpleItem!(si) {
 	public override block_t place(World world, BlockPosition position, uint face) {
 		static if(E.length) {
 			auto u = world[position - [0, 1, 0]];
-			static if(is(typeof(E[0]) == block_t[])) {
-				if(compareBlock!(E[0])(u)) return block;
-				else return Blocks.air;
-			} else {
+			static if(is(typeof(E[0]) : string)) {
 				foreach(prop ; E) {
 					if(mixin("!(u." ~ prop ~ ")")) return Blocks.air;
 				}
 				return block;
+			} else {
+				if(compareBlock!(E[0])(u)) return block;
+				else return Blocks.air;
 			}
 		} else {
 			return block;

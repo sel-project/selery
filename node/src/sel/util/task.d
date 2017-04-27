@@ -14,7 +14,7 @@
  */
 module sel.util.task;
 
-import common.sel;
+import com.sel;
 
 enum areValidTaskArgs(E...) = E.length == 0 || (E.length == 1 && is(E[0] : tick_t));
 

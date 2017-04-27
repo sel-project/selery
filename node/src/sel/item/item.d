@@ -18,7 +18,7 @@ import std.conv : to;
 static import std.json;
 import std.string : split, join;
 
-import common.sel;
+import com.sel;
 
 import nbt.tags;
 

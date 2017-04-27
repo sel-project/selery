@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.crash;
+module com.crash;
 
 import std.algorithm : min, max;
 import std.ascii : newline;
@@ -21,10 +21,10 @@ import std.datetime : Clock;
 import std.file : write, read, exists, mkdirRecurse;
 import std.string : split, replace;
 
-import common.format : Text, writeln;
-import common.lang : translate;
-import common.path : Paths;
-import common.sel;
+import com.format : Text, writeln;
+import com.lang : translate;
+import com.path : Paths;
+import com.sel;
 
 public string logCrash(string type, string lang, Throwable e) {
 

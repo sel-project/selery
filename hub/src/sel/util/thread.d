@@ -26,9 +26,9 @@ import std.conv : to;
 import std.datetime : dur;
 import std.file : exists, write, mkdirRecurse;
 
-import common.crash : logCrash;
-import common.path : Paths;
-import common.util : seconds;
+import com.crash : logCrash;
+import com.path : Paths;
+import com.util : seconds;
 
 import sel.settings : Settings;
 

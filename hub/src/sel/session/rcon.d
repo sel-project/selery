@@ -39,7 +39,7 @@ import std.datetime : dur;
 import std.socket;
 import std.system : Endian;
 
-import common.sel;
+import com.sel;
 
 import sel.constants;
 import sel.server : Server;

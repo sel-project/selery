@@ -20,7 +20,7 @@ import std.string : join;
 import std.typecons : Tuple, tuple;
 import std.uri : encodeComponent;
 
-import common.sel;
+import com.sel;
 
 import sel.session.player : Player = PlayerSession;
 import sel.util.thread : SafeThread;

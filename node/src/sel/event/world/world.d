@@ -14,7 +14,7 @@
  */
 module sel.event.world.world;
 
-import common.sel;
+import com.sel;
 
 import sel.entity.entity : Entity;
 import sel.event.event : Event, Cancellable;

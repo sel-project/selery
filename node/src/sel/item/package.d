@@ -15,6 +15,8 @@
 /// DDOC_EXCLUDE
 module sel.item;
 
+public import com.sel : item_t;
+
 public import sel.item.inventory : Inventory;
 public import sel.item.item : Item;
 public import sel.item.items : Items;

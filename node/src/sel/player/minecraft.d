@@ -26,8 +26,8 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import common.sel;
-import common.util : array_index;
+import com.sel;
+import com.util : array_index;
 
 import nbt.stream;
 import nbt.tags;

@@ -23,7 +23,7 @@ import std.socket : Address;
 import std.string : toLower;
 import std.uuid : UUID;
 
-import common.sel;
+import com.sel;
 
 import sel.server : Server;
 import sel.settings : Settings;

@@ -18,22 +18,19 @@
  */
 module sel.block.fluid;
 
-import common.sel;
+import com.sel;
 
 import sel.block.block;
 import sel.math.vector : BlockPosition;
 
 static import sul.blocks;
 
-/**
- * Class for fluids.
- * Params:
- * 		curr_level = current level of the fluid, in range 0..max_level
- * 		max_level = lowest level of the fluid
- * 		per_level = number of levels to add to curr_level when fluid expands
- * 		time = number of ticks used by the fluid to expand
- */
-class FluidBlock(sul.blocks.Block sb, block_t next, ubyte per_level=0, uint time=0) : SimpleBlock!(sb) {
+//TODO
+class FluidBlock : Block {
+
+	public this(sul.blocks.Block data) {
+		super(data);
+	}
 
 	public final override pure nothrow @property @safe @nogc bool fluid() {
 		return true;
@@ -107,5 +104,9 @@ class FluidBlock(sul.blocks.Block sb, block_t next, ubyte per_level=0, uint time
 			this.world.scheduleBlockUpdate(this, time);
 		}
 	}*/
+
+	public override pure nothrow @property @safe @nogc float fallDamageModifier() {
+		return 0;
+	}
 
 }

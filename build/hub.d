@@ -1,17 +1,19 @@
-/+ dub.json:
-{
-	"name": "hub",
-	"authors": ["Kripth"],
-	"targetType": "executable",
-	"dependencies": {
-		"sel-common": {
-			"path": "../common"
-		},
-		"sel-hub": {
-			"path": "../hub"
-		}
+/+ dub.sdl:
+	name "hub"
+	authors "Kripth"
+	targetType "executable"
+	dependency "sel-common" path="../common"
+	dependency "sel-hub" path="../hub"
+	configuration "default"
+	configuration "edu" {
+		versions "Edu"
 	}
-}
+	configuration "realm" {
+		versions "Realm"
+	}
+	configuration "edu-realm" {
+		versions "Edu" "Realm"
+	}
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -49,7 +51,7 @@ void main(string[] args) {
 
 			import std.json : JSONValue;
 			import std.stdio : writeln;
-			import common.sel;
+			import com.sel;
 
 			auto json = JSONValue([
 				"type": JSONValue("hub"),

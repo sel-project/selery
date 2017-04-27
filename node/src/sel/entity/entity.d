@@ -22,8 +22,8 @@ import std.traits : isArray, isAbstractClass;
 import std.typecons : Tuple;
 import std.uuid : UUID;
 
-import common.sel;
-import common.util : safe, call;
+import com.sel;
+import com.util : safe, call;
 
 import sel.server : server;
 import sel.settings;
@@ -616,9 +616,7 @@ abstract class Entity : EventListener!WorldEvent {
 						block.box.update(position.entityPosition);
 						if(block.box.intersects(this.n_box)) {
 							this.n_on_ground = true;
-							if(!block.noFallDamage) {
-								this.doFallDamage(this.highestPoint - this.position.y);
-							}
+							this.doFallDamage(this.highestPoint - this.position.y, block.fallDamageModifier);
 							this.highestPoint = this.position.y;
 							this.last_puncher = null;
 							goto BreakAll;
@@ -631,9 +629,9 @@ abstract class Entity : EventListener!WorldEvent {
 		this.m_last = this.position;
 	}
 
-	protected @trusted void doFallDamage(float distance) {
-		if(distance > 3.5) {
-			uint damage = to!uint(round(distance - 3));
+	protected @trusted void doFallDamage(float distance, float modifier=1) {
+		uint damage = to!int(round((distance - 3) * modifier));
+		if(damage > 0) {
 			if(this.last_puncher is null) {
 				this.attack(new EntityFallDamageEvent(this, damage));
 			} else {

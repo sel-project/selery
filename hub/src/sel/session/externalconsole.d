@@ -29,8 +29,8 @@ import std.random : uniform;
 import std.socket;
 import std.system : Endian, endian;
 
-import common.path : Paths;
-import common.sel;
+import com.path : Paths;
+import com.sel;
 
 import sel.constants;
 import sel.server : Server;

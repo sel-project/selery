@@ -17,9 +17,9 @@ branches:
     - master
 
 artifacts:
-  - path: hub\sel-hub.exe
+  - path: build\hub.exe
     name: sel-hub
-  - path: node\sel-node.exe
+  - path: build\node.exe
     name: sel-node
 
 install:
@@ -87,6 +87,7 @@ before_build:
 build_script:
  - cd build
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d
+ - dub init.d --arch=%Darch% --compiler=%DC%
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release node.d
 
 test_script:

@@ -19,8 +19,8 @@ import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLink
 import std.conv : to;
 import std.exception : enforce;
 
-import common.crash : logCrash;
-import common.util : UnloggedException;
+import com.crash : logCrash;
+import com.util : UnloggedException;
 
 import sel.server : isServerRunning, server;
 

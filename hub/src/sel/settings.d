@@ -27,9 +27,9 @@ import std.socket;
 import std.string;
 import std.traits : isArray;
 
-import common.config;
-import common.path : Paths;
-import common.sel;
+import com.config;
+import com.path : Paths;
+import com.sel;
 
 version(D_Ddoc) {
 	
@@ -100,8 +100,6 @@ static if(__doc) {
 }
 
 deprecated enum bool __onlineMode = false;
-
-deprecated enum bool __pocketEncryption = __onlineMode;
 
 private enum __unixSocket = is(UnixAddress);
 

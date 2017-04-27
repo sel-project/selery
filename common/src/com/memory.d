@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module common.memory;
+module com.memory;
 
 import std.array : split;
 import std.conv : to;

@@ -17,7 +17,7 @@ module sel.util.world;
 import std.conv : to;
 import std.typecons : Tuple;
 
-import common.sel;
+import com.sel;
 
 mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".world : Add;");
 

@@ -19,65 +19,10 @@ import std.conv : to;
 import std.regex : ctRegex, replaceAll;
 import std.string : toLower, replace;
 
-import common.util : roman;
+import com.util : roman;
 
 static import sul.enchantments;
-import sul.enchantments : _ = Enchantments;
-
-/**
- * Enchantments that can be applied to an item.
- * Example:
- * ---
- * assert(Enchantments.sharpness.pocket.id == 9);
- * assert(Enchantments.sharpness.minecraft.id == 16);
- * assert(!Enchantments.curseOfBinding.pocket);
- * ---
- */
-enum Enchantments : sul.enchantments.Enchantment {
-
-	// armour
-	protection = _.PROTECTION,
-	fireProtection = _.FIRE_PROTECTION,
-	featherFalling = _.FEATHER_FALLING,
-	blastProtection = _.BLAST_PROTECTION,
-	projectileProtection = _.PROJECTILE_PROTECTION,
-	respiration = _.RESPIRATION,
-	aquaAffinity = _.AQUA_AFFINITY,
-	thorns = _.THORNS,
-	depthStrider = _.DEPTH_STRIDER,
-	frostWalker = _.FROST_WALKER,
-	curseOfBinding = _.CURSE_OF_BINDING,
-
-	// fighting
-	sharpness = _.SHARPNESS,
-	smite = _.SMITE,
-	baneOfArthropods = _.BANE_OF_ARTHROPODS,
-	knockback = _.KNOCKBACK,
-	fireAspect = _.FIRE_ASPECT,
-	looting = _.LOOTING,
-	sweepingEdge = _.SWEEPING_EDGE,
-
-	// mining
-	efficiency = _.EFFICIENCY,
-	silkTouch = _.SILK_TOUCH,
-	unbreaking = _.UNBREAKING,
-	fortune = _.FORTUNE,
-
-	// bow
-	power = _.POWER,
-	punch = _.PUNCH,
-	flame = _.FLAME,
-	infinity = _.INFINITY,
-
-	// fishing
-	luckOfTheSea = _.LUCK_OF_THE_SEA,
-	lure = _.LURE,
-
-	// other
-	mending = _.MENDING,
-	curseOfVanishing = _.CURSE_OF_VANISHING,
-
-}
+public import sul.enchantments : Enchantments;
 
 /**
  * Class that represents an enchantment and its level.

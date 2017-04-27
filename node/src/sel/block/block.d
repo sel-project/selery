@@ -25,7 +25,7 @@ import std.conv : to;
 import std.math : ceil;
 import std.string : split, join, capitalize;
 
-import common.sel;
+import com.sel;
 
 import sel.entity.entity : Entity;
 import sel.event.event : EventListener;
@@ -60,13 +60,34 @@ enum Remove {
 
 }
 
+private enum double m = 1.0 / 16.0;
+
 /**
  * Base class for every block.
  */
 class Block {
 
-	public pure nothrow @property @safe @nogc sul.blocks.Block data() {
-		return sul.blocks.Block.init;
+	private const sul.blocks.Block n_data;
+
+	private immutable bool has_bounding_box;
+	private BlockAxis bounding_box;
+
+	public this(sul.blocks.Block data) {
+		this.n_data = data;
+		if(data.boundingBox) {
+			this.has_bounding_box = true;
+			with(data.boundingBox) this.bounding_box = new BlockAxis(m * min.x, m * min.y, m * min.z, m * max.x, m * max.y, m * max.z);
+			//TODO calculate shapes
+		} else {
+			this.has_bounding_box = false;
+		}
+	}
+
+	/**
+	 * Gets the block's sul data.
+	 */
+	public pure nothrow @property @safe @nogc const sul.blocks.Block data() {
+		return this.n_data;
 	}
 
 	/**
@@ -76,6 +97,9 @@ class Block {
 		return this.data.id;
 	}
 
+	/**
+	 * Indicates whether the block exists in Minecraft.
+	 */
 	public pure nothrow @property @safe @nogc bool minecraft() {
 		return this.data.minecraft.exists;
 	}
@@ -88,6 +112,9 @@ class Block {
 		return this.data.minecraft.meta;
 	}
 
+	/**
+	 * Indicates whether the block exists in Minecraft: Pocket Edition.
+	 */
 	public pure nothrow @property @safe @nogc bool pocket() {
 		return this.data.pocket.exists;
 	}
@@ -98,14 +125,6 @@ class Block {
 
 	public pure nothrow @property @safe @nogc ubyte pocketMeta() {
 		return this.data.pocket.meta;
-	}
-
-	public deprecated("Use minecraftId and pocketId instead") pure nothrow @property @safe @nogc bytegroup ids() {
-		return bytegroup(this.pocketId, this.minecraftId);
-	}
-
-	public deprecated("Use minecraftMeta and pocketMeta instead") pure nothrow @property @safe @nogc bytegroup metas() {
-		return bytegroup(this.pocketMeta, this.minecraftMeta);
 	}
 
 	/**
@@ -195,10 +214,17 @@ class Block {
 	}
 
 	/**
-	 * Indicates whether falling on this block causes damage or not.
+	 * Modifies an entity's damage. The value should be higher than 0.
+	 * Example:
+	 * ---
+	 * 0 = no damage
+	 * .5 = half damage
+	 * 1 = normal damage
+	 * 2 = double damage
+	 * ---
 	 */
-	public pure nothrow @property @safe @nogc bool noFallDamage() {
-		return this.fluid;
+	public pure nothrow @property @safe @nogc float fallDamageModifier() {
+		return 1;
 	}
 
 	/**
@@ -206,7 +232,7 @@ class Block {
 	 * can collide with, even if the block is not solid.
 	 */
 	public pure nothrow @property @safe @nogc bool hasBoundingBox() {
-		return false;
+		return this.has_bounding_box;
 	}
 
 	/**
@@ -215,7 +241,7 @@ class Block {
 	 * Values are from 0 to 1
 	 */
 	public pure nothrow @property @safe @nogc BlockAxis box() {
-		return null;
+		return this.bounding_box;
 	}
 
 	public pure nothrow @property @safe @nogc bool fullUpperShape() {
@@ -368,58 +394,6 @@ class Block {
 
 	public override bool opEquals(Object o) {
 		return cast(Block)o && this.opEquals((cast(Block)o).id);
-	}
-
-}
-
-private enum double m = 1.0 / 16.0;
-
-class SimpleBlock(sul.blocks.Block sb) : Block {
-
-	private BlockAxis n_box;
-
-	public this() {
-		static if(sb.boundingBox.exists) {
-			with(sb.boundingBox) this.n_box = new BlockAxis(m * min.x, m * min.y, m * min.z, m * max.x, m * max.y, m * max.z);
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc sul.blocks.Block data() {
-		return sb;
-	}
-
-	public final override pure nothrow @property @safe @nogc bool hasBoundingBox() {
-		static if(sb.boundingBox.exists) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	static if(sb.boundingBox.exists) {
-		public override pure nothrow @property @safe @nogc BlockAxis box() {
-			return this.n_box;
-		}
-	}
-
-	public final override pure nothrow @property @safe @nogc bool fullUpperShape() {
-		static if(sb.boundingBox && sb.boundingBox.min.x == 0 && sb.boundingBox.min.z == 0 && sb.boundingBox.max.x == 16 && sb.boundingBox.max.y == 16 && sb.boundingBox.max.z == 16) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-}
-
-template BlockWith(sul.blocks.Block sb, B : Block) {
-
-	class BlockWith : B {
-
-		public override pure nothrow @property @safe @nogc sul.blocks.Block data() {
-			return sb;
-		}
-
 	}
 
 }

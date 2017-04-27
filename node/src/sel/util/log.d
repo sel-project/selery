@@ -18,9 +18,9 @@ import std.conv : to;
 import std.path : dirSeparator;
 import std.string : replace, startsWith, indexOf;
 
-import common.format : Text, writeln;
-import common.sel;
-import common.util : milliseconds;
+import com.format : Text, writeln;
+import com.sel;
+import com.util : milliseconds;
 
 import sel.world.world : World;
 

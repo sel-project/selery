@@ -23,13 +23,13 @@ import std.string : replace, toLower, split;
 import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
-import common.sel;
-import common.util : call;
+import com.sel;
+import com.util : call;
 
 import sel.plugin;
 import sel.server : server;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
-import sel.block.blocks : Blocks;
+import sel.block.blocks : BlockStorage, Blocks;
 import sel.block.tile : Tile;
 import sel.entity.entity : Entity;
 import sel.entity.living : Living;
@@ -41,7 +41,7 @@ import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.item.item : Item;
-import sel.item.items : Items;
+import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player : Player;
@@ -57,6 +57,8 @@ import sel.world.generator;
 import sel.world.map : Map;
 import sel.world.particle : Particle;
 import sel.world.rules : Rules;
+
+static import sul.blocks;
 
 /**
  * Basic world.
@@ -149,8 +151,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private World n_parent;
 	private World[] n_children;
 	
-	protected Blocks n_blocks;
-	protected Items n_items;
+	protected BlockStorage n_blocks;
+	protected ItemStorage n_items;
 	
 	private Random n_random;
 
@@ -195,8 +197,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.id = wcount++;
 		this.n_name = name;
 		this.n_seed = seed;
-		if(this.n_blocks is null) this.n_blocks = new Blocks();
-		if(this.n_items is null) this.n_items = new Items();
+		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
+		if(this.n_items is null) this.n_items = new ItemStorage();
 		this.rules = this.parent is null ? rules : this.parent.rules.dup;
 		this.n_random = Random(this.seed);
 		this.generator = generator is null ? new Flat(this) : generator;
@@ -308,14 +310,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/*
 	 * Gets the blocks.
 	 */
-	public final pure nothrow @property @safe @nogc ref Blocks blocks() {
+	public final pure nothrow @property @safe @nogc ref BlockStorage blocks() {
 		return this.n_blocks;
 	}
 	
 	/*
 	 * Gets the items
 	 */
-	public final pure nothrow @property @safe @nogc ref Items items() {
+	public final pure nothrow @property @safe @nogc ref ItemStorage items() {
 		return this.n_items;
 	}
 	
@@ -845,15 +847,19 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Drops an item.
 	 */
-	public final ItemEntity drop(Slot item, EntityPosition position, EntityPosition motion) {
-		return this.spawn!ItemEntity(position, motion, item);
+	public final ItemEntity drop(Slot slot, EntityPosition position, EntityPosition motion) {
+		if(!slot.empty) {
+			return this.spawn!ItemEntity(position, motion, slot);
+		} else {
+			return null;
+		}
 	}
 
 	/// ditto
-	public final ItemEntity drop(Slot item, EntityPosition position) {
+	public final ItemEntity drop(Slot slot, EntityPosition position) {
 		float f0 = this.random.next!float * .1f;
 		float f1 = this.random.next!float * PI * 2f;
-		return this.drop(item, position, EntityPosition(-sin(f1) * f0, .2f, cos(f1) * f0));
+		return this.drop(slot, position, EntityPosition(-sin(f1) * f0, .2f, cos(f1) * f0));
 	}
 
 	/// ditto
@@ -1166,7 +1172,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world[12, 55, 789] = Blocks.chest; // not a tile!
 	 * ---
 	 */
-	public Block* opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
+	public Block* opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*) || is(T == sul.blocks.Blocks)) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 
@@ -1175,8 +1181,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				(*ptr).onRemoved(this, position, Remove.unset);
 			}
 
-			static if(is(T == ushort[])) {
+			static if(is(T == block_t[])) {
 				block_t b = block[0];
+			} else static if(is(T == sul.blocks.Blocks)) {
+				block_t b = block.id;
 			} else {
 				alias b = block;
 			}
@@ -1205,7 +1213,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public Block* opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
+	public Block* opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*) || is(T == sul.blocks.Blocks)) {
 		return this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 

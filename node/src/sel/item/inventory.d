@@ -22,7 +22,7 @@ import std.conv : to;
 import std.exception : enforce;
 import std.typecons : Tuple;
 
-import common.sel;
+import com.sel;
 
 import sel.entity.human : Human;
 import sel.item.item : Item;
