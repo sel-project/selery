@@ -745,10 +745,10 @@ class PlayerInventory : Inventory {
 		super(36 + 4);
 		this.slot_updates.length = 36;
 		this.holder = holder;
-		this.init();
+		this.reset();
 	}
 
-	public final @safe @nogc void init() {
+	public final @safe @nogc void reset() {
 		foreach(uint i ; 0..9) {
 			this.m_hotbar[i] = i;
 		}

@@ -152,7 +152,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 	public void firstspawn() {
 		this.n_spawned = true;
 		this.sprinting = false;
-		this.inventory.init();
+		this.inventory.reset();
 	}
 
 	// used for limiting the attacks

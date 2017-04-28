@@ -11,8 +11,8 @@
 		"resusage": "*"
 	},
 	"subPackages": [
-		"src/common",
-		"src/hub",
-		"src/node"
+		"packages/common",
+		"packages/hub",
+		"packages/node"
 	]
 }

@@ -226,13 +226,16 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Calls init and orders the default chunks.
 	 */
 	protected void start() {
-		this.init();
+		this.initChunks();
 		this.updated_blocks.length = 0;
 		sort!"a.x.abs + a.z.abs < b.x.abs + b.z.abs"(this.defaultChunks);
 		this.updateBlocks = true;
 	}
 
-	protected void init() {
+	/*
+	 * Initialise chunks.
+	 */
+	protected void initChunks() {
 		
 		immutable int radius = 5;
 		//load some chunks as a flat world

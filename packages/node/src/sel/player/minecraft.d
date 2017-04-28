@@ -46,7 +46,6 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
-import sel.util.buffers : BigEndianBuffer, Writer;
 import sel.util.lang : translate;
 import sel.util.log;
 import sel.world.chunk : Chunk;
@@ -331,7 +330,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		immutable overworld = chunk.world.dimension.pc == 0;
 
 		uint sections = 0;
-		Writer writer = Writer(BigEndianBuffer.instance);
+		ubyte[] buffer;
 		foreach(ubyte i ; 0..16) {
 			auto s = i in chunk;
 			if(s) {
@@ -365,20 +364,20 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 				// something lower can be used (?)
 				uint size = to!uint(ceil(log2(palette.length)));
 				//if(size < 4) size = 4;
-				size = 8; //TODO this limits to 256 different blocks
-				writer.write!ubyte(size & 255);
-				writer ~= varuint.encode(palette.length.to!uint);
+				size = 8; //TODO this limits to 256 different blocks!
+				buffer ~= size & 255;
+				buffer ~= varuint.encode(palette.length.to!uint);
 				foreach(uint p ; palette) {
-					writer ~= varuint.encode(p);
+					buffer ~= varuint.encode(p);
 				}
 				
-				writer ~= varuint.encode(4096 >> 3); // 4096 / 8 as ulong[].length
+				buffer ~= varuint.encode(4096 >> 3); // 4096 / 8 as ulong[].length
 				foreach(j ; pointers) {
-					writer.write!ubyte(j & 255);
+					buffer ~= j & 255;
 				}
-				
-				writer ~= section.skyLight;
-				if(overworld) writer ~= section.blocksLight;
+
+				buffer ~= section.skyLight;
+				if(overworld) buffer ~= section.blocksLight;
 			}
 		}
 
@@ -387,9 +386,9 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			biomes[i] = biome.id;
 		}
 
-		writer ~= biomes;
+		buffer ~= biomes;
 
-		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, writer);
+		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, buffer);
 
 		stream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {

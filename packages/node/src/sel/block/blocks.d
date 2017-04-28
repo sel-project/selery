@@ -70,7 +70,8 @@ public class BlockStorage {
 	}
 
 	public void registerTile(T:Tile)(T tile) {
-		//TODO
+		this.register(tile);
+		//TODO register tile data
 	}
 
 	/**

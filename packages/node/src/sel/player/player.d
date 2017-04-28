@@ -1534,18 +1534,7 @@ abstract class Player : Human, WorldCommandSender {
 
 				if(data[0] == uint.max) break;
 
-				debug {
-					import std.datetime : StopWatch;
-					StopWatch timer;
-					timer.start();
-				}
-
 				handler.send(new HncomPlayer.OrderedGamePacket(hubId, data[0], this.compress(data[1].dup)).encode());
-
-				debug {
-					timer.stop();
-					debug_log("compressed ", data[1].length, " bytes in ", timer.peek.usecs, " microseconds");
-				}
 
 			}
 
