@@ -4,16 +4,6 @@
    targetType "executable"
    dependency "sel-common" path="../packages/common"
    dependency "sel-hub" path="../packages/hub"
-   configuration "default"
-   configuration "edu" {
-   	versions "Edu"
-   }
-   configuration "realm" {
-   	versions "Realm"
-   }
-   configuration "edu-realm" {
-   	versions "Edu" "Realm"
-   }
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -31,48 +21,56 @@
  */
 module buildhub;
 
+import std.algorithm : canFind;
 import std.conv : to;
+import std.file : exists, read, write, mkdirRecurse;
 import std.string : replace, toLower;
+
+import com.path : Paths;
 
 import hub.server;
 import hub.settings;
 
 void main(string[] args) {
 
-	version(D_Ddoc) {
+	mkdirRecurse(Paths.hidden); //TODO move creation in com.path.Paths
 
-		// do not start the server when generating documentation
+	@property bool arg(string name) {
+		if(exists(Paths.hidden ~ name)) {
+			return to!bool(cast(string)read(Paths.hidden ~ name));
+		} else {
+			bool ret = args.canFind("-" ~ name);
+			write(Paths.hidden ~ name, to!string(ret));
+			return ret;
+		}
+	}
+
+	immutable action = args.length >= 2 ? args[1].toLower : "";
+
+	if(action == "about") {
+
+		import std.json : JSONValue;
+		import std.stdio : writeln;
+		import com.sel;
+
+		auto json = JSONValue([
+			"type": JSONValue("hub"),
+			"software": JSONValue([
+				"name": JSONValue(Software.name),
+				"version": JSONValue(Software.displayVersion),
+				"stable": JSONValue(Software.stable)
+			])
+		]);
+
+		writeln(json.toString());
+
+	} else if(action == "init") {
+
+		Settings(false, arg("edu"), arg("realm")).load();
 
 	} else {
 
-		immutable action = args.length >= 2 ? args[1].toLower : "";
-
-		if(action == "about") {
-
-			import std.json : JSONValue;
-			import std.stdio : writeln;
-			import com.sel;
-
-			auto json = JSONValue([
-				"type": JSONValue("hub"),
-				"software": JSONValue([
-					"name": JSONValue(Software.name),
-					"version": JSONValue(Software.displayVersion),
-					"stable": JSONValue(Software.stable)
-				])
-			]);
-
-			writeln(json.toString());
-
-		} else if(action == "init") {
-
-			Settings.reload();
-
-		} else {
-
-			new shared Server();
-
-		}
+		new shared Server(false, arg("edu"), arg("realm"));
 
 	}
 

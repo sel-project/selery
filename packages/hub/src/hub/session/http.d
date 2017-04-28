@@ -124,7 +124,7 @@ class HttpHandler : HandlerThread {
 		index = index.replace("{DISPLAY_NAME}", settings.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);
 		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(this.minecraftPort) ~ "</p>") : "");
-		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (__edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(this.pocketPort) ~ "</p>") : "");
+		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (settings.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(this.pocketPort) ~ "</p>") : "");
 		if(settings.serverIp.length) index = index.replace("{IP}", settings.serverIp);
 		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;

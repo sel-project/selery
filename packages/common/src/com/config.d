@@ -42,25 +42,25 @@ struct Config {
 
 	bool edu, realm;
 
-	string displayName = "A Minecraft Server";
+	string displayName;
 
 	Game minecraft, pocket;
 
-	bool allowVanillaPlayers = false;
+	bool allowVanillaPlayers;
 
-	uint maxPlayers = size_t.sizeof * 8;
+	uint maxPlayers;
 
 	bool whitelist, blacklist;
 
 	bool query;
 
-	string language = "en_GB";
+	string language;
 
-	string[] acceptedLanguages = ["en_GB", "it_IT"];
+	string[] acceptedLanguages;
 
 	string serverIp;
 
-	string icon = "favicon.png";
+	string icon;
 
 	string gamemode = "survival";
 
@@ -80,17 +80,17 @@ struct Config {
 
 	string[string] plugins;
 
-	bool panel = false;
+	bool panel;
 
 	string[string] panelUsers;
 
 	string[] panelAddresses;
 
-	bool externalConsole = false;
+	bool externalConsole;
 
 	string externalConsolePassword;
 
-	string[] externalConsoleAddresses = ["0.0.0.0:19134"];
+	string[] externalConsoleAddresses;
 
 	bool externalConsoleRemoteCommands = true;
 
@@ -98,15 +98,15 @@ struct Config {
 
 	string externalConsoleHashAlgorithm = "sha256";
 
-	bool rcon = false;
+	bool rcon;
 
 	string rconPassword;
 
-	string[] rconAddresses = ["0.0.0.0:25575"];
+	string[] rconAddresses;
 
-	bool web = false;
+	bool web;
 
-	string[] webAddresses = ["*:80"];
+	string[] webAddresses;
 
 	string googleAnalytics;
 
@@ -116,7 +116,7 @@ struct Config {
 
 	string hncomPassword;
 
-	uint maxNodes = 0;
+	uint maxNodes;
 
 	ushort hncomPort = 28232;
 
@@ -129,13 +129,6 @@ struct Config {
 		this.type = type;
 		this.edu = edu;
 		this.realm = realm;
-
-		this.minecraft = Game(!edu, "A Minecraft Server", false, ["0.0.0.0:25565"], latestMinecraftProtocols);
-		this.pocket = Game(true, "A Minecraft Server", false, ["0.0.0.0:19132"], latestPocketProtocols);
-
-		this.whitelist = edu || realm;
-		this.blacklist = !edu && !realm;
-		this.query = !edu && !realm;
 
 		this.acceptedLanguages = availableLanguages();
 		version(Windows) {
@@ -152,13 +145,8 @@ struct Config {
 		this.language = bestLanguage(this.language, this.acceptedLanguages);
 
 		this.acceptedNodes ~= getAddress("localhost", 0)[0].addressFamily == AddressFamily.INET6 ? "::1" : "127.0.*.*";
-		
-		this.panelUsers = ["admin": randomPassword];
-		this.externalConsolePassword = randomPassword;
-		this.rconPassword = randomPassword;
-		this.hncomUnixSocketAddress = "/tmp/sel/" ~ randomPassword;
 
-		this.social = JSONValue((JSONValue[string]).init);
+		this.hncomUnixSocketAddress = "/tmp/sel/" ~ randomPassword;
 
 	}
 
@@ -199,91 +187,91 @@ struct Config {
 
 		string file = header ~ "{" ~ newline;
 
-		if(type != ConfigType.node) file ~= "\t\"display-name\": " ~ JSONValue(this.displayName).toString() ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"display-name\": \"A Minecraft Server\"," ~ newline;
 		if(!edu) {
 			file ~= "\t\"minecraft\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.minecraft.enabled) ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"motd\": " ~ JSONValue(this.minecraft.motd).toString() ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": " ~ to!string(this.minecraft.onlineMode) ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"addresses\": " ~ JSONValue(this.minecraft.addresses).toString() ~ "," ~ newline;
-			file ~= "\t\t\"accepted-protocols\": " ~ to!string(this.minecraft.protocols) ~ newline;
+			file ~= "\t\t\"enabled\": true," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": false," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"addresses\": [\"0.0.0.0:25565\"]," ~ newline;
+			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestMinecraftProtocols) ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		{
 			file ~= "\t\"pocket\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.pocket.enabled) ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"motd\": " ~ JSONValue(this.pocket.motd).toString() ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": " ~ to!string(this.pocket.onlineMode) ~ "," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"addresses\": " ~ JSONValue(this.pocket.addresses).toString() ~ "," ~ newline;
-			file ~= "\t\t\"accepted-protocols\": " ~ to!string(this.pocket.protocols);
-			if(type != ConfigType.node && edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": " ~ to!string(this.allowVanillaPlayers);
+			file ~= "\t\t\"enabled\": true," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": false," ~ newline;
+			if(type != ConfigType.node) file ~= "\t\t\"addresses\": [\"0.0.0.0:19132\"]," ~ newline;
+			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestPocketProtocols);
+			if(type != ConfigType.node && edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": false";
 			file ~= newline ~ "\t}," ~ newline;
 		}
-		if(type != ConfigType.hub) file ~= "\t\"max-players\": " ~ to!string(this.maxPlayers) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"whitelist\": " ~ to!string(this.whitelist) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"blacklist\": " ~ to!string(this.blacklist) ~ "," ~ newline;
-		if(type != ConfigType.node && !realm) file ~= "\t\"query\": " ~ to!string(this.query) ~ "," ~ newline;
+		if(type != ConfigType.hub) file ~= "\t\"max-players\": " ~ to!string(size_t.sizeof * 8) ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"whitelist\": " ~ to!string(edu || realm) ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"blacklist\": " ~ to!string(!edu && !realm) ~ "," ~ newline;
+		if(type != ConfigType.node && !realm) file ~= "\t\"query\": " ~ to!string(!edu && !realm) ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"language\": " ~ JSONValue(this.language).toString() ~ "," ~ newline;
 		if(type != ConfigType.node) file ~= "\t\"accepted-languages\": " ~ to!string(this.acceptedLanguages) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"server-ip\": " ~ JSONValue(this.serverIp).toString() ~ "," ~ newline;
-		if(type != ConfigType.node && !edu) file ~= "\t\"icon\": " ~ JSONValue(this.icon).toString() ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"server-ip\": \"\"," ~ newline;
+		if(type != ConfigType.node && !edu) file ~= "\t\"icon\": \"favicon.png\"," ~ newline;
 		if(type != ConfigType.hub) {
 			file ~= "\t\"world\": {" ~ newline;
-			file ~= "\t\t\"gamemode\": \"" ~ this.gamemode ~ "\"," ~ newline;
-			file ~= "\t\t\"difficulty\": \"" ~ this.difficulty ~ "\"," ~ newline;
-			file ~= "\t\t\"pvp\": " ~ to!string(this.pvp) ~ "," ~ newline;
-			file ~= "\t\t\"pvm\": " ~ to!string(this.pvm) ~ "," ~ newline;
-			file ~= "\t\t\"do-daylight-cycle\": " ~ to!string(this.doDaylightCycle) ~ "," ~ newline;
-			file ~= "\t\t\"do-weather-cycle\": " ~ to!string(this.doWeatherCycle) ~ "," ~ newline;
-			file ~= "\t\t\"random-tick-speed\": " ~ to!string(this.randomTickSpeed) ~ "," ~ newline;
-			file ~= "\t\t\"do-scheduled-ticks\": " ~ to!string(this.doScheduledTicks) ~ newline;
+			file ~= "\t\t\"gamemode\": \"survival\"," ~ newline;
+			file ~= "\t\t\"difficulty\": \"normal\"," ~ newline;
+			file ~= "\t\t\"pvp\": true," ~ newline;
+			file ~= "\t\t\"pvm\": true," ~ newline;
+			file ~= "\t\t\"do-daylight-cycle\": true," ~ newline;
+			file ~= "\t\t\"do-weather-cycle\": true," ~ newline;
+			file ~= "\t\t\"random-tick-speed\": 3," ~ newline;
+			file ~= "\t\t\"do-scheduled-ticks\": true" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": {" ~ newline ~ "\t\t\"commands\": \"latest\"" ~ newline ~ "\t}," ~ newline;
 		/*if(type != ConfigType.node) {
 			file ~= "\t\"panel\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.panel) ~ "," ~ newline;
+			file ~= "\t\t\"enabled\": false," ~ newline;
 			file ~= "\t\t\"users\": " ~ JSONValue(this.panelUsers).toString() ~ "," ~ newline;
 			file ~= "\t\t\"addresses\": " ~ replace(to!string(this.panelAddresses), ",", ", ") ~ newline;
 			file ~= "\t},\n";
 		}*/
 		if(type != ConfigType.node) {
 			file ~= "\t\"external-console\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.externalConsole) ~ "," ~ newline;
-			file ~= "\t\t\"password\": " ~ JSONValue(this.externalConsolePassword).toString() ~ "," ~ newline;
-			file ~= "\t\t\"addresses\": " ~ JSONValue(this.externalConsoleAddresses).toString() ~ "," ~ newline;
-			file ~= "\t\t\"remote-commands\": " ~ to!string(this.externalConsoleRemoteCommands) ~ "," ~ newline;
-			file ~= "\t\t\"accept-websockets\": " ~ to!string(this.externalConsoleAcceptWebsockets) ~ "," ~ newline;
-			file ~= "\t\t\"hash-algorithm\": " ~ JSONValue(this.externalConsoleHashAlgorithm).toString() ~ newline;
+			file ~= "\t\t\"enabled\": false," ~ newline;
+			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0:19134\"]," ~ newline;
+			file ~= "\t\t\"remote-commands\": true," ~ newline;
+			file ~= "\t\t\"accept-websockets\": true," ~ newline;
+			file ~= "\t\t\"hash-algorithm\": \"sha256\"" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type != ConfigType.node) {
 			file ~= "\t\"rcon\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.rcon) ~ "," ~ newline;
-			file ~= "\t\t\"password\": " ~ JSONValue(this.rconPassword).toString() ~ "," ~ newline;
-			file ~= "\t\t\"addresses\": " ~ JSONValue(this.rconAddresses).toString() ~ newline;
+			file ~= "\t\t\"enabled\": false," ~ newline;
+			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0:25575\"]" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type != ConfigType.node && !realm) {
 			file ~= "\t\"web\": {" ~ newline;
-			file ~= "\t\t\"enabled\": " ~ to!string(this.web) ~ "," ~ newline;
-			file ~= "\t\t\"addresses\": " ~ JSONValue(this.webAddresses).toString() ~ newline;
+			file ~= "\t\t\"enabled\": false," ~ newline;
+			file ~= "\t\t\"addresses\": [\"*:80\"]" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type == ConfigType.hub) {
 			file ~= "\t\"hncom\": {" ~ newline;
 			file ~= "\t\t\"accepted-addresses\": " ~ to!string(this.acceptedNodes) ~ "," ~ newline;
-			file ~= "\t\t\"password\": " ~ JSONValue(this.hncomPassword).toString() ~ "," ~ newline;
-			file ~= "\t\t\"max\": " ~ (this.maxNodes==0 ? "\"unlimited\"" : to!string(this.maxNodes)) ~ "," ~ newline;
-			file ~= "\t\t\"port\": " ~ to!string(this.hncomPort);
+			file ~= "\t\t\"password\": \"\"," ~ newline;
+			file ~= "\t\t\"max\": \"unlimited\"," ~ newline;
+			file ~= "\t\t\"port\": 28232";
 			version(Posix) {
-				file ~= "," ~ newline ~ "\t\t\"use-unix-sockets\": " ~ to!string(this.hncomUseUnixSockets) ~ "," ~ newline;
-				file ~= "\t\t\"unix-socket-address\": " ~ this.hncomUnixSocketAddress;
+				file ~= "," ~ newline ~ "\t\t\"use-unix-sockets\": false," ~ newline;
+				file ~= "\t\t\"unix-socket-address\": \"" ~ this.hncomUnixSocketAddress ~ "\"";
 			}
 			file ~= newline ~ "\t}," ~ newline;
 		}
-		if(type != ConfigType.node) file ~= "\t\"google-analytics\": " ~ JSONValue(this.googleAnalytics).toString() ~ "," ~ newline;
-		if(type != ConfigType.node && !realm) file ~= "\t\"social\": " ~ this.social.toString() ~ "," ~ newline;
+		if(type != ConfigType.node) file ~= "\t\"google-analytics\": \"\"," ~ newline;
+		if(type != ConfigType.node && !realm) file ~= "\t\"social\": {}," ~ newline;
 
 		file = file[0..$-1-newline.length] ~ newline ~ "}" ~ newline;
 
@@ -346,12 +334,12 @@ struct Config {
 			set!"display-name"(this.displayName);
 			set!"minecraft.enabled"(this.minecraft.enabled);
 			set!"minecraft.motd"(this.minecraft.motd);
-			set!"minecraft.online-mode"(this.minecraft.onlineMode);
+			//set!"minecraft.online-mode"(this.minecraft.onlineMode);
 			set!"minecraft.addresses"(this.minecraft.addresses);
 			set!"minecraft.accepted-protocols"(this.minecraft.protocols);
 			set!"pocket.enabled"(this.pocket.enabled);
 			set!"pocket.motd"(this.pocket.motd);
-			set!"pocket.online-mode"(this.pocket.onlineMode);
+			//set!"pocket.online-mode"(this.pocket.onlineMode);
 			set!"pocket.addresses"(this.pocket.addresses);
 			set!"pocket.accepted-protocols"(this.pocket.protocols);
 			set!"pocket.allow-vanilla-players"(this.allowVanillaPlayers);

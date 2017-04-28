@@ -157,10 +157,11 @@ class Handler {
 	 * for each social field that is not empty in the settings.
 	 */
 	private shared void regenerateSocialJson() {
-		this.socialJson = cast(shared)(cast()this.server.settings.social).toString();
+		auto settings = cast()this.server.settings;
+		this.socialJson = settings.social.toString();
 		JSONValue[string] additional;
 		additional["social"] = this.server.settings.social;
-		additional["minecraft"] = ["edu": __edu, "realm": __realm];
+		additional["minecraft"] = ["edu": settings.edu, "realm": settings.realm];
 		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
 		this.additionalJson = cast(shared)JSONValue(additional).toString();
 	}

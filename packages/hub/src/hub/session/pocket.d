@@ -578,7 +578,7 @@ final class PocketSession : PlayerSession {
 			this.functionHandler = &this.handleFail;
 			this.acceptSplit = false;
 			// kick if the server is edu and the client is not
-			static if(__edu) {
+			if(this.server.settings.edu) { //TODO optimise this control
 				auto error = (){
 					if(!this.edu && !this.server.settings.allowVanillaPlayers) return PlayStatus.EDITION_MISMATCH_EDU_TO_VANILLA;
 					//TODO implement invalidTenant

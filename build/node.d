@@ -33,7 +33,6 @@ import com.path : Paths;
 import com.sel : Software;
 import com.util : UnloggedException;
 
-//import sel.plugin; // it seems that not importing this causes compiler errors
 import sel.server;
 
 import pluginloader : loadPlugins;

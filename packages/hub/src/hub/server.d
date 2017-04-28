@@ -125,7 +125,7 @@ class Server {
 
 	private shared GoogleAnalytics analytics;
 
-	public shared this() {
+	public shared this(bool lite, bool edu, bool realm) {
 
 		n_instance = this;
 
@@ -140,7 +140,9 @@ class Server {
 		this.n_whitelist = List(this, "whitelist");
 		this.n_blacklist = List(this, "blacklist");
 
-		this.n_settings = cast(shared)Settings.reload();
+		auto settings = Settings(lite, edu, realm);
+		settings.load();
+		this.n_settings = cast(shared)settings;
 
 		version(Windows) {
 			import std.process : executeShell;
@@ -161,15 +163,15 @@ class Server {
 		}
 
 		long id;
-		bool snoop_enabled = true;
-		try {
+		bool snoop_enabled = false;
+		/*try {
 			JSONValue[string] login;
 			with(Software) login["software"] = ["name": JSONValue(name), "version": JSONValue([major, minor, patch]), "stable": JSONValue(stable)];
 			login["online"] = __onlineMode;
 			if(this.n_settings.minecraft) login["minecraft"] = this.n_settings.minecraft.protocols;
 			if(this.n_settings.pocket) login["pocket"] = this.n_settings.pocket.protocols;
-			login["edu"] = __edu;
-			login["realm"] = __realm;
+			login["edu"] = edu;
+			login["realm"] = realm;
 			login["lang"] = this.n_settings.language;
 			login["bits"] = size_t.sizeof * 8;
 			login["endianness"] = cast(int)endian;
@@ -177,13 +179,10 @@ class Server {
 			login["cores"] = coresPerCPU;
 			//log(JSONValue(login).toString(), "\n");
 			id = to!ulong(post("http://snoop." ~ Software.website ~ "/login", JSONValue(login).toString()));
-		} catch(Throwable) {
-			id = uniform!"[]"(ulong.min, ulong.max);
-			snoop_enabled = false;
-		} finally {
-			this.id = id;
-			this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
-		}
+		} catch(Throwable) {*/
+
+		this.id = uniform!"[]"(ulong.min, ulong.max);
+		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
 
 		if(this.n_settings.whitelist) {
 			this.n_whitelist.load();
@@ -510,7 +509,7 @@ class Server {
 				case "reload":
 					this.n_max = 0;
 					this.unlimited_nodes = 0;
-					this.n_settings = cast(shared)Settings.reload(false);
+					(cast()this.n_settings).load();
 					this.handler.reload();
 					foreach(node ; this.nodes) node.reload();
 					this.command(Text.green ~ "Server's configurations have been reloaded", commandId);

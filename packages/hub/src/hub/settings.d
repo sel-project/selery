@@ -62,43 +62,6 @@ static if(__doc) {
 	
 }
 
-static if(__doc) {
-	
-	/**
-	 * Indicates whether or not the server is running in
-	 * education mode for Minecraft: Pocket Edition.
-	 */
-	enum bool __edu = false;
-	
-} else version(Edu) {
-	
-	enum bool __edu = true;
-	
-} else {
-	
-	enum bool __edu = false;
-	
-}
-
-static if(__doc) {
-	
-	/**
-	 * Indicates whether or not the server is running in
-	 * realm mode. Realm mode is slighter and has less
-	 * options.
-	 */
-	enum bool __realm = false;
-	
-} else version(Realm) {
-	
-	enum bool __realm = true;
-	
-} else {
-	
-	enum bool __realm = false;
-	
-}
-
 deprecated enum bool __onlineMode = false;
 
 private enum __unixSocket = is(UnixAddress);
@@ -114,6 +77,8 @@ struct Settings {
 		return n_default_language;
 	}
 
+	public bool lite, edu, realm;
+
 	public Config config;
 
 	string iconData;
@@ -122,48 +87,46 @@ struct Settings {
 
 	alias config this;
 
-	public static const(Settings) reload(bool all=true) {
+	public this(bool lite, bool edu, bool realm) {
+		this.lite = lite;
+		this.edu = edu;
+		this.realm = realm;
+	}
 
-		Settings settings;
+	public void load() {
 
-		version(Lite) {
-			settings.config = Config(ConfigType.lite, __edu, __realm);
-		} else {
-			settings.config = Config(ConfigType.hub, __edu, __realm);
-		}
-		settings.config.load();
+		this.config = Config(this.lite ? ConfigType.lite : ConfigType.hub, this.edu, this.realm);
+		this.config.load();
 
-		settings.config.minecraft.motd = unpad(settings.config.minecraft.motd);
-		settings.config.pocket.motd = unpad(settings.config.pocket.motd.replace(";", ""));
+		this.config.minecraft.motd = unpad(this.config.minecraft.motd);
+		this.config.pocket.motd = unpad(this.config.pocket.motd.replace(";", ""));
 
 		// icon
 		//TODO check file header to match PNG and size (64x64)
-		if(exists(Paths.home ~ settings.config.icon)) settings.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.home ~ settings.config.icon)).idup;
+		if(exists(Paths.home ~ this.config.icon)) this.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.home ~ this.config.icon)).idup;
 
 		string[] available = availableLanguages;
 		string[] accepted;
-		foreach(lang ; settings.config.acceptedLanguages) {
+		foreach(lang ; this.config.acceptedLanguages) {
 			lang = lang.strip;
 			if(available.canFind(lang)) {
 				accepted ~= lang;
 			}
 		}
 		if(accepted.length == 0) {
-			settings.config.acceptedLanguages = available;
+			this.config.acceptedLanguages = available;
 		} else {
-			settings.config.acceptedLanguages = accepted;
+			this.config.acceptedLanguages = accepted;
 		}
-		settings.language = bestLanguage(settings.language, settings.acceptedLanguages);
+		this.language = bestLanguage(this.language, this.acceptedLanguages);
 
-		n_default_language = settings.config.language;
+		n_default_language = this.config.language;
 
-		settings.config.externalConsoleHashAlgorithm = settings.config.externalConsoleHashAlgorithm.replace("-", "").toLower;
+		this.config.externalConsoleHashAlgorithm = this.config.externalConsoleHashAlgorithm.replace("-", "").toLower;
 
-		foreach(node ; settings.config.acceptedNodes) {
-			settings.acceptedNodes ~= AddressRange.parse(node);
+		foreach(node ; this.config.acceptedNodes) {
+			this.acceptedNodes ~= AddressRange.parse(node);
 		}
-
-		return settings;
 
 	}
 

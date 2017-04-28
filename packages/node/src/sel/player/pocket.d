@@ -589,7 +589,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	protected override void sendPosition() {
-		this.sendPacket(new Play.MovePlayer(this.id, tuple!(typeof(Play.MovePlayer.position))(this.position), this.pitch, this.bodyYaw, this.yaw, Play.MovePlayer.ROTATION, this.onGround));
+		this.sendPacket(new Play.MovePlayer(this.id, tuple!(typeof(Play.MovePlayer.position))(this.position), this.pitch, this.bodyYaw, this.yaw, Play.MovePlayer.TELEPORT, this.onGround));
 	}
 
 	protected override void sendMotion(EntityPosition motion) {
@@ -818,7 +818,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.handleTextMessage(message);
 	}
 
-	protected void handleMovePlayerPacket(long eid, typeof(Play.MovePlayer.position) position, float pitch, float bodyYaw, float yaw, ubyte mode, bool onGround, long unknown7) {
+	protected void handleMovePlayerPacket(long eid, typeof(Play.MovePlayer.position) position, float pitch, float bodyYaw, float yaw, ubyte mode, bool onGround, long unknown7, int unknown8, int unknown9) {
 		position.y -= this.eyeHeight;
 		this.handleMovementPacket(vector!(EntityPosition)(position), yaw, bodyYaw, pitch);
 	}
