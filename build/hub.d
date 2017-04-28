@@ -1,9 +1,9 @@
 /+ dub.sdl:
    name "hub"
-   authors "Kripth"
+   authors "sel-project"
    targetType "executable"
-   dependency "sel-common" path="../src/common"
-   dependency "sel-hub" path="../src/hub"
+   dependency "sel-common" path="../packages/common"
+   dependency "sel-hub" path="../packages/hub"
    configuration "default"
    configuration "edu" {
    	versions "Edu"
@@ -29,13 +29,13 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module hub;
+module buildhub;
 
 import std.conv : to;
 import std.string : replace, toLower;
 
-import sel.server;
-import sel.settings;
+import hub.server;
+import hub.settings;
 
 void main(string[] args) {
 

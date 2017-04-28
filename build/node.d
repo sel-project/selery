@@ -2,9 +2,9 @@
    name "node"
    authors "sel-project"
    targetType "executable"
-   dependency "sel-common" path="../src/common"
-   dependency "sel-node" path="../src/node"
-   dependency "data" path="../.hidden/data"
+   dependency "sel-common" path="../packages/common"
+   dependency "sel-node" path="../packages/node"
+   dependency "plugin-loader" path="../.sel/plugin-loader"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -20,7 +20,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module node;
+module buildnode;
 
 import std.algorithm : max, min;
 import std.concurrency : LinkTerminated;
@@ -36,7 +36,7 @@ import com.util : UnloggedException;
 import sel.plugin; // it seems that not importing this causes compiler errors
 import sel.server : Server, server;
 
-import data : __loadPlugins;
+import pluginloader : loadPlugins;
 
 void main(string[] args) {
 	
@@ -86,7 +86,7 @@ void main(string[] args) {
 				address = getAddress("localhost", port)[0];
 			}
 			
-			new Server(address, password, name, main, __loadPlugins());
+			new Server(address, password, name, main, loadPlugins());
 			
 		} catch(LinkTerminated) {
 			

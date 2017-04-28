@@ -8,10 +8,7 @@
 *.a
 *.selections.json
 .dub
-node/src/chatfilter
-node/src/commands
-node/src/example
-node/src/data.d
+.sel
 
 res/lang/system/es_ES.lang
 res/lang/system/fur_IT.lang

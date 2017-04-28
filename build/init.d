@@ -1,7 +1,7 @@
 /+ dub.sdl:
    name "init"
    authors "sel-project"
-   dependency "sel-common" path="../src/common"
+   dependency "sel-common" path="../packages/common"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -42,11 +42,11 @@ import com.format : Text, writeln;
 import com.path : Paths;
 import com.sel;
 
-enum size_t __GENERATOR__ = 32;
+enum size_t __GENERATOR__ = 34;
 
 void main(string[] args) {
 
-	mkdirRecurse(Paths.hidden ~ "data" ~ dirSeparator ~ "src");
+	mkdirRecurse(Paths.hidden ~ "plugin-loader" ~ dirSeparator ~ "src");
 
 	Config config = Config(ConfigType.node, false, false);
 	config.load();
@@ -55,7 +55,7 @@ void main(string[] args) {
 
 	data ~= "// This file has been automatically generated and it shouldn't be edited";
 	data ~= "// Generator: " ~ to!string(__GENERATOR__);
-	data ~= "module data;";
+	data ~= "module pluginloader;";
 	data ~= "";
 	//data ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
 	//data ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
@@ -232,13 +232,13 @@ void main(string[] args) {
 	string[] fimports;
 
 	JSONValue[string] dub;
-	dub["sel-node"] = JSONValue(["path": "../../src/node"]);
+	dub["sel-node"] = JSONValue(["path": "../../packages/node"]);
 
 	foreach(Info value ; ordered) {
 		if(value.active) {
 			count++;
 			dub[value.id] = ["path": "../../plugins/" ~ value.id];
-			JSONValue[string] deps = ["sel-node": JSONValue(["path": "../../src/node"])];
+			JSONValue[string] deps = ["sel-node": JSONValue(["path": "../../packages/node"])];
 			auto dptr = "dependencies" in value.json;
 			if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 				foreach(name, d; dptr.object) {
@@ -269,9 +269,9 @@ void main(string[] args) {
 
 	if(paths.length > 2) paths = paths[0..$-2];
 
-	write("../.hidden/data/src/data.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] __loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
+	write(Paths.hidden ~ "plugin-loader/src/pluginloader.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
 
-	write("../.hidden/data/dub.json", JSONValue(["name": JSONValue("data"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toPrettyString());
+	write(Paths.hidden ~ "plugin-loader/dub.json", JSONValue(["name": JSONValue("plugin-loader"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toPrettyString());
 
 }
 
