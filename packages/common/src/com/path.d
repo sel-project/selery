@@ -14,7 +14,7 @@
  */
 module com.path;
 
-import std.file : setAttributes;
+import std.file : mkdirRecurse, setAttributes;
 import std.path : dirSeparator;
 
 class Paths {
@@ -48,6 +48,7 @@ class Paths {
 		version(Windows) {
 			// hide hidden
 			import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
+			mkdirRecurse(hidden);
 			setAttributes(hidden, FILE_ATTRIBUTE_HIDDEN);
 		}
 
