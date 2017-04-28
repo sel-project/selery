@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.network;
+module sel.hncom;
 
 import core.thread : Thread, dur;
 import std.bitmanip : read, nativeToLittleEndian;
@@ -22,46 +22,25 @@ import std.system : Endian;
 
 import sel.util.log;
 
-final class Handler {
+abstract class Handler {
 	
 	private static shared(Handler) n_shared_instance;
 	
 	public static nothrow @property @safe @nogc shared(Handler) sharedInstance() {
 		return n_shared_instance;
 	}
-	
-	private Socket socket;
-	private ubyte[] buffer = new ubyte[2 ^^ 14];
-	
-	public this() {
-		n_shared_instance = cast(shared)this;
-	}
-	
-	public void connect(Address address) {
-		version(Posix) {
-			this.socket = new Socket(address.addressFamily, SocketType.STREAM, cast(UnixAddress)address ? cast(ProtocolType)0 : ProtocolType.TCP);
-		} else {
-			this.socket = new TcpSocket(address.addressFamily);
-		}
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(5));
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(5));
-		this.socket.blocking = true;
-		this.socket.connect(address);
-	}
-	
-	public void unblock() {
-		this.socket.blocking = false;
-	}
-	
-	public ubyte[] receive(size_t amount) {
-		ubyte[] buffer = new ubyte[amount];
-		this.socket.receive(buffer);
-		return buffer;
-	}
+
+	private ubyte[] buffer;
 	
 	private ubyte[] n_next;
 	private size_t n_next_length = 0;
+	
+	public this() {
+		n_shared_instance = cast(shared)this;
+		this.buffer = new ubyte[8192];
+	}
+	
+	public void unblock() {}
 
 	public ubyte[] next(ref bool closed) {
 		if(this.n_next_length == 0) {
@@ -77,7 +56,7 @@ final class Handler {
 	
 	private bool addNext(size_t amount, ref bool closed) {
 		while(this.n_next.length < amount) {
-			ptrdiff_t recv = this.socket.receive(this.buffer);
+			ptrdiff_t recv = this.receiveBuffer(this.buffer);
 			if(recv > 0) {
 				this.n_next ~= this.buffer[0..recv];
 			} else {
@@ -88,11 +67,56 @@ final class Handler {
 		return true;
 	}
 
+	protected abstract ptrdiff_t receiveBuffer(ref ubyte[] buffer);
+
 	/**
 	 * Returns: the amount of bytes sent
 	 */
-	public size_t send(ubyte[] buffer) {
-		buffer = nativeToLittleEndian(buffer.length.to!uint) ~ buffer;
+	public shared synchronized ptrdiff_t send(ubyte[] buffer) {
+		return (cast()this).sendImpl(buffer);
+	}
+
+	public size_t sendImpl(ubyte[] buffer) {
+		return this.sendBuffer(nativeToLittleEndian(buffer.length.to!uint) ~ buffer);
+	}
+
+	protected abstract size_t sendBuffer(ubyte[] buffer);
+	
+	public shared @property string lastError() {
+		return lastSocketError();
+	}
+	
+	public abstract void close();
+	
+}
+
+class SocketHandler : Handler {
+
+	private Socket socket;
+	
+	public this(Address address) {
+		super();
+		version(Posix) {
+			this.socket = new Socket(address.addressFamily, SocketType.STREAM, cast(UnixAddress)address ? cast(ProtocolType)0 : ProtocolType.TCP);
+		} else {
+			this.socket = new TcpSocket(address.addressFamily);
+		}
+		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(5));
+		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(5));
+		this.socket.blocking = true;
+		this.socket.connect(address);
+	}
+
+	public override void unblock() {
+		this.socket.blocking = false;
+	}
+
+	protected override ptrdiff_t receiveBuffer(ref ubyte[] buffer) {
+		return this.socket.receive(buffer);
+	}
+
+	protected override size_t sendBuffer(ubyte[] buffer) {
 		size_t length = 0;
 		ptrdiff_t sent;
 		do {
@@ -100,17 +124,9 @@ final class Handler {
 		} while((length += sent) < buffer.length);
 		return length;
 	}
-	
-	public shared synchronized ptrdiff_t send(ubyte[] buffer) {
-		return (cast()this).send(buffer);
-	}
-	
-	public shared @property string lastError() {
-		return lastSocketError();
-	}
-	
-	public void close() {
+
+	public override void close() {
 		this.socket.close();
 	}
-	
+
 }

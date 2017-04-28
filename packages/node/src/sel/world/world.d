@@ -160,7 +160,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	private tick_t n_ticks = 0;
 
-	protected EventListener!WorldEvent inheritance = new EventListener!WorldEvent();
+	protected EventListener!WorldEvent inheritance;
 	protected TaskManager task_manager;
 
 	protected Generator generator;
@@ -201,6 +201,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		if(this.n_items is null) this.n_items = new ItemStorage();
 		this.rules = this.parent is null ? rules : this.parent.rules.dup;
 		this.n_random = Random(this.seed);
+		this.inheritance = new EventListener!WorldEvent();
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
 		this.n_type = this.generator.type;

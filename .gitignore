@@ -9,6 +9,10 @@
 *.selections.json
 .dub
 .sel
+/crash
+/resources
+/plugins
+/worlds
 
 res/lang/system/es_ES.lang
 res/lang/system/fur_IT.lang

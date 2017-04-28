@@ -102,7 +102,7 @@ struct Settings {
 
 	public void load(bool edu, bool realm) {
 
-		this.config = Config(__oneNode ? ConfigType.full : ConfigType.node, edu, realm);
+		this.config = Config(__oneNode ? ConfigType.lite : ConfigType.node, edu, realm);
 		this.config.load();
 
 		Rules.reload(this.config);

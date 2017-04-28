@@ -58,7 +58,7 @@ static if(__doc) {
 	
 } else {
 	
-	enum bool __oneNode = false;
+	deprecated enum bool __oneNode = false;
 	
 }
 
@@ -126,7 +126,11 @@ struct Settings {
 
 		Settings settings;
 
-		settings.config = Config(__oneNode ? ConfigType.full : ConfigType.hub, __edu, __realm);
+		version(Lite) {
+			settings.config = Config(ConfigType.lite, __edu, __realm);
+		} else {
+			settings.config = Config(ConfigType.hub, __edu, __realm);
+		}
 		settings.config.load();
 
 		settings.config.minecraft.motd = unpad(settings.config.minecraft.motd);

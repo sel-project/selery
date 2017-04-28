@@ -58,6 +58,8 @@ mixin("import Status = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status
 mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 mixin("import World = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".world;");
 
+version(Lite) {} else version = NotLite;
+
 class HncomHandler : HandlerThread {
 	
 	private shared string* additionalJson, socialJson;
@@ -69,8 +71,8 @@ class HncomHandler : HandlerThread {
 	version(Posix) private shared string unixSocketAddress;
 	
 	public this(shared Server server, shared string* additionalJson, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
-		static if(__oneNode) {
-			string ip = "::1";
+		version(Lite) {
+			super(server, []);
 		} else {
 			string ip = "::";
 			string[] nodes = cast(string[])server.settings.config.acceptedNodes;
@@ -90,44 +92,43 @@ class HncomHandler : HandlerThread {
 					}
 				}
 			}
-		}
-		Socket socket = null;
-		version(Posix) {
-			if(server.settings.hncomUseUnixSockets && (ip == "127.0.0.1" || ip == "::1")) {
-				this.unixSocketAddress = server.settings.hncomUnixSocketAddress;
-				socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
+			Socket socket = null;
+			version(Posix) {
+				if(server.settings.hncomUseUnixSockets && (ip == "127.0.0.1" || ip == "::1")) {
+					this.unixSocketAddress = server.settings.hncomUnixSocketAddress;
+					socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
+				}
 			}
+			if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
+			this.address = cast(shared)socket.localAddress;
+			super(server, [cast(shared)socket]);
 		}
-		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
-		this.address = cast(shared)socket.localAddress;
-		super(server, [cast(shared)socket]);
 		this.additionalJson = additionalJson;
 		this.pocketPort = pocketPort;
 		this.minecraftPort = minecraftPort;
 	}
 	
 	protected override void listen(shared Socket sharedSocket) {
-		Socket socket = cast()sharedSocket;
-		while(true) {
-			Socket client = socket.accept();
-			Address address;
-			try {
-				address = client.remoteAddress;
-			} catch(Exception) {
-				static if(__oneNode) {
-					this.server.shutdown();
-					return;
-				} else {
+		version(Lite) {
+			new shared Node(this.server, null, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
+		} else {
+			Socket socket = cast()sharedSocket;
+			while(true) {
+				Socket client = socket.accept();
+				Address address;
+				try {
+					address = client.remoteAddress;
+				} catch(Exception) {
 					continue;
 				}
-			}
-			if(this.server.acceptNode(address)) {
-				new SafeThread({
-					shared Node node = new shared Node(this.server, client, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
-					delete node;
-				}).start();
-			} else {
-				client.close();
+				if(this.server.acceptNode(address)) {
+					new SafeThread({
+						shared Node node = new shared Node(this.server, client, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
+						delete node;
+					}).start();
+				} else {
+					client.close();
+				}
 			}
 		}
 	}
@@ -213,11 +214,15 @@ class Node : Session {
 	
 	public shared this(shared Server server, Socket socket, string additionalJson, shared string* socialJson, ushort pocket_port, ushort minecraft_port) {
 		super(server);
-		if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
-		this.socket = cast(shared)socket;
-		this.remoteAddress = socket.remoteAddress.toString();
+		version(Lite) {
+			//TODO do handshake
+		} else {
+			if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
+			this.socket = cast(shared)socket;
+			this.remoteAddress = socket.remoteAddress.toString();
+			socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
+		}
 		this.socialJson = socialJson;
-		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
 		auto receiver = new Receiver!(uint, Endian.littleEndian)();
 		ubyte[] buffer = new ubyte[256];
 		auto recv = socket.receive(buffer);

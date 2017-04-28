@@ -2,12 +2,12 @@ language: d
 
 d:
  - dmd-2.073.2
-# - ldc
+ - ldc-1.2.0
 
 script:
  - cd build
  - dub build --single --compiler=$DC --build=release hub.d
- - dub init.d --compiler=$DC
+ - dub --compiler=$DC --build=release init.d
  - dub build --single --compiler=$DC --build=release node.d
 
 notifications:

@@ -20,7 +20,7 @@ enum ConfigType {
 
 	hub,
 	node,
-	full
+	lite
 
 }
 

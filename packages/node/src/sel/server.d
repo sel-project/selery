@@ -48,7 +48,7 @@ import com.util : milliseconds, microseconds;
 import resusage.memory;
 import resusage.cpu;
 
-import sel.network : Handler;
+import sel.hncom;
 import sel.settings;
 import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
@@ -246,8 +246,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		static if(!__oneNode) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
 
 		try {
-			this.handler = new Handler();
-			this.handler.connect(hub);
+			this.handler = new SocketHandler(hub);
 			this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
 		} catch(SocketException e) {
 			error_log(translate("{warning.connectionError}", this.n_settings.language, [to!string(hub), e.msg]));
