@@ -36,7 +36,6 @@ import nbt.stream;
 import nbt.tags;
 
 import sel.server : server;
-import sel.settings;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect, Effects;
@@ -497,8 +496,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 		networkStream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {
-			if(tile.compound.pe !is null) {
-				auto compound = tile.compound.pe.dup;
+			if(tile.pocketCompound !is null) {
+				auto compound = tile.pocketCompound.dup;
 				compound["id"] = new String(tile.spawnId.pe);
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
@@ -727,9 +726,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			//tile.to!ITranslatable.translateStrings(this.lang);
 		}
 		auto packet = new Play.BlockEntityData(toBlockPosition(tile.position));
-		if(tile.compound.pe !is null) {
+		if(tile.pocketCompound !is null) {
 			networkStream.buffer.length = 0;
-			networkStream.writeTag(tile.compound.pe);
+			networkStream.writeTag(tile.pocketCompound);
 			packet.nbt = networkStream.buffer;
 		} else {
 			packet.nbt ~= NBT_TYPE.END;

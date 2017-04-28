@@ -14,8 +14,6 @@
  */
 module sel.player.minecraft;
 
-import sel.settings;
-
 import std.algorithm : sort, min, canFind, clamp;
 import std.conv : to;
 import std.json : JSONValue;
@@ -392,9 +390,9 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 		stream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {
-			if(tile.compound.pc !is null) {
+			if(tile.minecraftCompound !is null) {
 				packet.tilesCount++;
-				auto compound = tile.compound.pc.dup;
+				auto compound = tile.minecraftCompound.dup;
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
@@ -405,12 +403,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 		this.sendPacket(packet);
 
-
-		/*if(chunk.translatable_tiles.length > 0) {
-			foreach(Tile tile ; chunk.translatable_tiles) {
-				if(tile.hasCompound) this.sendTile(tile, true);
-			}
-		}*/
 	}
 	
 	public override void unloadChunk(ChunkPosition pos) {
@@ -599,8 +591,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	public override void sendTile(Tile tile, bool translatable) {
 		stream.buffer.length = 0;
 		auto packet = new Clientbound.UpdateBlockEntity(ulongPosition(tile.position), tile.action);
-		if(tile.compound.pc !is null) {
-			auto compound = tile.compound.pc.dup;
+		if(tile.minecraftCompound !is null) {
+			auto compound = tile.minecraftCompound.dup;
 			// signs become invisible without the coordinates
 			compound["x"] = new Int(tile.position.x);
 			compound["y"] = new Int(tile.position.y);

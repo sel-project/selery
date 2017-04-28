@@ -29,7 +29,6 @@ import com.sel;
 
 import nbt.tags;
 
-import sel.settings;
 import sel.block.block;
 import sel.block.blocks : Blocks;
 import sel.block.solid : Facing;
@@ -48,9 +47,7 @@ import sel.world.world : World;
 
 static import sul.blocks;
 
-static if(__minecraft) {
-	mixin("import sul.protocol.minecraft" ~ __minecraftProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
-}
+mixin("import sul.protocol.minecraft" ~ latestMinecraftProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
 
 /**
  * A special block that contains additional data.
@@ -83,12 +80,14 @@ abstract class Tile : Block {
 	public abstract pure nothrow @property @safe group!string spawnId();
 
 	/**
-	 * Gets the named binary tag for Minecraft and Minecraft: Pocket
-	 * Edition as a group.
+	 * Gets the named binary tag.
 	 * The tag may be null if the tile does not exists in the game's
 	 * version or when the tile is in its inital state (or empty).
 	 */
-	public abstract @property group!Compound compound();
+	public abstract @property Compound minecraftCompound();
+
+	/// ditto
+	public abstract @property Compound pocketCompound();
 
 	/**
 	 * Parses a non-null compound saved in the Minecraft's Anvil
@@ -191,20 +190,18 @@ abstract class Sign : Tile {
 	private Compound n_compound;
 	private Named!String[4] texts;
 
-	static if(__minecraft) {
-		private Compound minecraft_compound;
-		private Named!String[4] minecraft_texts;
-	}
+	private Compound minecraft_compound;
+	private Named!String[4] minecraft_texts;
 
 	public this(sul.blocks.Block data, string a, string b, string c, string d) {
 		super(data);
 		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
 			enum text = "Text" ~ to!string(i + 1);
 			this.texts[i] = new Named!String(text, "");
-			static if(__minecraft) this.minecraft_texts[i] = new Named!String(text, "");
+			this.minecraft_texts[i] = new Named!String(text, "");
 		}
 		this.n_compound = new Compound(this.texts[0], this.texts[1], this.texts[2], this.texts[3]);
-		static if(__minecraft) this.minecraft_compound = new Compound(this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
+		this.minecraft_compound = new Compound(this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
 		this.setImpl(0, a);
 		this.setImpl(1, b);
 		this.setImpl(2, c);
@@ -260,7 +257,7 @@ abstract class Sign : Tile {
 
 	private @trusted void setImpl(size_t index, string data) {
 		this.texts[index].value = data;
-		static if(__minecraft) this.minecraft_texts[index].value = JSONValue(["text": data]).toString();
+		this.minecraft_texts[index].value = JSONValue(["text": data]).toString();
 	}
 
 	/**
@@ -330,12 +327,12 @@ abstract class Sign : Tile {
 		return this[0].length == 0 && this[1].length == 0 && this[2].length == 0 && this[3].length == 0;
 	}
 
-	public override @property group!Compound compound() {
-		static if(__minecraft) {
-			return group!Compound(this.n_compound, this.minecraft_compound);
-		} else {
-			return group!Compound(this.n_compound, null);
-		}
+	public override @property Compound minecraftCompound() {
+		return this.minecraft_compound;
+	}
+
+	public override @property Compound pocketCompound() {
+		return this.n_compound;
 	}
 
 	public override void parseMinecraftCompound(Compound compound) {
@@ -468,8 +465,8 @@ class FlowerPot : Tile {
 	public @property Item item(Item item) {
 		if(item !is null) {
 			item.clear(); // remove enchantments and custom name
-			static if(__pocket) this.pocket_compound = new Compound(new Named!Short("item", item.pocketId), new Named!Int("mData", item.pocketMeta));
-			static if(__minecraft) this.minecraft_compound = new Compound(new Named!String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.minecraftMeta));
+			this.pocket_compound = new Compound(new Named!Short("item", item.pocketId), new Named!Int("mData", item.pocketMeta));
+			this.minecraft_compound = new Compound(new Named!String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.minecraftMeta));
 		} else {
 			this.pocket_compound = null;
 			this.minecraft_compound = null;
@@ -496,8 +493,12 @@ class FlowerPot : Tile {
 		return false;
 	}
 
-	public override @property group!Compound compound() {
-		return group!Compound(this.pocket_compound, this.minecraft_compound);
+	public override @property Compound minecraftCompound() {
+		return this.minecraft_compound;
+	}
+
+	public override @property Compound pocketCompound() {
+		return this.pocket_compound;
 	}
 
 	public override void parseMinecraftCompound(Compound compound) {

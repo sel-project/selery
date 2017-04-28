@@ -19,8 +19,6 @@ public import com.format : Text;
 public import com.sel;
 public import com.util;
 
-public import sel.settings;
-
 public import sel.server : Server, server;
 public import sel.player;
 

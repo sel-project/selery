@@ -64,8 +64,6 @@ static if(__doc) {
 
 deprecated enum bool __onlineMode = false;
 
-private enum __unixSocket = is(UnixAddress);
-
 /**
  * Runtime settings.
  */

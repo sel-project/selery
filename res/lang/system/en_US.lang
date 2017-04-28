@@ -21,7 +21,6 @@ warning.outofram = The server is using too much RAM memory and it will be stoppe
 warning.protocolRequired = The node uses protocol {0}, but protocol {1} is required by the hub
 warning.invalidGame = Game with id {0} required by the hub is not supported by this version of {1}
 warning.invalidProtocol = Protocol {0} for game "{1}" accepted by the hub is not supported by the node
-warning.differentProtocol = Protocol {0} for game "{1}" accepted by the hub was not included in the current build
 warning.rebuild = Build the node again and reconnect to the hub to solve the previous warning
 warning.removingDefaultWorld = Trying to remove world "{0}", but the default world cannot be removed
 warning.removingWithPlayers = Removing world "{0}" with {1} players online!

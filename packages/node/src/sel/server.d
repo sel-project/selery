@@ -38,7 +38,7 @@ import std.traits : Parameters;
 import std.uuid : UUID;
 import std.zlib : UnCompress;
 
-import com.config : Config;
+import com.config : Config, ConfigType;
 import com.format : Text;
 import com.memory : Memory;
 import com.path : Paths;
@@ -49,7 +49,6 @@ import resusage.memory;
 import resusage.cpu;
 
 import sel.hncom;
-import sel.settings;
 import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;
@@ -57,7 +56,9 @@ import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.math.vector : BlockPosition;
+import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player;
+import sel.player.pocket : PocketPlayerImpl;
 import sel.plugin.plugin : Plugin;
 import sel.util.command : Command, CommandSender;
 import sel.util.concurrency : thread, Thread;
@@ -65,6 +66,7 @@ import sel.util.lang : Lang, translate, Variables;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.util.task;
+import sel.world.rules : Rules;
 import sel.world.world : World;
 
 /*mixin((){
@@ -133,7 +135,9 @@ version(Windows) {
 
 }
 
-/** Singleton for the server instance. */
+/**
+ * Singleton for the server instance.
+ */
 final class Server : EventListener!ServerEvent, CommandSender {
 
 	private ulong start_time;
@@ -155,7 +159,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	private size_t next_received_length = 0;
 	private ubyte[] next_received;
 
-	private Settings n_settings;
+	private Config n_settings;
 	private uint n_node_max;
 	private size_t n_online;
 	private size_t n_max;
@@ -199,37 +203,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		this.n_plugins = plugins;
 		
 		n_server = this;
-
-		static if(__oneNode && !__noSocket) {
-			ubyte tries = 255;
-			while(--tries) {
-				if(std.file.exists(Paths.hidden ~ "handshake")) {
-					string[] lines = (cast(string)std.file.read(Paths.hidden ~ "handshake")).split(newline);
-					switch(lines[0]) {
-						case "4":
-							hub = new InternetAddress(lines[1], to!ushort(lines[2]));
-							break;
-						case "6":
-							hub = new Internet6Address(lines[1], to!ushort(lines[2]));
-							break;
-						default:
-							version(Posix) {
-								hub = new UnixAddress(lines[1]);
-							}
-							break;
-
-					}
-					std.file.remove(Paths.hidden ~ "handshake");
-					break;
-				}
-				Thr.sleep(dur!"msecs"(120));
-			}
-			if(tries == 0) {
-				// it waited 30 seconds
-				error_log("Could not connect to the hub!");
-				return;
-			}
-		}
 		
 		{
 			// load language from the last execution (or default language)
@@ -243,10 +216,14 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			Lang.init(this.n_settings.acceptedLanguages, [Paths.langSystem]);
 		}
 
-		static if(!__oneNode) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
+		if(hub !is null) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
 
 		try {
-			this.handler = new SocketHandler(hub);
+			if(hub !is null) {
+				this.handler = new SocketHandler(hub);
+			} else {
+				//TODO lite
+			}
 			this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
 		} catch(SocketException e) {
 			error_log(translate("{warning.connectionError}", this.n_settings.language, [to!string(hub), e.msg]));
@@ -305,15 +282,19 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			this.n_id = info.serverId;
 			this.uuid_count = info.reservedUuids;
 
+			auto type = this.n_hub_address is null ? ConfigType.lite : ConfigType.node;
+
 			auto additional = parseJSON(info.additionalJson);
 			auto minecraft = "minecraft" in additional;
 			if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 				auto edu = "edu" in *minecraft;
 				auto realm = "realm" in *minecraft;
-				this.n_settings.load(edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
+				this.n_settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
 			} else {
-				this.n_settings.load(false, false);
+				this.n_settings = Config(type, false, false);
 			}
+			this.n_settings.load();
+			Rules.reload(this.n_settings);
 
 			this.n_settings.displayName = info.displayName;
 			this.n_settings.language = info.language;
@@ -331,6 +312,9 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
 				if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
 			}
+
+			// save latest language used
+			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
 
 			version(Windows) {
 				executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
@@ -352,21 +336,16 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			bool conflict = false;
 
 			// filter protocols and print warnings if necessary
-			void check(ubyte type, string name, uint[] requested, uint[] compiled, uint[] supported) {
+			void check(ubyte type, string name, uint[] requested, uint[] supported) {
 				foreach(req ; requested) {
-					if(!compiled.canFind(req)) {
-						if(supported.canFind(req)) {
-							conflict = true;
-							warning_log(translate("{warning.differentProtocol}", this.n_settings.language, [to!string(req), name]));
-						} else {
-							warning_log(translate("{warning.invalidProtocol}", this.n_settings.language, [to!string(req), name]));
-						}
+					if(!supported.canFind(req)) {
+						warning_log(translate("{warning.invalidProtocol}", this.n_settings.language, [to!string(req), name]));
 					}
 				}
 			}
 
-			check(PE, "Minecraft: Pocket Edition", this.n_settings.pocket.protocols, __pocketProtocols, supportedPocketProtocols.keys);
-			check(PC, "Minecraft", this.n_settings.minecraft.protocols, __minecraftProtocols, supportedMinecraftProtocols.keys);
+			check(PE, "Minecraft: Pocket Edition", this.n_settings.pocket.protocols, supportedPocketProtocols.keys);
+			check(PC, "Minecraft", this.n_settings.minecraft.protocols, supportedMinecraftProtocols.keys);
 
 			if(conflict) {
 				warning_log(translate("{warning.rebuild}", this.n_settings.language, []));
@@ -444,9 +423,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		this.tasks = new TaskManager();
 
 		// load creative inventories
-		static if(__pocket) {
-			import sel.player.pocket : PocketPlayerImpl;
-			foreach(immutable protocol ; __pocketProtocolsTuple) {
+		foreach(immutable protocol ; SupportedPocketProtocols) {
+			if(this.settings.pocket.protocols.canFind(protocol)) {
 				mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory();");
 			}
 		}
@@ -468,8 +446,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomTypes.Game[] games;
-		static if(__pocket) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, __pocketProtocols);
-		static if(__minecraft) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, __minecraftProtocols);
+		static if(supportedPocketProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, supportedPocketProtocols.keys);
+		static if(supportedMinecraftProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, supportedMinecraftProtocols.keys);
 		HncomTypes.Plugin[] plugins;
 		foreach(plugin ; this.n_plugins) {
 			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
@@ -670,7 +648,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * static if(__minecraft) log("Port for Minecraft: ", server.settings.minecraft.port); 
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc const(Settings) settings() {
+	public pure nothrow @property @safe @nogc const(Config) settings() {
 		return this.n_settings;
 	}
 
@@ -1322,6 +1300,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * Reloads the configurations.
 	 */
 	private void handleReloadPacket(HncomStatus.Reload packet) {
+		// only reload plugins, not settings
 		foreach(plugin ; this.n_plugins) {
 			foreach(del ; plugin.onreload) del();
 		}
@@ -1344,31 +1323,26 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		Player player = (){
 			switch(packet.type) {
-				static if(__pocket) {
-					case HncomPlayer.Add.Pocket.TYPE:
-						import sel.player.pocket : PocketPlayerImpl;
-						auto pocket = packet.new Pocket();
-						pocket.decode();
-						foreach(immutable p ; __pocketProtocolsTuple) {
-							if(packet.protocol == p)
+				case HncomPlayer.Add.Pocket.TYPE:
+					auto pocket = packet.new Pocket();
+					pocket.decode();
+					final switch(packet.protocol) {
+						foreach(immutable p ; SupportedPocketProtocols) {
+							case p:
 								return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
 						}
-						assert(0);
-				}
-				static if(__minecraft) {
-					case HncomPlayer.Add.Minecraft.TYPE:
-						import sel.player.minecraft : MinecraftPlayerImpl;
-						auto minecraft = packet.new Minecraft();
-						minecraft.decode();
-						foreach(immutable p ; __minecraftProtocolsTuple) {
-							if(packet.protocol == p)
+					}
+				case HncomPlayer.Add.Minecraft.TYPE:
+					auto minecraft = packet.new Minecraft();
+					minecraft.decode();
+					final switch(packet.protocol) {
+						foreach(immutable p ; SupportedMinecraftProtocols) {
+							case p:
 								return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency);
 						}
-						assert(0);
-				}
+					}
 				default: assert(0, "Trying to add a player with an unknown type " ~ to!string(packet.type));
 			}
-			static if(!__pocket && !__minecraft) return cast(Player)null;
 		}();
 
 		// register the server's commands

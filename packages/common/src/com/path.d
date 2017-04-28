@@ -14,31 +14,42 @@
  */
 module com.path;
 
+import std.file : setAttributes;
 import std.path : dirSeparator;
 
 class Paths {
 
 	@disable this();
 
-	public shared static immutable string home, res, langSystem, langMessages, music, skin, plugins, resources, logs, crash, worlds, hidden;
+	public shared static string home, res, langSystem, langMessages, music, skin, plugins, resources, logs, crash, worlds, hidden;
 
 	public shared static this() {
+		load(".." ~ dirSeparator);
+	}
 
-		home = "../"; // exe should be in node/ or hub/
+	public static void load(string h) {
 
-		res = "../res/";
-		langSystem = res ~ "lang/system/";
-		langMessages = res ~ "lang/messages/";
-		music = res ~ "music/";
-		skin = res ~ "skin/";
+		home = h;
+
+		res = home ~ "res" ~ dirSeparator;
+		langSystem = res ~ "lang" ~ dirSeparator ~ "system" ~ dirSeparator;
+		langMessages = res ~ "lang" ~ dirSeparator ~ "messages" ~ dirSeparator;
+		music = res ~ "music" ~ dirSeparator;
+		skin = res ~ "skin" ~ dirSeparator;
 	
-		plugins = "../plugins/";
-		resources = "../resources/";
-		logs = "../logs/";
-		crash = "../crash/";
-		worlds = "../worlds/";
+		plugins = home ~ "plugins" ~ dirSeparator;
+		resources = home ~ "resources" ~ dirSeparator;
+		logs = home ~ "logs" ~ dirSeparator;
+		crash = home ~ "crash" ~ dirSeparator;
+		worlds = home ~ "worlds" ~ dirSeparator;
 
-		hidden = "../.sel/";
+		hidden = home ~ ".sel" ~ dirSeparator;
+
+		version(Windows) {
+			// hide hidden
+			import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
+			setAttributes(hidden, FILE_ATTRIBUTE_HIDDEN);
+		}
 
 	}
 

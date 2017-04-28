@@ -159,13 +159,31 @@ enum supportedMinecraftProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
-	//319: ["1.12"],
+	//325: ["1.12"],
 ];
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
 	112: ["1.1.0"],
 ];
+
+/**
+ * Tuples with the supported protocols.
+ */
+alias SupportedMinecraftProtocols = ProtocolsTuple!(supportedMinecraftProtocols);
+
+/// ditto
+alias SupportedPocketProtocols = ProtocolsTuple!(supportedPocketProtocols);
+
+alias ProtocolsTuple(string[][uint] protocols) = ProtocolsImpl!(protocols.keys);
+
+private template ProtocolsImpl(uint[] protocols, E...) {
+	static if(protocols.length) {
+		alias ProtocolsImpl = ProtocolsImpl!(protocols[1..$], E, protocols[0]);
+	} else {
+		alias ProtocolsImpl = E;
+	}
+}
 
 /**
  * Array with the protocols for the latest game version.

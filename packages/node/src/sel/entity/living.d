@@ -20,7 +20,6 @@ import std.math : round, isNaN;
 import com.sel;
 import com.util : safe, call;
 
-import sel.settings;
 import sel.entity.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
 import sel.entity.metadata;
@@ -362,16 +361,12 @@ public class Living : Entity {
 			this.metadata.set!"potionColor"(0);
 		} else {
 			auto c = color.rgb & 0xFFFFFF;
-			static if(__minecraft) {
-				foreach(p ; __minecraftProtocolsTuple) {
-					mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
-				}
+			foreach(p ; SupportedMinecraftProtocols) {
+				mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
 			}
-			static if(__pocket) {
-				c |= 0xFF000000;
-				foreach(p ; __pocketProtocolsTuple) {
-					mixin("this.metadata.pocket" ~ p.to!string ~ ".potionColor = c;");
-				}
+			c |= 0xFF000000;
+			foreach(p ; SupportedPocketProtocols) {
+				mixin("this.metadata.pocket" ~ p.to!string ~ ".potionColor = c;");
 			}
 		}
 		return color;

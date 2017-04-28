@@ -131,12 +131,6 @@ class Server {
 
 		if(!exists(Paths.resources)) mkdir(Paths.resources);
 
-		static if(!__oneNode) {
-			if(!exists(Paths.resources ~ "routes.json")) {
-				//write(Paths.resources ~ "routes.json", "{}");
-			}
-		}
-
 		this.n_whitelist = List(this, "whitelist");
 		this.n_blacklist = List(this, "blacklist");
 
@@ -216,22 +210,6 @@ class Server {
 			log(Text.red, "cannot start server!");
 			log(e);
 			return;
-		}
-
-		static if(__oneNode) {
-			if(cast(InternetAddress)this.handler.hncomAddress) {
-				auto v4 = cast(InternetAddress)this.handler.hncomAddress;
-				write(Paths.hidden ~ "handshake", "4" ~ newline ~ v4.toAddrString() ~ newline ~ v4.toPortString());
-			}
-			if(cast(Internet6Address)this.handler.hncomAddress) {
-				auto v6 = cast(Internet6Address)this.handler.hncomAddress;
-				write(Paths.hidden ~ "handshake", "6" ~ newline ~ v6.toAddrString() ~ newline ~ v6.toPortString());
-			}
-			version(Posix) {
-				if(cast(UnixAddress)this.handler.hncomAddress) {
-					write(Paths.hidden ~ "handshake", "u" ~ newline ~ this.handler.hncomAddress.toAddrString());
-				}
-			}
 		}
 
 		// listen for commands
@@ -883,7 +861,7 @@ struct List {
 		foreach(player ; this.players) {
 			lines ~= (cast()player).toString();
 		}
-		write(Paths.home ~ this.name ~ ".txt", lines.join(newline) ~ newline);
+		write(Paths.resources ~ this.name ~ ".txt", lines.join(newline) ~ newline);
 	}
 
 	static class Player {

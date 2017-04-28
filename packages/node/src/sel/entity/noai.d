@@ -19,7 +19,6 @@ import std.conv : to;
 import com.sel;
 import com.util : call;
 
-import sel.settings;
 import sel.block.block;
 import sel.entity.entity;
 import sel.entity.interfaces;
@@ -50,9 +49,9 @@ class ItemEntity : Entity, Collectable {
 		this.n_data = 1;
 		this.m_motion = motion;
 		this.n_item = item;
-		static if(__minecraft) {
+		static if(supportedMinecraftProtocols.length) {
 			import sel.player.minecraft : MinecraftPlayerImpl;
-			foreach(immutable i ; __minecraftProtocolsTuple) {
+			foreach(immutable i ; SupportedMinecraftProtocols) {
 				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = MinecraftPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
 			}
 		}

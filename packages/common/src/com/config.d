@@ -5,8 +5,9 @@ import std.array : array;
 import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
-import std.file : read, write, exists;
+import std.file : read, write, exists, tempDir;
 import std.json;
+import std.path : dirSeparator;
 import std.process : environment;
 import std.random : uniform;
 import std.socket : getAddress, AddressFamily;
@@ -78,7 +79,7 @@ struct Config {
 
 	bool doScheduledTicks = true;
 
-	string[string] plugins;
+	JSONValue[] plugins;
 
 	bool panel;
 
@@ -146,7 +147,9 @@ struct Config {
 
 		this.acceptedNodes ~= getAddress("localhost", 0)[0].addressFamily == AddressFamily.INET6 ? "::1" : "127.0.*.*";
 
-		this.hncomUnixSocketAddress = "/tmp/sel/" ~ randomPassword;
+		this.hncomUnixSocketAddress = tempDir();
+		if(!this.hncomUnixSocketAddress.endsWith(dirSeparator)) this.hncomUnixSocketAddress ~= dirSeparator;
+		this.hncomUnixSocketAddress ~= "sel" ~ dirSeparator ~ randomPassword;
 
 	}
 
@@ -188,23 +191,23 @@ struct Config {
 		string file = header ~ "{" ~ newline;
 
 		if(type != ConfigType.node) file ~= "\t\"display-name\": \"A Minecraft Server\"," ~ newline;
-		if(!edu) {
+		if(type != ConfigType.node && !edu) {
 			file ~= "\t\"minecraft\": {" ~ newline;
 			file ~= "\t\t\"enabled\": true," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": false," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"addresses\": [\"0.0.0.0:25565\"]," ~ newline;
+			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
+			file ~= "\t\t\"online-mode\": false," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0:25565\"]," ~ newline;
 			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestMinecraftProtocols) ~ newline;
 			file ~= "\t}," ~ newline;
 		}
-		{
+		if(type != ConfigType.node) {
 			file ~= "\t\"pocket\": {" ~ newline;
 			file ~= "\t\t\"enabled\": true," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"online-mode\": false," ~ newline;
-			if(type != ConfigType.node) file ~= "\t\t\"addresses\": [\"0.0.0.0:19132\"]," ~ newline;
+			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
+			file ~= "\t\t\"online-mode\": false," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0:19132\"]," ~ newline;
 			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestPocketProtocols);
-			if(type != ConfigType.node && edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": false";
+			if(edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": false";
 			file ~= newline ~ "\t}," ~ newline;
 		}
 		if(type != ConfigType.hub) file ~= "\t\"max-players\": " ~ to!string(size_t.sizeof * 8) ~ "," ~ newline;
@@ -227,7 +230,7 @@ struct Config {
 			file ~= "\t\t\"do-scheduled-ticks\": true" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
-		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": {" ~ newline ~ "\t\t\"commands\": \"latest\"" ~ newline ~ "\t}," ~ newline;
+		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": []," ~ newline;
 		/*if(type != ConfigType.node) {
 			file ~= "\t\"panel\": {" ~ newline;
 			file ~= "\t\t\"enabled\": false," ~ newline;
@@ -279,7 +282,7 @@ struct Config {
 
 	}
 
-	public void load() {
+	public void load(bool update=true) {
 
 		if(exists(Paths.home ~ "sel.json")) {
 
@@ -293,7 +296,7 @@ struct Config {
 
 			string file = lines.join("\n");
 
-			write(Paths.home ~ "sel.json", header ~ file);
+			if(update) write(Paths.home ~ "sel.json", header ~ file);
 
 			auto json = parseJSON(file);
 
@@ -402,7 +405,7 @@ struct Config {
 				social = parseJSON("{}");
 			}
 
-		} else {
+		} else if(update) {
 
 			this.save();
 
@@ -427,7 +430,7 @@ public @property string[] availableLanguages() {
 	foreach(string path ; dirEntries(Paths.langSystem, SpanMode.breadth)) {
 		if(path.isFile && path.endsWith(".lang")) {
 			if((cast(string)read(path)).indexOf(" COMPLETE") != -1) {
-				ret ~= path[path.lastIndexOf("/")+1..$-5];
+				ret ~= path[path.lastIndexOf(dirSeparator)+1..$-5];
 			}
 		}
 	}

@@ -26,7 +26,6 @@ import com.sel;
 import com.util : safe, call;
 
 import sel.server : server;
-import sel.settings;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;
@@ -265,11 +264,7 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 
 	public @property @trusted string nametag() {
-		static if(__pocket) {
-			return this.metadata.get!("nametag", string)();
-		} else {
-			return this.metadata.get!("customName", string)();
-		}
+		return this.metadata.get!("nametag", string)();
 	}
 
 	public @property @trusted string nametag(string nametag) {

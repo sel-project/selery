@@ -19,8 +19,6 @@
  */
 module init;
 
-version(Windows) import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
-
 import std.algorithm : sort, canFind, clamp;
 import std.array : join, split, replace;
 import std.ascii : newline;
@@ -48,35 +46,14 @@ void main(string[] args) {
 
 	mkdirRecurse(Paths.hidden ~ "plugin-loader" ~ dirSeparator ~ "src");
 
-	Config config = Config(ConfigType.node, false, false);
-	config.load();
-
 	string[] data;
 
 	data ~= "// This file has been automatically generated and it shouldn't be edited";
 	data ~= "// Generator: " ~ to!string(__GENERATOR__);
 	data ~= "module pluginloader;";
 	data ~= "";
-	//data ~= "enum uint[] __minecraftProtocols = " ~ to!string(config.minecraft ? config.minecraft.protocols : new uint[0]) ~ ";";
-	//data ~= "enum uint[] __pocketProtocols = " ~ to!string(config.pocket ? config.pocket.protocols : new uint[0]) ~ ";";
-	//data ~= "";
 
 	JSONValue[string] plugs; // plugs[location] = settingsfile
-
-	version(Windows) {
-		setAttributes(Paths.hidden, FILE_ATTRIBUTE_HIDDEN);
-	}
-
-	string temp;
-	if(exists(Paths.hidden ~ "temp")) {
-		temp = cast(string)read(Paths.hidden ~ "temp");
-	} else {
-		temp = randomUUID.toString().toUpper();
-		write(Paths.hidden ~ "temp", temp);
-	}
-	temp = tempDir() ~ dirSeparator ~ "sel" ~ dirSeparator ~ temp ~ dirSeparator;
-
-	if(!exists(temp)) mkdirRecurse(temp);
 
 	void loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
@@ -89,47 +66,23 @@ void main(string[] args) {
 		}
 	}
 
-	//TODO load plugins from config.plugins
-
-	// load plugins
+	// load plugins in plugins folder
 	if(exists(Paths.plugins)) {
 		foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
 			if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
 				if(ppath.isDir) {
 					loadPlugin(ppath);
-				} else if(ppath.isFile && ppath.endsWith(".ssa")) {
-					string name = ppath[Paths.plugins.length..$-4];
-					ubyte[] file = cast(ubyte[])read(ppath);
-					if(file.length > 5 && cast(string)file[0..5] == "plugn") {
-						file = file[5..$];
-						auto pack = readPluginArchive(file);
-						if(pack.type == JSON_TYPE.OBJECT) {
-							auto vers = "version" in pack.object;
-							if(vers && (*vers).type == JSON_TYPE.STRING) {
-								bool copy = !exists(temp ~ name ~ dirSeparator ~ "package.json");
-								if(!copy) {
-									try {
-										auto v = "version" in parseJSON(cast(string)read(temp ~ name ~ dirSeparator ~ "package.json"));
-										copy = v && (*v).type == JSON_TYPE.STRING && (*v).str != (*vers).str;
-									} catch(JSONException) {}
-								}
-								if(copy) {
-									write(temp ~ name ~ ".sa", file);
-									executeShell("cd " ~ temp ~ " && sel uncompress " ~ name ~ ".sa " ~ name);
-									remove(temp ~ name ~ ".sa");
-								}
-							}
-						}
-					}
 				}
 			}
 		}
 	}
 
-	// load plugins from temp
-	foreach(string ppath ; dirEntries(temp, SpanMode.breadth)) {
-		if(ppath[temp.length..$].indexOf(dirSeparator) == -1) {
-			loadPlugin(ppath);
+	// load plugins from config
+	auto config = Config(ConfigType.node, false, false);
+	config.load(false);
+	foreach(plugin ; config.plugins) {
+		if(plugin.type == JSON_TYPE.STRING) {
+			//TODO download from official repository
 		}
 	}
 
@@ -138,7 +91,7 @@ void main(string[] args) {
 	foreach(string path, JSONValue value; plugs) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
 		string index = path.split(dirSeparator)[$-2];
-		if(index !in info || info[index].path.startsWith(temp)) {
+		if(index !in info) {
 			info[index] = Info();
 			info[index].json = value;
 			info[index].id = index[index.lastIndexOf("/")+1..$];

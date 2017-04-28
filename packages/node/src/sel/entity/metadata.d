@@ -18,9 +18,9 @@ import std.conv : to;
 import std.string : join, startsWith;
 import std.typetuple : TypeTuple;
 
-import sel.settings;
+import com.sel;
 
-mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["pocket":__pocketProtocols,"minecraft":__minecraftProtocols]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
+mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["pocket":supportedPocketProtocols.keys,"minecraft":supportedMinecraftProtocols.keys]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
 
 mixin((){
 	string ret;
