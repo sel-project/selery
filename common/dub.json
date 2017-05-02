@@ -1,5 +1,5 @@
 {
-	"name": "sel-common",
+	"name": "common",
 	"authors": ["sel-project"],
 	"targetType": "library"
 }

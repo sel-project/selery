@@ -9,6 +9,7 @@ script:
  - dub init.d --compiler=$DC --build=release
  - dub build --single --compiler=$DC --build=release hub.d
  - dub build --single --compiler=$DC --build=release node.d
+ - dub build --single --compiler=$DC --build=release lite.d
 
 notifications:
  - email: false

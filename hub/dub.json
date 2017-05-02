@@ -1,11 +1,11 @@
 {
-	"name": "sel-hub",
+	"name": "hub",
 	"authors": ["sel-project"],
 	"targetType": "library",
 	"dependencies": {
-		"sel-common": {
+		"sel-server:common": {
 			"path": "../common"
 		},
-		"sel-utils": "==1.2.3"
+		"sel-utils": "==1.2.4"
 	}
 }

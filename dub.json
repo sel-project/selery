@@ -6,13 +6,16 @@
 	"copyright": "Copyright © 2017 SEL",
 	"targetType": "none",
 	"dependencies": {
+		"sel-server:common": "*",
+		"sel-server:hub": "*",
+		"sel-server:node": "*",
 		"sel-utils": "*",
 		"nbt-d": "*",
 		"resusage": "*"
 	},
 	"subPackages": [
-		"./packages/common/",
-		"./packages/hub/",
-		"./packages/node/"
+		"./common/",
+		"./hub/",
+		"./node/"
 	]
 }

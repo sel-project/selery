@@ -1,10 +1,9 @@
 /+ dub.sdl:
-   name "sel-hub"
+   name "sel-lite"
    authors "sel-project"
    targetType "executable"
-   dependency "sel-server:common" path="../"
-   dependency "sel-server:hub" path="../"
-   dependency "plugin-loader:hub" path="../.sel/plugin-loader"
+   dependency "sel-server" path="../"
+   dependency "plugin-loader" path="../.sel/plugin-loader"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -20,22 +19,32 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module buildhub;
+module buildlite;
+
+import core.thread : Thread;
 
 import std.algorithm : canFind;
+import std.concurrency : LinkTerminated;
 import std.conv : to;
-import std.file : exists, read, write, mkdirRecurse;
-import std.string : replace, toLower;
+import std.file : read, write, exists, mkdirRecurse;
+import std.string : toLower;
 
+import com.config;
+import com.crash : logCrash;
 import com.path : Paths;
+import com.sel : Software;
+import com.util : UnloggedException;
 
-import hub.server;
-import hub.settings;
+//import sel.plugin; // it seems that not importing this causes compiler errors
 
-import pluginloader.hub : loadPlugins;
+static import hub.server;
+static import sel.server;
+
+static import pluginloader.hub;
+static import pluginloader.node;
 
 void main(string[] args) {
-
+	
 	@property bool arg(string name) {
 		if(exists(Paths.hidden ~ name)) {
 			return to!bool(cast(string)read(Paths.hidden ~ name));
@@ -55,7 +64,7 @@ void main(string[] args) {
 		import com.sel;
 
 		auto json = JSONValue([
-			"type": JSONValue("hub"),
+			"type": JSONValue("lite"),
 			"software": JSONValue([
 				"name": JSONValue(Software.name),
 				"version": JSONValue(Software.displayVersion),
@@ -67,12 +76,31 @@ void main(string[] args) {
 
 	} else if(action == "init") {
 
-		Settings(false, arg("edu"), arg("realm")).load();
+		Config(ConfigType.lite, arg("edu"), arg("realm")).load();
 
 	} else {
+		
+		try {
 
-		new shared Server(false, arg("edu"), arg("realm"), loadPlugins());
+			new Thread({ new shared hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
+			
+			new sel.server.Server(null, "", "", true, pluginloader.node.loadPlugins());
+			
+		} catch(LinkTerminated) {
+			
+		} catch(UnloggedException) {
+			
+		} catch(Throwable e) {
 
+			logCrash("lite", sel.server.server is null ? "en_GB" : sel.server.server.settings.language, e);
+			
+		} finally {
+			
+			import std.c.stdlib : exit;
+			exit(1);
+			
+		}
 	}
-
+	
 }
+

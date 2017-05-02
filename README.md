@@ -54,17 +54,10 @@ sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=]
 
 ```
 cd build
+dub init.d
 dub build --single hub.d
-./hub
+./sel-hub [-edu] [-realm]
 ```
-
-Available configurations:
-
-`--config=<configuration>`
-
-- edu
-- realm
-- edu-realm
 
 #### Node
 
@@ -74,5 +67,5 @@ Available configurations:
 cd build
 dub init.d
 dub build --single node.d
-./node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
+./sel-node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
 ```

@@ -130,3 +130,11 @@ class SocketHandler : Handler {
 	}
 
 }
+
+class MessagePassingHandler : Handler {
+
+	public this() {
+		super();
+	}
+
+}

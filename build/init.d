@@ -1,7 +1,7 @@
 /+ dub.sdl:
    name "init"
    authors "sel-project"
-   dependency "sel-common" path="../packages/common"
+   dependency "common" path="../common"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -152,26 +152,26 @@ void main(string[] args) {
 		}
 	}
 
+	mkdirRecurse(Paths.hidden ~ "plugin-loader/src/pluginloader");
+	version(Windows) {
+		mkdirRecurse(Paths.hidden ~ "plugin-loader/.dub");
+		write(Paths.hidden ~ "plugin-loader/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
+	}
+
 	foreach(target ; ["hub", "node"]) {
 
-		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src");
-
-		version(Windows) {
-			mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/.dub");
-			write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
-		}
+		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader");
 	
 		size_t count = 0;
 			
 		string imports = "";
 		string loads = "";
-
 		string paths = "";
 
 		string[] fimports;
 
 		JSONValue[string] dub;
-		dub["sel-" ~ target] = JSONValue(["path": "../../../packages/" ~ target]);
+		dub["sel-server:" ~ target] = JSONValue(["path": "../../../"]);
 
 		foreach(Info value ; ordered) {
 			if(value.target == target && value.active) {
@@ -181,7 +181,7 @@ void main(string[] args) {
 					write(value.path ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
 				}
 				dub[value.id] = ["path": value.path.startsWith(Paths.plugins) ? "../../../plugins/" ~ value.id : value.path];
-				JSONValue[string] deps = ["sel-" ~ target: JSONValue(["path": "../../packages/" ~ target])];
+				JSONValue[string] deps = ["sel-server:" ~ target: JSONValue(["path": "../../"])];
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {
@@ -209,11 +209,23 @@ void main(string[] args) {
 
 		if(paths.length > 2) paths = paths[0..$-2];
 
-		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader.d", "module plugindata;import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
-
-		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target ~ "-plugin-loader"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toString());
+		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
+		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toString());
 
 	}
+
+	write(Paths.hidden ~ "plugin-loader/dub.json", JSONValue([
+		"name": JSONValue("plugin-loader"),
+		"targetType": JSONValue("none"),
+		"dependencies": JSONValue([
+			"plugin-loader:hub": "*",
+			"plugin-loader:node": "*"
+		]),
+		"subPackages": JSONValue([
+			"./hub/",
+			"./node/"
+		])
+	]).toString());
 
 }
 

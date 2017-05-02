@@ -10,9 +10,12 @@
 .dub
 .sel
 /crash
-/resources
+/portable/views
 /plugins
+/resources
 /worlds
+plugins.json
+sel.json
 
 res/lang/system/es_ES.lang
 res/lang/system/fur_IT.lang

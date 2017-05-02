@@ -1,10 +1,10 @@
 /+ dub.sdl:
-   name "node"
+   name "sel-node"
    authors "sel-project"
    targetType "executable"
-   dependency "sel-common" path="../packages/common"
-   dependency "sel-node" path="../packages/node"
-   dependency "node-plugin-loader" path="../.sel/plugin-loader/node"
+   dependency "sel-server:common" path="../"
+   dependency "sel-server:node" path="../"
+   dependency "plugin-loader:node" path="../.sel/plugin-loader"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -35,7 +35,7 @@ import com.util : UnloggedException;
 
 import sel.server;
 
-import pluginloader : loadPlugins;
+import pluginloader.node : loadPlugins;
 
 void main(string[] args) {
 	

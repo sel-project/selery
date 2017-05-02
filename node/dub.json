@@ -1,12 +1,12 @@
 {
-	"name": "sel-node",
+	"name": "node",
 	"authors": ["sel-project"],
 	"targetType": "library",
 	"dependencies": {
-		"sel-common": {
+		"sel-server:common": {
 			"path": "../common"
 		},
-		"sel-utils": "==1.2.3",
+		"sel-utils": "==1.2.4",
 		"nbt-d": "==1.1.1",
 		"resusage": "==0.2.4"
 	}

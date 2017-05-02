@@ -17,10 +17,12 @@ branches:
     - master
 
 artifacts:
-  - path: build\hub.exe
+  - path: build\sel-hub.exe
     name: sel-hub
-  - path: build\node.exe
+  - path: build\sel-node.exe
     name: sel-node
+  - path: build\sel-lite.exe
+    name: sel-lite
 
 install:
   - ps: function SetUpDCompiler
@@ -89,6 +91,7 @@ build_script:
  - dub init.d --arch=%Darch% --compiler=%DC% --build=release
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release node.d
+ - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
 
 test_script:
  - echo %PLATFORM%

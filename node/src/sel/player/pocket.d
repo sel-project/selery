@@ -289,7 +289,17 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		return ret;
 	}
 
-	protected Metadata metadataOf(SelMetadata metadata) {
+	public static Types.McpeUuid toUUID(UUID uuid) {
+		ubyte[8] msb, lsb;
+		foreach(i ; 0..8) {
+			msb[i] = uuid.data[i];
+			lsb[i] = uuid.data[i+8];
+		}
+		import std.bitmanip : bigEndianToNative;
+		return Types.McpeUuid(bigEndianToNative!long(msb), bigEndianToNative!long(lsb));
+	} 
+
+	public static Metadata metadataOf(SelMetadata metadata) {
 		mixin("return metadata.pocket" ~ __protocol.to!string ~ ";");
 	}
 
@@ -435,7 +445,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public override void sendAddList(Player[] players) {
 		Types.PlayerList[] list;
 		foreach(Player player ; players) {
-			if(player.id != this.id) list ~= Types.PlayerList(player.uuid, player.id, player.displayName, Types.Skin(player.skin.name, player.skin.data.dup));
+			list ~= Types.PlayerList(toUUID(player.uuid), player.id, player.displayName, Types.Skin(player.skin.name, player.skin.data.dup));
 		}
 		if(list.length) this.sendPacket(new Play.PlayerList().new Add(list));
 	}
@@ -443,9 +453,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public override void sendUpdateLatency(Player[] players) {}
 
 	public override void sendRemoveList(Player[] players) {
-		UUID[] uuids;
+		Types.McpeUuid[] uuids;
 		foreach(Player player ; players) {
-			if(player.id != this.id) uuids ~= player.uuid;
+			uuids ~= toUUID(player.uuid);
 		}
 		if(uuids.length) this.sendPacket(new Play.PlayerList().new Remove(uuids));
 	}
@@ -605,7 +615,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected void sendAddPlayer(Player player) {
-		this.sendPacket(new Play.AddPlayer(player.uuid, player.name, player.id, player.id, tuple!(typeof(Play.AddPlayer.position))(player.position), tuple!(typeof(Play.AddPlayer.motion))(player.motion), player.pitch, player.bodyYaw, player.yaw, toSlot(player.inventory.held), metadataOf(player.metadata)));
+		this.sendPacket(new Play.AddPlayer(toUUID(player.uuid), player.name, player.id, player.id, tuple!(typeof(Play.AddPlayer.position))(player.position), tuple!(typeof(Play.AddPlayer.motion))(player.motion), player.pitch, player.bodyYaw, player.yaw, toSlot(player.inventory.held), metadataOf(player.metadata)));
 	}
 	
 	protected void sendAddItemEntity(ItemEntity item) {
