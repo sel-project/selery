@@ -26,6 +26,8 @@ import sel.block.tile;
 import sel.item.items : Items;
 import sel.item.tool : Tools;
 
+import sul.blocks : _ = Blocks;
+
 /**
  * Storage for a world's blocks.
  */
@@ -38,9 +40,7 @@ public class BlockStorage {
 	
 	public this() {
 		if(instance is null) {
-			foreach_reverse(block ; instantiateDefaultBlocks()) {
-				this.register(block);
-			}
+			this.instantiateDefaultBlocks();
 			foreach(immutable member ; __traits(allMembers, Tiles)) {
 				mixin("alias T = Tiles." ~ member ~ ";");
 				this.registerTile!T(new T());
@@ -133,656 +133,661 @@ public class BlockStorage {
 		return this.sel.length;
 	}
 
-	private static Block[] instantiateDefaultBlocks() {
+	private void instantiateDefaultBlocks() {
 
-		return [
-			new Block(Blocks.air),
-			new StoneBlock(Blocks.stone, Items.cobblestone, Items.stone),
-			new StoneBlock(Blocks.granite, Items.granite),
-			new StoneBlock(Blocks.polishedGranite, Items.polishedGranite),
-			new StoneBlock(Blocks.diorite, Items.diorite),
-			new StoneBlock(Blocks.polishedDiorite, Items.polishedDiorite),
-			new StoneBlock(Blocks.andesite, Items.andesite),
-			new StoneBlock(Blocks.polishedAndesite, Items.polishedAndesite),
-			new StoneBlock(Blocks.stoneBricks, Items.stoneBricks),
-			new StoneBlock(Blocks.mossyStoneBricks, Items.mossyStoneBricks),
-			new StoneBlock(Blocks.crackedStoneBricks, Items.crackedStoneBricks),
-			new StoneBlock(Blocks.chiseledStoneBricks, Items.chiseledStoneBricks),
-			new StoneBlock(Blocks.cobblestone, Items.cobblestone),
-			new StoneBlock(Blocks.mossStone, Items.mossStone),
-			new StoneBlock(Blocks.cobblestoneWall, Items.cobblestoneWall),
-			new StoneBlock(Blocks.mossyCobblestoneWall, Items.mossyCobblestoneWall),
-			new StoneBlock(Blocks.bricks, Items.bricks),
-			new MineableBlock(Blocks.coalOre, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.coal, 1, 1, Items.coalOre, &Drop.plusOne), Experience(0, 2)),
-			new MineableBlock(Blocks.ironOre, MiningTool(true, Tools.pickaxe, Tools.stone), Drop(Items.ironOre, 1)),
-			new MineableBlock(Blocks.goldOre, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.goldOre, 1)),
-			new MineableBlock(Blocks.diamondOre, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.diamond, 1, 1, Items.diamondOre)), //TODO +1 with fortune
-			new MineableBlock(Blocks.emeraldOre, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.emerald, 1, 1, Items.emeraldOre)), //TODO +1 with fortune
-			new MineableBlock(Blocks.lapisLazuliOre, MiningTool(true, Tools.pickaxe, Tools.stone), Drop(Items.lapisLazuli, 4, 8, Items.lapisLazuliOre), Experience(2, 5)), //TODO fortune
-			new RedstoneOreBlock!false(Blocks.redstoneOre, Blocks.litRedstoneOre),
-			new RedstoneOreBlock!true(Blocks.litRedstoneOre, Blocks.redstoneOre),
-			new MineableBlock(Blocks.netherQuartzOre, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherQuartz, 2, 5, Items.netherQuartzOre), Experience(2, 5, 1)), //TODO fortune
-			new MineableBlock(Blocks.coalBlock, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.coalBlock, 1)),
-			new MineableBlock(Blocks.ironBlock, MiningTool(true, Tools.pickaxe, Tools.stone), Drop(Items.ironBlock, 1)),
-			new MineableBlock(Blocks.goldBlock, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.goldBlock, 1)),
-			new MineableBlock(Blocks.diamondBlock, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.diamondBlock, 1)),
-			new MineableBlock(Blocks.emeraldBlock, MiningTool(true, Tools.pickaxe, Tools.iron), Drop(Items.emeraldBlock, 1)),
-			new MineableBlock(Blocks.redstoneBlock, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redstoneBlock, 1)),
-			new MineableBlock(Blocks.lapisLazuliOre, MiningTool(true, Tools.pickaxe, Tools.stone), Drop(Items.lapisLazuliBlock, 1)),
-			new MineableBlock(Blocks.netherReactorCore, MiningTool(true, Tools.pickaxe, Tools.wood), [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]),
-			new MineableBlock(Blocks.activeNetherReactorCore, MiningTool(true, Tools.pickaxe, Tools.wood), [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]),
-			new MineableBlock(Blocks.usedNetherReactorCore, MiningTool(true, Tools.pickaxe, Tools.wood), [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]),
-			new SuffocatingSpreadingBlock(Blocks.grass, MiningTool(false, Tools.shovel, Tools.wood), [Drop(Items.dirt, 1, 1, Items.grass)], [Blocks.dirt], 1, 1, 2, 2, Blocks.dirt),
-			new MineableBlock(Blocks.dirt, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1)),
-			new MineableBlock(Blocks.coarseDirt, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1)),
-			new MineableBlock(Blocks.podzol, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1, 1, Items.podzol)),
-			new SpreadingBlock(Blocks.mycelium, MiningTool(false, Tools.shovel, Tools.wood), [Drop(Items.dirt, 1, 1, Items.mycelium)], [Blocks.dirt, Blocks.grass, Blocks.podzol], 1, 1, 3, 1),
-			new MineableBlock(Blocks.grassPath, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.grassPath, 1)),
-			new FertileTerrainBlock!false(Blocks.farmland0, Blocks.farmland7, Blocks.dirt),
-			new FertileTerrainBlock!false(Blocks.farmland1, Blocks.farmland7, Blocks.farmland0),
-			new FertileTerrainBlock!false(Blocks.farmland2, Blocks.farmland7, Blocks.farmland1),
-			new FertileTerrainBlock!false(Blocks.farmland3, Blocks.farmland7, Blocks.farmland2),
-			new FertileTerrainBlock!false(Blocks.farmland4, Blocks.farmland7, Blocks.farmland4),
-			new FertileTerrainBlock!false(Blocks.farmland5, Blocks.farmland7, Blocks.farmland4),
-			new FertileTerrainBlock!false(Blocks.farmland6, Blocks.farmland7, Blocks.farmland5),
-			new FertileTerrainBlock!false(Blocks.farmland7, 0, Blocks.farmland6),
-			new MineableBlock(Blocks.oakWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.oakWoodPlanks, 1)),
-			new MineableBlock(Blocks.spruceWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.spruceWoodPlanks, 1)),
-			new MineableBlock(Blocks.birchWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.birchWoodPlanks, 1)),
-			new MineableBlock(Blocks.jungleWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jungleWoodPlanks, 1)),
-			new MineableBlock(Blocks.acaciaWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.acaciaWoodPlanks, 1)),
-			new MineableBlock(Blocks.darkOakWoodPlanks, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.darkOakWoodPlanks, 1)),
-			new SaplingBlock(Blocks.oakSapling, Items.oakSapling, Blocks.oakWood, Blocks.oakLeaves),
-			new SaplingBlock(Blocks.spruceSapling, Items.spruceSapling, Blocks.spruceWood, Blocks.spruceLeaves),
-			new SaplingBlock(Blocks.birchSapling, Items.birchSapling, Blocks.birchWood, Blocks.birchLeaves),
-			new SaplingBlock(Blocks.jungleSapling, Items.jungleSapling, Blocks.jungleWood, Blocks.jungleLeaves),
-			new SaplingBlock(Blocks.acaciaSapling, Items.acaciaSapling, Blocks.acaciaWood, Blocks.acaciaLeaves),
-			new SaplingBlock(Blocks.darkOakSapling, Items.darkOakSapling, Blocks.darkOakWood, Blocks.darkOakLeaves),
-			new Block(Blocks.bedrock),
-			new GravityBlock(Blocks.sand, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.sand, 1)),
-			new GravityBlock(Blocks.redSand, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.redSand, 1)),
-			new GravelBlock(Blocks.gravel),
-			new WoodBlock(Blocks.oakWoodUpDown, Items.oakWood),
-			new WoodBlock(Blocks.oakWoodEastWest, Items.oakWood),
-			new WoodBlock(Blocks.oakWoodNorthSouth, Items.oakWood),
-			new WoodBlock(Blocks.oakWoodBark, Items.oakWood),
-			new WoodBlock(Blocks.spruceWoodUpDown, Items.spruceWood),
-			new WoodBlock(Blocks.spruceWoodEastWest, Items.spruceWood),
-			new WoodBlock(Blocks.spruceWoodNorthSouth, Items.spruceWood),
-			new WoodBlock(Blocks.spruceWoodBark, Items.spruceWood),
-			new WoodBlock(Blocks.birchWoodUpDown, Items.birchWood),
-			new WoodBlock(Blocks.birchWoodEastWest, Items.birchWood),
-			new WoodBlock(Blocks.birchWoodNorthSouth, Items.birchWood),
-			new WoodBlock(Blocks.birchWoodBark, Items.birchWood),
-			new WoodBlock(Blocks.jungleWoodUpDown, Items.jungleWood),
-			new WoodBlock(Blocks.jungleWoodEastWest, Items.jungleWood),
-			new WoodBlock(Blocks.jungleWoodNorthSouth, Items.jungleWood),
-			new WoodBlock(Blocks.jungleWoodBark, Items.jungleWood),
-			new WoodBlock(Blocks.acaciaWoodUpDown, Items.acaciaWood),
-			new WoodBlock(Blocks.acaciaWoodEastWest, Items.acaciaWood),
-			new WoodBlock(Blocks.acaciaWoodNorthSouth, Items.acaciaWood),
-			new WoodBlock(Blocks.acaciaWoodBark, Items.acaciaWood),
-			new WoodBlock(Blocks.darkOakWoodUpDown, Items.darkOakWood),
-			new WoodBlock(Blocks.darkOakWoodEastWest, Items.darkOakWood),
-			new WoodBlock(Blocks.darkOakWoodNorthSouth, Items.darkOakWood),
-			new WoodBlock(Blocks.darkOakWoodBark, Items.darkOakWood),
-			new LeavesBlock!(true, true)(Blocks.oakLeavesDecay, Items.oakLeaves, Items.oakSapling, false),
-			new LeavesBlock!(false, true)(Blocks.oakLeavesNoDecay, Items.oakLeaves, Items.oakSapling, false),
-			new LeavesBlock!(true, true)(Blocks.oakLeavesCheckDecay, Items.oakLeaves, Items.oakSapling, false),
-			new LeavesBlock!(false, true)(Blocks.oakLeavesNoDecayCheckDecay, Items.oakLeaves, Items.oakSapling, false),
-			new LeavesBlock!(true, false)(Blocks.spruceLeavesDecay, Items.spruceLeaves, Items.spruceSapling, false),
-			new LeavesBlock!(false, false)(Blocks.spruceLeavesNoDecay, Items.spruceLeaves, Items.spruceSapling, false),
-			new LeavesBlock!(true, false)(Blocks.spruceLeavesCheckDecay, Items.spruceLeaves, Items.spruceSapling, false),
-			new LeavesBlock!(true, false)(Blocks.spruceLeavesNoDecayCheckDecay, Items.spruceLeaves, Items.spruceSapling, false),
-			new LeavesBlock!(true, false)(Blocks.birchLeavesDecay, Items.birchLeaves, Items.birchSapling, false),
-			new LeavesBlock!(false, false)(Blocks.birchLeavesNoDecay, Items.birchLeaves, Items.birchSapling, false),
-			new LeavesBlock!(true, false)(Blocks.birchLeavesCheckDecay, Items.birchLeaves, Items.birchSapling, false),
-			new LeavesBlock!(false, false)(Blocks.birchLeavesNoDecayCheckDecay, Items.birchLeaves, Items.birchSapling, false),
-			new LeavesBlock!(true, false)(Blocks.jungleLeavesDecay, Items.jungleLeaves, Items.jungleSapling, true),
-			new LeavesBlock!(false, false)(Blocks.jungleLeavesNoDecay, Items.jungleLeaves, Items.jungleSapling, true),
-			new LeavesBlock!(true, false)(Blocks.jungleLeavesCheckDecay, Items.jungleLeaves, Items.jungleSapling, true),
-			new LeavesBlock!(false, true)(Blocks.jungleLeavesNoDecayCheckDecay, Items.jungleLeaves, Items.jungleSapling, true),
-			new LeavesBlock!(true, false)(Blocks.acaciaLeavesDecay, Items.acaciaLeaves, Items.acaciaSapling, false),
-			new LeavesBlock!(false, false)(Blocks.acaciaLeavesNoDecay, Items.acaciaLeaves, Items.acaciaSapling, false),
-			new LeavesBlock!(true, false)(Blocks.acaciaLeavesCheckDecay, Items.acaciaLeaves, Items.acaciaSapling, false),
-			new LeavesBlock!(false, false)(Blocks.acaciaLeavesNoDecayCheckDecay, Items.acaciaLeaves, Items.acaciaSapling, false),
-			new LeavesBlock!(true, true)(Blocks.darkOakLeavesDecay, Items.darkOakLeaves, Items.darkOakSapling, false),
-			new LeavesBlock!(false, true)(Blocks.darkOakLeavesNoDecay, Items.darkOakLeaves, Items.darkOakSapling, false),
-			new LeavesBlock!(true, true)(Blocks.darkOakLeavesCheckDecay, Items.darkOakLeaves, Items.darkOakSapling, false),
-			new LeavesBlock!(false, true)(Blocks.darkOakLeavesNoDecayCheckDecay, Items.darkOakLeaves, Items.darkOakSapling, false),
-			new AbsorbingBlock(Blocks.sponge, Items.sponge, Blocks.wetSponge, Blocks.water, 7, 65),
-			new MineableBlock(Blocks.wetSponge, MiningTool.init, Drop(Items.wetSponge, 1)),
-			new MineableBlock(Blocks.glass, MiningTool.init, Drop(0, 0, 0, Items.glass)),
-			new MineableBlock(Blocks.whiteStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.whiteStainedGlass)),
-			new MineableBlock(Blocks.orangeStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.orangeStainedGlass)),
-			new MineableBlock(Blocks.magentaStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.magentaStainedGlass)),
-			new MineableBlock(Blocks.lightBlueStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.lightBlueStainedGlass)),
-			new MineableBlock(Blocks.yellowStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.yellowStainedGlass)),
-			new MineableBlock(Blocks.limeStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.limeStainedGlass)),
-			new MineableBlock(Blocks.pinkStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.pinkStainedGlass)),
-			new MineableBlock(Blocks.grayStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.grayStainedGlass)),
-			new MineableBlock(Blocks.lightGrayStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.lightGrayStainedGlass)),
-			new MineableBlock(Blocks.cyanStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.cyanStainedGlass)),
-			new MineableBlock(Blocks.purpleStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.purpleStainedGlass)),
-			new MineableBlock(Blocks.blueStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.blueStainedGlass)),
-			new MineableBlock(Blocks.brownStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.brownStainedGlass)),
-			new MineableBlock(Blocks.greenStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.greenStainedGlass)),
-			new MineableBlock(Blocks.redStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.redStainedGlass)),
-			new MineableBlock(Blocks.blackStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.blackStainedGlass)),
-			new MineableBlock(Blocks.glassPane, MiningTool.init, Drop(0, 0, 0, Items.glassPane)),
-			new MineableBlock(Blocks.whiteStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.whiteStainedGlassPane)),
-			new MineableBlock(Blocks.orangeStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.orangeStainedGlassPane)),
-			new MineableBlock(Blocks.magentaStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.magentaStainedGlassPane)),
-			new MineableBlock(Blocks.lightBlueStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.lightBlueStainedGlassPane)),
-			new MineableBlock(Blocks.yellowStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.yellowStainedGlassPane)),
-			new MineableBlock(Blocks.limeStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.limeStainedGlassPane)),
-			new MineableBlock(Blocks.pinkStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.pinkStainedGlassPane)),
-			new MineableBlock(Blocks.grayStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.grayStainedGlassPane)),
-			new MineableBlock(Blocks.lightGrayStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.lightGrayStainedGlassPane)),
-			new MineableBlock(Blocks.cyanStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.cyanStainedGlassPane)),
-			new MineableBlock(Blocks.purpleStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.purpleStainedGlassPane)),
-			new MineableBlock(Blocks.blueStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.blueStainedGlassPane)),
-			new MineableBlock(Blocks.brownStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.brownStainedGlassPane)),
-			new MineableBlock(Blocks.greenStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.greenStainedGlassPane)),
-			new MineableBlock(Blocks.redStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.redStainedGlassPane)),
-			new MineableBlock(Blocks.blackStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.blackStainedGlassPane)),
-			new MineableBlock(Blocks.sandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.sandstone, 1)),
-			new MineableBlock(Blocks.chiseledSandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.chiseledSandstone, 1)),
-			new MineableBlock(Blocks.smoothSandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.smoothSandstone, 1)),
-			new MineableBlock(Blocks.redSandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redSandstone, 1)),
-			new MineableBlock(Blocks.chiseledRedSandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.chiseledRedSandstone, 1)),
-			new MineableBlock(Blocks.smoothRedSandstone, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.smoothRedSandstone, 1)),
-			new MineableBlock(Blocks.pistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.pistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.extendedPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.extendedPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.stickyPistonFacingEverywhere, MiningTool.init, Drop(Items.stickyPiston, 1)),
-			new MineableBlock(Blocks.stickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.stickyPiston, 1)),
-			new MineableBlock(Blocks.extendedStickyPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.extendedStickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)),
-			new MineableBlock(Blocks.whiteWool, MiningTool(false, Tools.shears), Drop(Items.whiteWool, 1)),
-			new MineableBlock(Blocks.orangeWool, MiningTool(false, Tools.shears), Drop(Items.orangeWool, 1)),
-			new MineableBlock(Blocks.magentaWool, MiningTool(false, Tools.shears), Drop(Items.magentaWool, 1)),
-			new MineableBlock(Blocks.lightBlueWool, MiningTool(false, Tools.shears), Drop(Items.lightBlueWool, 1)),
-			new MineableBlock(Blocks.yellowWool, MiningTool(false, Tools.shears), Drop(Items.yellowWool, 1)),
-			new MineableBlock(Blocks.limeWool, MiningTool(false, Tools.shears), Drop(Items.limeWool, 1)),
-			new MineableBlock(Blocks.pinkWool, MiningTool(false, Tools.shears), Drop(Items.pinkWool, 1)),
-			new MineableBlock(Blocks.grayWool, MiningTool(false, Tools.shears), Drop(Items.grayWool, 1)),
-			new MineableBlock(Blocks.lightGrayWool, MiningTool(false, Tools.shears), Drop(Items.lightGrayWool, 1)),
-			new MineableBlock(Blocks.cyanWool, MiningTool(false, Tools.shears), Drop(Items.cyanWool, 1)),
-			new MineableBlock(Blocks.purpleWool, MiningTool(false, Tools.shears), Drop(Items.purpleWool, 1)),
-			new MineableBlock(Blocks.blueWool, MiningTool(false, Tools.shears), Drop(Items.blueWool, 1)),
-			new MineableBlock(Blocks.brownWool, MiningTool(false, Tools.shears), Drop(Items.brownWool, 1)),
-			new MineableBlock(Blocks.greenWool, MiningTool(false, Tools.shears), Drop(Items.greenWool, 1)),
-			new MineableBlock(Blocks.redWool, MiningTool(false, Tools.shears), Drop(Items.redWool, 1)),
-			new MineableBlock(Blocks.blackWool, MiningTool(false, Tools.shears), Drop(Items.blackWool, 1)),
-			new MineableBlock(Blocks.whiteCarpet, MiningTool.init, Drop(Items.whiteCarpet, 1)),
-			new MineableBlock(Blocks.orangeCarpet, MiningTool.init, Drop(Items.orangeCarpet, 1)),
-			new MineableBlock(Blocks.magentaCarpet, MiningTool.init, Drop(Items.magentaCarpet, 1)),
-			new MineableBlock(Blocks.lightBlueCarpet, MiningTool.init, Drop(Items.lightBlueCarpet, 1)),
-			new MineableBlock(Blocks.yellowCarpet, MiningTool.init, Drop(Items.yellowCarpet, 1)),
-			new MineableBlock(Blocks.limeCarpet, MiningTool.init, Drop(Items.limeCarpet, 1)),
-			new MineableBlock(Blocks.pinkCarpet, MiningTool.init, Drop(Items.pinkCarpet, 1)),
-			new MineableBlock(Blocks.grayCarpet, MiningTool.init, Drop(Items.grayCarpet, 1)),
-			new MineableBlock(Blocks.lightGrayCarpet, MiningTool.init, Drop(Items.lightGrayCarpet, 1)),
-			new MineableBlock(Blocks.cyanCarpet, MiningTool.init, Drop(Items.cyanCarpet, 1)),
-			new MineableBlock(Blocks.purpleCarpet, MiningTool.init, Drop(Items.purpleCarpet, 1)),
-			new MineableBlock(Blocks.blueCarpet, MiningTool.init, Drop(Items.blueCarpet, 1)),
-			new MineableBlock(Blocks.brownCarpet, MiningTool.init, Drop(Items.brownCarpet, 1)),
-			new MineableBlock(Blocks.greenCarpet, MiningTool.init, Drop(Items.greenCarpet, 1)),
-			new MineableBlock(Blocks.redCarpet, MiningTool.init, Drop(Items.redCarpet, 1)),
-			new MineableBlock(Blocks.blackCarpet, MiningTool.init, Drop(Items.blackCarpet, 1)),
-			new FlowerBlock(Blocks.dandelion, Items.dandelion),
-			new FlowerBlock(Blocks.poppy, Items.poppy),
-			new FlowerBlock(Blocks.blueOrchid, Items.blueOrchid),
-			new FlowerBlock(Blocks.allium, Items.allium),
-			new FlowerBlock(Blocks.azureBluet, Items.azureBluet),
-			new FlowerBlock(Blocks.redTulip, Items.redTulip),
-			new FlowerBlock(Blocks.orangeTulip, Items.orangeTulip),
-			new FlowerBlock(Blocks.whiteTulip, Items.whiteTulip),
-			new FlowerBlock(Blocks.pinkTulip, Items.pinkTulip),
-			new FlowerBlock(Blocks.oxeyeDaisy, Items.oxeyeDaisy),
-			new DoublePlantBlock(Blocks.sunflowerBottom, false, Blocks.sunflowerTop, Items.sunflower),
-			new DoublePlantBlock(Blocks.sunflowerTop, true, Blocks.sunflowerBottom, Items.sunflower),
-			new DoublePlantBlock(Blocks.liliacBottom, false, Blocks.liliacTop, Items.liliac),
-			new DoublePlantBlock(Blocks.liliacTop, true, Blocks.liliacBottom, Items.liliac),
-			new GrassDoublePlantBlock(Blocks.doubleTallgrassBottom, false, Blocks.doubleTallgrassTop, Items.tallGrass),
-			new GrassDoublePlantBlock(Blocks.doubleTallgrassTop, true, Blocks.doubleTallgrassBottom, Items.tallGrass),
-			new GrassDoublePlantBlock(Blocks.largeFernBottom, false, Blocks.largeFernTop, Items.fern),
-			new GrassDoublePlantBlock(Blocks.largeFernTop, true, Blocks.largeFernBottom, Items.fern),
-			new DoublePlantBlock(Blocks.roseBushBottom, false, Blocks.roseBushTop, Items.roseBush),
-			new DoublePlantBlock(Blocks.roseBushTop, true, Blocks.roseBushBottom, Items.roseBush),
-			new DoublePlantBlock(Blocks.peonyBottom, false, Blocks.peonyTop, Items.peony),
-			new DoublePlantBlock(Blocks.peonyTop, true, Blocks.peonyBottom, Items.peony),
-			new PlantBlock(Blocks.tallGrass, Items.tallGrass, Drop(Items.seeds, 0, 1)),
-			new PlantBlock(Blocks.fern, Items.fern, Drop(Items.seeds, 0, 1)),
-			new PlantBlock(Blocks.deadBush, Items.deadBush, Drop(Items.stick, 0, 2)),
-			new MineableBlock(Blocks.stoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneSlab, 1)),
-			new MineableBlock(Blocks.sandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.sandstoneSlab, 1)),
-			new MineableBlock(Blocks.stoneWoodenSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneWoodenSlab, 1)),
-			new MineableBlock(Blocks.cobblestoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.cobblestoneSlab, 1)),
-			new MineableBlock(Blocks.bricksSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.bricksSlab, 1)),
-			new MineableBlock(Blocks.stoneBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneBrickSlab, 1)),
-			new MineableBlock(Blocks.netherBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherBrickSlab, 1)),
-			new MineableBlock(Blocks.quartzSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.quartzSlab, 1)),
-			new MineableBlock(Blocks.redSandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redSandstoneSlab, 1)),
-			new MineableBlock(Blocks.purpurSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.purpurSlab, 1)),
-			new MineableBlock(Blocks.oakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.oakWoodSlab, 1)),
-			new MineableBlock(Blocks.spruceWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.spruceWoodSlab, 1)),
-			new MineableBlock(Blocks.birchWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.birchWoodSlab, 1)),
-			new MineableBlock(Blocks.jungleWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jungleWoodSlab, 1)),
-			new MineableBlock(Blocks.acaciaWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.acaciaWoodSlab, 1)),
-			new MineableBlock(Blocks.darkOakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.darkOakWoodSlab, 1)),
-			new MineableBlock(Blocks.upperStoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneSlab, 1)),
-			new MineableBlock(Blocks.upperSandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.sandstoneSlab, 1)),
-			new MineableBlock(Blocks.upperStoneWoodenSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneWoodenSlab, 1)),
-			new MineableBlock(Blocks.upperCobblestoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.cobblestoneSlab, 1)),
-			new MineableBlock(Blocks.upperBricksSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.bricksSlab, 1)),
-			new MineableBlock(Blocks.upperStoneBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneBrickSlab, 1)),
-			new MineableBlock(Blocks.upperNetherBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherBrickSlab, 1)),
-			new MineableBlock(Blocks.upperQuartzSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.quartzSlab, 1)),
-			new MineableBlock(Blocks.upperRedSandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redSandstoneSlab, 1)),
-			new MineableBlock(Blocks.upperPurpurSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.purpurSlab, 1)),
-			new MineableBlock(Blocks.upperOakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.oakWoodSlab, 1)),
-			new MineableBlock(Blocks.upperSpruceWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.spruceWoodSlab, 1)),
-			new MineableBlock(Blocks.birchWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.birchWoodSlab, 1)),
-			new MineableBlock(Blocks.upperJungleWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jungleWoodSlab, 1)),
-			new MineableBlock(Blocks.upperAcaciaWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.acaciaWoodSlab, 1)),
-			new MineableBlock(Blocks.upperDarkOakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.darkOakWoodSlab, 1)),
-			new MineableBlock(Blocks.doubleStoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneSlab, 2)),
-			new MineableBlock(Blocks.doubleSandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.sandstoneSlab, 2)),
-			new MineableBlock(Blocks.doubleStoneWoodenSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneWoodenSlab, 2)),
-			new MineableBlock(Blocks.doubleCobblestoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.cobblestoneSlab, 2)),
-			new MineableBlock(Blocks.doubleBricksSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.bricksSlab, 1)),
-			new MineableBlock(Blocks.doubleStoneBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stoneBrickSlab, 2)),
-			new MineableBlock(Blocks.doubleNetherBrickSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherBrickSlab, 2)),
-			new MineableBlock(Blocks.doubleQuartzSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.quartzSlab, 2)),
-			new MineableBlock(Blocks.doubleRedSandstoneSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redSandstoneSlab, 2)),
-			new MineableBlock(Blocks.doublePurpurSlab, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.purpurSlab, 2)),
-			new MineableBlock(Blocks.doubleOakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.oakWoodSlab, 2)),
-			new MineableBlock(Blocks.doubleSpruceWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.spruceWoodSlab, 2)),
-			new MineableBlock(Blocks.birchWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.birchWoodSlab, 2)),
-			new MineableBlock(Blocks.doubleJungleWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jungleWoodSlab, 2)),
-			new MineableBlock(Blocks.doubleAcaciaWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.acaciaWoodSlab, 2)),
-			new MineableBlock(Blocks.doubleDarkOakWoodSlab, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.darkOakWoodSlab, 2)),
-			new StairsBlock(Blocks.cobblestoneStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.cobblestoneStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.cobblestoneStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.cobblestoneStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.upsideDownCobblestoneStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.upsideDownCobblestoneStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.upsideDownCobblestoneStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.upsideDownCobblestoneStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.cobblestoneStairs),
-			new StairsBlock(Blocks.brickStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.brickStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.brickStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.brickStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.upsideDownBrickStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.upsideDownBrickStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.upsideDownBrickStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.upsideDownBrickStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.brickStairs),
-			new StairsBlock(Blocks.netherBrickStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.netherBrickStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.netherBrickStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.netherBrickStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.upsideDownNetherBrickStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.upsideDownNetherBrickStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.upsideDownNetherBrickStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.upsideDownNetherBrickStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.netherBrickStairs),
-			new StairsBlock(Blocks.stoneBrickStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.stoneBrickStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.stoneBrickStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.stoneBrickStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.upsideDownStoneBrickStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.upsideDownStoneBrickStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.upsideDownStoneBrickStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.upsideDownStoneBrickStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.stoneBrickStairs),
-			new StairsBlock(Blocks.purpurStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.purpurStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.purpurStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.purpurStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.upsideDownPurpurStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.upsideDownPurpurStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.upsideDownPurpurStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.upsideDownPurpurStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.purpurStairs),
-			new StairsBlock(Blocks.quartzStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.quartzStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.quartzStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.quartzStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.upsideDownQuartzStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.upsideDownQuartzStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.upsideDownQuartzStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.upsideDownQuartzStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.quartzStairs),
-			new StairsBlock(Blocks.sandstoneStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.sandstoneStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.sandstoneStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.sandstoneStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.upsideDownSandstoneStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.upsideDownSandstoneStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.upsideDownSandstoneStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.upsideDownSandstoneStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.sandstoneStairs),
-			new StairsBlock(Blocks.redSandstoneStairsFacingEast, Facing.east, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.redSandstoneStairsFacingWest, Facing.west, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.redSandstoneStairsFacingSouth, Facing.south, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.redSandstoneStairsFacingNorth, Facing.north, false, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.upsideDownRedSandstoneStairsFacingEast, Facing.east, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.upsideDownRedSandstoneStairsFacingWest, Facing.west, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.upsideDownRedSandstoneStairsFacingSouth, Facing.south, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.upsideDownRedSandstoneStairsFacingNorth, Facing.north, true, MiningTool(true, Tools.pickaxe, Tools.wood), Items.redSandstoneStairs),
-			new StairsBlock(Blocks.oakWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.oakWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.oakWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.oakWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.upsideDownOakWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.upsideDownOakWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.upsideDownOakWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.upsideDownOakWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.oakWoodStairs),
-			new StairsBlock(Blocks.spruceWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.spruceWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.spruceWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.spruceWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.upsideDownSpruceWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.upsideDownSpruceWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.upsideDownSpruceWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.upsideDownSpruceWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.spruceWoodStairs),
-			new StairsBlock(Blocks.birchWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.birchWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.birchWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.birchWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.upsideDownBirchWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.upsideDownBirchWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.upsideDownBirchWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.upsideDownBirchWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.birchWoodStairs),
-			new StairsBlock(Blocks.jungleWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.jungleWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.jungleWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.jungleWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.upsideDownJungleWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.upsideDownJungleWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.upsideDownJungleWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.upsideDownJungleWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.jungleWoodStairs),
-			new StairsBlock(Blocks.acaciaWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.acaciaWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.acaciaWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.acaciaWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.upsideDownAcaciaWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.upsideDownAcaciaWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.upsideDownAcaciaWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.upsideDownAcaciaWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.acaciaWoodStairs),
-			new StairsBlock(Blocks.darkOakWoodStairsFacingEast, Facing.east, false, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.darkOakWoodStairsFacingWest, Facing.west, false, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.darkOakWoodStairsFacingSouth, Facing.south, false, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.darkOakWoodStairsFacingNorth, Facing.north, false, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.upsideDownDarkOakWoodStairsFacingEast, Facing.east, true, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.upsideDownDarkOakWoodStairsFacingWest, Facing.west, true, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.upsideDownDarkOakWoodStairsFacingSouth, Facing.south, true, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new StairsBlock(Blocks.upsideDownDarkOakWoodStairsFacingNorth, Facing.north, true, MiningTool(false, Tools.axe, Tools.wood), Items.darkOakWoodStairs),
-			new MineableBlock(Blocks.bookshelf, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.book, 3, 3, Items.bookshelf)),
-			new MineableBlock(Blocks.obsidian, MiningTool(true, Tools.pickaxe, Tools.diamond), Drop(Items.obsidian, 1)),
-			new MineableBlock(Blocks.glowingObsidian, MiningTool(true, Tools.pickaxe, Tools.diamond), Drop(Items.glowingObsidian, 1)),
-			new MineableBlock(Blocks.torchFacingEast, MiningTool.init, Drop(Items.torch, 1)),
-			new MineableBlock(Blocks.torchFacingWest, MiningTool.init, Drop(Items.torch, 1)),
-			new MineableBlock(Blocks.torchFacingSouth, MiningTool.init, Drop(Items.torch, 1)),
-			new MineableBlock(Blocks.torchFacingNorth, MiningTool.init, Drop(Items.torch, 1)),
-			new MineableBlock(Blocks.torchFacingUp, MiningTool.init, Drop(Items.torch, 1)),
-			new MineableBlock(Blocks.craftingTable, MiningTool(Tools.axe, Tools.all), Drop(Items.craftingTable, 1)), //TODO open window on click
-			new StageCropBlock(Blocks.seeds0, Blocks.seeds1, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds1, Blocks.seeds2, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds2, Blocks.seeds3, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds3, Blocks.seeds4, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds4, Blocks.seeds5, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds5, Blocks.seeds6, [Drop(Items.seeds, 1)]),
-			new StageCropBlock(Blocks.seeds6, Blocks.seeds7, [Drop(Items.seeds, 1)]),
-			new FarmingBlock(Blocks.seeds7, [Drop(Items.seeds, 0, 3), Drop(Items.wheat, 1)]),
-			new ChanceCropBlock(Blocks.beetroot0, Blocks.beetroot1, [Drop(Items.beetrootSeeds, 1)], 2, 3),
-			new ChanceCropBlock(Blocks.beetroot1, Blocks.beetroot2, [Drop(Items.beetrootSeeds, 1)], 2, 3),
-			new ChanceCropBlock(Blocks.beetroot2, Blocks.beetroot3, [Drop(Items.beetrootSeeds, 1)], 2, 3),
-			new FarmingBlock(Blocks.beetroot3, [Drop(Items.beetroot, 1), Drop(Items.beetrootSeeds, 0, 3)]),
-			new StageCropBlock(Blocks.carrot0, Blocks.carrot1, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot1, Blocks.carrot2, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot2, Blocks.carrot3, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot3, Blocks.carrot4, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot4, Blocks.carrot5, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot5, Blocks.carrot6, [Drop(Items.carrot, 1)]),
-			new StageCropBlock(Blocks.carrot6, Blocks.carrot7, [Drop(Items.carrot, 1)]),
-			new FarmingBlock(Blocks.carrot7, [Drop(Items.carrot, 1, 4)]),
-			new StageCropBlock(Blocks.potato0, Blocks.potato1, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato1, Blocks.potato2, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato2, Blocks.potato3, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato3, Blocks.potato4, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato4, Blocks.potato5, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato5, Blocks.potato6, [Drop(Items.potato, 1)]),
-			new StageCropBlock(Blocks.potato6, Blocks.potato7, [Drop(Items.potato, 1)]),
-			new FarmingBlock(Blocks.potato7, [Drop(Items.potato, 1, 4), Drop(Items.poisonousPotato, -49, 1)]),
-			new StemBlock!StageCropBlock(Blocks.melonStem0, Items.melonSeeds, Blocks.melonStem1),
-			new StemBlock!StageCropBlock(Blocks.melonStem1, Items.melonSeeds, Blocks.melonStem2),
-			new StemBlock!StageCropBlock(Blocks.melonStem2, Items.melonSeeds, Blocks.melonStem3),
-			new StemBlock!StageCropBlock(Blocks.melonStem3, Items.melonSeeds, Blocks.melonStem4),
-			new StemBlock!StageCropBlock(Blocks.melonStem4, Items.melonSeeds, Blocks.melonStem5),
-			new StemBlock!StageCropBlock(Blocks.melonStem5, Items.melonSeeds, Blocks.melonStem6),
-			new StemBlock!StageCropBlock(Blocks.melonStem6, Items.melonSeeds, Blocks.melonStem7),
-			new StemBlock!(FruitCropBlock!false)(Blocks.melonStem7, Items.melonSeeds, Blocks.melon),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem0, Items.pumpkinSeeds, Blocks.pumpkinStem1),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem1, Items.pumpkinSeeds, Blocks.pumpkinStem2),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem2, Items.pumpkinSeeds, Blocks.pumpkinStem3),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem3, Items.pumpkinSeeds, Blocks.pumpkinStem4),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem4, Items.pumpkinSeeds, Blocks.pumpkinStem5),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem5, Items.pumpkinSeeds, Blocks.pumpkinStem6),
-			new StemBlock!StageCropBlock(Blocks.pumpkinStem6, Items.pumpkinSeeds, Blocks.pumpkinStem7),
-			new StemBlock!(FruitCropBlock!true)(Blocks.pumpkinStem7, Items.pumpkinSeeds, cast(block_t[4])Blocks.pumpkin[0..4]),
-			new SugarCanesBlock(Blocks.sugarCanes0, Blocks.sugarCanes1),
-			new SugarCanesBlock(Blocks.sugarCanes1, Blocks.sugarCanes2),
-			new SugarCanesBlock(Blocks.sugarCanes2, Blocks.sugarCanes3),
-			new SugarCanesBlock(Blocks.sugarCanes3, Blocks.sugarCanes4),
-			new SugarCanesBlock(Blocks.sugarCanes4, Blocks.sugarCanes5),
-			new SugarCanesBlock(Blocks.sugarCanes5, Blocks.sugarCanes6),
-			new SugarCanesBlock(Blocks.sugarCanes6, Blocks.sugarCanes7),
-			new SugarCanesBlock(Blocks.sugarCanes7, Blocks.sugarCanes8),
-			new SugarCanesBlock(Blocks.sugarCanes8, Blocks.sugarCanes9),
-			new SugarCanesBlock(Blocks.sugarCanes9, Blocks.sugarCanes10),
-			new SugarCanesBlock(Blocks.sugarCanes10, Blocks.sugarCanes11),
-			new SugarCanesBlock(Blocks.sugarCanes11, Blocks.sugarCanes12),
-			new SugarCanesBlock(Blocks.sugarCanes12, Blocks.sugarCanes13),
-			new SugarCanesBlock(Blocks.sugarCanes13, Blocks.sugarCanes14),
-			new SugarCanesBlock(Blocks.sugarCanes14, Blocks.sugarCanes15),
-			new SugarCanesBlock(Blocks.sugarCanes15, 0),
-			new StageNetherCropBlock(Blocks.netherWart0, Blocks.netherWart1, Drop(Items.netherWart, 1)),
-			new StageNetherCropBlock(Blocks.netherWart1, Blocks.netherWart2, Drop(Items.netherWart, 1)),
-			new StageNetherCropBlock(Blocks.netherWart2, Blocks.netherWart3, Drop(Items.netherWart, 1)),
-			new NetherCropBlock(Blocks.netherWart3, Drop(Items.netherWart, 1, 4, 0)), //TODO +1 with fortune
-			new MineableBlock(Blocks.stonecutter, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.stonecutter, 1)),
-			new GravityBlock(Blocks.snowLayer0, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 2)),
-			new GravityBlock(Blocks.snowLayer1, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 3)),
-			new GravityBlock(Blocks.snowLayer2, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 4)),
-			new GravityBlock(Blocks.snowLayer3, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 5)),
-			new GravityBlock(Blocks.snowLayer4, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 6)),
-			new GravityBlock(Blocks.snowLayer5, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 7)),
-			new GravityBlock(Blocks.snowLayer6, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 8)),
-			new GravityBlock(Blocks.snowLayer7, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 9)),
-			new MineableBlock(Blocks.snow, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 4, 4, Items.snowBlock)),
-			new CactusBlock(Blocks.cactus0, Blocks.cactus1),
-			new CactusBlock(Blocks.cactus1, Blocks.cactus2),
-			new CactusBlock(Blocks.cactus2, Blocks.cactus3),
-			new CactusBlock(Blocks.cactus3, Blocks.cactus4),
-			new CactusBlock(Blocks.cactus4, Blocks.cactus5),
-			new CactusBlock(Blocks.cactus5, Blocks.cactus6),
-			new CactusBlock(Blocks.cactus6, Blocks.cactus7),
-			new CactusBlock(Blocks.cactus7, Blocks.cactus8),
-			new CactusBlock(Blocks.cactus8, Blocks.cactus9),
-			new CactusBlock(Blocks.cactus9, Blocks.cactus10),
-			new CactusBlock(Blocks.cactus10, Blocks.cactus11),
-			new CactusBlock(Blocks.cactus11, Blocks.cactus12),
-			new CactusBlock(Blocks.cactus12, Blocks.cactus13),
-			new CactusBlock(Blocks.cactus13, Blocks.cactus14),
-			new CactusBlock(Blocks.cactus14, Blocks.cactus15),
-			new CactusBlock(Blocks.cactus15, 0),
-			new MineableBlock(Blocks.clay, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.clay, 4, 4, Items.clayBlock)),
-			new MineableBlock(Blocks.hardenedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.hardenedClay, 1)),
-			new MineableBlock(Blocks.whiteStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.whiteStainedClay, 1)),
-			new MineableBlock(Blocks.orangeStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.orangeStainedClay, 1)),
-			new MineableBlock(Blocks.magentaStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.magentaStainedClay, 1)),
-			new MineableBlock(Blocks.lightBlueStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.lightBlueStainedClay, 1)),
-			new MineableBlock(Blocks.yellowStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.yellowStainedClay, 1)),
-			new MineableBlock(Blocks.limeStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.limeStainedClay, 1)),
-			new MineableBlock(Blocks.pinkStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.pinkStainedClay, 1)),
-			new MineableBlock(Blocks.grayStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.grayStainedClay, 1)),
-			new MineableBlock(Blocks.lightGrayStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.lightGrayStainedClay, 1)),
-			new MineableBlock(Blocks.cyanStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.cyanStainedClay, 1)),
-			new MineableBlock(Blocks.purpleStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.purpleStainedClay, 1)),
-			new MineableBlock(Blocks.blueStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.blueStainedClay, 1)),
-			new MineableBlock(Blocks.brownStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.brownStainedClay, 1)),
-			new MineableBlock(Blocks.greenStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.greenStainedClay, 1)),
-			new MineableBlock(Blocks.redStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redStainedClay, 1)),
-			new MineableBlock(Blocks.blackStainedClay, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.blackStainedClay, 1)),
-			new MineableBlock(Blocks.pumpkinFacingSouth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.pumpkinFacingWest, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.pumpkinFacingNorth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.pumpkinFacingEast, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.facelessPumpkinFacingSouth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.facelessPumpkinFacingWest, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.facelessPumpkinFacingNorth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.facelessPumpkinFacingEast, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.pumpkin, 1)),
-			new MineableBlock(Blocks.jackOLanternFacingSouth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.jackOLanternFacingWest, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.jackOLanternFacingNorth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.jackOLanternFacingEast, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.facelessJackOLanternFacingSouth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.facelessJackOLanternFacingWest, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.facelessJackOLanternFacingNorth, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.facelessJackOLanternFacingEast, MiningTool(false, Tools.axe, Tools.wood), Drop(Items.jackOLantern, 1)),
-			new MineableBlock(Blocks.netherrack, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherrack, 1)), //TODO infinite fire
-			new MineableBlock(Blocks.soulSand, MiningTool(false, Tools.pickaxe, Tools.wood), Drop(Items.soulSand, 1)),
-			new MineableBlock(Blocks.glowstone, MiningTool.init, Drop(Items.glowstoneDust, 2, 4, Items.glowstone)), //TODO fortune +1 but max 4
-			new MineableBlock(Blocks.netherBrick, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.netherBrick, 1)),
-			new MineableBlock(Blocks.redNetherBrick, MiningTool(true, Tools.pickaxe, Tools.wood), Drop(Items.redNetherBrick, 1)),
-			new CakeBlock(Blocks.cake0, Blocks.cake1),
-			new CakeBlock(Blocks.cake1, Blocks.cake2),
-			new CakeBlock(Blocks.cake2, Blocks.cake3),
-			new CakeBlock(Blocks.cake3, Blocks.cake4),
-			new CakeBlock(Blocks.cake4, Blocks.cake5),
-			new CakeBlock(Blocks.cake5, Blocks.cake6),
-			new CakeBlock(Blocks.cake6, 0),
-			new SwitchingBlock!false(Blocks.woodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorSouthSide),
-			new SwitchingBlock!false(Blocks.woodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorNorthSide),
-			new SwitchingBlock!false(Blocks.woodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorEastSide),
-			new SwitchingBlock!false(Blocks.woodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorWestSide),
-			new SwitchingBlock!false(Blocks.openedWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorSouthSide),
-			new SwitchingBlock!false(Blocks.openedWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorNorthSide),
-			new SwitchingBlock!false(Blocks.openedWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorEastSide),
-			new SwitchingBlock!false(Blocks.openedWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorWestSide),
-			new SwitchingBlock!false(Blocks.topWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorSouthSide),
-			new SwitchingBlock!false(Blocks.topWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorNorthSide),
-			new SwitchingBlock!false(Blocks.topWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorEastSide),
-			new SwitchingBlock!false(Blocks.topWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorWestSide),
-			new SwitchingBlock!false(Blocks.openedTopWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorSouthSide),
-			new SwitchingBlock!false(Blocks.openedTopWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorNorthSide),
-			new SwitchingBlock!false(Blocks.openedTopWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorEastSide),
-			new SwitchingBlock!false(Blocks.openedTopWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorWestSide),
-			new SwitchingBlock!true(Blocks.ironTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorSouthSide),
-			new SwitchingBlock!true(Blocks.ironTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorNorthSide),
-			new SwitchingBlock!true(Blocks.ironTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorEastSide),
-			new SwitchingBlock!true(Blocks.ironTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorWestSide),
-			new SwitchingBlock!true(Blocks.openedIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorSouthSide),
-			new SwitchingBlock!true(Blocks.openedIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorNorthSide),
-			new SwitchingBlock!true(Blocks.openedIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorEastSide),
-			new SwitchingBlock!true(Blocks.openedIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorWestSide),
-			new SwitchingBlock!true(Blocks.topIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorSouthSide),
-			new SwitchingBlock!true(Blocks.topIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorNorthSide),
-			new SwitchingBlock!true(Blocks.topIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorEastSide),
-			new SwitchingBlock!true(Blocks.topIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorWestSide),
-			new SwitchingBlock!true(Blocks.openedTopIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorSouthSide),
-			new SwitchingBlock!true(Blocks.openedTopIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorNorthSide),
-			new SwitchingBlock!true(Blocks.openedTopIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorEastSide),
-			new SwitchingBlock!true(Blocks.openedTopIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorWestSide),
-			new MonsterEggBlock(Blocks.stoneMonsterEgg, Blocks.stone),
-			new MonsterEggBlock(Blocks.cobblestoneMonsterEgg, Blocks.cobblestone),
-			new MonsterEggBlock(Blocks.stoneBrickMonsterEgg, Blocks.stoneBricks),
-			new MonsterEggBlock(Blocks.mossyStoneBrickMonsterEgg, Blocks.mossyStoneBricks),
-			new MonsterEggBlock(Blocks.crackedStoneBrickMonsterEgg, Blocks.crackedStoneBricks),
-			new MonsterEggBlock(Blocks.chiseledStoneBrickMonsterEgg, Blocks.chiseledStoneBricks),
-			new MineableBlock(Blocks.brownMushroomPoresEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopWestNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopNorthEast, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopWest, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTop, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopEast, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopSouthWest, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapTopEastSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomStemEverySide, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomCapsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.brownMushroomStemsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomPoresEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopWestNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopNorthEast, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopWest, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTop, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopEast, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopSouthWest, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapTopEastSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomStemEverySide, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomCapsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.redMushroomStemsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)),
-			new MineableBlock(Blocks.ironBars, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironBars, 1)),
-			new MineableBlock(Blocks.melon, MiningTool(Tools.axe | Tools.sword, Tools.all), Drop(Items.melon, 3, 7, Items.melonBlock)),
-			new InactiveEndPortalBlock(Blocks.endPortalFrameSouth, Blocks.activeEndPortalFrameSouth, Facing.south),
-			new InactiveEndPortalBlock(Blocks.endPortalFrameWest, Blocks.activeEndPortalFrameWest, Facing.west),
-			new InactiveEndPortalBlock(Blocks.endPortalFrameNorth, Blocks.activeEndPortalFrameNorth, Facing.north),
-			new InactiveEndPortalBlock(Blocks.endPortalFrameEast, Blocks.activeEndPortalFrameEast, Facing.east),
-			new Block(Blocks.activeEndPortalFrameSouth),
-			new Block(Blocks.activeEndPortalFrameWest),
-			new Block(Blocks.activeEndPortalFrameNorth),
-			new Block(Blocks.activeEndPortalFrameEast),
-			new MineableBlock(Blocks.endStone, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.endStone, 1)),
-			new MineableBlock(Blocks.endStoneBricks, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.endStoneBricks, 1)),
-			new Block(Blocks.endPortal), //TODO teleport to end dimension
-			new GrowingBeansBlock(Blocks.cocoaNorth0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.south, Blocks.cocoaNorth1),
-			new GrowingBeansBlock(Blocks.cocoaEast0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.west, Blocks.cocoaEast1),
-			new GrowingBeansBlock(Blocks.cocoaSouth0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.north, Blocks.cocoaSouth1),
-			new GrowingBeansBlock(Blocks.cocoaWest0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.east, Blocks.cocoaWest1),
-			new GrowingBeansBlock(Blocks.cocoaNorth1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.south, Blocks.cocoaNorth2),
-			new GrowingBeansBlock(Blocks.cocoaEast1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.west, Blocks.cocoaEast2),
-			new GrowingBeansBlock(Blocks.cocoaSouth1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.north, Blocks.cocoaSouth2),
-			new GrowingBeansBlock(Blocks.cocoaWest1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.east, Blocks.cocoaWest2),
-			new BeansBlock(Blocks.cocoaNorth2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.south),
-			new BeansBlock(Blocks.cocoaEast2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.west),
-			new BeansBlock(Blocks.cocoaSouth2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.north),
-			new BeansBlock(Blocks.cocoaWest2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.east),
-			new MineableBlock(Blocks.lilyPad, MiningTool.init, Drop(Items.lilyPad, 1)), //TODO drop when the block underneath is not water nor ice
-			new MineableBlock(Blocks.quartzBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.quartzBlock, 1)),
-			new MineableBlock(Blocks.chiseledQuartzBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.chiseledQuartzBlock, 1)),
-			new MineableBlock(Blocks.pillarQuartzBlockVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)),
-			new MineableBlock(Blocks.pillarQuartzBlockNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)),
-			new MineableBlock(Blocks.pillarQuartzBlockEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)),
-			new Block(Blocks.barrier),
-			new MineableBlock(Blocks.prismarine, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.prismarine, 1)),
-			new MineableBlock(Blocks.prismarineBricks, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.prismarineBricks, 1)),
-			new MineableBlock(Blocks.darkPrismarine, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.darkPrismarine, 1)),
-			new MineableBlock(Blocks.seaLantern, MiningTool.init, Drop(Items.prismarineCrystals, 2, 3, Items.seaLantern)), //TODO fortune
-			new MineableBlock(Blocks.hayBaleVertical, MiningTool.init, Drop(Items.hayBale, 1)),
-			new MineableBlock(Blocks.hayBaleEastWest, MiningTool.init, Drop(Items.hayBale, 1)),
-			new MineableBlock(Blocks.hayBaleNorthSouth, MiningTool.init, Drop(Items.hayBale, 1)),
-			new MineableBlock(Blocks.endRodFacingDown, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.endRodFacingUp, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.endRodFacingNorth, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.endRodFacingSouth, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.endRodFacingWest, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.endRodFacingEast, MiningTool.init, Drop(Items.endRod, 1)),
-			new MineableBlock(Blocks.purpurBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurBlock, 1)),
-			new MineableBlock(Blocks.purpurPillarVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)),
-			new MineableBlock(Blocks.purpurPillarEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)),
-			new MineableBlock(Blocks.purpurPillarNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)),
-			new MineableBlock(Blocks.netherWartBlock, MiningTool.init, Drop(Items.netherWartBlock, 1)),
-			new MineableBlock(Blocks.boneBlockVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)),
-			new MineableBlock(Blocks.boneBlockEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)),
-			new MineableBlock(Blocks.boneBlockNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)),
-			new Block(Blocks.structureVoid),
-			new Block(Blocks.updateBlock),
-			new Block(Blocks.ateupdBlock),
-		];
+		const woodPickaxe = MiningTool(true, Tools.pickaxe, Tools.wood);
+		const stonePickaxe = MiningTool(true, Tools.pickaxe, Tools.stone);
+		const ironPickaxe = MiningTool(true, Tools.pickaxe, Tools.iron);
+		const diamondPickaxe = MiningTool(true, Tools.pickaxe, Tools.diamond);
+
+		const woodAxe = MiningTool(false, Tools.axe, Tools.wood);
+
+		this.register(new Block(_.air));
+		this.register(new StoneBlock(_.stone, Items.cobblestone, Items.stone));
+		this.register(new StoneBlock(_.granite, Items.granite));
+		this.register(new StoneBlock(_.polishedGranite, Items.polishedGranite));
+		this.register(new StoneBlock(_.diorite, Items.diorite));
+		this.register(new StoneBlock(_.polishedDiorite, Items.polishedDiorite));
+		this.register(new StoneBlock(_.andesite, Items.andesite));
+		this.register(new StoneBlock(_.polishedAndesite, Items.polishedAndesite));
+		this.register(new StoneBlock(_.stoneBricks, Items.stoneBricks));
+		this.register(new StoneBlock(_.mossyStoneBricks, Items.mossyStoneBricks));
+		this.register(new StoneBlock(_.crackedStoneBricks, Items.crackedStoneBricks));
+		this.register(new StoneBlock(_.chiseledStoneBricks, Items.chiseledStoneBricks));
+		this.register(new StoneBlock(_.cobblestone, Items.cobblestone));
+		this.register(new StoneBlock(_.mossStone, Items.mossStone));
+		this.register(new StoneBlock(_.cobblestoneWall, Items.cobblestoneWall));
+		this.register(new StoneBlock(_.mossyCobblestoneWall, Items.mossyCobblestoneWall));
+		this.register(new StoneBlock(_.bricks, Items.bricks));
+		this.register(new MineableBlock(_.coalOre, woodPickaxe, Drop(Items.coal, 1, 1, Items.coalOre, &Drop.plusOne), Experience(0, 2)));
+		this.register(new MineableBlock(_.ironOre, stonePickaxe, Drop(Items.ironOre, 1)));
+		this.register(new MineableBlock(_.goldOre, ironPickaxe, Drop(Items.goldOre, 1)));
+		this.register(new MineableBlock(_.diamondOre, ironPickaxe, Drop(Items.diamond, 1, 1, Items.diamondOre))); //TODO +1 with fortune
+		this.register(new MineableBlock(_.emeraldOre, ironPickaxe, Drop(Items.emerald, 1, 1, Items.emeraldOre))); //TODO +1 with fortune
+		this.register(new MineableBlock(_.lapisLazuliOre, stonePickaxe, Drop(Items.lapisLazuli, 4, 8, Items.lapisLazuliOre), Experience(2, 5))); //TODO fortune
+		this.register(new RedstoneOreBlock!false(_.redstoneOre, Blocks.litRedstoneOre));
+		this.register(new RedstoneOreBlock!true(_.litRedstoneOre, Blocks.redstoneOre));
+		this.register(new MineableBlock(_.netherQuartzOre, woodPickaxe, Drop(Items.netherQuartz, 2, 5, Items.netherQuartzOre), Experience(2, 5, 1))); //TODO fortune
+		this.register(new MineableBlock(_.coalBlock, woodPickaxe, Drop(Items.coalBlock, 1)));
+		this.register(new MineableBlock(_.ironBlock, stonePickaxe, Drop(Items.ironBlock, 1)));
+		this.register(new MineableBlock(_.goldBlock, ironPickaxe, Drop(Items.goldBlock, 1)));
+		this.register(new MineableBlock(_.diamondBlock, ironPickaxe, Drop(Items.diamondBlock, 1)));
+		this.register(new MineableBlock(_.emeraldBlock, ironPickaxe, Drop(Items.emeraldBlock, 1)));
+		this.register(new MineableBlock(_.redstoneBlock, woodPickaxe, Drop(Items.redstoneBlock, 1)));
+		this.register(new MineableBlock(_.lapisLazuliOre, stonePickaxe, Drop(Items.lapisLazuliBlock, 1)));
+		this.register(new MineableBlock(_.netherReactorCore, woodPickaxe, [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]));
+		this.register(new MineableBlock(_.activeNetherReactorCore, woodPickaxe, [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]));
+		this.register(new MineableBlock(_.usedNetherReactorCore, woodPickaxe, [Drop(Items.diamond, 3), Drop(Items.ironIngot, 6)]));
+		this.register(new SuffocatingSpreadingBlock(_.grass, MiningTool(false, Tools.shovel, Tools.wood), [Drop(Items.dirt, 1, 1, Items.grass)], [Blocks.dirt], 1, 1, 2, 2, Blocks.dirt));
+		this.register(new MineableBlock(_.dirt, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1)));
+		this.register(new MineableBlock(_.coarseDirt, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1)));
+		this.register(new MineableBlock(_.podzol, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.dirt, 1, 1, Items.podzol)));
+		this.register(new SpreadingBlock(_.mycelium, MiningTool(false, Tools.shovel, Tools.wood), [Drop(Items.dirt, 1, 1, Items.mycelium)], [Blocks.dirt, Blocks.grass, Blocks.podzol], 1, 1, 3, 1));
+		this.register(new MineableBlock(_.grassPath, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.grassPath, 1)));
+		this.register(new FertileTerrainBlock!false(_.farmland0, Blocks.farmland7, Blocks.dirt));
+		this.register(new FertileTerrainBlock!false(_.farmland1, Blocks.farmland7, Blocks.farmland0));
+		this.register(new FertileTerrainBlock!false(_.farmland2, Blocks.farmland7, Blocks.farmland1));
+		this.register(new FertileTerrainBlock!false(_.farmland3, Blocks.farmland7, Blocks.farmland2));
+		this.register(new FertileTerrainBlock!false(_.farmland4, Blocks.farmland7, Blocks.farmland4));
+		this.register(new FertileTerrainBlock!false(_.farmland5, Blocks.farmland7, Blocks.farmland4));
+		this.register(new FertileTerrainBlock!false(_.farmland6, Blocks.farmland7, Blocks.farmland5));
+		this.register(new FertileTerrainBlock!true(_.farmland7, 0, Blocks.farmland6));
+		this.register(new MineableBlock(_.oakWoodPlanks, woodAxe, Drop(Items.oakWoodPlanks, 1)));
+		this.register(new MineableBlock(_.spruceWoodPlanks, woodAxe, Drop(Items.spruceWoodPlanks, 1)));
+		this.register(new MineableBlock(_.birchWoodPlanks, woodAxe, Drop(Items.birchWoodPlanks, 1)));
+		this.register(new MineableBlock(_.jungleWoodPlanks, woodAxe, Drop(Items.jungleWoodPlanks, 1)));
+		this.register(new MineableBlock(_.acaciaWoodPlanks, woodAxe, Drop(Items.acaciaWoodPlanks, 1)));
+		this.register(new MineableBlock(_.darkOakWoodPlanks, woodAxe, Drop(Items.darkOakWoodPlanks, 1)));
+		this.register(new SaplingBlock(_.oakSapling, Items.oakSapling, Blocks.oakWood, Blocks.oakLeaves));
+		this.register(new SaplingBlock(_.spruceSapling, Items.spruceSapling, Blocks.spruceWood, Blocks.spruceLeaves));
+		this.register(new SaplingBlock(_.birchSapling, Items.birchSapling, Blocks.birchWood, Blocks.birchLeaves));
+		this.register(new SaplingBlock(_.jungleSapling, Items.jungleSapling, Blocks.jungleWood, Blocks.jungleLeaves));
+		this.register(new SaplingBlock(_.acaciaSapling, Items.acaciaSapling, Blocks.acaciaWood, Blocks.acaciaLeaves));
+		this.register(new SaplingBlock(_.darkOakSapling, Items.darkOakSapling, Blocks.darkOakWood, Blocks.darkOakLeaves));
+		this.register(new Block(_.bedrock));
+		this.register(new GravityBlock(_.sand, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.sand, 1)));
+		this.register(new GravityBlock(_.redSand, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.redSand, 1)));
+		this.register(new GravelBlock(_.gravel));
+		this.register(new WoodBlock(_.oakWoodUpDown, Items.oakWood));
+		this.register(new WoodBlock(_.oakWoodEastWest, Items.oakWood));
+		this.register(new WoodBlock(_.oakWoodNorthSouth, Items.oakWood));
+		this.register(new WoodBlock(_.oakWoodBark, Items.oakWood));
+		this.register(new WoodBlock(_.spruceWoodUpDown, Items.spruceWood));
+		this.register(new WoodBlock(_.spruceWoodEastWest, Items.spruceWood));
+		this.register(new WoodBlock(_.spruceWoodNorthSouth, Items.spruceWood));
+		this.register(new WoodBlock(_.spruceWoodBark, Items.spruceWood));
+		this.register(new WoodBlock(_.birchWoodUpDown, Items.birchWood));
+		this.register(new WoodBlock(_.birchWoodEastWest, Items.birchWood));
+		this.register(new WoodBlock(_.birchWoodNorthSouth, Items.birchWood));
+		this.register(new WoodBlock(_.birchWoodBark, Items.birchWood));
+		this.register(new WoodBlock(_.jungleWoodUpDown, Items.jungleWood));
+		this.register(new WoodBlock(_.jungleWoodEastWest, Items.jungleWood));
+		this.register(new WoodBlock(_.jungleWoodNorthSouth, Items.jungleWood));
+		this.register(new WoodBlock(_.jungleWoodBark, Items.jungleWood));
+		this.register(new WoodBlock(_.acaciaWoodUpDown, Items.acaciaWood));
+		this.register(new WoodBlock(_.acaciaWoodEastWest, Items.acaciaWood));
+		this.register(new WoodBlock(_.acaciaWoodNorthSouth, Items.acaciaWood));
+		this.register(new WoodBlock(_.acaciaWoodBark, Items.acaciaWood));
+		this.register(new WoodBlock(_.darkOakWoodUpDown, Items.darkOakWood));
+		this.register(new WoodBlock(_.darkOakWoodEastWest, Items.darkOakWood));
+		this.register(new WoodBlock(_.darkOakWoodNorthSouth, Items.darkOakWood));
+		this.register(new WoodBlock(_.darkOakWoodBark, Items.darkOakWood));
+		this.register(new LeavesBlock!(true, true)(_.oakLeavesDecay, Items.oakLeaves, Items.oakSapling, false));
+		this.register(new LeavesBlock!(false, true)(_.oakLeavesNoDecay, Items.oakLeaves, Items.oakSapling, false));
+		this.register(new LeavesBlock!(true, true)(_.oakLeavesCheckDecay, Items.oakLeaves, Items.oakSapling, false));
+		this.register(new LeavesBlock!(false, true)(_.oakLeavesNoDecayCheckDecay, Items.oakLeaves, Items.oakSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.spruceLeavesDecay, Items.spruceLeaves, Items.spruceSapling, false));
+		this.register(new LeavesBlock!(false, false)(_.spruceLeavesNoDecay, Items.spruceLeaves, Items.spruceSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.spruceLeavesCheckDecay, Items.spruceLeaves, Items.spruceSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.spruceLeavesNoDecayCheckDecay, Items.spruceLeaves, Items.spruceSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.birchLeavesDecay, Items.birchLeaves, Items.birchSapling, false));
+		this.register(new LeavesBlock!(false, false)(_.birchLeavesNoDecay, Items.birchLeaves, Items.birchSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.birchLeavesCheckDecay, Items.birchLeaves, Items.birchSapling, false));
+		this.register(new LeavesBlock!(false, false)(_.birchLeavesNoDecayCheckDecay, Items.birchLeaves, Items.birchSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.jungleLeavesDecay, Items.jungleLeaves, Items.jungleSapling, true));
+		this.register(new LeavesBlock!(false, false)(_.jungleLeavesNoDecay, Items.jungleLeaves, Items.jungleSapling, true));
+		this.register(new LeavesBlock!(true, false)(_.jungleLeavesCheckDecay, Items.jungleLeaves, Items.jungleSapling, true));
+		this.register(new LeavesBlock!(false, true)(_.jungleLeavesNoDecayCheckDecay, Items.jungleLeaves, Items.jungleSapling, true));
+		this.register(new LeavesBlock!(true, false)(_.acaciaLeavesDecay, Items.acaciaLeaves, Items.acaciaSapling, false));
+		this.register(new LeavesBlock!(false, false)(_.acaciaLeavesNoDecay, Items.acaciaLeaves, Items.acaciaSapling, false));
+		this.register(new LeavesBlock!(true, false)(_.acaciaLeavesCheckDecay, Items.acaciaLeaves, Items.acaciaSapling, false));
+		this.register(new LeavesBlock!(false, false)(_.acaciaLeavesNoDecayCheckDecay, Items.acaciaLeaves, Items.acaciaSapling, false));
+		this.register(new LeavesBlock!(true, true)(_.darkOakLeavesDecay, Items.darkOakLeaves, Items.darkOakSapling, false));
+		this.register(new LeavesBlock!(false, true)(_.darkOakLeavesNoDecay, Items.darkOakLeaves, Items.darkOakSapling, false));
+		this.register(new LeavesBlock!(true, true)(_.darkOakLeavesCheckDecay, Items.darkOakLeaves, Items.darkOakSapling, false));
+		this.register(new LeavesBlock!(false, true)(_.darkOakLeavesNoDecayCheckDecay, Items.darkOakLeaves, Items.darkOakSapling, false));
+		this.register(new AbsorbingBlock(_.sponge, Items.sponge, Blocks.wetSponge, Blocks.water, 7, 65));
+		this.register(new MineableBlock(_.wetSponge, MiningTool.init, Drop(Items.wetSponge, 1)));
+		this.register(new MineableBlock(_.glass, MiningTool.init, Drop(0, 0, 0, Items.glass)));
+		this.register(new MineableBlock(_.whiteStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.whiteStainedGlass)));
+		this.register(new MineableBlock(_.orangeStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.orangeStainedGlass)));
+		this.register(new MineableBlock(_.magentaStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.magentaStainedGlass)));
+		this.register(new MineableBlock(_.lightBlueStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.lightBlueStainedGlass)));
+		this.register(new MineableBlock(_.yellowStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.yellowStainedGlass)));
+		this.register(new MineableBlock(_.limeStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.limeStainedGlass)));
+		this.register(new MineableBlock(_.pinkStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.pinkStainedGlass)));
+		this.register(new MineableBlock(_.grayStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.grayStainedGlass)));
+		this.register(new MineableBlock(_.lightGrayStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.lightGrayStainedGlass)));
+		this.register(new MineableBlock(_.cyanStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.cyanStainedGlass)));
+		this.register(new MineableBlock(_.purpleStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.purpleStainedGlass)));
+		this.register(new MineableBlock(_.blueStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.blueStainedGlass)));
+		this.register(new MineableBlock(_.brownStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.brownStainedGlass)));
+		this.register(new MineableBlock(_.greenStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.greenStainedGlass)));
+		this.register(new MineableBlock(_.redStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.redStainedGlass)));
+		this.register(new MineableBlock(_.blackStainedGlass, MiningTool.init, Drop(0, 0, 0, Items.blackStainedGlass)));
+		this.register(new MineableBlock(_.glassPane, MiningTool.init, Drop(0, 0, 0, Items.glassPane)));
+		this.register(new MineableBlock(_.whiteStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.whiteStainedGlassPane)));
+		this.register(new MineableBlock(_.orangeStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.orangeStainedGlassPane)));
+		this.register(new MineableBlock(_.magentaStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.magentaStainedGlassPane)));
+		this.register(new MineableBlock(_.lightBlueStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.lightBlueStainedGlassPane)));
+		this.register(new MineableBlock(_.yellowStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.yellowStainedGlassPane)));
+		this.register(new MineableBlock(_.limeStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.limeStainedGlassPane)));
+		this.register(new MineableBlock(_.pinkStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.pinkStainedGlassPane)));
+		this.register(new MineableBlock(_.grayStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.grayStainedGlassPane)));
+		this.register(new MineableBlock(_.lightGrayStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.lightGrayStainedGlassPane)));
+		this.register(new MineableBlock(_.cyanStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.cyanStainedGlassPane)));
+		this.register(new MineableBlock(_.purpleStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.purpleStainedGlassPane)));
+		this.register(new MineableBlock(_.blueStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.blueStainedGlassPane)));
+		this.register(new MineableBlock(_.brownStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.brownStainedGlassPane)));
+		this.register(new MineableBlock(_.greenStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.greenStainedGlassPane)));
+		this.register(new MineableBlock(_.redStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.redStainedGlassPane)));
+		this.register(new MineableBlock(_.blackStainedGlassPane, MiningTool.init, Drop(0, 0, 0, Items.blackStainedGlassPane)));
+		this.register(new MineableBlock(_.sandstone, woodPickaxe, Drop(Items.sandstone, 1)));
+		this.register(new MineableBlock(_.chiseledSandstone, woodPickaxe, Drop(Items.chiseledSandstone, 1)));
+		this.register(new MineableBlock(_.smoothSandstone, woodPickaxe, Drop(Items.smoothSandstone, 1)));
+		this.register(new MineableBlock(_.redSandstone, woodPickaxe, Drop(Items.redSandstone, 1)));
+		this.register(new MineableBlock(_.chiseledRedSandstone, woodPickaxe, Drop(Items.chiseledRedSandstone, 1)));
+		this.register(new MineableBlock(_.smoothRedSandstone, woodPickaxe, Drop(Items.smoothRedSandstone, 1)));
+		this.register(new MineableBlock(_.pistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.pistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.extendedPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.extendedPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.stickyPistonFacingEverywhere, MiningTool.init, Drop(Items.stickyPiston, 1)));
+		this.register(new MineableBlock(_.stickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.stickyPiston, 1)));
+		this.register(new MineableBlock(_.extendedStickyPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.extendedStickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
+		this.register(new MineableBlock(_.whiteWool, MiningTool(false, Tools.shears), Drop(Items.whiteWool, 1)));
+		this.register(new MineableBlock(_.orangeWool, MiningTool(false, Tools.shears), Drop(Items.orangeWool, 1)));
+		this.register(new MineableBlock(_.magentaWool, MiningTool(false, Tools.shears), Drop(Items.magentaWool, 1)));
+		this.register(new MineableBlock(_.lightBlueWool, MiningTool(false, Tools.shears), Drop(Items.lightBlueWool, 1)));
+		this.register(new MineableBlock(_.yellowWool, MiningTool(false, Tools.shears), Drop(Items.yellowWool, 1)));
+		this.register(new MineableBlock(_.limeWool, MiningTool(false, Tools.shears), Drop(Items.limeWool, 1)));
+		this.register(new MineableBlock(_.pinkWool, MiningTool(false, Tools.shears), Drop(Items.pinkWool, 1)));
+		this.register(new MineableBlock(_.grayWool, MiningTool(false, Tools.shears), Drop(Items.grayWool, 1)));
+		this.register(new MineableBlock(_.lightGrayWool, MiningTool(false, Tools.shears), Drop(Items.lightGrayWool, 1)));
+		this.register(new MineableBlock(_.cyanWool, MiningTool(false, Tools.shears), Drop(Items.cyanWool, 1)));
+		this.register(new MineableBlock(_.purpleWool, MiningTool(false, Tools.shears), Drop(Items.purpleWool, 1)));
+		this.register(new MineableBlock(_.blueWool, MiningTool(false, Tools.shears), Drop(Items.blueWool, 1)));
+		this.register(new MineableBlock(_.brownWool, MiningTool(false, Tools.shears), Drop(Items.brownWool, 1)));
+		this.register(new MineableBlock(_.greenWool, MiningTool(false, Tools.shears), Drop(Items.greenWool, 1)));
+		this.register(new MineableBlock(_.redWool, MiningTool(false, Tools.shears), Drop(Items.redWool, 1)));
+		this.register(new MineableBlock(_.blackWool, MiningTool(false, Tools.shears), Drop(Items.blackWool, 1)));
+		this.register(new MineableBlock(_.whiteCarpet, MiningTool.init, Drop(Items.whiteCarpet, 1)));
+		this.register(new MineableBlock(_.orangeCarpet, MiningTool.init, Drop(Items.orangeCarpet, 1)));
+		this.register(new MineableBlock(_.magentaCarpet, MiningTool.init, Drop(Items.magentaCarpet, 1)));
+		this.register(new MineableBlock(_.lightBlueCarpet, MiningTool.init, Drop(Items.lightBlueCarpet, 1)));
+		this.register(new MineableBlock(_.yellowCarpet, MiningTool.init, Drop(Items.yellowCarpet, 1)));
+		this.register(new MineableBlock(_.limeCarpet, MiningTool.init, Drop(Items.limeCarpet, 1)));
+		this.register(new MineableBlock(_.pinkCarpet, MiningTool.init, Drop(Items.pinkCarpet, 1)));
+		this.register(new MineableBlock(_.grayCarpet, MiningTool.init, Drop(Items.grayCarpet, 1)));
+		this.register(new MineableBlock(_.lightGrayCarpet, MiningTool.init, Drop(Items.lightGrayCarpet, 1)));
+		this.register(new MineableBlock(_.cyanCarpet, MiningTool.init, Drop(Items.cyanCarpet, 1)));
+		this.register(new MineableBlock(_.purpleCarpet, MiningTool.init, Drop(Items.purpleCarpet, 1)));
+		this.register(new MineableBlock(_.blueCarpet, MiningTool.init, Drop(Items.blueCarpet, 1)));
+		this.register(new MineableBlock(_.brownCarpet, MiningTool.init, Drop(Items.brownCarpet, 1)));
+		this.register(new MineableBlock(_.greenCarpet, MiningTool.init, Drop(Items.greenCarpet, 1)));
+		this.register(new MineableBlock(_.redCarpet, MiningTool.init, Drop(Items.redCarpet, 1)));
+		this.register(new MineableBlock(_.blackCarpet, MiningTool.init, Drop(Items.blackCarpet, 1)));
+		this.register(new FlowerBlock(_.dandelion, Items.dandelion));
+		this.register(new FlowerBlock(_.poppy, Items.poppy));
+		this.register(new FlowerBlock(_.blueOrchid, Items.blueOrchid));
+		this.register(new FlowerBlock(_.allium, Items.allium));
+		this.register(new FlowerBlock(_.azureBluet, Items.azureBluet));
+		this.register(new FlowerBlock(_.redTulip, Items.redTulip));
+		this.register(new FlowerBlock(_.orangeTulip, Items.orangeTulip));
+		this.register(new FlowerBlock(_.whiteTulip, Items.whiteTulip));
+		this.register(new FlowerBlock(_.pinkTulip, Items.pinkTulip));
+		this.register(new FlowerBlock(_.oxeyeDaisy, Items.oxeyeDaisy));
+		this.register(new DoublePlantBlock(_.sunflowerBottom, false, Blocks.sunflowerTop, Items.sunflower));
+		this.register(new DoublePlantBlock(_.sunflowerTop, true, Blocks.sunflowerBottom, Items.sunflower));
+		this.register(new DoublePlantBlock(_.liliacBottom, false, Blocks.liliacTop, Items.liliac));
+		this.register(new DoublePlantBlock(_.liliacTop, true, Blocks.liliacBottom, Items.liliac));
+		this.register(new GrassDoublePlantBlock(_.doubleTallgrassBottom, false, Blocks.doubleTallgrassTop, Items.tallGrass));
+		this.register(new GrassDoublePlantBlock(_.doubleTallgrassTop, true, Blocks.doubleTallgrassBottom, Items.tallGrass));
+		this.register(new GrassDoublePlantBlock(_.largeFernBottom, false, Blocks.largeFernTop, Items.fern));
+		this.register(new GrassDoublePlantBlock(_.largeFernTop, true, Blocks.largeFernBottom, Items.fern));
+		this.register(new DoublePlantBlock(_.roseBushBottom, false, Blocks.roseBushTop, Items.roseBush));
+		this.register(new DoublePlantBlock(_.roseBushTop, true, Blocks.roseBushBottom, Items.roseBush));
+		this.register(new DoublePlantBlock(_.peonyBottom, false, Blocks.peonyTop, Items.peony));
+		this.register(new DoublePlantBlock(_.peonyTop, true, Blocks.peonyBottom, Items.peony));
+		this.register(new PlantBlock(_.tallGrass, Items.tallGrass, Drop(Items.seeds, 0, 1)));
+		this.register(new PlantBlock(_.fern, Items.fern, Drop(Items.seeds, 0, 1)));
+		this.register(new PlantBlock(_.deadBush, Items.deadBush, Drop(Items.stick, 0, 2)));
+		this.register(new MineableBlock(_.stoneSlab, woodPickaxe, Drop(Items.stoneSlab, 1)));
+		this.register(new MineableBlock(_.sandstoneSlab, woodPickaxe, Drop(Items.sandstoneSlab, 1)));
+		this.register(new MineableBlock(_.stoneWoodenSlab, woodPickaxe, Drop(Items.stoneWoodenSlab, 1)));
+		this.register(new MineableBlock(_.cobblestoneSlab, woodPickaxe, Drop(Items.cobblestoneSlab, 1)));
+		this.register(new MineableBlock(_.bricksSlab, woodPickaxe, Drop(Items.bricksSlab, 1)));
+		this.register(new MineableBlock(_.stoneBrickSlab, woodPickaxe, Drop(Items.stoneBrickSlab, 1)));
+		this.register(new MineableBlock(_.netherBrickSlab, woodPickaxe, Drop(Items.netherBrickSlab, 1)));
+		this.register(new MineableBlock(_.quartzSlab, woodPickaxe, Drop(Items.quartzSlab, 1)));
+		this.register(new MineableBlock(_.redSandstoneSlab, woodPickaxe, Drop(Items.redSandstoneSlab, 1)));
+		this.register(new MineableBlock(_.purpurSlab, woodPickaxe, Drop(Items.purpurSlab, 1)));
+		this.register(new MineableBlock(_.oakWoodSlab, woodAxe, Drop(Items.oakWoodSlab, 1)));
+		this.register(new MineableBlock(_.spruceWoodSlab, woodAxe, Drop(Items.spruceWoodSlab, 1)));
+		this.register(new MineableBlock(_.birchWoodSlab, woodAxe, Drop(Items.birchWoodSlab, 1)));
+		this.register(new MineableBlock(_.jungleWoodSlab, woodAxe, Drop(Items.jungleWoodSlab, 1)));
+		this.register(new MineableBlock(_.acaciaWoodSlab, woodAxe, Drop(Items.acaciaWoodSlab, 1)));
+		this.register(new MineableBlock(_.darkOakWoodSlab, woodAxe, Drop(Items.darkOakWoodSlab, 1)));
+		this.register(new MineableBlock(_.upperStoneSlab, woodPickaxe, Drop(Items.stoneSlab, 1)));
+		this.register(new MineableBlock(_.upperSandstoneSlab, woodPickaxe, Drop(Items.sandstoneSlab, 1)));
+		this.register(new MineableBlock(_.upperStoneWoodenSlab, woodPickaxe, Drop(Items.stoneWoodenSlab, 1)));
+		this.register(new MineableBlock(_.upperCobblestoneSlab, woodPickaxe, Drop(Items.cobblestoneSlab, 1)));
+		this.register(new MineableBlock(_.upperBricksSlab, woodPickaxe, Drop(Items.bricksSlab, 1)));
+		this.register(new MineableBlock(_.upperStoneBrickSlab, woodPickaxe, Drop(Items.stoneBrickSlab, 1)));
+		this.register(new MineableBlock(_.upperNetherBrickSlab, woodPickaxe, Drop(Items.netherBrickSlab, 1)));
+		this.register(new MineableBlock(_.upperQuartzSlab, woodPickaxe, Drop(Items.quartzSlab, 1)));
+		this.register(new MineableBlock(_.upperRedSandstoneSlab, woodPickaxe, Drop(Items.redSandstoneSlab, 1)));
+		this.register(new MineableBlock(_.upperPurpurSlab, woodPickaxe, Drop(Items.purpurSlab, 1)));
+		this.register(new MineableBlock(_.upperOakWoodSlab, woodAxe, Drop(Items.oakWoodSlab, 1)));
+		this.register(new MineableBlock(_.upperSpruceWoodSlab, woodAxe, Drop(Items.spruceWoodSlab, 1)));
+		this.register(new MineableBlock(_.birchWoodSlab, woodAxe, Drop(Items.birchWoodSlab, 1)));
+		this.register(new MineableBlock(_.upperJungleWoodSlab, woodAxe, Drop(Items.jungleWoodSlab, 1)));
+		this.register(new MineableBlock(_.upperAcaciaWoodSlab, woodAxe, Drop(Items.acaciaWoodSlab, 1)));
+		this.register(new MineableBlock(_.upperDarkOakWoodSlab, woodAxe, Drop(Items.darkOakWoodSlab, 1)));
+		this.register(new MineableBlock(_.doubleStoneSlab, woodPickaxe, Drop(Items.stoneSlab, 2)));
+		this.register(new MineableBlock(_.doubleSandstoneSlab, woodPickaxe, Drop(Items.sandstoneSlab, 2)));
+		this.register(new MineableBlock(_.doubleStoneWoodenSlab, woodPickaxe, Drop(Items.stoneWoodenSlab, 2)));
+		this.register(new MineableBlock(_.doubleCobblestoneSlab, woodPickaxe, Drop(Items.cobblestoneSlab, 2)));
+		this.register(new MineableBlock(_.doubleBricksSlab, woodPickaxe, Drop(Items.bricksSlab, 1)));
+		this.register(new MineableBlock(_.doubleStoneBrickSlab, woodPickaxe, Drop(Items.stoneBrickSlab, 2)));
+		this.register(new MineableBlock(_.doubleNetherBrickSlab, woodPickaxe, Drop(Items.netherBrickSlab, 2)));
+		this.register(new MineableBlock(_.doubleQuartzSlab, woodPickaxe, Drop(Items.quartzSlab, 2)));
+		this.register(new MineableBlock(_.doubleRedSandstoneSlab, woodPickaxe, Drop(Items.redSandstoneSlab, 2)));
+		this.register(new MineableBlock(_.doublePurpurSlab, woodPickaxe, Drop(Items.purpurSlab, 2)));
+		this.register(new MineableBlock(_.doubleOakWoodSlab, woodAxe, Drop(Items.oakWoodSlab, 2)));
+		this.register(new MineableBlock(_.doubleSpruceWoodSlab, woodAxe, Drop(Items.spruceWoodSlab, 2)));
+		this.register(new MineableBlock(_.birchWoodSlab, woodAxe, Drop(Items.birchWoodSlab, 2)));
+		this.register(new MineableBlock(_.doubleJungleWoodSlab, woodAxe, Drop(Items.jungleWoodSlab, 2)));
+		this.register(new MineableBlock(_.doubleAcaciaWoodSlab, woodAxe, Drop(Items.acaciaWoodSlab, 2)));
+		this.register(new MineableBlock(_.doubleDarkOakWoodSlab, woodAxe, Drop(Items.darkOakWoodSlab, 2)));
+		this.register(new StairsBlock(_.cobblestoneStairsFacingEast, Facing.east, false, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.cobblestoneStairsFacingWest, Facing.west, false, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.cobblestoneStairsFacingSouth, Facing.south, false, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.cobblestoneStairsFacingNorth, Facing.north, false, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.upsideDownCobblestoneStairsFacingEast, Facing.east, true, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.upsideDownCobblestoneStairsFacingWest, Facing.west, true, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.upsideDownCobblestoneStairsFacingSouth, Facing.south, true, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.upsideDownCobblestoneStairsFacingNorth, Facing.north, true, woodPickaxe, Items.cobblestoneStairs));
+		this.register(new StairsBlock(_.brickStairsFacingEast, Facing.east, false, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.brickStairsFacingWest, Facing.west, false, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.brickStairsFacingSouth, Facing.south, false, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.brickStairsFacingNorth, Facing.north, false, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.upsideDownBrickStairsFacingEast, Facing.east, true, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.upsideDownBrickStairsFacingWest, Facing.west, true, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.upsideDownBrickStairsFacingSouth, Facing.south, true, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.upsideDownBrickStairsFacingNorth, Facing.north, true, woodPickaxe, Items.brickStairs));
+		this.register(new StairsBlock(_.netherBrickStairsFacingEast, Facing.east, false, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.netherBrickStairsFacingWest, Facing.west, false, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.netherBrickStairsFacingSouth, Facing.south, false, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.netherBrickStairsFacingNorth, Facing.north, false, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.upsideDownNetherBrickStairsFacingEast, Facing.east, true, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.upsideDownNetherBrickStairsFacingWest, Facing.west, true, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.upsideDownNetherBrickStairsFacingSouth, Facing.south, true, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.upsideDownNetherBrickStairsFacingNorth, Facing.north, true, woodPickaxe, Items.netherBrickStairs));
+		this.register(new StairsBlock(_.stoneBrickStairsFacingEast, Facing.east, false, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.stoneBrickStairsFacingWest, Facing.west, false, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.stoneBrickStairsFacingSouth, Facing.south, false, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.stoneBrickStairsFacingNorth, Facing.north, false, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.upsideDownStoneBrickStairsFacingEast, Facing.east, true, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.upsideDownStoneBrickStairsFacingWest, Facing.west, true, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.upsideDownStoneBrickStairsFacingSouth, Facing.south, true, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.upsideDownStoneBrickStairsFacingNorth, Facing.north, true, woodPickaxe, Items.stoneBrickStairs));
+		this.register(new StairsBlock(_.purpurStairsFacingEast, Facing.east, false, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.purpurStairsFacingWest, Facing.west, false, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.purpurStairsFacingSouth, Facing.south, false, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.purpurStairsFacingNorth, Facing.north, false, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.upsideDownPurpurStairsFacingEast, Facing.east, true, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.upsideDownPurpurStairsFacingWest, Facing.west, true, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.upsideDownPurpurStairsFacingSouth, Facing.south, true, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.upsideDownPurpurStairsFacingNorth, Facing.north, true, woodPickaxe, Items.purpurStairs));
+		this.register(new StairsBlock(_.quartzStairsFacingEast, Facing.east, false, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.quartzStairsFacingWest, Facing.west, false, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.quartzStairsFacingSouth, Facing.south, false, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.quartzStairsFacingNorth, Facing.north, false, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.upsideDownQuartzStairsFacingEast, Facing.east, true, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.upsideDownQuartzStairsFacingWest, Facing.west, true, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.upsideDownQuartzStairsFacingSouth, Facing.south, true, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.upsideDownQuartzStairsFacingNorth, Facing.north, true, woodPickaxe, Items.quartzStairs));
+		this.register(new StairsBlock(_.sandstoneStairsFacingEast, Facing.east, false, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.sandstoneStairsFacingWest, Facing.west, false, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.sandstoneStairsFacingSouth, Facing.south, false, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.sandstoneStairsFacingNorth, Facing.north, false, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownSandstoneStairsFacingEast, Facing.east, true, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownSandstoneStairsFacingWest, Facing.west, true, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownSandstoneStairsFacingSouth, Facing.south, true, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownSandstoneStairsFacingNorth, Facing.north, true, woodPickaxe, Items.sandstoneStairs));
+		this.register(new StairsBlock(_.redSandstoneStairsFacingEast, Facing.east, false, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.redSandstoneStairsFacingWest, Facing.west, false, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.redSandstoneStairsFacingSouth, Facing.south, false, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.redSandstoneStairsFacingNorth, Facing.north, false, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownRedSandstoneStairsFacingEast, Facing.east, true, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownRedSandstoneStairsFacingWest, Facing.west, true, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownRedSandstoneStairsFacingSouth, Facing.south, true, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.upsideDownRedSandstoneStairsFacingNorth, Facing.north, true, woodPickaxe, Items.redSandstoneStairs));
+		this.register(new StairsBlock(_.oakWoodStairsFacingEast, Facing.east, false, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.oakWoodStairsFacingWest, Facing.west, false, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.oakWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.oakWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownOakWoodStairsFacingEast, Facing.east, true, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownOakWoodStairsFacingWest, Facing.west, true, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownOakWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownOakWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.oakWoodStairs));
+		this.register(new StairsBlock(_.spruceWoodStairsFacingEast, Facing.east, false, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.spruceWoodStairsFacingWest, Facing.west, false, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.spruceWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.spruceWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.upsideDownSpruceWoodStairsFacingEast, Facing.east, true, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.upsideDownSpruceWoodStairsFacingWest, Facing.west, true, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.upsideDownSpruceWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.upsideDownSpruceWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.spruceWoodStairs));
+		this.register(new StairsBlock(_.birchWoodStairsFacingEast, Facing.east, false, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.birchWoodStairsFacingWest, Facing.west, false, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.birchWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.birchWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.upsideDownBirchWoodStairsFacingEast, Facing.east, true, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.upsideDownBirchWoodStairsFacingWest, Facing.west, true, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.upsideDownBirchWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.upsideDownBirchWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.birchWoodStairs));
+		this.register(new StairsBlock(_.jungleWoodStairsFacingEast, Facing.east, false, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.jungleWoodStairsFacingWest, Facing.west, false, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.jungleWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.jungleWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.upsideDownJungleWoodStairsFacingEast, Facing.east, true, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.upsideDownJungleWoodStairsFacingWest, Facing.west, true, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.upsideDownJungleWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.upsideDownJungleWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.jungleWoodStairs));
+		this.register(new StairsBlock(_.acaciaWoodStairsFacingEast, Facing.east, false, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.acaciaWoodStairsFacingWest, Facing.west, false, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.acaciaWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.acaciaWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.upsideDownAcaciaWoodStairsFacingEast, Facing.east, true, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.upsideDownAcaciaWoodStairsFacingWest, Facing.west, true, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.upsideDownAcaciaWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.upsideDownAcaciaWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.acaciaWoodStairs));
+		this.register(new StairsBlock(_.darkOakWoodStairsFacingEast, Facing.east, false, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.darkOakWoodStairsFacingWest, Facing.west, false, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.darkOakWoodStairsFacingSouth, Facing.south, false, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.darkOakWoodStairsFacingNorth, Facing.north, false, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownDarkOakWoodStairsFacingEast, Facing.east, true, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownDarkOakWoodStairsFacingWest, Facing.west, true, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownDarkOakWoodStairsFacingSouth, Facing.south, true, woodAxe, Items.darkOakWoodStairs));
+		this.register(new StairsBlock(_.upsideDownDarkOakWoodStairsFacingNorth, Facing.north, true, woodAxe, Items.darkOakWoodStairs));
+		this.register(new MineableBlock(_.bookshelf, woodAxe, Drop(Items.book, 3, 3, Items.bookshelf)));
+		this.register(new MineableBlock(_.obsidian, diamondPickaxe, Drop(Items.obsidian, 1)));
+		this.register(new MineableBlock(_.glowingObsidian, diamondPickaxe, Drop(Items.glowingObsidian, 1)));
+		this.register(new MineableBlock(_.torchFacingEast, MiningTool.init, Drop(Items.torch, 1)));
+		this.register(new MineableBlock(_.torchFacingWest, MiningTool.init, Drop(Items.torch, 1)));
+		this.register(new MineableBlock(_.torchFacingSouth, MiningTool.init, Drop(Items.torch, 1)));
+		this.register(new MineableBlock(_.torchFacingNorth, MiningTool.init, Drop(Items.torch, 1)));
+		this.register(new MineableBlock(_.torchFacingUp, MiningTool.init, Drop(Items.torch, 1)));
+		this.register(new MineableBlock(_.craftingTable, MiningTool(Tools.axe, Tools.all), Drop(Items.craftingTable, 1))); //TODO open window on click
+		this.register(new StageCropBlock(_.seeds0, Blocks.seeds1, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds1, Blocks.seeds2, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds2, Blocks.seeds3, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds3, Blocks.seeds4, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds4, Blocks.seeds5, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds5, Blocks.seeds6, [Drop(Items.seeds, 1)]));
+		this.register(new StageCropBlock(_.seeds6, Blocks.seeds7, [Drop(Items.seeds, 1)]));
+		this.register(new FarmingBlock(_.seeds7, [Drop(Items.seeds, 0, 3), Drop(Items.wheat, 1)]));
+		this.register(new ChanceCropBlock(_.beetroot0, Blocks.beetroot1, [Drop(Items.beetrootSeeds, 1)], 2, 3));
+		this.register(new ChanceCropBlock(_.beetroot1, Blocks.beetroot2, [Drop(Items.beetrootSeeds, 1)], 2, 3));
+		this.register(new ChanceCropBlock(_.beetroot2, Blocks.beetroot3, [Drop(Items.beetrootSeeds, 1)], 2, 3));
+		this.register(new FarmingBlock(_.beetroot3, [Drop(Items.beetroot, 1), Drop(Items.beetrootSeeds, 0, 3)]));
+		this.register(new StageCropBlock(_.carrot0, Blocks.carrot1, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot1, Blocks.carrot2, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot2, Blocks.carrot3, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot3, Blocks.carrot4, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot4, Blocks.carrot5, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot5, Blocks.carrot6, [Drop(Items.carrot, 1)]));
+		this.register(new StageCropBlock(_.carrot6, Blocks.carrot7, [Drop(Items.carrot, 1)]));
+		this.register(new FarmingBlock(_.carrot7, [Drop(Items.carrot, 1, 4)]));
+		this.register(new StageCropBlock(_.potato0, Blocks.potato1, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato1, Blocks.potato2, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato2, Blocks.potato3, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato3, Blocks.potato4, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato4, Blocks.potato5, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato5, Blocks.potato6, [Drop(Items.potato, 1)]));
+		this.register(new StageCropBlock(_.potato6, Blocks.potato7, [Drop(Items.potato, 1)]));
+		this.register(new FarmingBlock(_.potato7, [Drop(Items.potato, 1, 4), Drop(Items.poisonousPotato, -49, 1)]));
+		this.register(new StemBlock!StageCropBlock(_.melonStem0, Items.melonSeeds, Blocks.melonStem1));
+		this.register(new StemBlock!StageCropBlock(_.melonStem1, Items.melonSeeds, Blocks.melonStem2));
+		this.register(new StemBlock!StageCropBlock(_.melonStem2, Items.melonSeeds, Blocks.melonStem3));
+		this.register(new StemBlock!StageCropBlock(_.melonStem3, Items.melonSeeds, Blocks.melonStem4));
+		this.register(new StemBlock!StageCropBlock(_.melonStem4, Items.melonSeeds, Blocks.melonStem5));
+		this.register(new StemBlock!StageCropBlock(_.melonStem5, Items.melonSeeds, Blocks.melonStem6));
+		this.register(new StemBlock!StageCropBlock(_.melonStem6, Items.melonSeeds, Blocks.melonStem7));
+		this.register(new StemBlock!(FruitCropBlock!false)(_.melonStem7, Items.melonSeeds, Blocks.melon));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem0, Items.pumpkinSeeds, Blocks.pumpkinStem1));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem1, Items.pumpkinSeeds, Blocks.pumpkinStem2));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem2, Items.pumpkinSeeds, Blocks.pumpkinStem3));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem3, Items.pumpkinSeeds, Blocks.pumpkinStem4));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem4, Items.pumpkinSeeds, Blocks.pumpkinStem5));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem5, Items.pumpkinSeeds, Blocks.pumpkinStem6));
+		this.register(new StemBlock!StageCropBlock(_.pumpkinStem6, Items.pumpkinSeeds, Blocks.pumpkinStem7));
+		this.register(new StemBlock!(FruitCropBlock!true)(_.pumpkinStem7, Items.pumpkinSeeds, cast(block_t[4])Blocks.pumpkin[0..4]));
+		this.register(new SugarCanesBlock(_.sugarCanes0, Blocks.sugarCanes1));
+		this.register(new SugarCanesBlock(_.sugarCanes1, Blocks.sugarCanes2));
+		this.register(new SugarCanesBlock(_.sugarCanes2, Blocks.sugarCanes3));
+		this.register(new SugarCanesBlock(_.sugarCanes3, Blocks.sugarCanes4));
+		this.register(new SugarCanesBlock(_.sugarCanes4, Blocks.sugarCanes5));
+		this.register(new SugarCanesBlock(_.sugarCanes5, Blocks.sugarCanes6));
+		this.register(new SugarCanesBlock(_.sugarCanes6, Blocks.sugarCanes7));
+		this.register(new SugarCanesBlock(_.sugarCanes7, Blocks.sugarCanes8));
+		this.register(new SugarCanesBlock(_.sugarCanes8, Blocks.sugarCanes9));
+		this.register(new SugarCanesBlock(_.sugarCanes9, Blocks.sugarCanes10));
+		this.register(new SugarCanesBlock(_.sugarCanes10, Blocks.sugarCanes11));
+		this.register(new SugarCanesBlock(_.sugarCanes11, Blocks.sugarCanes12));
+		this.register(new SugarCanesBlock(_.sugarCanes12, Blocks.sugarCanes13));
+		this.register(new SugarCanesBlock(_.sugarCanes13, Blocks.sugarCanes14));
+		this.register(new SugarCanesBlock(_.sugarCanes14, Blocks.sugarCanes15));
+		this.register(new SugarCanesBlock(_.sugarCanes15, 0));
+		this.register(new StageNetherCropBlock(_.netherWart0, Blocks.netherWart1, Drop(Items.netherWart, 1)));
+		this.register(new StageNetherCropBlock(_.netherWart1, Blocks.netherWart2, Drop(Items.netherWart, 1)));
+		this.register(new StageNetherCropBlock(_.netherWart2, Blocks.netherWart3, Drop(Items.netherWart, 1)));
+		this.register(new NetherCropBlock(_.netherWart3, Drop(Items.netherWart, 1, 4, 0))); //TODO +1 with fortune
+		this.register(new MineableBlock(_.stonecutter, woodPickaxe, Drop(Items.stonecutter, 1)));
+		this.register(new GravityBlock(_.snowLayer0, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 2)));
+		this.register(new GravityBlock(_.snowLayer1, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 3)));
+		this.register(new GravityBlock(_.snowLayer2, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 4)));
+		this.register(new GravityBlock(_.snowLayer3, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 5)));
+		this.register(new GravityBlock(_.snowLayer4, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 6)));
+		this.register(new GravityBlock(_.snowLayer5, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 7)));
+		this.register(new GravityBlock(_.snowLayer6, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 8)));
+		this.register(new GravityBlock(_.snowLayer7, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 9)));
+		this.register(new MineableBlock(_.snow, MiningTool(Tools.shovel, Tools.wood), Drop(Items.snowball, 4, 4, Items.snowBlock)));
+		this.register(new CactusBlock(_.cactus0, Blocks.cactus1));
+		this.register(new CactusBlock(_.cactus1, Blocks.cactus2));
+		this.register(new CactusBlock(_.cactus2, Blocks.cactus3));
+		this.register(new CactusBlock(_.cactus3, Blocks.cactus4));
+		this.register(new CactusBlock(_.cactus4, Blocks.cactus5));
+		this.register(new CactusBlock(_.cactus5, Blocks.cactus6));
+		this.register(new CactusBlock(_.cactus6, Blocks.cactus7));
+		this.register(new CactusBlock(_.cactus7, Blocks.cactus8));
+		this.register(new CactusBlock(_.cactus8, Blocks.cactus9));
+		this.register(new CactusBlock(_.cactus9, Blocks.cactus10));
+		this.register(new CactusBlock(_.cactus10, Blocks.cactus11));
+		this.register(new CactusBlock(_.cactus11, Blocks.cactus12));
+		this.register(new CactusBlock(_.cactus12, Blocks.cactus13));
+		this.register(new CactusBlock(_.cactus13, Blocks.cactus14));
+		this.register(new CactusBlock(_.cactus14, Blocks.cactus15));
+		this.register(new CactusBlock(_.cactus15, 0));
+		this.register(new MineableBlock(_.clay, MiningTool(false, Tools.shovel, Tools.wood), Drop(Items.clay, 4, 4, Items.clayBlock)));
+		this.register(new MineableBlock(_.hardenedClay, woodPickaxe, Drop(Items.hardenedClay, 1)));
+		this.register(new MineableBlock(_.whiteStainedClay, woodPickaxe, Drop(Items.whiteStainedClay, 1)));
+		this.register(new MineableBlock(_.orangeStainedClay, woodPickaxe, Drop(Items.orangeStainedClay, 1)));
+		this.register(new MineableBlock(_.magentaStainedClay, woodPickaxe, Drop(Items.magentaStainedClay, 1)));
+		this.register(new MineableBlock(_.lightBlueStainedClay, woodPickaxe, Drop(Items.lightBlueStainedClay, 1)));
+		this.register(new MineableBlock(_.yellowStainedClay, woodPickaxe, Drop(Items.yellowStainedClay, 1)));
+		this.register(new MineableBlock(_.limeStainedClay, woodPickaxe, Drop(Items.limeStainedClay, 1)));
+		this.register(new MineableBlock(_.pinkStainedClay, woodPickaxe, Drop(Items.pinkStainedClay, 1)));
+		this.register(new MineableBlock(_.grayStainedClay, woodPickaxe, Drop(Items.grayStainedClay, 1)));
+		this.register(new MineableBlock(_.lightGrayStainedClay, woodPickaxe, Drop(Items.lightGrayStainedClay, 1)));
+		this.register(new MineableBlock(_.cyanStainedClay, woodPickaxe, Drop(Items.cyanStainedClay, 1)));
+		this.register(new MineableBlock(_.purpleStainedClay, woodPickaxe, Drop(Items.purpleStainedClay, 1)));
+		this.register(new MineableBlock(_.blueStainedClay, woodPickaxe, Drop(Items.blueStainedClay, 1)));
+		this.register(new MineableBlock(_.brownStainedClay, woodPickaxe, Drop(Items.brownStainedClay, 1)));
+		this.register(new MineableBlock(_.greenStainedClay, woodPickaxe, Drop(Items.greenStainedClay, 1)));
+		this.register(new MineableBlock(_.redStainedClay, woodPickaxe, Drop(Items.redStainedClay, 1)));
+		this.register(new MineableBlock(_.blackStainedClay, woodPickaxe, Drop(Items.blackStainedClay, 1)));
+		this.register(new MineableBlock(_.pumpkinFacingSouth, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.pumpkinFacingWest, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.pumpkinFacingNorth, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.pumpkinFacingEast, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.facelessPumpkinFacingSouth, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.facelessPumpkinFacingWest, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.facelessPumpkinFacingNorth, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.facelessPumpkinFacingEast, woodAxe, Drop(Items.pumpkin, 1)));
+		this.register(new MineableBlock(_.jackOLanternFacingSouth, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.jackOLanternFacingWest, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.jackOLanternFacingNorth, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.jackOLanternFacingEast, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.facelessJackOLanternFacingSouth, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.facelessJackOLanternFacingWest, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.facelessJackOLanternFacingNorth, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.facelessJackOLanternFacingEast, woodAxe, Drop(Items.jackOLantern, 1)));
+		this.register(new MineableBlock(_.netherrack, woodPickaxe, Drop(Items.netherrack, 1))); //TODO infinite fire
+		this.register(new MineableBlock(_.soulSand, MiningTool(false, Tools.pickaxe, Tools.wood), Drop(Items.soulSand, 1)));
+		this.register(new MineableBlock(_.glowstone, MiningTool.init, Drop(Items.glowstoneDust, 2, 4, Items.glowstone))); //TODO fortune +1 but max 4
+		this.register(new MineableBlock(_.netherBrick, woodPickaxe, Drop(Items.netherBrick, 1)));
+		this.register(new MineableBlock(_.redNetherBrick, woodPickaxe, Drop(Items.redNetherBrick, 1)));
+		this.register(new CakeBlock(_.cake0, Blocks.cake1));
+		this.register(new CakeBlock(_.cake1, Blocks.cake2));
+		this.register(new CakeBlock(_.cake2, Blocks.cake3));
+		this.register(new CakeBlock(_.cake3, Blocks.cake4));
+		this.register(new CakeBlock(_.cake4, Blocks.cake5));
+		this.register(new CakeBlock(_.cake5, Blocks.cake6));
+		this.register(new CakeBlock(_.cake6, 0));
+		this.register(new SwitchingBlock!false(_.woodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorSouthSide));
+		this.register(new SwitchingBlock!false(_.woodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorNorthSide));
+		this.register(new SwitchingBlock!false(_.woodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorEastSide));
+		this.register(new SwitchingBlock!false(_.woodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedWoodenTrapdoorWestSide));
+		this.register(new SwitchingBlock!false(_.openedWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorSouthSide));
+		this.register(new SwitchingBlock!false(_.openedWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorNorthSide));
+		this.register(new SwitchingBlock!false(_.openedWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorEastSide));
+		this.register(new SwitchingBlock!false(_.openedWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.woodenTrapdoorWestSide));
+		this.register(new SwitchingBlock!false(_.topWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorSouthSide));
+		this.register(new SwitchingBlock!false(_.topWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorNorthSide));
+		this.register(new SwitchingBlock!false(_.topWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorEastSide));
+		this.register(new SwitchingBlock!false(_.topWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.openedTopWoodenTrapdoorWestSide));
+		this.register(new SwitchingBlock!false(_.openedTopWoodenTrapdoorSouthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorSouthSide));
+		this.register(new SwitchingBlock!false(_.openedTopWoodenTrapdoorNorthSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorNorthSide));
+		this.register(new SwitchingBlock!false(_.openedTopWoodenTrapdoorEastSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorEastSide));
+		this.register(new SwitchingBlock!false(_.openedTopWoodenTrapdoorWestSide, MiningTool(Tools.axe, Tools.all), Drop(Items.woodenTrapdoor, 1), Blocks.topWoodenTrapdoorWestSide));
+		this.register(new SwitchingBlock!true(_.ironTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorSouthSide));
+		this.register(new SwitchingBlock!true(_.ironTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorNorthSide));
+		this.register(new SwitchingBlock!true(_.ironTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorEastSide));
+		this.register(new SwitchingBlock!true(_.ironTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedIronTrapdoorWestSide));
+		this.register(new SwitchingBlock!true(_.openedIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorSouthSide));
+		this.register(new SwitchingBlock!true(_.openedIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorNorthSide));
+		this.register(new SwitchingBlock!true(_.openedIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorEastSide));
+		this.register(new SwitchingBlock!true(_.openedIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.ironTrapdoorWestSide));
+		this.register(new SwitchingBlock!true(_.topIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorSouthSide));
+		this.register(new SwitchingBlock!true(_.topIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorNorthSide));
+		this.register(new SwitchingBlock!true(_.topIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorEastSide));
+		this.register(new SwitchingBlock!true(_.topIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.openedTopIronTrapdoorWestSide));
+		this.register(new SwitchingBlock!true(_.openedTopIronTrapdoorSouthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorSouthSide));
+		this.register(new SwitchingBlock!true(_.openedTopIronTrapdoorNorthSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorNorthSide));
+		this.register(new SwitchingBlock!true(_.openedTopIronTrapdoorEastSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorEastSide));
+		this.register(new SwitchingBlock!true(_.openedTopIronTrapdoorWestSide, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironTrapdoor, 1), Blocks.topIronTrapdoorWestSide));
+		this.register(new MonsterEggBlock(_.stoneMonsterEgg, Blocks.stone));
+		this.register(new MonsterEggBlock(_.cobblestoneMonsterEgg, Blocks.cobblestone));
+		this.register(new MonsterEggBlock(_.stoneBrickMonsterEgg, Blocks.stoneBricks));
+		this.register(new MonsterEggBlock(_.mossyStoneBrickMonsterEgg, Blocks.mossyStoneBricks));
+		this.register(new MonsterEggBlock(_.crackedStoneBrickMonsterEgg, Blocks.crackedStoneBricks));
+		this.register(new MonsterEggBlock(_.chiseledStoneBrickMonsterEgg, Blocks.chiseledStoneBricks));
+		this.register(new MineableBlock(_.brownMushroomPoresEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopWestNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopNorthEast, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopWest, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTop, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopEast, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopSouthWest, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapTopEastSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomStemEverySide, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomCapsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.brownMushroomStemsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.brownMushroom, 0, 2, Items.brownMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomPoresEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopWestNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopNorth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopNorthEast, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopWest, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTop, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopEast, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopSouthWest, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapTopEastSouth, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomStemEverySide, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomCapsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.redMushroomStemsEverywhere, MiningTool(Tools.axe, Tools.all), Drop(Items.redMushroom, 0, 2, Items.redMushroomBlock)));
+		this.register(new MineableBlock(_.ironBars, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.ironBars, 1)));
+		this.register(new MineableBlock(_.melon, MiningTool(Tools.axe | Tools.sword, Tools.all), Drop(Items.melon, 3, 7, Items.melonBlock)));
+		this.register(new InactiveEndPortalBlock(_.endPortalFrameSouth, Blocks.activeEndPortalFrameSouth, Facing.south));
+		this.register(new InactiveEndPortalBlock(_.endPortalFrameWest, Blocks.activeEndPortalFrameWest, Facing.west));
+		this.register(new InactiveEndPortalBlock(_.endPortalFrameNorth, Blocks.activeEndPortalFrameNorth, Facing.north));
+		this.register(new InactiveEndPortalBlock(_.endPortalFrameEast, Blocks.activeEndPortalFrameEast, Facing.east));
+		this.register(new Block(_.activeEndPortalFrameSouth));
+		this.register(new Block(_.activeEndPortalFrameWest));
+		this.register(new Block(_.activeEndPortalFrameNorth));
+		this.register(new Block(_.activeEndPortalFrameEast));
+		this.register(new MineableBlock(_.endStone, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.endStone, 1)));
+		this.register(new MineableBlock(_.endStoneBricks, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.endStoneBricks, 1)));
+		this.register(new Block(_.endPortal)); //TODO teleport to end dimension
+		this.register(new GrowingBeansBlock(_.cocoaNorth0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.south, Blocks.cocoaNorth1));
+		this.register(new GrowingBeansBlock(_.cocoaEast0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.west, Blocks.cocoaEast1));
+		this.register(new GrowingBeansBlock(_.cocoaSouth0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.north, Blocks.cocoaSouth1));
+		this.register(new GrowingBeansBlock(_.cocoaWest0, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.east, Blocks.cocoaWest1));
+		this.register(new GrowingBeansBlock(_.cocoaNorth1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.south, Blocks.cocoaNorth2));
+		this.register(new GrowingBeansBlock(_.cocoaEast1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.west, Blocks.cocoaEast2));
+		this.register(new GrowingBeansBlock(_.cocoaSouth1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.north, Blocks.cocoaSouth2));
+		this.register(new GrowingBeansBlock(_.cocoaWest1, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 1), Facing.east, Blocks.cocoaWest2));
+		this.register(new BeansBlock(_.cocoaNorth2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.south));
+		this.register(new BeansBlock(_.cocoaEast2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.west));
+		this.register(new BeansBlock(_.cocoaSouth2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.north));
+		this.register(new BeansBlock(_.cocoaWest2, MiningTool(Tools.axe, Tools.wood), Drop(Items.cocoaBeans, 2, 3), Facing.east));
+		this.register(new MineableBlock(_.lilyPad, MiningTool.init, Drop(Items.lilyPad, 1))); //TODO drop when the block underneath is not water nor ice
+		this.register(new MineableBlock(_.quartzBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.quartzBlock, 1)));
+		this.register(new MineableBlock(_.chiseledQuartzBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.chiseledQuartzBlock, 1)));
+		this.register(new MineableBlock(_.pillarQuartzBlockVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)));
+		this.register(new MineableBlock(_.pillarQuartzBlockNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)));
+		this.register(new MineableBlock(_.pillarQuartzBlockEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.pillarQuartzBlock, 1)));
+		this.register(new Block(_.barrier));
+		this.register(new MineableBlock(_.prismarine, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.prismarine, 1)));
+		this.register(new MineableBlock(_.prismarineBricks, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.prismarineBricks, 1)));
+		this.register(new MineableBlock(_.darkPrismarine, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.darkPrismarine, 1)));
+		this.register(new MineableBlock(_.seaLantern, MiningTool.init, Drop(Items.prismarineCrystals, 2, 3, Items.seaLantern))); //TODO fortune
+		this.register(new MineableBlock(_.hayBaleVertical, MiningTool.init, Drop(Items.hayBale, 1)));
+		this.register(new MineableBlock(_.hayBaleEastWest, MiningTool.init, Drop(Items.hayBale, 1)));
+		this.register(new MineableBlock(_.hayBaleNorthSouth, MiningTool.init, Drop(Items.hayBale, 1)));
+		this.register(new MineableBlock(_.endRodFacingDown, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.endRodFacingUp, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.endRodFacingNorth, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.endRodFacingSouth, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.endRodFacingWest, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.endRodFacingEast, MiningTool.init, Drop(Items.endRod, 1)));
+		this.register(new MineableBlock(_.purpurBlock, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurBlock, 1)));
+		this.register(new MineableBlock(_.purpurPillarVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)));
+		this.register(new MineableBlock(_.purpurPillarEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)));
+		this.register(new MineableBlock(_.purpurPillarNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.purpurPillar, 1)));
+		this.register(new MineableBlock(_.netherWartBlock, MiningTool.init, Drop(Items.netherWartBlock, 1)));
+		this.register(new MineableBlock(_.boneBlockVertical, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)));
+		this.register(new MineableBlock(_.boneBlockEastWest, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)));
+		this.register(new MineableBlock(_.boneBlockNorthSouth, MiningTool(Tools.pickaxe, Tools.wood), Drop(Items.boneBlock, 1)));
+		this.register(new Block(_.structureVoid));
+		this.register(new Block(_.updateBlock));
+		this.register(new Block(_.ateupdBlock));
 
 	}
 
@@ -790,12 +795,10 @@ public class BlockStorage {
 
 interface Blocks {
 
-	static import sul.blocks;
-
 	mixin((){
 		string ret;
-		foreach(member ; __traits(allMembers, sul.blocks.Blocks)) {
-			ret ~= "alias " ~ member ~ "=sul.blocks.Blocks." ~ member ~ ";";
+		foreach(member ; __traits(allMembers, _)) {
+			ret ~= "enum " ~ member ~ "=_." ~ member ~ ".id;";
 		}
 		return ret;
 	}());

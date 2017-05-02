@@ -16,32 +16,17 @@ module sel.util.command;
 
 import std.algorithm : sort;
 import std.conv : ConvException, to;
-import std.json : parseJSON;
 static import std.math;
 import std.random : uniform;
-import std.string : join, split, replace, toLower, startsWith;
+import std.string : split, replace, toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
 import std.typecons : Tuple;
 
-import sel.server : server;
-import sel.entity.effect : Effect;
 import sel.entity.entity : Entity;
-import sel.event.world : EntityDamageByCommandEvent;
-import sel.item : Item, Slot;
 import sel.math.vector;
 import sel.player.player : Player, Gamemode;
 import sel.plugin.plugin : arguments;
-import sel.util.lang : translate;
-import sel.util.log;
 import sel.world.world : World;
-
-/*bool areValidCommandArgs(E...)() {
-	static if(E.length == 1 && (is(E[0] == arguments) || is(E[0] == string[]))) return true;
-	foreach(T ; E) {
-		static if(!is(T == string) && !is(T == long) && !is(T == ulong) && !is(T == bool) && !is(T == Position)) return false;
-	}
-	return true;
-}*/
 
 class Command {
 	
@@ -287,6 +272,49 @@ template SingleEnum(string value) {
 
 	mixin("enum SingleEnum { " ~ value ~ " }");
 
+}
+
+/**
+ * Example:
+ * ---
+ * enum Example : int {
+ *    plain = 12,
+ *    camelCase = 44,
+ *    PascalCase = 100,
+ *    ALL_UPPERCASE = 200
+ * }
+ * alias Snake = SnakeCaseEnum!Example;
+ * assert(Example.plain == Snake.plain);
+ * assert(Example.camelCase == Snake.camel_case);
+ * assert(Example.PascalCase == Snake.pascal_case);
+ * assert(Example.ALL_UPPERCASE == Snake.all_uppercase);
+ * ---
+ */
+template SnakeCaseEnum(T) if(is(T == enum)) {
+
+	mixin("enum SnakeCaseEnum {" ~ (){
+		string ret;
+		foreach(immutable member ; __traits(allMembers, T)) {
+			ret ~= toSnakeCase(member) ~ "=T." ~ member ~ ",";
+		}
+		return ret;
+	}() ~ "}");
+
+}
+
+private string toSnakeCase(string str) {
+	string ret;
+	bool noupper = true;
+	foreach(c ; str) {
+		if(c >= 'A' && c <= 'Z') {
+			if(noupper) ret ~= c + 32;
+			else ret ~= "_" ~ cast(char)(c + 32);
+			noupper = true;
+		} else {
+			ret ~= c;
+		}
+	}
+	return ret;
 }
 
 /**

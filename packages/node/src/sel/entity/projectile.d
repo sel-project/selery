@@ -29,7 +29,6 @@ import sel.event.world;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.util.color : Color;
-import sel.world.particle : Particles;
 import sel.world.world : World;
 
 static import sul.entities;

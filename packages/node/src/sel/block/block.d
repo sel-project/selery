@@ -30,7 +30,6 @@ import com.sel;
 import sel.entity.entity : Entity;
 import sel.event.event : EventListener;
 import sel.event.world.world : WorldEvent;
-import sel.item.enchanting : Enchantments;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockAxis, BlockPosition, entityPosition;

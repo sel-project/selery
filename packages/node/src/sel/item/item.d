@@ -25,7 +25,7 @@ import nbt.tags;
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
-import sel.item.enchanting;
+import sel.item.enchantment;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition, face;
@@ -133,7 +133,7 @@ class Item {
 	/**
 	 * Gets the item's data.
 	 */
-	public pure nothrow @property @safe @nogc sul.items.Item data() {
+	public pure nothrow @property @safe @nogc const sul.items.Item data() {
 		return sul.items.Item.init;
 	}
 
@@ -802,14 +802,14 @@ class Item {
 	alias Translatable = GenericTranslatable!("this.customName", T);
 }*/
 
-class SimpleItem(sul.items.Item si) : Item {
+class SimpleItem(sul.items.Item _data) : Item {
 
 	public @safe this(E...)(E args) {
 		super(args);
 	}
 
-	public final override pure nothrow @property @safe @nogc sul.items.Item data() {
-		return si;
+	public override pure nothrow @property @safe @nogc const sul.items.Item data() {
+		return _data;
 	}
 	
 	alias slot this;

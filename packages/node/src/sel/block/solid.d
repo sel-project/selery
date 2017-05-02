@@ -24,7 +24,7 @@ import sel.block.block : Update, Remove, Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
 import sel.entity.projectile : FallingBlock;
-import sel.item.enchanting : Enchantments;
+import sel.item.enchantment : Enchantments;
 import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
@@ -210,13 +210,13 @@ struct Experience {
 
 class MineableBlock : Block {
 
-	private MiningTool _miningTool;
-	private Drop[] _drops;
-	private Experience _exp;
+	private const MiningTool _miningTool;
+	private const Drop[] _drops;
+	private const Experience _exp;
 
 	private bool delegate(Item) validateTool;
 
-	public this(sul.blocks.Block data, MiningTool miningTool, Drop[] drops, Experience exp=Experience.init) {
+	public this(sul.blocks.Block data, inout MiningTool miningTool, inout Drop[] drops, inout Experience exp=Experience.init) {
 		super(data);
 		this._miningTool = miningTool;
 		this._drops = drops;
@@ -228,7 +228,7 @@ class MineableBlock : Block {
 		}
 	}
 
-	public this(sul.blocks.Block data, MiningTool miningTool, Drop drop, Experience exp=Experience.init) {
+	public this(sul.blocks.Block data, inout MiningTool miningTool, inout Drop drop, inout Experience exp=Experience.init) {
 		this(data, miningTool, [drop], exp);
 	}
 

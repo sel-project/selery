@@ -62,7 +62,6 @@ import sel.util.log;
 import sel.util.node : Node;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
-import sel.world.particle : Particle, Particles;
 import sel.world.world : Rules, World;
 
 enum Gamemode : ubyte {
@@ -1085,8 +1084,6 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void sendLightning(Lightning lightning);
 	
 	public abstract void sendAnimation(Entity entity);
-	
-	public abstract void sendParticle(Particle particle);
 
 	public final void sendBlock(PlacedBlock block) {
 		this.sendBlocks([block]);
@@ -1766,8 +1763,6 @@ class Puppet : Player {
 	public override @safe @nogc void sendLightning(Lightning lightning) {}
 	
 	public override @safe @nogc void sendAnimation(Entity entity) {}
-	
-	public override @safe @nogc void sendParticle(Particle particle) {}
 	
 	public override @safe @nogc void sendBlocks(PlacedBlock[] block) {}
 	

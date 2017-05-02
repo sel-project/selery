@@ -121,7 +121,7 @@ class ToolItem(sul.items.Item si, ubyte _type, ubyte _material, ushort _durabili
 		super(args);
 	}
 
-	public override pure nothrow @property @safe @nogc sul.items.Item data() {
+	public override pure nothrow @property @safe @nogc const sul.items.Item data() {
 		return si;
 	}
 	

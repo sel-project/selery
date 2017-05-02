@@ -4,7 +4,7 @@
    targetType "executable"
    dependency "sel-common" path="../packages/common"
    dependency "sel-node" path="../packages/node"
-   dependency "plugin-loader" path="../.sel/plugin-loader"
+   dependency "node-plugin-loader" path="../.sel/plugin-loader/node"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -52,9 +52,7 @@ void main(string[] args) {
 				"name": JSONValue(Software.name),
 				"version": JSONValue(Software.displayVersion),
 				"stable": JSONValue(Software.stable)
-			])/*,
-			"minecraft": JSONValue(__minecraftProtocols),
-			"pocket": JSONValue(__pocketProtocols)*/
+			])
 		]);
 		
 		writeln(json.toString());
@@ -85,7 +83,7 @@ void main(string[] args) {
 				address = getAddress("localhost", port)[0];
 			}
 			
-			new Server(address, password, name, main, loadPlugins());
+			new Server(address, name, password, main, loadPlugins());
 			
 		} catch(LinkTerminated) {
 			

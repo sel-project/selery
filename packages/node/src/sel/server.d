@@ -195,7 +195,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 	private Command[string] commands;
 
-	public this(Address hub, string password, string name, bool main, Plugin[] plugins) {
+	public this(Address hub, string name, string password, bool main, Plugin[] plugins) {
 
 		this.node_name = name;
 		this.node_main = main;
@@ -418,6 +418,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 			auto collector = thread!Collector();
 			send(collector, thisTid);
+
 		}
 		
 		this.tasks = new TaskManager();
@@ -430,6 +431,25 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		}
 
 		this.n_node_max = this.n_settings.maxPlayers;
+
+		// remove plugins from list if deactivated
+		if(std.file.exists(Paths.home ~ "plugins.json")) {
+			Plugin[] plugins;
+			auto json = parseJSON(cast(string)std.file.read(Paths.home ~ "plugins.json"));
+			foreach(plugin ; this.n_plugins) {
+				auto p = plugin.namespace in json;
+				if(!p || p.type != JSON_TYPE.FALSE) plugins ~= plugin;
+			}
+			this.n_plugins = plugins;
+		}
+		// rewite plugins.json
+		{
+			string[] plugins;
+			foreach(plugin ; this.n_plugins) {
+				plugins ~= "\t\"" ~ plugin.namespace ~ "\": true";
+			}
+			std.file.write(Paths.home ~ "plugins.json", "{" ~ newline ~ plugins.join("," ~ newline) ~ newline ~ "}" ~ newline);
+		}
 
 		this.start_time = milliseconds;
 
@@ -880,7 +900,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * if(lobby !is null) lobby.transfer(player);
 	 * ---
 	 */
-	public pure nothrow @safe const(Node) nodeWithName(string name) {
+	public inout pure nothrow @safe const(Node) nodeWithName(string name) {
 		auto ret = name in this.nodes_names;
 		return ret ? *ret : null;
 	}
@@ -889,7 +909,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * Gets a node by its hub id, which is given by the hub and
 	 * unique for every session.
 	 */
-	public pure nothrow @safe const(Node) nodeWithHubId(uint hubId) {
+	public inout pure nothrow @safe const(Node) nodeWithHubId(uint hubId) {
 		auto ret = hubId in this.nodes_hubid;
 		return ret ? *ret : null;
 	}
@@ -1014,7 +1034,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	}
 
 	/**
-	 * Creates and registers a world, initializing its terrain,
+	 * Creates and registers a world, initialising its terrain,
 	 * registering events, commands and tasks.
 	 * Example:
 	 * ---
@@ -1250,7 +1270,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * Adds (or update) a node.
 	 */
 	private void handleAddNodePacket(HncomStatus.AddNode packet) {
-		auto node = new Node(packet.hubId, packet.name, packet.main);
+		auto node = new Node(this, packet.hubId, packet.name, packet.main);
 		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = accepted.protocols;
 		this.nodes_hubid[node.hubId] = node;
 		this.nodes_names[node.name] = node;

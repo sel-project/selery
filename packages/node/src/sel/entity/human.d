@@ -25,7 +25,7 @@ import sel.entity.interfaces;
 import sel.entity.living : Healing, Living;
 import sel.event.world.damage;
 import sel.event.world.entity : EntityHealEvent;
-import sel.item.enchanting : Enchantments;
+import sel.item.enchantment : Enchantments;
 import sel.item.inventory : PlayerInventory;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;

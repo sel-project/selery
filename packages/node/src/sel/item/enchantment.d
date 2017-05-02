@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.item.enchanting;
+module sel.item.enchantment;
 
 import std.algorithm : min;
 import std.conv : to;

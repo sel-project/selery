@@ -16,8 +16,6 @@ module sel.util.concurrency;
 
 import core.thread : dur, Duration, thread_attachThis;
 import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLinked, Tid;
-import std.conv : to;
-import std.exception : enforce;
 
 import com.crash : logCrash;
 import com.util : UnloggedException;

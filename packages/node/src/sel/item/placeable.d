@@ -25,40 +25,112 @@ import sel.world.world : World;
 
 static import sul.items;
 
-class PlaceableItem(sul.items.Item si, block_t block, E...) : SimpleItem!(si) {
-	
-	alias sul = si;
-	
-	public @safe this(E...)(E args) {
-		super(args);
-	}
-	
+class GenericPlaceableItem : Item {
+
+	//TODO ctor
+
 	public override pure nothrow @property @safe @nogc bool placeable() {
 		return true;
 	}
-	
+
 	public override block_t place(World world, BlockPosition position, uint face) {
-		static if(E.length) {
-			auto u = world[position - [0, 1, 0]];
-			static if(is(typeof(E[0]) : string)) {
-				foreach(prop ; E) {
-					if(mixin("!(u." ~ prop ~ ")")) return Blocks.air;
-				}
-				return block;
-			} else {
-				if(compareBlock!(E[0])(u)) return block;
-				else return Blocks.air;
-			}
-		} else {
-			return block;
-		}
+		return this.block;
 	}
-	
-	alias slot this;
-	
+
+	public abstract pure nothrow @property @safe @nogc block_t block();
+
 }
 
-alias PlaceableOnSolidItem(sul.items.Item si, block_t block) = PlaceableItem!(si, block, "fullUpperShape", "solid", "opacity==15");
+class PlaceableOnBlockItem : GenericPlaceableItem {
+
+	//TODO ctor
+
+	public override block_t place(World world, BlockPosition position, uint face) {
+		if(world[position - [0, 1, 0]] == this.supportBlocks) {
+			return super.place(world, position, face);
+		} else {
+			return 0;
+		}
+	}
+
+	public abstract pure nothrow @property @safe block_t[] supportBlocks();
+
+}
+
+template PlaceableItem(sul.items.Item _data, block_t _block, E...) {
+
+	static if(E.length == 0) {
+
+		class PlaceableItem : GenericPlaceableItem {
+
+			public override pure nothrow @property @safe @nogc const sul.items.Item data() {
+				return _data;
+			}
+
+			public override pure nothrow @property @safe @nogc block_t block() {
+				return _block;
+			}
+
+			alias slot this;
+
+		}
+
+	} else static if(is(typeof(E[0]) == block_t[])) {
+		
+		class PlaceableItem : PlaceableOnBlockItem {
+			
+			public override pure nothrow @property @safe @nogc const sul.items.Item data() {
+				return _data;
+			}
+			
+			public override pure nothrow @property @safe @nogc block_t block() {
+				return _block;
+			}
+			
+			public override pure nothrow @property @safe block_t[] supportBlocks() {
+				return E[0];
+			}
+			
+			alias slot this;
+			
+		}
+
+	} else {
+
+		class PlaceableItem : GenericPlaceableItem {
+
+			public override pure nothrow @property @safe @nogc const sul.items.Item data() {
+				return _data;
+			}
+
+			public override block_t place(World world, BlockPosition position, uint face) {
+				auto down = world[position - [0, 1, 0]];
+				if(mixin((){
+					import std.string : join;
+					string[] ret;
+					foreach(cmp ; E) {
+						ret ~= "down." ~ cmp;
+					}
+					return ret.join("&&");
+				}())) {
+					return super.place(world, position, face);
+				} else {
+					return 0;
+				}
+
+			}
+			
+			public override pure nothrow @property @safe @nogc block_t block() {
+				return _block;
+			}
+
+		}
+
+	}
+
+}
+
+alias PlaceableOnSolidItem(sul.items.Item _data, block_t _block) = PlaceableItem!(_data, _block, "fullUpperShape", "solid", "opacity==15");
 
 class WoodItem(sul.items.Item si, block_t[] blocks) : SimpleItem!(si) if(blocks.length == 4) {
 

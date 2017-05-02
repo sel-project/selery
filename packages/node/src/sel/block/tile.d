@@ -33,16 +33,12 @@ import sel.block.block;
 import sel.block.blocks : Blocks;
 import sel.block.solid : Facing;
 import sel.entity.entity : Entity;
-import sel.entity.human : Human;
-import sel.item.inventory : Inventory, NotifiedInventory, InventoryHolder;
 import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
-import sel.math.vector : BlockAxis, BlockPosition, entityPosition;
+import sel.math.vector : BlockPosition, entityPosition;
 import sel.player.player : Player;
-import sel.util.color : Color, Colors;
 import sel.util.lang : GenericTranslatable = Translatable;
-import sel.world.particle : Particles;
 import sel.world.world : World;
 
 static import sul.blocks;
@@ -560,6 +556,6 @@ template TileImpl(sul.blocks.Block data, T:Tile) {
 
 interface Tiles {
 
-	alias FlowerPot = TileImpl!(Blocks.flowerPot, sel.block.tile.FlowerPot);
+	alias FlowerPot = TileImpl!(sul.blocks.Blocks.flowerPot, sel.block.tile.FlowerPot);
 
 }

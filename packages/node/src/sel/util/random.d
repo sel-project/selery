@@ -14,25 +14,8 @@
  */
 module sel.util.random;
 
-import std.algorithm : min;
-import std.conv : to;
 import std.math : acos;
 import std.random : uniform, Rand = Random, unpredictableSeed, randomShuffle;
-
-public @safe T random(T)(T min=T.min, T max=T.max) {
-	return cast(T)uniform(min, max);
-}
-
-public @safe auto array_random(T...)(T args) {
-	alias E = typeof(args[0]);
-	E[] ret;
-	foreach(a ; args) {
-		if(is(typeof(a) == E)) {
-			ret ~= cast(E)a;
-		}
-	}
-	return ret[random(0, $)];
-}
 
 /**
  * Generates random values using the same seed.

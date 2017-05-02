@@ -6,8 +6,8 @@ d:
 
 script:
  - cd build
- - dub build --single --compiler=$DC --build=release hub.d
  - dub init.d --compiler=$DC --build=release
+ - dub build --single --compiler=$DC --build=release hub.d
  - dub build --single --compiler=$DC --build=release node.d
 
 notifications:

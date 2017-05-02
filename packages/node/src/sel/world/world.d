@@ -55,10 +55,7 @@ import sel.util.task;
 import sel.world.chunk;
 import sel.world.generator;
 import sel.world.map : Map;
-import sel.world.particle : Particle;
 import sel.world.rules : Rules;
-
-static import sul.blocks;
 
 /**
  * Basic world.
@@ -1176,7 +1173,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world[12, 55, 789] = Blocks.chest; // not a tile!
 	 * ---
 	 */
-	public Block* opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*) || is(T == sul.blocks.Blocks)) {
+	public Block* opIndexAssign(bool sendUpdates=true, T)(T block, BlockPosition position) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
 		auto chunk = ChunkPosition(position.x >> 4, position.z >> 4) in this;
 		if(chunk) {
 
@@ -1187,8 +1184,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			static if(is(T == block_t[])) {
 				block_t b = block[0];
-			} else static if(is(T == sul.blocks.Blocks)) {
-				block_t b = block.id;
 			} else {
 				alias b = block;
 			}
@@ -1217,7 +1212,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/// ditto
-	public Block* opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*) || is(T == sul.blocks.Blocks)) {
+	public Block* opIndexAssign(T)(T block, int x, uint y, int z) if(is(T == block_t) || is(T == block_t[]) || is(T == Block*)) {
 		return this.opIndexAssign(block, BlockPosition(x, y, z));
 	}
 

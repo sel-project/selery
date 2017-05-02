@@ -20,38 +20,22 @@
 module init;
 
 import std.algorithm : sort, canFind, clamp;
-import std.array : join, split, replace;
+import std.array : join, split;
 import std.ascii : newline;
-static import std.bitmanip;
 import std.conv : ConvException, to;
-import std.datetime : Clock;
 import std.file;
 import std.json;
 import std.path : dirSeparator;
 import std.process : executeShell;
-import std.random : uniform;
-import std.stdio : writecmd = write;
 import std.string;
-import std.uuid : randomUUID;
-import std.zlib : compress, UnCompress;
 
-import com.config;
 import com.format : Text, writeln;
 import com.path : Paths;
 import com.sel;
 
-enum size_t __GENERATOR__ = 34;
+enum size_t __GENERATOR__ = 41;
 
 void main(string[] args) {
-
-	mkdirRecurse(Paths.hidden ~ "plugin-loader" ~ dirSeparator ~ "src");
-
-	string[] data;
-
-	data ~= "// This file has been automatically generated and it shouldn't be edited";
-	data ~= "// Generator: " ~ to!string(__GENERATOR__);
-	data ~= "module pluginloader;";
-	data ~= "";
 
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 
@@ -77,15 +61,6 @@ void main(string[] args) {
 		}
 	}
 
-	// load plugins from config
-	auto config = Config(ConfigType.node, false, false);
-	config.load(false);
-	foreach(plugin ; config.plugins) {
-		if(plugin.type == JSON_TYPE.STRING) {
-			//TODO download from official repository
-		}
-	}
-
 	Info[string] info;
 	
 	foreach(string path, JSONValue value; plugs) {
@@ -96,6 +71,9 @@ void main(string[] args) {
 			info[index].json = value;
 			info[index].id = index[index.lastIndexOf("/")+1..$];
 			info[index].path = path;
+			if("target" in value && value["target"].type == JSON_TYPE.STRING) {
+				info[index].target = value["target"].str;
+			}
 			if("priority" in value && value["priority"].type == JSON_TYPE.STRING) {
 				info[index].priority = value["priority"].str;
 			}
@@ -117,7 +95,7 @@ void main(string[] args) {
 				}
 			}
 			if("version" in value && value["version"].type == JSON_TYPE.STRING) {
-				info[index].vers = value["version"].str;
+				//info[index].vers = value["version"].str;
 			}
 			if("main" in value && value["main"].type == JSON_TYPE.STRING) {
 				string main = value["main"].str;
@@ -174,61 +152,83 @@ void main(string[] args) {
 			}
 		}
 	}
-	
-	size_t count = 0;
-		
-	string imports = "";
-	string loads = "";
 
-	string paths = "";
+	foreach(target ; ["hub", "node"]) {
 
-	string[] fimports;
+		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src");
 
-	JSONValue[string] dub;
-	dub["sel-node"] = JSONValue(["path": "../../packages/node"]);
-
-	foreach(Info value ; ordered) {
-		if(value.active) {
-			count++;
-			dub[value.id] = ["path": "../../plugins/" ~ value.id];
-			JSONValue[string] deps = ["sel-node": JSONValue(["path": "../../packages/node"])];
-			auto dptr = "dependencies" in value.json;
-			if(dptr && dptr.type == JSON_TYPE.OBJECT) {
-				foreach(name, d; dptr.object) {
-					if(name != "sel-node") deps[name] = d;
-				}
-			}
-			write(value.path ~ "dub.json", JSONValue(["name": JSONValue(value.id), "targetType": JSONValue("library"), "dependencies": JSONValue(deps)]).toString());
-			auto lang = value.path ~ "lang" ~ dirSeparator;
-			if((value.main.length || value.api) && exists(lang) && lang.isDir) {
-				// use full path
-				version(Windows) {
-					lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
-				} else {
-					lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
-				}
-				if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
-				if(exists(lang)) lang = "`" ~ lang ~ "`";
-				else lang = "null";
-			} else {
-				lang = "null";
-			}
-			if(value.main.length) {
-				imports ~= "static import " ~ value.mod ~ ";" ~ newline;
-			}
-			loads ~= newline ~ "\t\tnew PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
+		version(Windows) {
+			mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/.dub");
+			write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
 		}
+	
+		size_t count = 0;
+			
+		string imports = "";
+		string loads = "";
+
+		string paths = "";
+
+		string[] fimports;
+
+		JSONValue[string] dub;
+		dub["sel-" ~ target] = JSONValue(["path": "../../../packages/" ~ target]);
+
+		foreach(Info value ; ordered) {
+			if(value.target == target && value.active) {
+				count++;
+				version(Windows) {
+					mkdirRecurse(value.path ~ "/.dub");
+					write(value.path ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
+				}
+				dub[value.id] = ["path": value.path.startsWith(Paths.plugins) ? "../../../plugins/" ~ value.id : value.path];
+				JSONValue[string] deps = ["sel-" ~ target: JSONValue(["path": "../../packages/" ~ target])];
+				auto dptr = "dependencies" in value.json;
+				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
+					foreach(name, d; dptr.object) {
+						if(name.length > 4 && name.startsWith("dub/")) deps[name[4..$]] = d;
+					}
+				}
+				write(value.path ~ "dub.json", JSONValue([
+					"name": JSONValue(value.id),
+					"targetType": JSONValue("library"),
+					"dependencies": JSONValue(deps),
+					"versions": JSONValue([capitalize(target)])
+				]).toString());
+				auto lang = value.path ~ "lang" ~ dirSeparator;
+				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
+					// use full path
+					version(Windows) {
+						lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
+					} else {
+						lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
+					}
+					if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
+					if(exists(lang)) lang = "`" ~ lang ~ "`";
+					else lang = "null";
+				} else {
+					lang = "null";
+				}
+				if(value.main.length) {
+					imports ~= "static import " ~ value.mod ~ ";";
+				}
+				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
+			}
+		}
+
+		if(paths.length > 2) paths = paths[0..$-2];
+
+		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader.d", "module plugindata;import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin, PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){ return [" ~ loads ~ "]; }");
+
+		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target ~ "-plugin-loader"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toString());
+
 	}
-
-	if(paths.length > 2) paths = paths[0..$-2];
-
-	write(Paths.hidden ~ "plugin-loader/src/pluginloader.d", data.join(newline) ~ newline ~ "import sel.plugin.plugin : Plugin, PluginOf;" ~ newline ~ newline ~ imports ~ newline ~ "Plugin[] loadPlugins() {" ~ newline ~ newline ~ "\treturn [" ~ loads ~ newline ~ "\t];" ~ newline ~ newline ~ "}" ~ newline);
-
-	write(Paths.hidden ~ "plugin-loader/dub.json", JSONValue(["name": JSONValue("plugin-loader"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toPrettyString());
 
 }
 
 struct Info {
+
+	public string target = "node";
 
 	public JSONValue json;
 
@@ -239,28 +239,13 @@ struct Info {
 	public size_t order;
 	public bool api;
 
-	public string name = "?";
+	public string name = "";
 	public string[] authors = [];
-	public string vers = "1.0.0";
+	public string vers = "~local";
 
 	public string id;
 	public string path;
 	public string mod;
 	public string main;
 
-}
-
-JSONValue readPluginArchive(ref ubyte[] file) {
-	if(file.length > 4) {
-		size_t length = std.bitmanip.read!uint(file);
-		if(length <= file.length) {
-			UnCompress uc = new UnCompress();
-			ubyte[] data = cast(ubyte[])uc.uncompress(file[0..length].dup);
-			data ~= cast(ubyte[])uc.flush();
-			auto json = parseJSON(cast(string)data);
-			file = file[length..$];
-			return json;
-		}
-	}
-	return JSONValue.init;
 }

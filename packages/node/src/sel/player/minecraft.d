@@ -49,7 +49,6 @@ import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.music : Instruments;
-import sel.world.particle : Particle;
 import sel.world.world : World;
 
 import sul.utils.var : varuint;
@@ -570,14 +569,12 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		}
 	}
 	
-	public override void sendParticle(Particle particle) {
-		//TODO
-		//this.sendPacket(new MinecraftParticle(particle));
-	}
-	
 	public override void sendBlocks(PlacedBlock[] blocks) {
+		log(blocks.length);
 		Types.BlockChange[][int][int] pc;
 		foreach(PlacedBlock block ; blocks) {
+			if(block.block is null) log("block is null");
+			else log(block);
 			auto position = block.position;
 			pc[position.x >> 4][position.z >> 4] ~= Types.BlockChange((position.x & 15) << 4 | (position.z & 15), position.y & 255, block.minecraftId << 4 | block.minecraftMeta);
 		}

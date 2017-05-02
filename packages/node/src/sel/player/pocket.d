@@ -53,7 +53,6 @@ import sel.util.lang;
 import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
-import sel.world.particle;
 import sel.world.world : World;
 
 import sul.utils.var : varuint;
@@ -704,13 +703,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendAnimation(Entity entity) {
 		this.sendPacket(new Play.Animate(Play.Animate.BREAKING, entity.id));
-	}
-	
-	public override void sendParticle(Particle particle) {
-		/*ushort evid = to!ushort(particle.peid >= 2000 ? particle.peid : particle.peid | constant!"LEVEL_EVENT_ADD_PARTICLE");
-		foreach(uint i ; 0..particle.count) {
-			this.sendLevelEvent(evid, particle.position, particle.pedata);
-		}*/
 	}
 
 	public override void sendBlocks(PlacedBlock[] blocks) {

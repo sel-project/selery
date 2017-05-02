@@ -51,6 +51,7 @@ import hub.util.analytics : GoogleAnalytics;
 import hub.util.block : Blocks;
 import hub.util.ip;
 import hub.util.log;
+import hub.util.plugin : Plugin;
 import hub.util.thread;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : HubInfo, NodeInfo;");
@@ -125,7 +126,7 @@ class Server {
 
 	private shared GoogleAnalytics analytics;
 
-	public shared this(bool lite, bool edu, bool realm) {
+	public shared this(bool lite, bool edu, bool realm, Plugin[] plugins) {
 
 		n_instance = this;
 

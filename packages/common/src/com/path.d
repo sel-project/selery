@@ -28,10 +28,14 @@ class Paths {
 	}
 
 	public static void load(string h) {
+		load(h, h ~ "res" ~ dirSeparator);
+	}
+
+	public static void load(string h, string r) {
 
 		home = h;
 
-		res = home ~ "res" ~ dirSeparator;
+		res = r;
 		langSystem = res ~ "lang" ~ dirSeparator ~ "system" ~ dirSeparator;
 		langMessages = res ~ "lang" ~ dirSeparator ~ "messages" ~ dirSeparator;
 		music = res ~ "music" ~ dirSeparator;

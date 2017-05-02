@@ -4,6 +4,7 @@
    targetType "executable"
    dependency "sel-common" path="../packages/common"
    dependency "sel-hub" path="../packages/hub"
+   dependency "hub-plugin-loader" path="../.sel/plugin-loader/hub"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -31,9 +32,9 @@ import com.path : Paths;
 import hub.server;
 import hub.settings;
 
-void main(string[] args) {
+import pluginloader : loadPlugins;
 
-	mkdirRecurse(Paths.hidden); //TODO move creation in com.path.Paths
+void main(string[] args) {
 
 	@property bool arg(string name) {
 		if(exists(Paths.hidden ~ name)) {
@@ -70,7 +71,7 @@ void main(string[] args) {
 
 	} else {
 
-		new shared Server(false, arg("edu"), arg("realm"));
+		new shared Server(false, arg("edu"), arg("realm"), loadPlugins());
 
 	}
 

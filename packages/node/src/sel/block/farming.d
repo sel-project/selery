@@ -73,7 +73,7 @@ class FertileTerrainBlock(bool hydrated) : MineableBlock {
 
 	public override void onUpdated(World world, BlockPosition position, Update update) {
 		Block up = world[position + [0, 1, 0]];
-		if(up.solid) world[position] = Blocks.dirt.id;
+		if(up.solid) world[position] = Blocks.dirt;
 		//TODO moved by piston
 		//TODO stepped
 	}

@@ -26,7 +26,7 @@ import sel.entity.noai : Lightning;
 import sel.event.event : Cancellable;
 import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent;
-import sel.item.enchanting;
+import sel.item.enchantment;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;

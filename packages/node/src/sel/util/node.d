@@ -16,30 +16,32 @@ module sel.util.node;
 
 import std.algorithm : canFind;
 
-import sel.server : server;
+import sel.server : Server;
 import sel.player.player : Player;
 
 /**
  * A node connected to the hub where players can be transferred to.
  */
 class Node {
+
+	private Server server;
 	
 	/**
 	 * Id of the node, given by the hub.
 	 */
-	uint hubId;
+	public immutable uint hubId;
 	
 	/**
 	 * Name of the node. It can only be one node with the same name
 	 * online at the same time.
 	 */
-	string name;
+	public const string name;
 	
 	/**
 	 * Indicates whether the can receive player when they first
 	 * connect or only when they are transferred.
 	 */
-	bool main;
+	public immutable bool main;
 	
 	/**
 	 * Indicates which games and which protocols the node does accept.
@@ -52,8 +54,9 @@ class Node {
 	 * ---
 	 */
 	uint[][ubyte] acceptedGames;
-	
-	public this(uint hubId, string name, bool main) {
+
+	public this(Server server, uint hubId, string name, bool main) {
+		this.server = server;
 		this.hubId = hubId;
 		this.name = name;
 		this.main = main;
@@ -69,7 +72,7 @@ class Node {
 	 * ---
 	 */
 	public inout @property @safe bool online() {
-		return server.nodeWithHubId(this.hubId) !is null;
+		return this.server.nodeWithHubId(this.hubId) !is null;
 	}
 	
 	/**
@@ -87,7 +90,7 @@ class Node {
 	 * This methos does the same as player.transfer(Node).
 	 */
 	public void transfer(Player player) {
-		server.transfer(player, this);
+		this.server.transfer(player, this);
 	}
 
 	/**
@@ -104,7 +107,7 @@ class Node {
 	 * ---
 	 */
 	public void sendMessage(ubyte[] payload) {
-		server.sendMessage(this, payload);
+		this.server.sendMessage(this, payload);
 	}
 
 	/// ditto
