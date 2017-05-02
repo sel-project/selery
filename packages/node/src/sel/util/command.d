@@ -81,7 +81,7 @@ class Command {
 					else static if(is(T == arguments) || is(T == string[])) return "args";
 					else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return "int";
 					else static if(is(T == float) || is(T == double) || is(T == real)) return "float";
-					else return T.stringof.toLower;
+					else return "string";
 				}
 			}
 			return "unknown";
@@ -304,14 +304,15 @@ template SnakeCaseEnum(T) if(is(T == enum)) {
 
 private string toSnakeCase(string str) {
 	string ret;
-	bool noupper = true;
+	bool noUpper = true;
 	foreach(c ; str) {
 		if(c >= 'A' && c <= 'Z') {
-			if(noupper) ret ~= c + 32;
+			if(noUpper) ret ~= c + 32;
 			else ret ~= "_" ~ cast(char)(c + 32);
-			noupper = true;
+			noUpper = true;
 		} else {
 			ret ~= c;
+			noUpper = false;
 		}
 	}
 	return ret;

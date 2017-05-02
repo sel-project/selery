@@ -223,7 +223,7 @@ class Block {
 	 * ---
 	 */
 	public pure nothrow @property @safe @nogc float fallDamageModifier() {
-		return 1;
+		return 1f;
 	}
 
 	/**
@@ -419,9 +419,9 @@ private bool compareBlockImpl(block_t[] blocks)(block_t block) {
 struct PlacedBlock {
 
 	private BlockPosition n_position;
-	private Block n_block;
+	private sul.blocks.Block n_block;
 
-	public @safe @nogc this(BlockPosition position, Block block) {
+	public @safe @nogc this(BlockPosition position, sul.blocks.Block block) {
 		this.n_position = position;
 		this.n_block = block;
 	}
@@ -430,7 +430,7 @@ struct PlacedBlock {
 		return this.n_position;
 	}
 
-	public pure nothrow @property @safe @nogc Block block() {
+	public pure nothrow @property @safe @nogc sul.blocks.Block block() {
 		return this.n_block;
 	}
 

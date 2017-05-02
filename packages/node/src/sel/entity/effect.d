@@ -27,6 +27,8 @@ public import sul.effects : Effects;
 
 class Effect {
 
+	public enum tick_t UNLIMITED = int.max / 20;
+
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker=null) {
 		switch(effect.minecraft.id) {
 			case Effects.speed.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);

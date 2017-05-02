@@ -76,7 +76,7 @@ public class ItemStorage {
 	}
 	
 	public Item function(ushort) getConstructor(size_t index) {
-		return this.indexes.length < index ? this.indexes[index] : null;
+		return index < this.indexes.length ? this.indexes[index] : null;
 	}
 	
 	public Item get(size_t index, ushort damage=0) {

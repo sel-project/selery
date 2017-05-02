@@ -607,7 +607,7 @@ abstract class Entity : EventListener!WorldEvent {
 				foreach(int z ; min.z.blockInto..max.z.blockInto+1) {
 					BlockPosition position = BlockPosition(x, to!int(this.position.y) - (to!int(this.position.y) == this.position.y ? 1 : 0), z);
 					auto block = this.world[position];
-					if(block.hasBoundingBox && !block.fluid) {
+					if(block.hasBoundingBox) {
 						block.box.update(position.entityPosition);
 						if(block.box.intersects(this.n_box)) {
 							this.n_on_ground = true;
@@ -625,7 +625,7 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 
 	protected @trusted void doFallDamage(float distance, float modifier=1) {
-		uint damage = to!int(round((distance - 3) * modifier));
+		int damage = to!int(round((distance - 3) * modifier));
 		if(damage > 0) {
 			if(this.last_puncher is null) {
 				this.attack(new EntityFallDamageEvent(this, damage));

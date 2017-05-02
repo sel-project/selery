@@ -12,11 +12,6 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/**
- * Server's class file and small utilities. Automaticaly imported with sel.plugin.
- * 
- * License: <a href="http://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">GNU General Lesser Public License v3</a>
- */
 module sel.server;
 
 import core.thread : getpid, Thr = Thread;
@@ -333,9 +328,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				this.handleGameInfo(game);
 			}
 
-			bool conflict = false;
-
-			// filter protocols and print warnings if necessary
+			// check protocols and print warnings if necessary
 			void check(ubyte type, string name, uint[] requested, uint[] supported) {
 				foreach(req ; requested) {
 					if(!supported.canFind(req)) {
@@ -346,10 +339,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 			check(PE, "Minecraft: Pocket Edition", this.n_settings.pocket.protocols, supportedPocketProtocols.keys);
 			check(PC, "Minecraft", this.n_settings.minecraft.protocols, supportedMinecraftProtocols.keys);
-
-			if(conflict) {
-				warning_log(translate("{warning.rebuild}", this.n_settings.language, []));
-			}
 
 			this.finishConstruction();
 
@@ -382,7 +371,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		log(translate("{startup.running}", this.n_settings.language, [Text.white ~ __VENDOR__ ~ Text.reset ~ " v" ~ Text.white ~ to!string(__VERSION__) ~ Text.reset, __DATE__ ~ " " ~ __TIME__, processor() ~ " (" ~ to!string(coresPerCPU) ~ " core" ~ (coresPerCPU() != 1 ? "s" : "") ~ ", " ~ to!string(threadsPerCPU()) ~ " thread" ~ (threadsPerCPU() != 1 ? "s" : "") ~ ")"]));
 		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullCodename ~ Text.white ~ " " ~ Software.fullVersion ~ Text.green ~ " API " ~ Text.white ~ "v" ~ to!string(Software.api)]));
 
 		version(linux) {} else version(Windows) {} else {
@@ -455,13 +443,12 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		foreach(plugin ; this.n_plugins) {
 			plugin.load();
-			auto args = [Text.green ~ plugin.name ~ Text.reset, Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset, Text.white ~ plugin.vers];
-			string s = "{startup.plugin.enabled}";
-			if(plugin.api && plugin.hasMain) s = "{startup.plugin.enabled.asapi}";
-			else if(plugin.api) s = "{startup.plugin.enabled.withapi}";
-			s = s.translate(this.n_settings.language, args);
-			s = s.replace("API", Text.lightPurple ~ "API" ~ Text.reset);
-			log(s);
+			auto args = [
+				Text.green ~ plugin.name ~ (plugin.api ? " + API" : "") ~ Text.reset,
+				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
+				Text.white ~ plugin.vers
+			];
+			log(translate("{startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : "") ~ "}", this.n_settings.language, args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
@@ -544,8 +531,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		}
 
-		//log("shutting down server");
-
 		this.handler.close();
 
 		// call @stop plugins
@@ -555,31 +540,16 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			}
 		}
 
-		//log("saving worlds");
-
 		// unload (an save) all worlds
 		foreach(World world ; this.m_worlds) {
-			
-			// save world
-			/*import sel.world.io : DefaultSel;
-			DefaultSel.writeWorld(world, Paths.worlds ~ dirSeparator ~ world.name);*/
-
+			//TODO save the world if there's a provider
 			this.removeWorld(world);
 		}
 
 		import std.file : exists, remove;
 		if(exists(Paths.hidden ~ "status")) remove(Paths.hidden ~ "status");
 
-		//log("saved");
-
-		log("Server stopped");
-
-		/*version(Windows) {
-			if(stoppedWithSignal) {
-				import std.stdio : write;
-				write("\n", executeShell("cd").output.strip, ">");
-			}
-		}*/
+		log(translate("{startup.stopped}", this.n_settings.language, []));
 
 		version(Windows) {
 			// forcefully kill this process to make sure also children

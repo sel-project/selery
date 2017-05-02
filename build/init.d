@@ -25,7 +25,7 @@ import std.ascii : newline;
 import std.conv : ConvException, to;
 import std.file;
 import std.json;
-import std.path : dirSeparator;
+import std.path : dirSeparator, buildNormalizedPath, absolutePath;
 import std.process : executeShell;
 import std.string;
 
@@ -63,43 +63,45 @@ void main(string[] args) {
 
 	Info[string] info;
 	
-	foreach(string path, JSONValue value; plugs) {
+	foreach(path, value; plugs) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
 		string index = path.split(dirSeparator)[$-2];
 		if(index !in info) {
-			info[index] = Info();
-			info[index].json = value;
-			info[index].id = index[index.lastIndexOf("/")+1..$];
-			info[index].path = path;
-			if("target" in value && value["target"].type == JSON_TYPE.STRING) {
-				info[index].target = value["target"].str;
+			auto plugin = Info();
+			plugin.json = value;
+			plugin.id = index[index.lastIndexOf("/")+1..$];
+			plugin.path = path;
+			auto target = "target" in value;
+			if(target && target.type == JSON_TYPE.STRING) {
+				plugin.target = target.str.toLower;
 			}
-			if("priority" in value && value["priority"].type == JSON_TYPE.STRING) {
-				info[index].priority = value["priority"].str;
-			}
-			if("priority" in value && value["priority"].type == JSON_TYPE.INTEGER) {
-				size_t i = value["priority"].integer.to!size_t;
-				info[index].prior = i > 10 ? 10 : (i < 0 ? 0 : i);
-			}
-			if("name" in value && value["name"].type == JSON_TYPE.STRING) {
-				info[index].name = value["name"].str;
-			}
-			if("author" in value && value["author"].type == JSON_TYPE.STRING) {
-				info[index].authors = [value["author"].str];
-			}
-			if("authors" in value && value["authors"].type == JSON_TYPE.ARRAY) {
-				foreach(author ; value["authors"].array) {
-					if(author.type == JSON_TYPE.STRING) {
-						info[index].authors ~= author.str;
-					}
+			auto priority = "priority" in value;
+			if(priority) {
+				if(priority.type == JSON_TYPE.STRING) {
+					immutable p = priority.str.toLower;
+					plugin.priority = p == "high" ? 10 : (p == "medium" || p == "normal" ? 5 : 1);
+				} else if(priority.type == JSON_TYPE.INTEGER) {
+					plugin.priority = clamp(priority.integer.to!size_t, 1, 10);
 				}
 			}
-			if("version" in value && value["version"].type == JSON_TYPE.STRING) {
-				//info[index].vers = value["version"].str;
+			auto name = "name" in value;
+			if(name && name.type == JSON_TYPE.STRING) {
+				plugin.name = name.str;
 			}
-			if("main" in value && value["main"].type == JSON_TYPE.STRING) {
-				string main = value["main"].str;
-				string[] spl = main.split(".");
+			auto authors = "authors" in value;
+			auto author = "author" in value;
+			if(authors && authors.type == JSON_TYPE.ARRAY) {
+				foreach(a ; authors.array) {
+					if(a.type == JSON_TYPE.STRING) {
+						plugin.authors ~= a.str;
+					}
+				}
+			} else if(author && author.type == JSON_TYPE.STRING) {
+				plugin.authors = [author.str];
+			}
+			auto main = "main" in value;
+			if(main && main.type == JSON_TYPE.STRING) {
+				string[] spl = main.str.split(".");
 				string[] m;
 				foreach(string s ; spl) {
 					if(s == s.idup.toLower) {
@@ -108,22 +110,21 @@ void main(string[] args) {
 						break;
 					}
 				}
-				info[index].mod = m.join(".");
-				info[index].main = main;
+				plugin.mod = m.join(".");
+				plugin.main = main.str;
 			}
-			info[index].api = exists(path ~ "api.d");
+			plugin.api = exists(path ~ "api.d");
+			info[index] = plugin;
 		}
 	}
 
-	// order
-	Info[] ordered = info.values;
-	foreach(ref inf ; ordered) {
-		inf.prior = inf.priority == "high" ? 10 : (inf.priority == "medium" ? 5 : clamp(inf.prior, 0, 10));
-	}
-	sort!"a.prior == b.prior ? a.id < b.id : a.prior > b.prior"(ordered);
+	auto ordered = info.values;
+
+	// sort by priority (or alphabetically)
+	sort!"a.priority == b.priority ? a.id < b.id : a.priority > b.priority"(ordered);
 
 	// control api version
-	foreach(ref Info inf ; ordered) {
+	foreach(ref inf ; ordered) {
 		if(inf.active) {
 			long[] api;
 			auto ptr = "api" in inf.json;
@@ -144,9 +145,7 @@ void main(string[] args) {
 					}
 				}
 			}
-			if(api.canFind(Software.api)) {
-				//writeln(Text.white ~ "Loading plugin " ~ Text.blue ~ inf.name ~ Text.white ~ " version " ~ Text.aqua ~ inf.vers);
-			} else {
+			if(!api.canFind(Software.api)) {
 				writeln(Text.white ~ "Cannot load plugin " ~ Text.red ~ inf.name ~ Text.white ~ " because it has a different target API than the one required by this version of " ~ Software.name);
 				inf.active = false;
 			}
@@ -195,30 +194,22 @@ void main(string[] args) {
 					"dependencies": JSONValue(deps),
 					"versions": JSONValue([capitalize(target)])
 				]).toString());
-				auto lang = value.path ~ "lang" ~ dirSeparator;
+				auto lang = value.path ~ "lang";
 				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
-					// use full path
-					version(Windows) {
-						lang = executeShell("cd " ~ lang ~ " && cd").output.strip;
-					} else {
-						lang = executeShell("cd " ~ lang ~ " && pwd").output.strip;
-					}
-					if(!lang.endsWith(dirSeparator)) lang ~= dirSeparator;
-					if(exists(lang)) lang = "`" ~ lang ~ "`";
-					else lang = "null";
+					lang = "`" ~ buildNormalizedPath(absolutePath(lang)) ~ dirSeparator ~ "`";
 				} else {
 					lang = "null";
 				}
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";";
 				}
-				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ lang ~ "),";
+				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ lang ~ "),";
 			}
 		}
 
 		if(paths.length > 2) paths = paths[0..$-2];
 
-		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader.d", "module plugindata;import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin, PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){ return [" ~ loads ~ "]; }");
+		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader.d", "module plugindata;import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
 
 		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target ~ "-plugin-loader"), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toString());
 
@@ -233,10 +224,8 @@ struct Info {
 	public JSONValue json;
 
 	public bool active = true;
-	public string priority = "low";
-	public size_t prior = 0;
+	public size_t priority = 1;
 
-	public size_t order;
 	public bool api;
 
 	public string name = "";

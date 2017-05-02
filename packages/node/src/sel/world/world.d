@@ -57,6 +57,8 @@ import sel.world.generator;
 import sel.world.map : Map;
 import sel.world.rules : Rules;
 
+static import sul.blocks;
+
 /**
  * Basic world.
  */
@@ -1192,7 +1194,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			// set as to update
 			//TODO move this in the chunk
-			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb ? *nb : null);
+			static if(sendUpdates) this.updated_blocks ~= PlacedBlock(position, nb ? (*nb).data : sul.blocks.Blocks.air);
 
 			// call the update function
 			if(this.updateBlocks) {

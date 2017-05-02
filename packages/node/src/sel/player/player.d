@@ -1307,7 +1307,7 @@ abstract class Player : Human, WorldCommandSender {
 			cancelblock = true;
 		}
 		if(cancelblock && this.is_breaking && this.world[this.breaking] !is null) {
-			this.sendBlock(PlacedBlock(this.breaking, this.world[this.breaking]));
+			this.sendBlock(PlacedBlock(this.breaking, this.world[this.breaking].data));
 			auto tile = this.world.tileAt(this.breaking);
 			if(tile !is null) {
 				this.sendTile(tile, cast(ITranslatable)tile ? true : false);
@@ -1333,7 +1333,7 @@ abstract class Player : Human, WorldCommandSender {
 		if(this.world.callCancellableIfExists!PlayerPlaceBlockEvent(this, this.inventory.held, tpos, tface) || !this.inventory.held.item.onPlaced(this, tpos, tface)) {
 			//no block placed!
 			//sends the block back
-			this.sendBlock(PlacedBlock(tpos.face(tface), this.world[tpos.face(tface)]));
+			this.sendBlock(PlacedBlock(tpos.face(tface), this.world[tpos.face(tface)].data));
 		}
 	}
 	

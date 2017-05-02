@@ -219,7 +219,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				}
 				return true;
 			} catch(CurlException) {
-				warning_log(translate("{warning.creativeFailed}", server.settings.language, ["pocket" ~ __protocol.to!string]));
+				warning_log(translate("{warning.creativeFailed}", server.settings.language, [supportedPocketProtocols[__protocol].join(", ")]));
 			}
 			ubyte[] encoded = packet.encode();
 			Compress c = new Compress(9);
@@ -707,7 +707,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	public override void sendBlocks(PlacedBlock[] blocks) {
 		foreach(PlacedBlock block ; blocks) {
-			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.pocketId, 176 | block.pocketMeta));
+			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.pocket.id, 176 | block.pocket.meta));
 		}
 		this.broken_by_this.length = 0;
 	}
