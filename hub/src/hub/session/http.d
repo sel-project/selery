@@ -36,13 +36,15 @@ import hub.constants;
 import hub.server : Server;
 import hub.settings;
 import hub.network.handler : HandlerThread;
-import hub.network.socket;
 import hub.util.log;
-import hub.util.thread : SafeThread;
 
-class HttpHandler : HandlerThread {
-	
-	private shared WebResource index;
+import vibe.http.server;
+import vibe.web.web;
+
+class HttpHandler {
+
+	private shared Server server;
+
 	private shared WebResource icon;
 	private shared string info;
 	private shared WebResource status;
@@ -58,43 +60,21 @@ class HttpHandler : HandlerThread {
 
 	private shared size_t sessionsCount;
 	
-	public this(shared Server server, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
-		with(server.settings) super(server, createSockets!TcpSocket("http", webAddresses, WEB_BACKLOG));
+	public this(shared Server server, shared string* socialJson) {
+		this.server = server;
 		this.socialJson = socialJson;
 		this.pocketPort = pocketPort;
 		this.minecraftPort = minecraftPort;
-		(cast(shared)this).reload();
+		this.reload();
 	}
 
-	protected override void listen(shared Socket sharedSocket) {
-		Socket socket = cast()sharedSocket;
-		while(true) {
-			Socket client = socket.accept();
-			client.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(WEB_TIMEOUT));
-			this.handleClient(client);
-		}
-	}
-
-	private void handleClient(Socket socket) {
-		new SafeThread({
-			char[] buffer = new char[WEB_BUFFER_SIZE];
-			auto recv = socket.receive(buffer);
-			if(recv > 0) {
-				this.receive(recv);
-				auto sent = socket.send(this.handleConnection(socket, Request.parse(buffer[0..recv].idup)).toString());
-				if(sent > 0) this.send(sent);
-			}
-			socket.close();
-		}).start();
-	}
-
-	public override shared void reload() {
+	public void reload() {
 		// from reload command
-		(cast()this).reloadInfoJson();
-		(cast()this).reloadWebResources();
+		this.reloadInfoJson();
+		this.reloadWebResources();
 	}
 	
-	public void reloadInfoJson() {
+	private void reloadInfoJson() {
 		auto settings = this.server.settings;
 		JSONValue[string] json, software, protocols;
 		with(Software) {
@@ -111,24 +91,9 @@ class HttpHandler : HandlerThread {
 		this.info = JSONValue(json).toString();
 	}
 	
-	public void reloadWebResources() {
+	private void reloadWebResources() {
 		
-		auto settings = this.server.settings;
-
-		this.website = "";
-		try { this.website = (cast()settings.social)["website"].str; } catch(JSONException) {}
-		
-		// index
-		string index = cast(string)read(Paths.res ~ "index.html");
-		index = index.replace("{DEFAULT_LANG}", settings.language[0..2]);
-		index = index.replace("{DISPLAY_NAME}", settings.displayName);
-		index = index.replace("{SOFTWARE}", Software.display);
-		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(this.minecraftPort) ~ "</p>") : "");
-		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (settings.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(this.pocketPort) ~ "</p>") : "");
-		if(settings.serverIp.length) index = index.replace("{IP}", settings.serverIp);
-		index = index.replace("{WEBSITE}", this.website);
-		this.index.uncompressed = index;
-		this.index.compress();
+		auto settings = cast()this.server.settings;
 		
 		// icon.png
 		if(exists(Paths.resources ~ settings.icon)) {
@@ -147,7 +112,7 @@ class HttpHandler : HandlerThread {
 		
 	}
 	
-	public void reloadWebStatus(shared const Settings settings) {
+	private void reloadWebStatus(inout Settings settings) {
 		ubyte[] status = nativeToLittleEndian(server.onlinePlayers) ~ nativeToLittleEndian(server.maxPlayers);
 		static if(JSON_STATUS_SHOW_PLAYERS) {
 			foreach(player ; this.server.players) {
@@ -164,81 +129,67 @@ class HttpHandler : HandlerThread {
 		}
 		this.lastStatusUpdate = seconds;
 	}
-	
-	private Response handleConnection(Socket socket, Request request) {
-		if(!request.valid || request.path.length == 0 || "host" !in request.headers) return this.returnWebError(400, "Bad Request");
-		if(request.method != "GET") return this.returnWebError(405, "Method Not Allowed");
-		switch(decode(request.path[1..$])) {
-			case "":
-				auto response = Response(200, "OK", ["Content-Type": "text/html"]);
-				return this.returnWebResource(this.index, request, response);
-			case "info.json":
-				return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], this.info);
-			case "social.json":
-				return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], *this.socialJson);
-			case "status":
-				auto time = seconds;
-				if(time - this.lastStatusUpdate > JSON_STATUS_REFRESH_TIMEOUT) this.reloadWebStatus(server.settings);
-				auto response = Response(200, "OK", ["Content-Type": "application/octet-stream"], this.status.uncompressed);
-				if(this.status.isCompressed) {
-					response = this.returnWebResource(this.status, request, response);
-				}
-				return response;
-			case "icon.png":
-				if(this.icon.compressed !is null) {
-					auto response = Response(200, "OK", ["Content-Type": "image/png"]);
-					return this.returnWebResource(this.icon, request, response);
-				} else {
-					return Response(301, "Moved Permanently", ["Location": "//i.imgur.com/uxvZbau.png"]);
-				}
-			case "icon":
-				return Response(301, "Moved Permanently", ["Location": "/icon.png"]);
-			case Software.codenameEmoji:
-				return Response(418, "I'm a " ~ Software.codename.toLower, ["Content-Type": "text/html"], "<head><meta charset='UTF-8'/><style>span{font-size:128px}</style><script>function a(){document.body.innerHTML+='<span>" ~ Software.codenameEmoji ~ "</span>';setTimeout(a,Math.round(Math.random()*2500));}window.onload=a;</script></head>");
-			case "software":
-				return Response(301, "Moved Permanently", ["Location": "//" ~ Software.website]);
-			case "website":
-				if(this.website.length) {
-					return Response(301, "Moved Permanently", ["Location": "//" ~ this.website]);
-				} else {
-					return this.returnWebError(404, "Not Found");
-				}
-			case "style.css":
-				return this.returnWebResource(this.stylesheet, request, Response(200, "OK", ["Content-Type": "text/css"]));
-			default:
-				if(request.path.startsWith("/player/") && request.path.endsWith(".json")) {
-					try {
-						auto player = this.server.playerFromId(to!uint(request.path[8..$-5]));
-						if(player !is null) {
-							JSONValue[string] json;
-							json["name"] = JSONValue(player.username);
-							json["display"] = JSONValue(player.displayName);
-							json["version"] = JSONValue(player.game);
-							if(player.skin !is null) json["picture"] = JSONValue(player.skin.faceBase64);
-							json["world"] = JSONValue(["name": JSONValue(player.world.name), "dimension": JSONValue(player.dimension)]);
-							return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], JSONValue(json).toString());
-						}
-					} catch(Exception) {}
-					return Response(404, "Not Found", ["Content-Type": "application/json; charset=utf-8"], "{\"error\":\"player not found\"}");
-				}
-				return this.returnWebError(404, "Not Found");
-		}
+
+	public void index(HTTPServerResponse res) {
+		auto settings = cast()this.server.settings.config;
+		auto website = ""; //TODO
+		res.render!("index.dt", settings, Software, website, supportedMinecraftProtocols, supportedPocketProtocols);
 	}
-	
-	private Response returnWebResource(ref shared WebResource resource, Request request, Response response) {
-		auto ae = "accept-encoding" in request.headers;
-		if(ae && ((*ae).indexOf(WEB_COMPRESSION_FORMAT) >= 0 || *ae == "*")) {
-			response.headers["Content-Encoding"] = WEB_COMPRESSION_FORMAT;
-			response.content = resource.compressed;
+
+	@path("/index.html") getIndex(HTTPServerResponse res) {
+		res.redirect("/", 301);
+	}
+
+	@path("/info.json") getInfo(HTTPServerResponse res) {
+		res.writeBody(this.info, "application/json; charset=utf-8");
+	}
+
+	@path("/social.json") getSocial(HTTPServerResponse res) {
+		res.writeBody(*this.socialJson, "application/json; charset=utf-8");
+	}
+
+	@path("/status") getStatus(HTTPServerResponse res) {
+		if(seconds - this.lastStatusUpdate > JSON_STATUS_REFRESH_TIMEOUT) this.reloadWebStatus(cast()server.settings);
+		res.writeBody(this.status.uncompressed, "application/octet-stream");
+	}
+
+	@path("/icon.png") getIcon(HTTPServerResponse res) {
+		if(this.icon.compressed !is null) {
+			res.writeBody(this.icon.uncompressed, "image/png");
 		} else {
-			response.content = resource.uncompressed;
+			res.redirect("//i.imgur.com/uxvZbau.png", 301);
 		}
-		return response;
 	}
-	
-	private Response returnWebError(uint error, string description) {
-		string ed = to!string(error) ~ " " ~ description;
-		return Response(error, description, ["Content-Type": "text/html"], "<head><title>" ~ ed ~ "</title></head><body><center><h1>" ~ ed ~ "</h1></center><hr><center>" ~ Software.display ~ "</center></body>");
+
+	@path("/icon") getIconRedirect(HTTPServerResponse res) {
+		res.redirect("/icon.png", 301);
+	}
+
+	@path("/" ~ Software.codenameEmoji) getCodenameEmoji(HTTPServerResponse res) {
+		res.statusCode = 418;
+		res.statusPhrase = "It's a " ~ Software.codenameEmoji;
+		res.writeBody("<head><meta charset='UTF-8'/><style>span{font-size:128px}</style><script>function a(){document.body.innerHTML+='<span>" ~ Software.codenameEmoji ~ "</span>';setTimeout(a,Math.round(Math.random()*2500));}window.onload=a;</script></head>", "text/html; charset=utf-8");
+	}
+
+	@path("/software") getSoftware(HTTPServerResponse res) {
+		res.redirect("//" ~ Software.website, 301);
+	}
+
+	@path("/player/:id") getPlayer(HTTPServerResponse res, uint _id) {
+		auto player = this.server.playerFromId(_id);
+		if(player !is null) {
+			JSONValue[string] json;
+			json["name"] = JSONValue(player.username);
+			json["display"] = JSONValue(player.displayName);
+			json["version"] = JSONValue(player.game);
+			if(player.skin !is null) json["picture"] = JSONValue(player.skin.faceBase64);
+			json["world"] = JSONValue(["name": JSONValue(player.world.name), "dimension": JSONValue(player.dimension)]);
+			res.writeBody(JSONValue(json).toString(), "application/json; charset=utf-8");
+		} else {
+			res.statusCode = 404;
+			res.statusPhrase = "Not Found";
+			res.writeBody("{\"error\":\"Player not found\"}", "application/json; charset=utf-8");
+		}
 	}
 
 }

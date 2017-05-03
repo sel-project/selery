@@ -35,7 +35,6 @@ import com.sel;
 import nbt.stream;
 import nbt.tags;
 
-import sel.server : server;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect, Effects;
@@ -218,14 +217,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					packet.slots ~= slot;
 				}
 				return true;
-			} catch(CurlException) {
-				warning_log(translate("{warning.creativeFailed}", server.settings.language, [supportedPocketProtocols[__protocol].join(", ")]));
-			}
-			ubyte[] encoded = packet.encode();
-			Compress c = new Compress(9);
-			creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
-			creative_inventory ~= cast(ubyte[])c.flush();
+			} catch(CurlException) {}
 			if(packet.slots.length) {
+				ubyte[] encoded = packet.encode();
+				Compress c = new Compress(9);
+				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
+				creative_inventory ~= cast(ubyte[])c.flush();
 				mkdirRecurse(Paths.hidden ~ "creative");
 				write(cached, creative_inventory);
 				return true;
@@ -659,7 +656,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendJoinPacket() {
 		//TODO send thunders
-		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !server.settings.realm, false, new Types.Rule[0], Software.display, server.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
 	}
 	
 	public override void sendTimePacket() {

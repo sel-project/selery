@@ -6,6 +6,7 @@
 *.o
 *.lib
 *.a
+*.dll
 *.selections.json
 .dub
 .sel

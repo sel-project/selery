@@ -58,7 +58,7 @@ mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : Remote
 final class RconHandler : HandlerThread {
 	
 	public this(shared Server server) {
-		with(server.settings) super(server, createSockets!TcpSocket("rcon", rconAddresses, RCON_BACKLOG));
+		with(server.settings) super(server, createSockets!TcpSocket("rcon", rconAddresses, rconPort, RCON_BACKLOG));
 	}
 	
 	protected override void listen(shared Socket sharedSocket) {

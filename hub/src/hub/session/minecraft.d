@@ -69,7 +69,7 @@ class MinecraftHandler : HandlerThread {
 	private __gshared Condition condition;
 	
 	public this(shared Server server, shared string* socialJson, bool delegate(string ip) acceptIp, shared ubyte[]* legacyStatus, shared ubyte[]* legacyStatusOld) {
-		with(server.settings) super(server, createSockets!TcpSocket("minecraft", minecraft.addresses, MINECRAFT_BACKLOG));
+		with(server.settings) super(server, createSockets!TcpSocket("minecraft", minecraft.addresses, minecraft.port, MINECRAFT_BACKLOG));
 		this.socialJson = socialJson;
 		this.acceptIp = acceptIp;
 		this.legacyStatus = legacyStatus;
@@ -244,7 +244,7 @@ class MinecraftQueryHandler : UnconnectedHandler {
 	private shared ubyte[]* shortQuery, longQuery;
 	
 	public this(shared Server server, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("minecraftQuery", minecraft.addresses, -1), 15);
+		with(server.settings) super(server, createSockets!UdpSocket("minecraftQuery", minecraft.addresses, minecraft.port, -1), 15);
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
 		this.longQuery = longQuery;

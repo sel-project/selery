@@ -33,6 +33,7 @@ struct Config {
 		string motd;
 		bool onlineMode;
 		string[] addresses;
+		ushort port;
 		uint[] protocols;
 
 		alias enabled this;
@@ -87,11 +88,15 @@ struct Config {
 
 	string[] panelAddresses;
 
+	ushort panelPort = 19134;
+
 	bool externalConsole;
 
 	string externalConsolePassword;
 
 	string[] externalConsoleAddresses;
+
+	ushort externalConsolePort = 19134;
 
 	bool externalConsoleRemoteCommands = true;
 
@@ -105,9 +110,13 @@ struct Config {
 
 	string[] rconAddresses;
 
+	ushort rconPort = 25575;
+
 	bool web;
 
 	string[] webAddresses;
+
+	ushort webPort = 80;
 
 	string googleAnalytics;
 
@@ -196,7 +205,8 @@ struct Config {
 			file ~= "\t\t\"enabled\": true," ~ newline;
 			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
 			file ~= "\t\t\"online-mode\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0:25565\"]," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
+			file ~= "\t\t\"port\": 25565," ~ newline;
 			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestMinecraftProtocols) ~ newline;
 			file ~= "\t}," ~ newline;
 		}
@@ -205,7 +215,8 @@ struct Config {
 			file ~= "\t\t\"enabled\": true," ~ newline;
 			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
 			file ~= "\t\t\"online-mode\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0:19132\"]," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
+			file ~= "\t\t\"port\": 19132," ~ newline;
 			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestPocketProtocols);
 			if(edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": false";
 			file ~= newline ~ "\t}," ~ newline;
@@ -242,7 +253,8 @@ struct Config {
 			file ~= "\t\"external-console\": {" ~ newline;
 			file ~= "\t\t\"enabled\": false," ~ newline;
 			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0:19134\"]," ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
+			file ~= "\t\t\"port\": 19134," ~ newline;
 			file ~= "\t\t\"remote-commands\": true," ~ newline;
 			file ~= "\t\t\"accept-websockets\": true," ~ newline;
 			file ~= "\t\t\"hash-algorithm\": \"sha256\"" ~ newline;
@@ -252,13 +264,15 @@ struct Config {
 			file ~= "\t\"rcon\": {" ~ newline;
 			file ~= "\t\t\"enabled\": false," ~ newline;
 			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0:25575\"]" ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
+			file ~= "\t\t\"port\": 25575" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type != ConfigType.node && !realm) {
 			file ~= "\t\"web\": {" ~ newline;
 			file ~= "\t\t\"enabled\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"*:80\"]" ~ newline;
+			file ~= "\t\t\"addresses\": [\"0.0.0.0\", \"::\"]," ~ newline;
+			file ~= "\t\t\"port\": 80" ~ newline;
 			file ~= "\t}," ~ newline;
 		}
 		if(type == ConfigType.hub) {
@@ -339,11 +353,13 @@ struct Config {
 			set!"minecraft.motd"(this.minecraft.motd);
 			//set!"minecraft.online-mode"(this.minecraft.onlineMode);
 			set!"minecraft.addresses"(this.minecraft.addresses);
+			set!"minecraft.port"(this.minecraft.port);
 			set!"minecraft.accepted-protocols"(this.minecraft.protocols);
 			set!"pocket.enabled"(this.pocket.enabled);
 			set!"pocket.motd"(this.pocket.motd);
 			//set!"pocket.online-mode"(this.pocket.onlineMode);
 			set!"pocket.addresses"(this.pocket.addresses);
+			set!"pocket.port"(this.pocket.port);
 			set!"pocket.accepted-protocols"(this.pocket.protocols);
 			set!"pocket.allow-vanilla-players"(this.allowVanillaPlayers);
 			set!"max-players"(this.maxPlayers);
@@ -366,17 +382,21 @@ struct Config {
 			set!"panel.enabled"(this.panel);
 			set!"panel.users"(this.panelUsers);
 			set!"panel.addresses"(this.panelAddresses);
+			set!"panel.port"(this.panelPort);
 			set!"external-console.enabled"(this.externalConsole);
 			set!"external-console.password"(this.externalConsolePassword);
 			set!"external-console.addresses"(this.externalConsoleAddresses);
+			set!"external-console-port"(this.externalConsolePort);
 			set!"external-console.remote-commands"(this.externalConsoleRemoteCommands);
 			set!"external-console.accept-websockets"(this.externalConsoleAcceptWebsockets);
 			set!"external-console.hash-algorithm"(this.externalConsoleHashAlgorithm);
 			set!"rcon.enabled"(this.rcon);
 			set!"rcon.password"(this.rconPassword);
 			set!"rcon.addresses"(this.rconAddresses);
+			set!"rcon.port"(this.rconPort);
 			set!"web.enabled"(this.web);
 			set!"web.addresses"(this.webAddresses);
+			set!"web.port"(this.webPort);
 			set!"hncom.accepted-addresses"(this.acceptedNodes);
 			set!"hncom.password"(this.hncomPassword);
 			set!"hncom.max"(this.maxNodes);

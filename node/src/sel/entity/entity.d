@@ -25,7 +25,7 @@ import std.uuid : UUID;
 import com.sel;
 import com.util : safe, call;
 
-import sel.server : server;
+import sel.server : Server;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;
@@ -103,9 +103,11 @@ abstract class Entity : EventListener!WorldEvent {
 	public this(World world, EntityPosition position) {
 		//assert(world !is null, "World can't be null");
 		this.id = reserve();
-		this.n_uuid = server.nextUUID;
 		this.n_world = world;
-		if(world !is null) this.rules = this.world.rules.dup;
+		if(world !is null) {
+			this.rules = this.world.rules.dup;
+			this.n_uuid = world.server.nextUUID;
+		}
 		this.m_position = this.m_last = this.oldposition = position;
 		this.m_motion = EntityPosition(0, 0, 0);
 		this.highestPoint = this.position.y;
@@ -201,6 +203,10 @@ abstract class Entity : EventListener!WorldEvent {
 	 */
 	public pure nothrow @property @safe @nogc World world() {
 		return this.n_world;
+	}
+
+	public final pure nothrow @property @safe @nogc Server server() {
+		return this.world.server;
 	}
 
 	// ticks the entity

@@ -54,6 +54,9 @@ import hub.util.log;
 import hub.util.plugin : Plugin;
 import hub.util.thread;
 
+import vibe.core.core;
+import vibe.core.log;
+
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : HubInfo, NodeInfo;");
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
@@ -129,8 +132,8 @@ class Server {
 	public shared this(bool lite, bool edu, bool realm, Plugin[] plugins) {
 
 		n_instance = this;
-
-		if(!exists(Paths.resources)) mkdir(Paths.resources);
+		
+		setLogLevel(LogLevel.warn);
 
 		this.n_whitelist = List(this, "whitelist");
 		this.n_blacklist = List(this, "blacklist");
@@ -141,7 +144,7 @@ class Server {
 
 		version(Windows) {
 			import std.process : executeShell;
-			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (__oneNode ? "" : "hub ^| ") ~ Software.display);
+			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.display);
 		}
 
 		Lang.init([this.n_settings.language], [Paths.langSystem]);
@@ -256,39 +259,45 @@ class Server {
 		}
 
 		this.started = milliseconds;
-		int last_online, last_max = this.maxPlayers;
-		size_t next_analytics = 0;
-		while(true) {
-			uint online = this.onlinePlayers.to!uint;
-			if(online != last_online || this.maxPlayers != last_max) {
-				last_online = online;
-				last_max = this.maxPlayers;
-				foreach(node ; this.nodes) {
-					node.updatePlayers(last_online, last_max);
+
+		new Thread({
+			int last_online, last_max = this.maxPlayers;
+			size_t next_analytics = 0;
+			while(true) {
+				uint online = this.onlinePlayers.to!uint;
+				if(online != last_online || this.maxPlayers != last_max) {
+					last_online = online;
+					last_max = this.maxPlayers;
+					foreach(node ; this.nodes) {
+						node.updatePlayers(last_online, last_max);
+					}
 				}
-			}
-			auto sent = cast(uint)(this.n_traffic.sent.to!float / 5f);
-			auto recv = cast(uint)(this.n_traffic.received.to!float / 5f);
-			if(this.externalConsoles.length) {
-				auto uptime = this.uptime;
-				auto nodeStats = this.externalConsoleNodeStats;
-				foreach(externalConsole ; this.externalConsoles) {
-					externalConsole.updateStats(online, last_max, uptime, sent, recv, nodeStats);
+				auto sent = cast(uint)(this.n_traffic.sent.to!float / 5f);
+				auto recv = cast(uint)(this.n_traffic.received.to!float / 5f);
+				if(this.externalConsoles.length) {
+					auto uptime = this.uptime;
+					auto nodeStats = this.externalConsoleNodeStats;
+					foreach(externalConsole ; this.externalConsoles) {
+						externalConsole.updateStats(online, last_max, uptime, sent, recv, nodeStats);
+					}
 				}
-			}
-			this.n_upload = sent;
-			this.n_download = recv;
-			this.n_traffic.reset();
-			if(this.analytics !is null) {
-				if(++next_analytics == 12) {
-					next_analytics = 0;
-					this.analytics.updatePlayers(this.players);
+				this.n_upload = sent;
+				this.n_download = recv;
+				this.n_traffic.reset();
+				if(this.analytics !is null) {
+					if(++next_analytics == 12) {
+						next_analytics = 0;
+						this.analytics.updatePlayers(this.players);
+					}
+					this.analytics.sendRequests();
 				}
-				this.analytics.sendRequests();
+				Thread.sleep(dur!"msecs"(5000));
+				this.blocks.remove(5);
 			}
-			Thread.sleep(dur!"msecs"(5000));
-			this.blocks.remove(5);
-		}
+		}).start();
+
+		// start vibe
+		runApplication();
 
 	}
 

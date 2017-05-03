@@ -38,7 +38,6 @@ import com.sel;
 import com.util : milliseconds, call;
 
 import sel.hncom : Handler;
-import sel.server : server;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.blocks : Blocks;
 import sel.block.tile : Tile, Container;
@@ -62,16 +61,8 @@ import sel.util.log;
 import sel.util.node : Node;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
-import sel.world.world : Rules, World;
-
-enum Gamemode : ubyte {
-	
-	survival = 0, s = 0,
-	creative = 1, c = 1,
-	adventure = 2, a = 2,
-	spectator = 3, sp = 3,
-	
-}
+import sel.world.rules : Rules, Gamemode;
+import sel.world.world : World;
 
 /**
  * Variables unique for every player that can be used
@@ -279,7 +270,7 @@ abstract class Player : Human, WorldCommandSender {
 	public final @property @trusted string displayName(string displayName) {
 		//TODO update MinecraftPlayer's list
 		this.n_display_name = displayName;
-		server.updatePlayerDisplayName(this);
+		this.server.updatePlayerDisplayName(this);
 		return this.displayName;
 	}
 	
@@ -311,7 +302,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * the node.
 	 */
 	public nothrow @property @safe @nogc bool online() {
-		return server.playerWithHubId(this.hubId) !is null;
+		return this.server.playerWithHubId(this.hubId) !is null;
 	}
 	
 	/**
@@ -342,7 +333,7 @@ abstract class Player : Human, WorldCommandSender {
 	 */
 	public @property @trusted string lang(string lang) {
 		// check if it's valid (call the event and notify the hub)
-		if(server.changePlayerLanguage(this, lang)) {
+		if(this.server.changePlayerLanguage(this, lang)) {
 			this.m_lang = lang;
 			// update translatable signs in the loaded chunks
 			foreach(ChunkPosition position ; this.loaded_chunks) {
@@ -390,9 +381,9 @@ abstract class Player : Human, WorldCommandSender {
 	
 	public void handleUpdateLatency(HncomPlayer.UpdateLatency packet) {
 		immutable old = this.n_latency;
-		this.n_latency = packet.latency + server.hubLatency;
+		this.n_latency = packet.latency + this.server.hubLatency;
 		if(old != this.n_latency) {
-			server.callEventIfExists!PlayerLatencyUpdatedEvent(this);
+			this.server.callEventIfExists!PlayerLatencyUpdatedEvent(this);
 			this.sendUpdateLatency([this]);
 			foreach(player ; this.world.playersList) player.sendUpdateLatency([this]);
 		}
@@ -402,7 +393,7 @@ abstract class Player : Human, WorldCommandSender {
 		immutable old = this.n_packet_loss;
 		this.n_packet_loss = packet.packetLoss;
 		if(old != this.n_packet_loss) {
-			server.callEventIfExists!PlayerPacketLossUpdatedEvent(this);
+			this.server.callEventIfExists!PlayerPacketLossUpdatedEvent(this);
 		}
 	}
 
@@ -548,7 +539,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public override void sendMessage(string message, string[] args=[]) {
-		this.sendChatMessage(translate(message, this.lang, args, server.variables, this.variables));
+		this.sendChatMessage(translate(message, this.lang, args, this.server.variables, this.variables));
 	}
 
 	/**
@@ -564,7 +555,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public void sendTip(string message, string[] args=[]) {
-		this.sendTipMessage(translate(message, this.lang, args, server.variables, this.variables));
+		this.sendTipMessage(translate(message, this.lang, args, this.server.variables, this.variables));
 	}
 
 	/// ditto
@@ -587,8 +578,8 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public Title title(Title title, string[] args=[]) {
-		if(title.title.length) title.title = translate(title.title, this.lang, args, server.variables, this.variables);
-		if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args, server.variables, this.variables);
+		if(title.title.length) title.title = translate(title.title, this.lang, args, this.server.variables, this.variables);
+		if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args, this.server.variables, this.variables);
 		this.sendTitleMessage(title);
 		return title;
 	}
@@ -718,7 +709,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
 	public void disconnect(string reason="disconnect.closed", string[] args=[], bool translation=true) {
-		server.disconnect(this, reason.translate(this.lang, args, server.variables, this.variables), translation);
+		this.server.disconnect(this, reason.translate(this.lang, args, this.server.variables, this.variables), translation);
 	}
 
 	/// ditto
@@ -748,7 +739,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * instead, using ip and port as parameters and not a node name.
 	 */
 	public void transfer(inout Node node) {
-		server.transfer(this, node);
+		this.server.transfer(this, node);
 	}
 
 	/**
@@ -1678,8 +1669,12 @@ mixin template generateHandlers(E...) {
  */
 class Puppet : Player {
 	
-	public this(World world, EntityPosition position, string name, Skin skin, UUID uuid=server.nextUUID) {
+	public this(World world, EntityPosition position, string name, Skin skin, UUID uuid) {
 		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), "", 0, name, name, skin, uuid, "", 0, 0);
+	}
+	
+	public this(World world, EntityPosition position, string name, Skin skin) {
+		this(world, position, name, skin, world.server.nextUUID);
 	}
 	
 	public this(World world, EntityPosition position, string name) {

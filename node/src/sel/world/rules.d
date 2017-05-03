@@ -20,7 +20,23 @@ import std.typecons : Tuple, tuple;
 import com.config : Config;
 import com.path : Paths;
 
-import sel.world.world : Gamemode, Difficulty;
+enum Gamemode : ubyte {
+
+	survival = 0, s = 0,
+	creative = 1, c = 1,
+	adventure = 2, a = 2,
+	spectator = 3, sp = 3,
+
+}
+
+enum Difficulty : ubyte {
+
+	peaceful = 0,
+	easy = 1,
+	normal = 2,
+	hard = 3,
+
+}
 
 struct Rules {
 

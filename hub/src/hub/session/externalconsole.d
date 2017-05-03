@@ -83,7 +83,7 @@ class ExternalConsoleHandler : HandlerThread {
 			default:
 				throw new Exception("Unsopported hash: " ~ server.settings.externalConsoleHashAlgorithm);
 		}
-		with(server.settings) super(server, createSockets!TcpSocket("externalConsole", externalConsoleAddresses, EXTERNAL_CONSOLE_BACKLOG));
+		with(server.settings) super(server, createSockets!TcpSocket("externalConsole", externalConsoleAddresses, externalConsolePort, EXTERNAL_CONSOLE_BACKLOG));
 	}
 	
 	protected override void listen(shared Socket sharedSocket) {

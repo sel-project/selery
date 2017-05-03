@@ -1,12 +1,12 @@
-<!DOCTYPE html>
-<html lang="{DEFAULT_LANG}">
-	<head>
-		<title>{DISPLAY_NAME}</title>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-		<link rel="icon" type="image/png" href="/icon.png" />
-		<link href="//db.onlinewebfonts.com/c/bf3f245b7cd53caea0cb07d265a64adc?family=Minecraftia" rel="stylesheet" type="text/css" />
-		<style>
+doctype html
+html(lang='#{settings.language}')
+	head
+		title #{settings.displayName}
+		meta(charset='UTF-8')
+		meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
+		link(rel='icon', type='image/png', href='/icon.png')
+		link(href='//db.onlinewebfonts.com/c/bf3f245b7cd53caea0cb07d265a64adc?family=Minecraftia', rel='stylesheet', type='text/css')
+		:css
 			body {
 				background: url(http://i.imgur.com/dlwRr20.png) center center;
 				font-family: 'Minecraftia', Monospace;
@@ -42,8 +42,7 @@
 				margin-top: 16px;
 				font-size: 24px;
 			}
-		</style>
-		<script>
+		:javascript
 			var accepted_pe, accepted_pc;
 			var online_mode;
 			window.addEventListener("load", function(){
@@ -58,8 +57,7 @@
 				};
 				info.send();
 			});
-		</script>
-		<script>
+		:javascript
 			const UPDATE_TIMEOUT = 5000;
 			const UNLIMITED = 4294967296;
 			var showed_player = null;
@@ -205,38 +203,28 @@
 				}
 				return f;
 			}
-		</script>
-	</head>
-	<body>
-		<header>
-			<div class="title">{DISPLAY_NAME}</div>
-			<div class="subtitle">{SOFTWARE}</div>
-			<div id="player_name"></div>
-		</header>
-		<section class="icons">
-			<img id="icon" src="/icon.png" />
-			<div id="player_pic" style="display:none"></div>
-		</section>
-		<section>
-			<span id="status">Loading</span>
-		</section>
-		<div id="server">
-			<section>
-				{PC}
-				{PE}
-			</section>
-			<section>
-				<p id="players"></p>
-				<p id="players_list"></p>
-			</section>
-			<section>
-				{WEBSITE}
-			</section>
-		</div>
-		<div id="player" style="display:none">
-			<section>
-				<p id="version">Minecraft 1.10.2</p>
-			</section>
-		</div>
-	</body>
-</html>
+	body
+		header
+			div.title #{settings.displayName}
+			div.subtitle #{Software.display}
+			div.player_name
+		section.icons
+			img#icon(src='/icon.png')
+			div#player_pic(style='display:none')
+		section
+			span#status Loading
+		div#server
+			section
+				- if(settings.minecraft)
+					p Minecraft #{supportedMinecraftProtocols[settings.minecraft.protocols[$-1]][0]}
+				- if(settings.pocket)
+					p Minecraft: Pocket Edition #{supportedPocketProtocols[settings.pocket.protocols[$-1]][0]}
+			section
+				p#players
+				p#players_list
+			- if(website.length)
+				section
+					p #{website}
+		div#player(style='display:none')
+			section
+				p#version Minecraft 1.10.2

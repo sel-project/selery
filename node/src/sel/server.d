@@ -64,21 +64,13 @@ import sel.util.task;
 import sel.world.rules : Rules;
 import sel.world.world : World;
 
-/*mixin((){
+mixin((){
 	string imports;
-	foreach(mod ; ["util", "types", "login", "status", "player", "world", "tracking"]) {
+	foreach(mod ; ["util", "types", "login", "status", "player", "world"]) {
 		imports ~= "import Hncom" ~ capitalize(mod) ~ " = sul.protocol.hncom" ~ to!string(Software.hncom) ~ "." ~ mod ~ ";";
 	}
 	return imports;
-}());*/
-
-// mixin causes errors!
-import HncomUtil = sul.protocol.hncom2.util;
-import HncomTypes = sul.protocol.hncom2.types;
-import HncomLogin = sul.protocol.hncom2.login;
-import HncomStatus = sul.protocol.hncom2.status;
-import HncomPlayer = sul.protocol.hncom2.player;
-import HncomWorld = sul.protocol.hncom2.world;
+}());
 
 alias ServerVariables = Variables!("server", string, "name", size_t, "ticks", size_t, "online", size_t, "max");
 
@@ -354,6 +346,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			game.protocols = info.game.protocols;
 			game.motd = info.motd;
 			game.onlineMode = info.onlineMode;
+			game.port = info.port;
 		}
 		if(info.game.type == HncomTypes.Game.POCKET) {
 			set(this.n_settings.pocket);
@@ -413,8 +406,14 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		// load creative inventories
 		foreach(immutable protocol ; SupportedPocketProtocols) {
+			string[] failed;
 			if(this.settings.pocket.protocols.canFind(protocol)) {
-				mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory();");
+				if(!mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory()")) {
+					failed ~= supportedPocketProtocols[protocol];
+				}
+			}
+			if(failed.length) {
+				warning_log("{warning.creativeFailed}", this.n_settings.language, [failed.join(", ")]);
 			}
 		}
 
@@ -1014,7 +1013,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 */
 	public T addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
 		T world = new T(args);
-		World.startWorld(world, null);
+		World.startWorld(this, world, null);
 		this.m_worlds ~= cast(World)world; // default if there are no worlds
 		this.sendPacket(new HncomWorld.Add(
 			world.id, world.name, world.dimension.pe,

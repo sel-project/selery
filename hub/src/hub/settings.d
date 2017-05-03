@@ -19,7 +19,7 @@ import std.ascii : newline;
 import std.base64 : Base64;
 import std.conv : to, ConvException;
 import std.datetime : Clock;
-import std.file : write, read, exists, mkdir, tempDir;
+import std.file : write, read, exists, mkdir, tempDir, isFile;
 import std.path : dirSeparator;
 import std.process : environment;
 import std.random : uniform;
@@ -101,7 +101,9 @@ struct Settings {
 
 		// icon
 		//TODO check file header to match PNG and size (64x64)
-		if(exists(Paths.home ~ this.config.icon)) this.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.home ~ this.config.icon)).idup;
+		if(exists(Paths.home ~ this.config.icon) && isFile(Paths.home ~ this.config.icon)) {
+			this.iconData = "data:image/png;base64," ~ Base64.encode(cast(ubyte[])read(Paths.home ~ this.config.icon)).idup;
+		}
 
 		string[] available = availableLanguages;
 		string[] accepted;

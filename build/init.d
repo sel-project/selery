@@ -1,6 +1,7 @@
 /+ dub.sdl:
    name "init"
    authors "sel-project"
+   targetType "executable"
    dependency "common" path="../common"
 +/
 /*
@@ -173,7 +174,7 @@ void main(string[] args) {
 		JSONValue[string] dub;
 		dub["sel-server:" ~ target] = JSONValue(["path": "../../../"]);
 
-		foreach(Info value ; ordered) {
+		foreach(ref value ; ordered) {
 			if(value.target == target && value.active) {
 				count++;
 				version(Windows) {
@@ -181,19 +182,20 @@ void main(string[] args) {
 					write(value.path ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
 				}
 				dub[value.id] = ["path": value.path.startsWith(Paths.plugins) ? "../../../plugins/" ~ value.id : value.path];
-				JSONValue[string] deps = ["sel-server:" ~ target: JSONValue(["path": "../../"])];
+				if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
+				if("versions" !in value.dub) value.dub["versions"] = new JSONValue[0];
+				value.dub["name"] = value.id;
+				value.dub["targetType"] = "library";
+				value.dub["dependencies"]["sel-server:" ~ target] = ["path": "../../"];
+				value.dub["versions"].array ~= JSONValue(capitalize(target));
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {
-						if(name.length > 4 && name.startsWith("dub/")) deps[name[4..$]] = d;
+						if(name.length > 4 && name.startsWith("dub:")) {
+							value.dub["dependencies"][name[4..$]] = d;
+						}
 					}
 				}
-				write(value.path ~ "dub.json", JSONValue([
-					"name": JSONValue(value.id),
-					"targetType": JSONValue("library"),
-					"dependencies": JSONValue(deps),
-					"versions": JSONValue([capitalize(target)])
-				]).toString());
 				auto lang = value.path ~ "lang";
 				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
 					lang = "`" ~ buildNormalizedPath(absolutePath(lang)) ~ dirSeparator ~ "`";
@@ -227,6 +229,10 @@ void main(string[] args) {
 		])
 	]).toString());
 
+	foreach(value ; ordered) {
+		write(value.path ~ "dub.json", JSONValue(value.dub).toString());
+	}
+
 }
 
 struct Info {
@@ -248,5 +254,7 @@ struct Info {
 	public string path;
 	public string mod;
 	public string main;
+
+	public JSONValue[string] dub;
 
 }

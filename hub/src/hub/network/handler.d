@@ -41,6 +41,10 @@ import hub.util.log;
 import hub.util.query : Queries;
 import hub.util.thread : SafeThread;
 
+import vibe.http.router;
+import vibe.http.server;
+import vibe.web.web;
+
 /**
  * Main handler with the purpose of starting children handlers,
  * store constant informations and reload them when needed.
@@ -108,7 +112,14 @@ class Handler {
 			}
 
 			if(web) {
-				this.startThread!HttpHandler(server, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort);
+				auto handler = new HttpHandler(server, &this.socialJson);
+				auto router = new URLRouter();
+				auto settings = new HTTPServerSettings();
+				settings.bindAddresses = cast(string[])webAddresses;
+				settings.port = cast(ushort)webPort;
+				router.registerWebInterface(handler);
+				listenHTTP(settings, router);
+				//this.handlers ~= cast(shared)handler;
 			}
 
 			if(panel) {
@@ -179,11 +190,11 @@ class Handler {
 
 abstract class HandlerThread : SafeThread {
 
-	public static shared(Socket)[] createSockets(T)(string handler, inout string[] addresses, int backlog) {
+	public static shared(Socket)[] createSockets(T)(string handler, inout string[] addresses, inout ushort port, int backlog) {
 		shared(Socket)[] sockets;
 		foreach(string address ; addresses) {
 			try {
-				sockets ~= cast(shared)socketFromAddress!(BlockingSocket!T)(address, backlog);
+				sockets ~= cast(shared)socketFromAddress!(BlockingSocket!T)(address, port, backlog);
 				log(translate("{handler.listening}", Settings.defaultLanguage, [Text.green ~ handler ~ Text.reset, address]));
 			} catch(SocketException e) {
 				log(translate("{handler.error.bind}", Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address, Text.yellow ~ (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
@@ -194,8 +205,8 @@ abstract class HandlerThread : SafeThread {
 		return sockets;
 	}
 
-	public static shared(Socket)[] createSockets(T)(string handler, shared inout string[] addresses, int backlog) {
-		return createSockets!T(handler, cast(string[])addresses, backlog);
+	public static shared(Socket)[] createSockets(T)(string handler, shared inout string[] addresses, shared inout ushort port, int backlog) {
+		return createSockets!T(handler, cast(string[])addresses, cast()port, backlog);
 	}
 
 	protected shared Server server;

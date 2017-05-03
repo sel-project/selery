@@ -56,13 +56,6 @@ version(Posix) {
 
 }
 
-public T socketFromAddress(T : Socket)(string address, int backlog) {
-	string[] spl = address.split(":");
-	if(spl.length < 2) throw new AddressException("Wrong address format");
-	ushort port = to!ushort(spl[$-1]);
-	if(spl.length == 2 && spl[0] == "*") {
-		return new T("::", port, backlog, true);
-	} else {
-		return new T(getAddress(spl[0..$-1].join(":"), port)[0], backlog, false);
-	}
+public T socketFromAddress(T : Socket)(string address, ushort port, int backlog) {
+	return new T(getAddress(address, port)[0], backlog, false);
 }

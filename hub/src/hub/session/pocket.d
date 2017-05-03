@@ -95,7 +95,7 @@ class PocketHandler : UnconnectedHandler {
 	private __gshared Condition condition;
 	
 	public this(shared Server server, shared string* socialJson, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("pocket", pocket.addresses, -1), POCKET_BUFFER_SIZE);
+		with(server.settings) super(server, createSockets!UdpSocket("pocket", pocket.addresses, pocket.port, -1), POCKET_BUFFER_SIZE);
 		this.socialJson = socialJson;
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;

@@ -50,6 +50,7 @@ class Paths {
 		hidden = home ~ ".sel" ~ dirSeparator;
 
 		version(Windows) {
+			//TODO do only if requested
 			// hide hidden
 			import core.sys.windows.winnt : FILE_ATTRIBUTE_HIDDEN;
 			mkdirRecurse(hidden);

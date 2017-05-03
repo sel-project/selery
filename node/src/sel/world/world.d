@@ -26,8 +26,7 @@ import std.typecons : Tuple;
 import com.sel;
 import com.util : call;
 
-import sel.plugin;
-import sel.server : server;
+import sel.server : Server;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import sel.block.blocks : BlockStorage, Blocks;
 import sel.block.tile : Tile;
@@ -44,7 +43,7 @@ import sel.item.item : Item;
 import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
-import sel.player.player : Player;
+import sel.player.player : Player, isPlayer;
 import sel.plugin.plugin;
 import sel.util.color : Color;
 import sel.util.command : Command;
@@ -55,7 +54,7 @@ import sel.util.task;
 import sel.world.chunk;
 import sel.world.generator;
 import sel.world.map : Map;
-import sel.world.rules : Rules;
+import sel.world.rules : Rules, Gamemode, Difficulty;
 
 static import sul.blocks;
 
@@ -109,7 +108,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
-	public static void startWorld(T:World)(T world, World parent) {
+	public static void startWorld(T:World)(Server server, T world, World parent) {
+		world.n_server = server;
 		world.setListener(server.globalListener);
 		if(parent !is null) {
 			world.setListener(parent.inheritance);
@@ -124,7 +124,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			void transfer(World from) {
 				auto c = from.w_players.length;
 				if(c) {
-					warning_log(translate("{warning.removingWithPlayers}", server.settings.language, [from.name, to!string(c)]));
+					static import sel.server;
+					warning_log(translate("{warning.removingWithPlayers}", sel.server.server.settings.language, [from.name, to!string(c)]));
 					foreach(player ; from.w_players) {
 						player.world = transferTo;
 					}
@@ -142,6 +143,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	public immutable uint id;
 	public immutable string n_name;
+
+	protected Server n_server;
 
 	protected group!byte n_dimension = Dimension.overworld;
 	protected uint n_seed;
@@ -263,6 +266,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		foreach(child ; children) {
 			child.stop();
 		}
+	}
+
+	public final pure nothrow @property @safe @nogc Server server() {
+		return this.n_server;
 	}
 
 	/**
@@ -390,7 +397,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 */
 	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
 		T world = new T(args);
-		World.startWorld(world, this);
+		World.startWorld(this.server, world, this);
 		this.n_children ~= world;
 		return world;
 	}
@@ -707,8 +714,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * broadcasts the packet to the players in the world.
 	 */
 	public final void removePlayerList(Player player) {
-		if(array_remove(player, this.players_list)) {
-			this.w_players.call!"sendRemoveList"([player]);
+		foreach(i, p; this.players_list) {
+			if(player == p) {
+				this.w_players.call!"sendRemoveList"([player]);
+				this.players_list = this.players_list[0..i] ~ this.players_list[i+1..$];
+				break;
+			}
 		}
 	}
 
@@ -1462,15 +1473,6 @@ struct Weather {
 	public @safe @nogc void tick() {
 		this.rain--;
 	}
-
-}
-
-enum Difficulty : ubyte {
-
-	peaceful = 0,
-	easy = 1,
-	normal = 2,
-	hard = 3
 
 }
 

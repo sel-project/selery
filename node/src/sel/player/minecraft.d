@@ -30,7 +30,6 @@ import com.util : array_index;
 import nbt.stream;
 import nbt.tags;
 
-import sel.server : server;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect;
@@ -100,7 +99,7 @@ abstract class MinecraftPlayer : Player {
 			this.viewDistance = min(this.world.rules.viewDistance, viewDistance);
 			this.world.playerUpdateRadius(this);
 		}
-		lang = server.settings.acceptedLanguages.canFind(language) ? language : /*(language.split("_")[0] in __DEFAULT_LANGUAGES__ ? __DEFAULT_LANGUAGES__[language.split("_")[0]] :*/ server.settings.language/*)*/;
+		lang = this.server.settings.acceptedLanguages.canFind(language) ? language : /*(language.split("_")[0] in __DEFAULT_LANGUAGES__ ? __DEFAULT_LANGUAGES__[language.split("_")[0]] :*/ this.server.settings.language/*)*/;
 		if(lang != this.lang) {
 			this.lang = lang;
 		}

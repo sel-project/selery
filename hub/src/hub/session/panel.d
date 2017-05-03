@@ -23,7 +23,7 @@ import hub.network.session : Session;
 class PanelHandler : HandlerThread {
 
 	public this(shared Server server) {
-		super(server, createSockets!TcpSocket("panel", server.settings.panelAddresses, 8));
+		super(server, createSockets!TcpSocket("panel", server.settings.panelAddresses, server.settings.panelPort, 8));
 	}
 
 	protected override void listen(shared Socket sharedSocket) {
