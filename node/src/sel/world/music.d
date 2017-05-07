@@ -127,9 +127,8 @@ struct Music {
 }
 
 void play(Music music, World world, EntityPosition position=EntityPosition.init, bool loop=true) {
-	import sel.server : server; //TODO register the task on the world
 	size_t pointer = 0;
-	server.addTask({
+	world.addTask({
 		foreach(Note note ; music.notes[pointer]) {
 			foreach(player ; world.players) {
 				player.sendMusic(position.isNaN ? player.position : position, note.instrument, note.pitch);

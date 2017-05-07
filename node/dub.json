@@ -4,9 +4,7 @@
 	"targetType": "library",
 	"license": "LGPL-3.0",
 	"dependencies": {
-		"sel-server:common": {
-			"path": "../common"
-		},
+		"sel-server:common": "*",
 		"sel-utils": "==1.2.10",
 		"nbt-d": "==1.1.1",
 		"resusage": "==0.2.4"

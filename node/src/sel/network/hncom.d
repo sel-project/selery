@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.hncom;
+module sel.network.hncom;
 
 import core.thread : Thread, dur;
 import std.bitmanip : read, nativeToLittleEndian;

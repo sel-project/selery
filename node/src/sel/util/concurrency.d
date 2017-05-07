@@ -20,7 +20,7 @@ import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLink
 import com.crash : logCrash;
 import com.util : UnloggedException;
 
-import sel.server : isServerRunning, server;
+import sel.node : isServerRunning, server;
 
 Tid thread(T:Thread)() {
 	return spawnLinked(&_thread!T);

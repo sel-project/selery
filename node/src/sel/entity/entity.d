@@ -25,7 +25,7 @@ import std.uuid : UUID;
 import com.sel;
 import com.util : safe, call;
 
-import sel.server : Server;
+import sel.node : Server;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;

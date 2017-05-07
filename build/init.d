@@ -2,6 +2,7 @@
    name "init"
    authors "sel-project"
    targetType "executable"
+   //dependency "sel-server:common" path="../"
    dependency "common" path="../common"
 +/
 /*
@@ -34,7 +35,7 @@ import com.format : Text, writeln;
 import com.path : Paths;
 import com.sel;
 
-enum size_t __GENERATOR__ = 42;
+enum size_t __GENERATOR__ = 45;
 
 void main(string[] args) {
 
@@ -153,7 +154,6 @@ void main(string[] args) {
 		}
 	}
 
-	mkdirRecurse(Paths.hidden ~ "plugin-loader/src/pluginloader");
 	version(Windows) {
 		mkdirRecurse(Paths.hidden ~ "plugin-loader/.dub");
 		write(Paths.hidden ~ "plugin-loader/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
@@ -161,7 +161,7 @@ void main(string[] args) {
 
 	foreach(target ; ["hub", "node"]) {
 
-		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader");
+		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader");
 	
 		size_t count = 0;
 			
@@ -211,12 +211,12 @@ void main(string[] args) {
 
 		if(paths.length > 2) paths = paths[0..$-2];
 
-		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
-		write(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toString());
+		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
+		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "sourcePaths": JSONValue(["."]), "importPaths": JSONValue(["."]), "dependencies": JSONValue(dub)]).toString());
 
 	}
 
-	write(Paths.hidden ~ "plugin-loader/dub.json", JSONValue([
+	writeDiff(Paths.hidden ~ "plugin-loader/dub.json", JSONValue([
 		"name": JSONValue("plugin-loader"),
 		"targetType": JSONValue("none"),
 		"dependencies": JSONValue([
@@ -230,9 +230,13 @@ void main(string[] args) {
 	]).toString());
 
 	foreach(value ; ordered) {
-		write(value.path ~ "dub.json", JSONValue(value.dub).toString());
+		writeDiff(value.path ~ "dub.json", JSONValue(value.dub).toString());
 	}
 
+}
+
+void writeDiff(string location, const void[] data) {
+	if(!exists(location) || read(location) != data) write(location, data);
 }
 
 struct Info {

@@ -20,7 +20,7 @@ import std.traits : isAbstractClass, getUDAs, hasUDA;
 public import com.plugin;
 import com.sel;
 
-import sel.server : server;
+import sel.node : server;
 
 class PluginOf(T) : Plugin if(!isAbstractClass!T || is(T == struct)) {
 

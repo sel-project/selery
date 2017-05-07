@@ -33,7 +33,7 @@ import com.path : Paths;
 import com.sel : Software;
 import com.util : UnloggedException;
 
-import sel.server;
+import sel.node;
 
 import pluginloader.node : loadPlugins;
 

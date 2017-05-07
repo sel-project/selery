@@ -37,7 +37,6 @@ import std.uuid : UUID, randomUUID;
 import com.sel;
 import com.util : milliseconds, call;
 
-import sel.hncom : Handler;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.blocks : Blocks;
 import sel.block.tile : Tile, Container;
@@ -54,6 +53,7 @@ import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.network.hncom : Handler;
 import sel.util.command : Command, WorldCommandSender;
 import sel.util.concurrency : thread, Thread;
 import sel.util.lang;

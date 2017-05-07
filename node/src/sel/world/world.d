@@ -26,7 +26,7 @@ import std.typecons : Tuple;
 import com.sel;
 import com.util : call;
 
-import sel.server : Server;
+import sel.node : Server;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import sel.block.blocks : BlockStorage, Blocks;
 import sel.block.tile : Tile;
@@ -124,8 +124,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			void transfer(World from) {
 				auto c = from.w_players.length;
 				if(c) {
-					static import sel.server;
-					warning_log(translate("{warning.removingWithPlayers}", sel.server.server.settings.language, [from.name, to!string(c)]));
+					static import sel.node;
+					warning_log(translate("{warning.removingWithPlayers}", sel.node.server.settings.language, [from.name, to!string(c)]));
 					foreach(player ; from.w_players) {
 						player.world = transferTo;
 					}

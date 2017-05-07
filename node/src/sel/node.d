@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.server;
+module sel.node;
 
 import core.thread : getpid, Thr = Thread;
 import std.algorithm : canFind;
@@ -43,7 +43,8 @@ import com.util : milliseconds, microseconds;
 import resusage.memory;
 import resusage.cpu;
 
-import sel.hncom;
+import sel.network.hncom; // do not move this import down
+
 import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;

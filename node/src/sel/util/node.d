@@ -16,7 +16,7 @@ module sel.util.node;
 
 import std.algorithm : canFind;
 
-import sel.server : Server;
+import sel.node : Server;
 import sel.player.player : Player;
 
 /**

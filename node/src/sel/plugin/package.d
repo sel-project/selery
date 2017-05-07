@@ -19,7 +19,7 @@ public import com.format : Text;
 public import com.sel;
 public import com.util;
 
-public import sel.server : Server, server;
+public import sel.node : Server, server;
 public import sel.player;
 
 public import sel.plugin.config : Config, _, Value, value;
