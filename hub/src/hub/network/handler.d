@@ -41,10 +41,6 @@ import hub.util.log;
 import hub.util.query : Queries;
 import hub.util.thread : SafeThread;
 
-import vibe.http.router;
-import vibe.http.server;
-import vibe.web.web;
-
 /**
  * Main handler with the purpose of starting children handlers,
  * store constant informations and reload them when needed.
@@ -112,14 +108,7 @@ class Handler {
 			}
 
 			if(web) {
-				auto handler = new HttpHandler(server, &this.socialJson);
-				auto router = new URLRouter();
-				auto settings = new HTTPServerSettings();
-				settings.bindAddresses = cast(string[])webAddresses;
-				settings.port = cast(ushort)webPort;
-				router.registerWebInterface(handler);
-				listenHTTP(settings, router);
-				//this.handlers ~= cast(shared)handler;
+				this.startThread!HttpHandler(server, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort);
 			}
 
 			if(panel) {

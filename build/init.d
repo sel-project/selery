@@ -34,7 +34,7 @@ import com.format : Text, writeln;
 import com.path : Paths;
 import com.sel;
 
-enum size_t __GENERATOR__ = 41;
+enum size_t __GENERATOR__ = 42;
 
 void main(string[] args) {
 
@@ -187,7 +187,7 @@ void main(string[] args) {
 				value.dub["name"] = value.id;
 				value.dub["targetType"] = "library";
 				value.dub["dependencies"]["sel-server:" ~ target] = ["path": "../../"];
-				value.dub["versions"].array ~= JSONValue(capitalize(target));
+				//value.dub["versions"].array ~= JSONValue(capitalize(target));
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {

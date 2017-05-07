@@ -50,7 +50,7 @@ struct Config {
 
 	bool allowVanillaPlayers;
 
-	uint maxPlayers;
+	uint maxPlayers = size_t.sizeof.to!uint * 8;
 
 	bool whitelist, blacklist;
 

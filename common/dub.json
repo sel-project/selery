@@ -1,5 +1,6 @@
 {
 	"name": "common",
 	"authors": ["sel-project"],
+	"license": "LGPL-3.0",
 	"targetType": "library"
 }
