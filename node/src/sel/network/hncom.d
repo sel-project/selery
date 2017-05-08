@@ -135,24 +135,12 @@ class SocketHandler : Handler {
 
 static import std.concurrency;
 
-class TidAddress : Address {
+class TidAddress : UnknownAddress {
 
 	public std.concurrency.Tid tid;
 
 	public this(std.concurrency.Tid tid) {
 		this.tid = tid;
-	}
-
-	public override sockaddr* name() {
-		return null;
-	}
-
-	public override const(sockaddr)* name() const {
-		return null;
-	}
-
-	public override socklen_t nameLen() const {
-		return 0;
 	}
 
 	alias tid this;
