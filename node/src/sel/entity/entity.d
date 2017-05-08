@@ -22,10 +22,8 @@ import std.traits : isArray, isAbstractClass;
 import std.typecons : Tuple;
 import std.uuid : UUID;
 
-import com.sel;
-import com.util : safe, call;
-
-import sel.node : Server;
+import sel.about;
+import sel.utils : safe, call;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;
@@ -33,6 +31,7 @@ import sel.event.world.damage;
 import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.node.server : Server;
 import sel.player.player : Player;
 import sel.util.command : Position;
 import sel.world.world : World, Rules;

@@ -16,9 +16,8 @@ module sel.entity.noai;
 
 import std.conv : to;
 
-import com.sel;
-import com.util : call;
-
+import sel.about;
+import sel.utils : call;
 import sel.block.block;
 import sel.entity.entity;
 import sel.entity.interfaces;

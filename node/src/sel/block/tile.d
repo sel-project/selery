@@ -25,10 +25,9 @@ import std.traits : isAbstractClass;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
-import com.sel;
-
 import nbt.tags;
 
+import sel.about;
 import sel.block.block;
 import sel.block.blocks : Blocks;
 import sel.block.solid : Facing;

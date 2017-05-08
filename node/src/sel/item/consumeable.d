@@ -16,9 +16,8 @@ module sel.item.consumeable;
 
 import std.typecons : Tuple;
 
-import com.sel;
-import com.util : roman;
-
+import sel.about : block_t, item_t;
+import sel.utils : roman;
 import sel.block.block : compareBlock, blockInto;
 import sel.block.blocks : Blocks;
 import sel.entity.effect;

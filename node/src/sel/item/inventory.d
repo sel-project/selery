@@ -22,8 +22,7 @@ import std.conv : to;
 import std.exception : enforce;
 import std.typecons : Tuple;
 
-import com.sel;
-
+import sel.about : item_t;
 import sel.entity.human : Human;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
@@ -973,11 +972,5 @@ class PlayerInventory : Inventory {
 interface InventoryHolder {
 
 	public @trusted void slotUpdated(size_t slot);
-
-}
-
-enum Windows : bytegroup {
-
-	INVENTORY = bytegroup(0, 0),
 
 }

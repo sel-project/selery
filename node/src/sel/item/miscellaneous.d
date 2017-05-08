@@ -17,10 +17,9 @@ module sel.item.miscellaneous;
 import std.conv : to, ConvException;
 import std.traits : isIntegral;
 
-import com.sel;
-
 import nbt.tags;
 
+import sel.about : block_t, item_t;
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.item.item : SimpleItem;

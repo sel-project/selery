@@ -29,16 +29,14 @@ import std.conv : to;
 import std.file : read, write, exists, mkdirRecurse;
 import std.string : toLower;
 
-import com.config;
-import com.crash : logCrash;
-import com.path : Paths;
-import com.sel : Software;
-import com.util : UnloggedException;
+import sel.about : Software;
+import sel.config;
+import sel.crash : logCrash;
+import sel.path : Paths;
+import sel.utils : UnloggedException;
 
-//import sel.plugin; // it seems that not importing this causes compiler errors
-
-static import hub.server;
-static import sel.server;
+static import sel.hub.server;
+static import sel.node.server;
 
 static import pluginloader.hub;
 static import pluginloader.node;
@@ -61,7 +59,6 @@ void main(string[] args) {
 
 		import std.json : JSONValue;
 		import std.stdio : writeln;
-		import com.sel;
 
 		auto json = JSONValue([
 			"type": JSONValue("lite"),
@@ -82,9 +79,9 @@ void main(string[] args) {
 		
 		try {
 
-			new Thread({ new shared hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
+			new Thread({ new shared sel.hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
 			
-			new sel.server.Server(null, "", "", true, pluginloader.node.loadPlugins());
+			new sel.node.server.Server(null, "", "", true, pluginloader.node.loadPlugins());
 			
 		} catch(LinkTerminated) {
 			
@@ -92,7 +89,7 @@ void main(string[] args) {
 			
 		} catch(Throwable e) {
 
-			logCrash("lite", sel.server.server is null ? "en_GB" : sel.server.server.settings.language, e);
+			logCrash("lite", sel.node.server.server is null ? "en_GB" : sel.node.server.server.settings.language, e);
 			
 		} finally {
 			

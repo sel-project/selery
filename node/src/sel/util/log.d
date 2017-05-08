@@ -18,10 +18,9 @@ import std.conv : to;
 import std.path : dirSeparator;
 import std.string : replace, startsWith, indexOf;
 
-import com.format : Text, writeln;
-import com.sel;
-import com.util : milliseconds;
-
+import sel.about : Software;
+import sel.format : Text, writeln;
+import sel.utils : milliseconds;
 import sel.world.world : World;
 
 mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".status : Log;");

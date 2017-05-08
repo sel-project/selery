@@ -14,8 +14,7 @@
  */
 module sel.event.world.world;
 
-import com.sel;
-
+import sel.about : tick_t;
 import sel.entity.entity : Entity;
 import sel.event.event : Event, Cancellable;
 import sel.math.vector : EntityPosition;

@@ -16,8 +16,7 @@ module sel.event.server.player;
 
 import std.conv : to;
 
-import com.sel : Software;
-
+import sel.about : Software;
 import sel.event.event : Cancellable;
 import sel.event.server.server : ServerEvent;
 import sel.player.player : Player;

@@ -25,8 +25,7 @@ import std.conv : to;
 import std.math : ceil;
 import std.string : split, join, capitalize;
 
-import com.sel;
-
+import sel.about : block_t, item_t, tick_t;
 import sel.entity.entity : Entity;
 import sel.event.event : EventListener;
 import sel.event.world.world : WorldEvent;

@@ -34,9 +34,8 @@ import std.system : endian;
 import std.typetuple : TypeTuple;
 import std.uuid : UUID, randomUUID;
 
-import com.sel;
-import com.util : milliseconds, call;
-
+import sel.about;
+import sel.utils : milliseconds, call;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.blocks : Blocks;
 import sel.block.tile : Tile, Container;

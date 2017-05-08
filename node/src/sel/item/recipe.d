@@ -14,7 +14,7 @@
  */
 module sel.item.recipe;
 
-import com.sel;
+import sel.about : block_t, item_t;
 
 class Recipe {}
 

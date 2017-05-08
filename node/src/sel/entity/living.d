@@ -17,9 +17,8 @@ module sel.entity.living;
 import std.conv : to;
 import std.math : round, isNaN;
 
-import com.sel;
-import com.util : safe, call;
-
+import sel.about;
+import sel.utils : safe, call;
 import sel.entity.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
 import sel.entity.metadata;

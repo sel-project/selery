@@ -4,7 +4,6 @@
 	"license": "LGPL-3.0",
 	"targetType": "library",
 	"dependencies": {
-		"sel-server:common": "*",
-		"sel-utils": "==1.2.10"
+		"sel-server:common": "*"
 	}
 }

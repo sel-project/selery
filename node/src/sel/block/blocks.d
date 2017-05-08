@@ -14,8 +14,7 @@
  */
 module sel.block.blocks;
 
-import com.sel;
-
+import sel.about : block_t, item_t;
 import sel.block.block : Block;
 import sel.block.farming;
 import sel.block.fluid;

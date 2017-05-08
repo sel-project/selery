@@ -29,12 +29,11 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import com.path : Paths;
-import com.sel;
-
 import nbt.stream;
 import nbt.tags;
 
+import sel.about;
+import sel.path : Paths;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect, Effects;
@@ -536,7 +535,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		foreach(ushort index, bool slot; slots) {
 			if(slot) {
 				//TODO if slot is in the hotbar the third argument should not be 0
-				this.sendPacket(new Play.ContainerSetSlot(Windows.INVENTORY.pe, index, 0, toSlot(this.inventory[index])));
+				this.sendPacket(new Play.ContainerSetSlot(0, index, 0, toSlot(this.inventory[index])));
 			}
 		}
 		//normal inventory

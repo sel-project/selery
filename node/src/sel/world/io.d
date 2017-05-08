@@ -22,12 +22,11 @@ import std.string;
 import std.system;
 import std.zlib;
 
-import com.sel : Software;
-import com.util : seconds;
-
 import nbt.stream : ClassicStream;
 import nbt.tags;
 
+import sel.about : Software;
+import sel.utils : seconds;
 import sel.block.block : Block;
 import sel.math.vector;
 import sel.util.buffers;

@@ -28,12 +28,11 @@ import std.conv : to;
 import std.socket;
 import std.string : split, replace, join;
 
-import com.crash : logCrash;
-import com.path : Paths;
-import com.sel : Software;
-import com.util : UnloggedException;
-
-import sel.node;
+import sel.about : Software;
+import sel.crash : logCrash;
+import sel.path : Paths;
+import sel.utils : UnloggedException;
+import sel.node.server : Server, server;
 
 import pluginloader.node : loadPlugins;
 

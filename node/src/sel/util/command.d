@@ -25,8 +25,9 @@ import std.typecons : Tuple;
 import sel.entity.entity : Entity;
 import sel.math.vector;
 import sel.player.player : Player, Gamemode;
-import sel.plugin.plugin : arguments;
 import sel.world.world : World;
+
+alias arguments = immutable(string)[];
 
 class Command {
 	

@@ -14,8 +14,7 @@
  */
 module sel.block.redstone;
 
-import com.sel;
-
+import sel.about : block_t;
 import sel.block.block;
 import sel.block.solid;
 import sel.item.item : Item;

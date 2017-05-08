@@ -31,11 +31,11 @@ import std.path : dirSeparator, buildNormalizedPath, absolutePath;
 import std.process : executeShell;
 import std.string;
 
-import com.format : Text, writeln;
-import com.path : Paths;
-import com.sel;
+import sel.about;
+import sel.format : Text, writeln;
+import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 45;
+enum size_t __GENERATOR__ = 46;
 
 void main(string[] args) {
 
@@ -211,7 +211,7 @@ void main(string[] args) {
 
 		if(paths.length > 2) paths = paths[0..$-2];
 
-		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import " ~ (target=="node" ? "sel.plugin" : "hub.util") ~ ".plugin : Plugin,PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
+		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import sel.plugin:Plugin;import sel." ~ target ~ ".plugin:PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
 		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "sourcePaths": JSONValue(["."]), "importPaths": JSONValue(["."]), "dependencies": JSONValue(dub)]).toString());
 
 	}

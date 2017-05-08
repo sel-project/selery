@@ -15,8 +15,7 @@
 /// DDOC_EXCLUDE
 module sel.block;
 
-public import com.sel : block_t;
-
+public import sel.about : block_t;
 public import sel.block.block : Block, blockInto;
 public import sel.block.blocks : Blocks;
 public import sel.block.tile : Tile, Sign, FlowerPot, Tiles;

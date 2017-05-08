@@ -23,10 +23,8 @@ import std.string : replace, toLower, split;
 import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
-import com.sel;
-import com.util : call;
-
-import sel.node : Server;
+import sel.about;
+import sel.utils : call;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import sel.block.blocks : BlockStorage, Blocks;
 import sel.block.tile : Tile;
@@ -43,8 +41,9 @@ import sel.item.item : Item;
 import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.node.plugin;
+import sel.node.server : Server;
 import sel.player.player : Player, isPlayer;
-import sel.plugin.plugin;
 import sel.util.color : Color;
 import sel.util.command : Command;
 import sel.util.lang : translate, ITranslatable;
@@ -124,8 +123,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			void transfer(World from) {
 				auto c = from.w_players.length;
 				if(c) {
-					static import sel.node;
-					warning_log(translate("{warning.removingWithPlayers}", sel.node.server.settings.language, [from.name, to!string(c)]));
+					static import sel.node.server;
+					warning_log(translate("{warning.removingWithPlayers}", sel.node.server.server.settings.language, [from.name, to!string(c)]));
 					foreach(player ; from.w_players) {
 						player.world = transferTo;
 					}

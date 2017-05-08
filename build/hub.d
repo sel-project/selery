@@ -27,10 +27,10 @@ import std.conv : to;
 import std.file : exists, read, write, mkdirRecurse;
 import std.string : replace, toLower;
 
-import com.path : Paths;
-
-import hub.server;
-import hub.settings;
+import sel.about : Software;
+import sel.path : Paths;
+import sel.hub.server;
+import sel.hub.settings;
 
 import pluginloader.hub : loadPlugins;
 
@@ -52,7 +52,6 @@ void main(string[] args) {
 
 		import std.json : JSONValue;
 		import std.stdio : writeln;
-		import com.sel;
 
 		auto json = JSONValue([
 			"type": JSONValue("hub"),

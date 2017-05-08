@@ -18,8 +18,7 @@ import std.algorithm : canFind, min;
 import std.conv : to;
 import std.math : ceil;
 
-import com.sel;
-
+import sel.about : block_t, item_t, tick_t;
 import sel.block.block : Update, Remove, Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;

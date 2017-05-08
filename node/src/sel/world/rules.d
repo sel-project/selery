@@ -17,8 +17,8 @@ module sel.world.rules;
 import std.conv : to;
 import std.typecons : Tuple, tuple;
 
-import com.config : Config;
-import com.path : Paths;
+import sel.config : Config;
+import sel.path : Paths;
 
 enum Gamemode : ubyte {
 

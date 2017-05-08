@@ -14,8 +14,7 @@
  */
 module sel.item.placeable;
 
-import com.sel;
-
+import sel.about : block_t, item_t;
 import sel.block.block : compareBlock;
 import sel.block.blocks : Blocks;
 import sel.item.item;

@@ -18,10 +18,9 @@ import std.conv : to;
 static import std.json;
 import std.string : split, join;
 
-import com.sel;
-
 import nbt.tags;
 
+import sel.about;
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;

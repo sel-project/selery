@@ -17,8 +17,7 @@ module sel.entity.projectile;
 import std.conv : to;
 import std.math : abs, sqrt, atan2, PI;
 
-import com.sel;
-
+import sel.about;
 import sel.block.block : Block, blockInto;
 import sel.block.blocks : Blocks;
 import sel.entity.effect;

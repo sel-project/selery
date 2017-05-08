@@ -18,8 +18,7 @@
  */
 module sel.block.fluid;
 
-import com.sel;
-
+import sel.about : block_t, item_t;
 import sel.block.block;
 import sel.math.vector : BlockPosition;
 

@@ -24,12 +24,11 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import com.sel;
-import com.util : array_index;
-
 import nbt.stream;
 import nbt.tags;
 
+import sel.about;
+import sel.utils : array_index;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
 import sel.entity.effect : Effect;

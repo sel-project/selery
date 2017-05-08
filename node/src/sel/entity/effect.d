@@ -14,8 +14,7 @@
  */
 module sel.entity.effect;
 
-import com.sel : tick_t;
-
+import sel.about : tick_t;
 import sel.entity.human : Human;
 import sel.entity.living : Living;
 import sel.event.world.damage;

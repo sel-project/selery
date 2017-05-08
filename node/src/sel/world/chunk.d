@@ -25,9 +25,8 @@ import std.math : abs, ceil, log2;
 import std.path : dirSeparator;
 import std.string : split, join, endsWith;
 
-import com.path : Paths;
-import com.sel : block_t;
-
+import sel.about : block_t;
+import sel.path : Paths;
 import sel.block.block : Block;
 import sel.block.blocks : BlockStorage;
 import sel.block.tile : Tile;

@@ -16,8 +16,7 @@ module sel.item.items;
 
 import std.string : replace, toLower;
 
-import com.sel;
-
+import sel.about : item_t;
 import sel.block.blocks : Blocks;
 import sel.entity.effect : Effects;
 import sel.item.consumeable;

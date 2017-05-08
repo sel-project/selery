@@ -17,10 +17,9 @@ module sel.util.concurrency;
 import core.thread : dur, Duration, thread_attachThis;
 import std.concurrency : OwnerTerminated, receiveOnly, receiveTimeout, spawnLinked, Tid;
 
-import com.crash : logCrash;
-import com.util : UnloggedException;
-
-import sel.node : isServerRunning, server;
+import sel.crash : logCrash;
+import sel.utils : UnloggedException;
+import sel.node.server : isServerRunning, server;
 
 Tid thread(T:Thread)() {
 	return spawnLinked(&_thread!T);

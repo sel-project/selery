@@ -17,10 +17,9 @@ module sel.item.tool;
 import std.conv : ConvException;
 import std.json : JSONValue, JSON_TYPE;
 
-import com.sel;
-
 import nbt.tags;
 
+import sel.about;
 import sel.block.block : Block, Faces;
 import sel.block.blocks : Blocks;
 import sel.entity.entity : Entity;
