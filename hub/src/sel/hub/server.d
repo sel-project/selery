@@ -176,7 +176,7 @@ class Server {
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
 
-		if(this.n_settings.whitelist) {
+		/*if(this.n_settings.whitelist) {
 			this.n_whitelist.load();
 			this.n_whitelist.save();
 		}
@@ -184,7 +184,7 @@ class Server {
 		if(this.n_settings.blacklist) {
 			this.n_blacklist.load();
 			this.n_blacklist.save();
-		}
+		}*/
 		
 		/*try {
 			log("Public ip (ipv4): ", publicIpv4);
@@ -580,28 +580,24 @@ class Server {
 	}
 
 	public shared bool acceptNode(Address address) {
-		static if(__oneNode) {
-			return this.nodes.length == 0;
-		} else {
-			version(Posix) {
-				if(cast(UnixAddress)address) return true;
-			}
-			if(this.n_settings.maxNodes != 0) {
-				if(this.nodes.length >= this.n_settings.maxNodes) return false;
-			}
-			// check if it's an IPv4-mapped in IPv6
-			if(cast(Internet6Address)address) {
-				auto v6 = cast(Internet6Address)address;
-				ubyte[] bytes = v6.addr;
-				if(bytes[10] == 255 && bytes[11] == 255) { // ::ffff:127.0.0.1
-					address = new InternetAddress(to!string(bytes[12]) ~ "." ~ to!string(bytes[13]) ~ "." ~ to!string(bytes[14]) ~ "." ~ to!string(bytes[15]), v6.port);
-				}
-			}
-			foreach(ar ; this.settings.acceptedNodes) {
-				if((cast()ar).contains(address)) return true;
-			}
-			return false;
+		version(Posix) {
+			if(cast(UnixAddress)address) return true;
 		}
+		if(this.n_settings.maxNodes != 0) {
+			if(this.nodes.length >= this.n_settings.maxNodes) return false;
+		}
+		// check if it's an IPv4-mapped in IPv6
+		if(cast(Internet6Address)address) {
+			auto v6 = cast(Internet6Address)address;
+			ubyte[] bytes = v6.addr;
+			if(bytes[10] == 255 && bytes[11] == 255) { // ::ffff:127.0.0.1
+				address = new InternetAddress(to!string(bytes[12]) ~ "." ~ to!string(bytes[13]) ~ "." ~ to!string(bytes[14]) ~ "." ~ to!string(bytes[15]), v6.port);
+			}
+		}
+		foreach(ar ; this.settings.acceptedNodes) {
+			if((cast()ar).contains(address)) return true;
+		}
+		return false;
 	}
 
 	public shared nothrow @property @safe @nogc bool hasNodes() {

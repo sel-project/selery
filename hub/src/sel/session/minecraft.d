@@ -217,7 +217,7 @@ class MinecraftHandler : HandlerThread {
 	public shared synchronized nothrow void removeSession(shared IMinecraftSession session) {
 		for(size_t i=0; i<this.sessions.length; i++) {
 			if(session.sessionId == this.sessions[i].sessionId) {
-				this.sessions = this.sessions[0..i] ~ this.sessions[i+1..$];
+				this.sessions = this.sessions[0..i] ~ this.sessions[i+1..$]; // crashes the software in release mode
 				break;
 			}
 		}

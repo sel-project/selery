@@ -1,4 +1,4 @@
-![SEL Logo](http://i.imgur.com/jPfQuZ0.png)
+![SEL Logo](https://i.imgur.com/cTu1FE5.png)
 
 **A Server for Minecraft and Minecraft: Pocket Edition written in D**
 

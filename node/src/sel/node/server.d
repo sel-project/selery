@@ -310,7 +310,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
 
 			version(Windows) {
-				executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
+				//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
 			}
 
 			// reload languages and save cache
@@ -419,7 +419,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				}
 			}
 			if(failed.length) {
-				warning_log("{warning.creativeFailed}", this.n_settings.language, [failed.join(", ")]);
+				warning_log(translate("{warning.creativeFailed}", this.n_settings.language, [failed.join(", ")]));
 			}
 		}
 

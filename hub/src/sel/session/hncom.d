@@ -819,6 +819,7 @@ class MessagePassingNode : Node {
 		foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
 		this.plugins = cast(shared)info.plugins;
 		foreach(node ; server.nodesList) this.send(node.addPacket.encode());
+		this.server.add(this);
 		this.loop(receiver);
 		this.onClosed(); // just kick the players
 	}

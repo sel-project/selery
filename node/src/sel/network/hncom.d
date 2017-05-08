@@ -147,11 +147,11 @@ class TidAddress : Address {
 		return null;
 	}
 
-	public const override const(sockaddr)* name() {
+	public override const(sockaddr)* name() const {
 		return null;
 	}
 
-	public override const int nameLen() {
+	public override socklen_t nameLen() const {
 		return 0;
 	}
 
@@ -178,7 +178,7 @@ class MessagePassingHandler : Handler {
 
 	private ptrdiff_t receiveBlocking(ref ubyte[] buffer) {
 		auto recv = std.concurrency.receiveOnly!(immutable(ubyte)[])();
-		buffer ~= recv.dup;
+		buffer = recv.dup;
 		return recv.length; // 0 for close connection
 	}
 
@@ -186,7 +186,7 @@ class MessagePassingHandler : Handler {
 		ptrdiff_t ret = -1; // -1 means nothing was received
 		std.concurrency.receiveTimeout(msecs(0),
 			(immutable(ubyte)[] b) {
-				buffer ~= b.dup;
+				buffer = b.dup;
 				ret = buffer.length; // 0 for close connection
 			},
 			(Variant v) {} // close

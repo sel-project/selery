@@ -54,8 +54,6 @@ class Handler {
 	private shared string additionalJson;
 	private shared string socialJson;
 
-	private shared Address n_hncom_address;
-
 	private shared HandlerThread[] handlers;
 
 	public shared this(shared Server server) {
@@ -128,10 +126,6 @@ class Handler {
 		}
 		thread.start();
 		return cast(shared)thread;
-	}
-
-	public shared nothrow @property @nogc Address hncomAddress() {
-		return cast()this.n_hncom_address;
 	}
 
 	/**

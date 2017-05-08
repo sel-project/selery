@@ -26,8 +26,8 @@ import core.thread : Thread, dur;
 import std.algorithm : canFind;
 import std.concurrency : LinkTerminated;
 import std.conv : to;
-import std.file : read, write, exists, mkdirRecurse;
-import std.string : toLower;
+import std.file : read, write, exists, mkdirRecurse, dirSeparator;
+import std.string : toLower, indexOf, lastIndexOf;
 
 import sel.about : Software;
 import sel.config;
