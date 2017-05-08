@@ -399,13 +399,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	public override void sendMovementUpdates(Entity[] entities) {
 		foreach(Entity entity ; entities) {
-			this.sendPacket(new Play.MoveEntity(entity.id, tuple!(typeof(Play.MoveEntity.position))(entity.position + [0, entity.eyeHeight, 0]), entity.anglePitch, entity.angleYaw, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, entity.onGround));
+			this.sendPacket(new Play.MoveEntity(entity.id, (cast(Vector3!float)(entity.position + [0, entity.eyeHeight, 0])).tuple, entity.anglePitch, entity.angleYaw, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, entity.onGround));
 		}
 	}
 	
 	public override void sendMotionUpdates(Entity[] entities) {
 		foreach(Entity entity ; entities) {
-			this.sendPacket(new Play.SetEntityMotion(entity.id, tuple!(typeof(Play.SetEntityMotion.motion))(entity.motion)));
+			this.sendPacket(new Play.SetEntityMotion(entity.id, (cast(Vector3!float)entity.motion).tuple));
 		}
 	}
 	
@@ -512,7 +512,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		}
 		data.blockEntities = networkStream.buffer;
 
-		this.sendPacket(new Play.FullChunkData(tuple!(typeof(Play.FullChunkData.position))(chunk.position), data));
+		this.sendPacket(new Play.FullChunkData(chunk.position.tuple, data));
 
 		/*if(chunk.translatable_tiles.length > 0) {
 			foreach(Tile tile ; chunk.translatable_tiles) {
@@ -593,11 +593,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	protected override void sendPosition() {
-		this.sendPacket(new Play.MovePlayer(this.id, tuple!(typeof(Play.MovePlayer.position))(this.position), this.pitch, this.bodyYaw, this.yaw, Play.MovePlayer.TELEPORT, this.onGround));
+		this.sendPacket(new Play.MovePlayer(this.id, (cast(Vector3!float)this.position).tuple, this.pitch, this.bodyYaw, this.yaw, Play.MovePlayer.TELEPORT, this.onGround));
 	}
 
 	protected override void sendMotion(EntityPosition motion) {
-		this.sendPacket(new Play.SetEntityMotion(this.id, tuple!(typeof(Play.SetEntityMotion.motion))(motion)));
+		this.sendPacket(new Play.SetEntityMotion(this.id, (cast(Vector3!float)motion).tuple));
 	}
 
 	public override void sendSpawnEntity(Entity entity) {
@@ -611,15 +611,15 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	protected void sendAddPlayer(Player player) {
-		this.sendPacket(new Play.AddPlayer(toUUID(player.uuid), player.name, player.id, player.id, tuple!(typeof(Play.AddPlayer.position))(player.position), tuple!(typeof(Play.AddPlayer.motion))(player.motion), player.pitch, player.bodyYaw, player.yaw, toSlot(player.inventory.held), metadataOf(player.metadata)));
+		this.sendPacket(new Play.AddPlayer(toUUID(player.uuid), player.name, player.id, player.id, (cast(Vector3!float)player.position).tuple, (cast(Vector3!float)player.motion).tuple, player.pitch, player.bodyYaw, player.yaw, toSlot(player.inventory.held), metadataOf(player.metadata)));
 	}
 	
 	protected void sendAddItemEntity(ItemEntity item) {
-		this.sendPacket(new Play.AddItemEntity(item.id, item.id, toSlot(item.item), tuple!(typeof(Play.AddItemEntity.position))(item.position), tuple!(typeof(Play.AddItemEntity.motion))(item.motion), metadataOf(item.metadata)));
+		this.sendPacket(new Play.AddItemEntity(item.id, item.id, toSlot(item.item), (cast(Vector3!float)item.position).tuple, (cast(Vector3!float)item.motion).tuple, metadataOf(item.metadata)));
 	}
 	
 	protected void sendAddEntity(Entity entity) {
-		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.pocketId, tuple!(typeof(Play.AddEntity.position))(entity.position), tuple!(typeof(Play.AddEntity.motion))(entity.motion), entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
+		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.pocketId, (cast(Vector3!float)entity.position).tuple, (cast(Vector3!float)entity.motion).tuple, entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
 	}
 
 	public override @trusted void healthUpdated() {
@@ -655,7 +655,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendJoinPacket() {
 		//TODO send thunders
-		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, tuple!(typeof(Play.StartGame.position))(this.position), this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, tuple!(typeof(Play.StartGame.spawnPosition))(cast(Vector3!int)this.spawn), false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
 	}
 	
 	public override void sendTimePacket() {
@@ -679,7 +679,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 	
 	public override void sendRespawnPacket() {
-		this.sendPacket(new Play.Respawn(tuple!(typeof(Play.Respawn.position))(this.spawn + [0, this.eyeHeight, 0])));
+		this.sendPacket(new Play.Respawn((cast(Vector3!float)(this.spawn + [0, this.eyeHeight, 0])).tuple));
 	}
 	
 	public override void setAsReadyToSpawn() {
@@ -700,7 +700,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	private void sendLevelEvent(typeof(Play.LevelEvent.eventId) evid, EntityPosition position, uint data) {
-		this.sendPacket(new Play.LevelEvent(evid, tuple!(typeof(Play.LevelEvent.position))(position), data));
+		this.sendPacket(new Play.LevelEvent(evid, (cast(Vector3!float)position).tuple, data));
 	}
 	
 	public override void sendLightning(Lightning lightning) {
@@ -750,7 +750,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		foreach(Vector3!byte u ; updates) {
 			upd ~= toBlockPosition(cast(Vector3!int)u);
 		}
-		this.sendPacket(new Play.Explode(tuple!(typeof(Play.Explode.position))(position), radius, upd));
+		this.sendPacket(new Play.Explode((cast(Vector3!float)position).tuple, radius, upd));
 	}
 	
 	public override void sendMap(Map map) {
@@ -759,7 +759,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void sendMusic(EntityPosition position, ubyte instrument, uint pitch) {
-		this.sendPacket(new Play.LevelSoundEvent(Play.LevelSoundEvent.NOTE, tuple!(typeof(Play.LevelSoundEvent.position))(position), instrument, pitch, false));
+		this.sendPacket(new Play.LevelSoundEvent(Play.LevelSoundEvent.NOTE, (cast(Vector3!float)position).tuple, instrument, pitch, false));
 	}
 
 	protected override void sendCommands() {
@@ -817,7 +817,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	protected void handleMovePlayerPacket(long eid, typeof(Play.MovePlayer.position) position, float pitch, float bodyYaw, float yaw, ubyte mode, bool onGround, long unknown7, int unknown8, int unknown9) {
 		position.y -= this.eyeHeight;
-		this.handleMovementPacket(vector!(EntityPosition)(position), yaw, bodyYaw, pitch);
+		this.handleMovementPacket(cast(EntityPosition)Vector3!float(position), yaw, bodyYaw, pitch);
 	}
 
 	protected void handleRiderJumpPacket(long eid) {}

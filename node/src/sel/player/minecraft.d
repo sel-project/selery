@@ -253,9 +253,9 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			//TODO check for old rotation
 			if(entity.oldposition != entity.position) {
 				if(abs(entity.position.x - entity.oldposition.x) <= 8 && abs(entity.position.y - entity.oldposition.y) <= 8 && abs(entity.position.z - entity.oldposition.z) <= 8) {
-					this.sendPacket(new Clientbound.EntityLookAndRelativeMove(entity.id, tuple!(typeof(Clientbound.EntityLookAndRelativeMove.delta))(cast(Vector3!short)round((entity.position * 32 - entity.oldposition * 32) * 128)), entity.angleYaw, entity.anglePitch, entity.onGround));
+					this.sendPacket(new Clientbound.EntityLookAndRelativeMove(entity.id, (cast(Vector3!short)round((entity.position * 32 - entity.oldposition * 32) * 128)).tuple, entity.angleYaw, entity.anglePitch, entity.onGround));
 				} else {
-					this.sendPacket(new Clientbound.EntityTeleport(entity.id, tuple!(typeof(Clientbound.EntityTeleport.position))(entity.position), entity.angleYaw, entity.anglePitch, entity.onGround));
+					this.sendPacket(new Clientbound.EntityTeleport(entity.id, entity.position.tuple, entity.angleYaw, entity.anglePitch, entity.onGround));
 				}
 			} else {
 				this.sendPacket(new Clientbound.EntityLook(entity.id, entity.angleYaw, entity.anglePitch, entity.onGround));
@@ -266,7 +266,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	
 	public override void sendMotionUpdates(Entity[] entities) {
 		foreach(Entity entity ; entities) {
-			this.sendPacket(new Clientbound.EntityVelocity(entity.id, tuple!(typeof(Clientbound.EntityVelocity.velocity))(entity.velocity)));
+			this.sendPacket(new Clientbound.EntityVelocity(entity.id, entity.velocity.tuple));
 		}
 	}
 
@@ -383,7 +383,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 		buffer ~= biomes;
 
-		auto packet = new Clientbound.ChunkData(tuple!(typeof(Clientbound.ChunkData.position))(chunk.position), true, sections, buffer);
+		auto packet = new Clientbound.ChunkData(chunk.position.tuple, true, sections, buffer);
 
 		stream.buffer.length = 0;
 		foreach(tile ; chunk.tiles) {
@@ -403,7 +403,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	public override void unloadChunk(ChunkPosition pos) {
-		this.sendPacket(new Clientbound.UnloadChunk(tuple!(typeof(Clientbound.UnloadChunk.position))(pos)));
+		this.sendPacket(new Clientbound.UnloadChunk(pos.tuple));
 	}
 
 	public override void sendChangeDimension(group!byte from, group!byte to) {
@@ -461,13 +461,13 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	protected override void sendPosition() {
-		this.sendPacket(new Clientbound.PlayerPositionAndLook(tuple!(typeof(Clientbound.PlayerPositionAndLook.position))(this.position), this.yaw, this.pitch, ubyte.init, 0));
+		this.sendPacket(new Clientbound.PlayerPositionAndLook(this.position.tuple, this.yaw, this.pitch, ubyte.init, 0));
 	}
 
 	protected override void sendMotion(EntityPosition motion) {
 		auto ret = motion * 8000;
 		auto m = Vector3!short(clamp(ret.x, short.min, short.max), clamp(ret.y, short.min, short.max), clamp(ret.z, short.min, short.max));
-		this.sendPacket(new Clientbound.EntityVelocity(this.id, tuple!(typeof(Clientbound.EntityVelocity.velocity))(m)));
+		this.sendPacket(new Clientbound.EntityVelocity(this.id, m.tuple));
 	}
 
 	public override void sendSpawnEntity(Entity entity) {
@@ -480,15 +480,15 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	protected void sendAddPlayer(Player player) {
-		this.sendPacket(new Clientbound.SpawnPlayer(player.id, player.uuid, tuple!(typeof(Clientbound.SpawnPlayer.position))(player.position), player.angleYaw, player.anglePitch, metadataOf(player.metadata)));
+		this.sendPacket(new Clientbound.SpawnPlayer(player.id, player.uuid, player.position.tuple, player.angleYaw, player.anglePitch, metadataOf(player.metadata)));
 	}
 	
 	protected void sendAddEntity(Entity entity) {
 		//TODO xp orb
 		//TODO painting
 		if(entity.minecraft) {
-			if(entity.object) this.sendPacket(new Clientbound.SpawnObject(entity.id, entity.uuid, entity.minecraftId, tuple!(typeof(Clientbound.SpawnObject.position))(entity.position), entity.anglePitch, entity.angleYaw, entity.objectData, tuple!(typeof(Clientbound.SpawnObject.velocity))(entity.velocity)));
-			else this.sendPacket(new Clientbound.SpawnMob(entity.id, entity.uuid, entity.minecraftId, tuple!(typeof(Clientbound.SpawnMob.position))(entity.position), entity.angleYaw, entity.anglePitch, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, tuple!(typeof(Clientbound.SpawnMob.velocity))(entity.velocity), metadataOf(entity.metadata)));
+			if(entity.object) this.sendPacket(new Clientbound.SpawnObject(entity.id, entity.uuid, entity.minecraftId, entity.position.tuple, entity.anglePitch, entity.angleYaw, entity.objectData, entity.velocity.tuple));
+			else this.sendPacket(new Clientbound.SpawnMob(entity.id, entity.uuid, entity.minecraftId, entity.position.tuple, entity.angleYaw, entity.anglePitch, cast(Living)entity ? (cast(Living)entity).angleBodyYaw : entity.angleYaw, entity.velocity.tuple, metadataOf(entity.metadata)));
 			if(cast(ItemEntity)entity) this.sendMetadata(entity);
 		}
 	}
@@ -556,7 +556,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 
 	public override void sendLightning(Lightning lightning) {
-		this.sendPacket(new Clientbound.SpawnGlobalEntity(lightning.id, Clientbound.SpawnGlobalEntity.THUNDERBOLT, tuple!(typeof(Clientbound.SpawnGlobalEntity.position))(lightning.position)));
+		this.sendPacket(new Clientbound.SpawnGlobalEntity(lightning.id, Clientbound.SpawnGlobalEntity.THUNDERBOLT, lightning.position.tuple));
 	}
 	
 	public override void sendAnimation(Entity entity) {
@@ -575,7 +575,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		}
 		foreach(x, pcz; pc) {
 			foreach(z, pb; pcz) {
-				this.sendPacket(new Clientbound.MultiBlockChange(tuple!(typeof(Clientbound.MultiBlockChange.chunk))(ChunkPosition(x, z)), pb));
+				this.sendPacket(new Clientbound.MultiBlockChange(ChunkPosition(x, z).tuple, pb));
 			}
 		}
 	}
@@ -618,12 +618,11 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	public override void sendExplosion(EntityPosition position, float radius, Vector3!byte[] updates) {
-		alias R = typeof(Clientbound.Explosion.records.init[0]);
-		R[] records;
+		Vector3!byte.Tuple[] records;
 		foreach(update ; updates) {
-			records ~= tuple!R(update);
+			records ~= update.tuple;
 		}
-		this.sendPacket(new Clientbound.Explosion(tuple!(typeof(Clientbound.Explosion.position))(position), radius, records, typeof(Clientbound.Explosion.motion)(0, 0, 0)));
+		this.sendPacket(new Clientbound.Explosion((cast(Vector3!float)position).tuple, radius, records, typeof(Clientbound.Explosion.motion)(0, 0, 0)));
 	}
 	
 	public override void sendMap(Map map) {
@@ -642,7 +641,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			}
 		}
 		enum float[] pitches = [.5, .533333, .566666, .6, .633333, .666666, .7, .75, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.25, 1.333333, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2];
-		this.sendPacket(new Clientbound.NamedSoundEffect("block.note." ~ sound, 2, tuple!(typeof(Clientbound.NamedSoundEffect.position))(cast(Vector3!int)position), 16, pitches[pitch]));
+		this.sendPacket(new Clientbound.NamedSoundEffect("block.note." ~ sound, 2, (cast(Vector3!int)position).tuple, 16, pitches[pitch]));
 	}
 
 

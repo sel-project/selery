@@ -28,7 +28,7 @@ import std.traits : IntegralTypeOf, staticIndexOf, isNumeric, isArray, CommonTyp
 import std.typecons : isTuple;
 import std.typetuple : TypeTuple;
 
-import sel.entity.entity : Entity;
+static import std.typecons;
 
 /**
  * Vector for coordinates storing and operations.
@@ -37,42 +37,61 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	
 	public alias Type = T;
 	public alias coordinates = c;
+
+	mixin("alias Tuple = std.typecons.Tuple!(T, \"" ~ join(coordinates.idup.split(""), "\", T, \"") ~ "\");");
 	
 	mixin("public enum coords = TypeTuple!('" ~ join(coordinates.idup.split(""), "','") ~ "');");
 	
 	enum bool isFloatingPoint = isFloatingPointTrait!T;
+
+	private Tuple value;
 	
 	mixin((){
-			string ret;
-			foreach(immutable c ; coords) {
-				ret ~= "private T n_" ~ c ~ ";";
-				ret ~= "public pure nothrow @property @safe @nogc T " ~ c ~ "(){ return this.n_" ~ c ~ "; }";
-			}
-			return ret;
-		}());
-	
-	public @safe @nogc this(T value) {
+		string ret;
 		foreach(immutable c ; coords) {
-			mixin("this.n_" ~ c ~ " = value;");
+			ret ~= "public pure nothrow @property @safe @nogc T " ~ c ~ "(){ return this.value." ~ c ~ "; }";
+		}
+		return ret;
+	}());
+
+	public pure nothrow @safe @nogc this(Tuple value) {
+		this.value = value;
+	}
+
+	public pure nothrow @safe @nogc this(T value) {
+		foreach(immutable c ; coords) {
+			mixin("this.value." ~ c ~ " = value;");
 		}
 	}
 	
 	public @safe this(F...)(F args) if(F.length == coordinates.length) {
 		foreach(i, immutable c; coords) {
-			mixin("this.n_" ~ c ~ " = cast(T)args[" ~ to!string(i) ~ "];");
+			mixin("this.value." ~ c ~ " = cast(T)args[" ~ to!string(i) ~ "];");
 		}
 	}
 	
 	public @safe @nogc this(T[coords.length] variables) {
 		foreach(i, immutable c; coords) {
-			mixin("this.n_" ~ c ~ " = variables[i];");
+			mixin("this.value." ~ c ~ " = variables[i];");
 		}
 	}
 	
 	public @safe @nogc this(T[] variables) {
 		foreach(i, immutable c; coords) {
-			mixin("this.n_" ~ c ~ " = variables[i];");
+			mixin("this.value." ~ c ~ " = variables[i];");
 		}
+	}
+
+	/**
+	 * Gets the vector as a constant tuple.
+	 * Example:
+	 * ---
+	 * auto v = vector(0, 3, 4);
+	 * assert(v.tuple == typeof(v).Tuple(0, 3, 4));
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc const Tuple tuple() {
+		return this.value;
 	}
 	
 	/**
@@ -119,7 +138,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	public typeof(this) opUnary(string op)() if(__traits(compiles, { mixin("T t;t=" ~ op ~ "t;"); })) {
 		typeof(this) ret;
 		foreach(immutable c ; coords) {
-			mixin("ret.n_" ~ c ~ "=" ~ op ~ "this.n_" ~ c ~ ";");
+			mixin("ret." ~ c ~ "=" ~ op ~ "this.value." ~ c ~ ";");
 		}
 		return ret;
 	}
@@ -159,17 +178,17 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	 * ---
 	 */
 	public typeof(this) opOpAssign(string op, F)(F value) if(isVector!F && coordinates == F.coordinates) {
-		return this.opAssignImpl!("this.n_{c}" ~ op ~ "=value.{c}")(value);
+		return this.opAssignImpl!("this.value.{c}" ~ op ~ "=value.{c}")(value);
 	}
 	
 	/// ditto
 	public typeof(this) opOpAssign(string op, F)(F value) if(isArray!F) {
-		return this.opAssignImpl!("this.n_{c}" ~ op ~ "=value[{i}]")(value);
+		return this.opAssignImpl!("this.value.{c}" ~ op ~ "=value[{i}]")(value);
 	}
 	
 	/// ditto
 	public typeof(this) opOpAssign(string op, F)(F value) if(isImplicitlyConvertible!(F, T)) {
-		return this.opAssignImpl!("this.n_{c}" ~ op ~ "=value")(value);
+		return this.opAssignImpl!("this.value.{c}" ~ op ~ "=value")(value);
 	}
 	
 	private typeof(this) opAssignImpl(string query, F)(F value) {
@@ -197,7 +216,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 			F ret;
 			foreach(immutable c; F.coords) {
 				static if(coordinates.canFind(c)) {
-					mixin("ret.n_" ~ c ~ "=to!(F.Type)(this." ~ c ~ ");");
+					mixin("ret.value." ~ c ~ "=to!(F.Type)(this." ~ c ~ ");");
 				}
 			}
 			return ret;
@@ -226,7 +245,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	public auto type(F)() if(isImplicitlyConvertible!(F, T)) {
 		Vector!(F, coordinates) ret;
 		foreach(immutable c ; coords) {
-			mixin("ret.n_" ~ c ~ "=this." ~ c ~ ";");
+			mixin("ret.value." ~ c ~ "=this." ~ c ~ ";");
 		}
 		return ret;
 	}
@@ -247,7 +266,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	public @property double length() {
 		double length = 0;
 		foreach(immutable c ; coords) {
-			mixin("length += this.n_" ~ c ~ " * this.n_" ~ c ~ ";");
+			mixin("length += this.value." ~ c ~ " * this.value." ~ c ~ ";");
 		}
 		return std.math.sqrt(length);
 	}
@@ -258,7 +277,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 	public @property double length(double length) {
 		double mult = length / this.length;
 		foreach(immutable c ; coords) {
-			mixin("this.n_" ~ c ~ " = cast(T)(this.n_" ~ c ~ " * mult);");
+			mixin("this.value." ~ c ~ " = cast(T)(this.value." ~ c ~ " * mult);");
 		}
 		return length;
 	}
@@ -271,7 +290,7 @@ struct Vector(T, char[] c) if(c.length > 1 && areValidCoordinates(c)) {
 		foreach(i, coord; coords) {
 			mixin("cs ~= to!string(this." ~ coord ~ ");");
 		}
-		return "Vector!" ~ coordinates.idup ~ "(" ~ cs.join(",") ~ ")";
+		return "Vector!(" ~ T.stringof ~ ", \"" ~ coordinates.idup ~ "\")(" ~ cs.join(", ") ~ ")";
 	}
 	
 }
@@ -446,7 +465,7 @@ public pure nothrow @safe Vector!(CommonType!(A, B), coords) cross(A, B, char[] 
  * 
  * ---
  */
-public V vector(V, T)(T tuple) if(isVector!V && isTuple!T) {
+deprecated("Use the vector's constructor instead") public V vector(V, T)(T tuple) if(isVector!V && isTuple!T) {
 	mixin((){
 		string[] ret;
 		foreach(field ; T.fieldNames) {
@@ -456,7 +475,7 @@ public V vector(V, T)(T tuple) if(isVector!V && isTuple!T) {
 	}());
 }
 
-public T tuple(T, V)(V vector) if(isTuple!T && isVector!V) {
+deprecated("Use vector's .tuple property instead") public T tuple(T, V)(V vector) if(isTuple!T && isVector!V) {
 	T tup;
 	mixin((){
 		string ret = "";
