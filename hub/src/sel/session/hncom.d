@@ -57,77 +57,63 @@ mixin("import Status = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status
 mixin("import Player = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 mixin("import World = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".world;");
 
-version(Lite) {} else version = NotLite;
-
 class HncomHandler : HandlerThread {
 	
 	private shared string* additionalJson, socialJson;
-
-	private immutable ushort pocketPort, minecraftPort;
 
 	private shared Address address;
 
 	version(Posix) private shared string unixSocketAddress;
 	
-	public this(shared Server server, shared string* additionalJson, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
-		version(Lite) {
-			super(server, []);
-		} else {
-			string ip = "::";
-			string[] nodes = cast(string[])server.settings.config.acceptedNodes;
-			if(nodes.length) {
-				if(nodes.length == 1) {
-					if(nodes[0] == "::1") ip = "::1";
-					else if(nodes[0].startsWith("127.0.")) ip = "127.0.0.1";
-					else if(nodes[0].startsWith("192.168.") && !nodes[0].canFind('-') && (!nodes[0].canFind('*') || nodes[0].indexOf("*") < nodes[0].lastIndexOf("."))) ip = nodes[0][0..nodes[0].lastIndexOf(".")] ~ ".255";
-				}
-				if(ip == "::") {
-					ip = "0.0.0.0";
-					foreach(range ; server.settings.acceptedNodes) {
-						if(range.addressFamily != AddressFamily.INET) {
-							ip = "::";
-							break;
-						}
+	public this(shared Server server, shared string* additionalJson, shared string* socialJson) {
+		string ip = "::";
+		string[] nodes = cast(string[])server.settings.config.acceptedNodes;
+		if(nodes.length) {
+			if(nodes.length == 1) {
+				if(nodes[0] == "::1") ip = "::1";
+				else if(nodes[0].startsWith("127.0.")) ip = "127.0.0.1";
+				else if(nodes[0].startsWith("192.168.") && !nodes[0].canFind('-') && (!nodes[0].canFind('*') || nodes[0].indexOf("*") < nodes[0].lastIndexOf("."))) ip = nodes[0][0..nodes[0].lastIndexOf(".")] ~ ".255";
+			}
+			if(ip == "::") {
+				ip = "0.0.0.0";
+				foreach(range ; server.settings.acceptedNodes) {
+					if(range.addressFamily != AddressFamily.INET) {
+						ip = "::";
+						break;
 					}
 				}
 			}
-			Socket socket = null;
-			version(Posix) {
-				if(server.settings.hncomUseUnixSockets && (ip == "127.0.0.1" || ip == "::1")) {
-					this.unixSocketAddress = server.settings.hncomUnixSocketAddress;
-					socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
-				}
-			}
-			if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
-			this.address = cast(shared)socket.localAddress;
-			super(server, [cast(shared)socket]);
 		}
+		Socket socket = null;
+		version(Posix) {
+			if(server.settings.hncomUseUnixSockets && (ip == "127.0.0.1" || ip == "::1")) {
+				this.unixSocketAddress = server.settings.hncomUnixSocketAddress;
+				socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
+			}
+		}
+		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
+		this.address = cast(shared)socket.localAddress;
+		super(server, [cast(shared)socket]);
 		this.additionalJson = additionalJson;
-		this.pocketPort = pocketPort;
-		this.minecraftPort = minecraftPort;
 	}
 	
 	protected override void listen(shared Socket sharedSocket) {
-		version(Lite) {
-			new shared Node(this.server, null, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
-		} else {
-			Socket socket = cast()sharedSocket;
-			while(true) {
-				Socket client = socket.accept();
-				Address address;
-				try {
-					address = client.remoteAddress;
-				} catch(Exception) {
-					continue;
-				}
-				if(this.server.acceptNode(address)) {
-					new SafeThread({
-						shared Node node = new shared Node(this.server, client, *this.additionalJson, this.socialJson, this.pocketPort, this.minecraftPort);
-						delete node;
-					}).start();
-				} else {
-					client.close();
-				}
+		Socket socket = cast()sharedSocket;
+		while(true) {
+			Socket client = socket.accept();
+			Address address;
+			try {
+				address = client.remoteAddress;
+			} catch(Exception) {
+				continue;
+			}
+			if(this.server.acceptNode(address)) {
+				new SafeThread({
+					shared Node node = new shared Node(this.server, client, *this.additionalJson, this.socialJson);
+					delete node;
+				}).start();
+			} else {
+				client.close();
 			}
 		}
 	}
@@ -211,80 +197,78 @@ class Node : Session {
 	private shared ulong n_ram;
 	private shared float n_cpu;
 	
-	public shared this(shared Server server, Socket socket, string additionalJson, shared string* socialJson, ushort pocket_port, ushort minecraft_port) {
+	public shared this(shared Server server, Socket socket, string additionalJson, shared string* socialJson) {
 		super(server);
-		version(Lite) {
-			//TODO do handshake
-		} else {
+		this.socialJson = socialJson;
+		if(socket !is null) {
 			if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
 			this.socket = cast(shared)socket;
 			this.remoteAddress = socket.remoteAddress.toString();
 			socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
-		}
-		this.socialJson = socialJson;
-		auto receiver = new Receiver!(uint, Endian.littleEndian)();
-		ubyte[] buffer = new ubyte[256];
-		auto recv = socket.receive(buffer);
-		if(recv > 0) {
-			this.server.traffic.receive(recv);
-			receiver.add(buffer[0..recv]);
-		}
-		if(receiver.has) {
-			ubyte[] payload = receiver.next;
-			if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
-				immutable password = server.settings.hncomPassword;
-				auto request = Login.ConnectionRequest.fromBuffer(payload);
-				this.n_name = request.name.idup;
-				this.n_main = request.main;
-				auto response = new Login.ConnectionResponse(Login.ConnectionResponse.OK, Software.hncom);
-				if(request.protocol > Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_HUB;
-				else if(request.protocol < Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_NODE;
-				else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
-				else if(password.length && password != request.password) response.status = Login.ConnectionResponse.WRONG_PASSWORD;
-				else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
-				else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
-				else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-				else if(["about", "disconnect", "help", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
-				this.send(response.encode());
-				if(response.status == Login.ConnectionResponse.OK) {
-					// send info packets
-					with(cast()server.settings) {
-						Types.GameInfo[] games;
-						if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocket.protocols), pocket.motd, pocket.onlineMode, pocket_port);
-						if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraft.protocols), minecraft.motd, minecraft.onlineMode, minecraft_port);
-						this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
-					}
-					socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
-					while(true) {
-						if(receiver.has) {
-							payload = receiver.next;
-							if(payload.length && payload[0] == Login.NodeInfo.ID) {
-								auto info = Login.NodeInfo.fromBuffer(payload);
-								this.n_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
-								this.n_max = info.max;
-								foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
-								this.plugins = cast(shared)info.plugins;
-								foreach(node ; server.nodesList) this.send(node.addPacket.encode());
-								server.add(this);
-								this.loop(receiver);
-								server.remove(this);
-								this.onClosed();
-							}
-							break;
-						} else {
-							recv = socket.receive(buffer);
-							if(recv > 0) {
-								this.server.traffic.receive(recv);
-								receiver.add(buffer[0..recv]);
-							} else {
+			auto receiver = new Receiver!(uint, Endian.littleEndian)();
+			ubyte[] buffer = new ubyte[256];
+			auto recv = socket.receive(buffer);
+			if(recv > 0) {
+				this.server.traffic.receive(recv);
+				receiver.add(buffer[0..recv]);
+			}
+			if(receiver.has) {
+				ubyte[] payload = receiver.next;
+				if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
+					immutable password = server.settings.hncomPassword;
+					auto request = Login.ConnectionRequest.fromBuffer(payload);
+					this.n_name = request.name.idup;
+					this.n_main = request.main;
+					auto response = new Login.ConnectionResponse(Login.ConnectionResponse.OK, Software.hncom);
+					if(request.protocol > Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_HUB;
+					else if(request.protocol < Software.hncom) response.status = Login.ConnectionResponse.OUTDATED_NODE;
+					else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
+					else if(password.length && password != request.password) response.status = Login.ConnectionResponse.WRONG_PASSWORD;
+					else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
+					else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
+					else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
+					else if(["about", "disconnect", "help", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+					this.send(response.encode());
+					if(response.status == Login.ConnectionResponse.OK) {
+						// send info packets
+						with(cast()server.settings) {
+							Types.GameInfo[] games;
+							if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraft.protocols), minecraft.motd, minecraft.onlineMode, minecraft.port);
+							if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocket.protocols), pocket.motd, pocket.onlineMode, pocket.port);
+							this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
+						}
+						socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
+						while(true) {
+							if(receiver.has) {
+								payload = receiver.next;
+								if(payload.length && payload[0] == Login.NodeInfo.ID) {
+									auto info = Login.NodeInfo.fromBuffer(payload);
+									this.n_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
+									this.n_max = info.max;
+									foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
+									this.plugins = cast(shared)info.plugins;
+									foreach(node ; server.nodesList) this.send(node.addPacket.encode());
+									server.add(this);
+									this.loop(receiver);
+									server.remove(this);
+									this.onClosed();
+								}
 								break;
+							} else {
+								recv = socket.receive(buffer);
+								if(recv > 0) {
+									this.server.traffic.receive(recv);
+									receiver.add(buffer[0..recv]);
+								} else {
+									break;
+								}
 							}
 						}
 					}
 				}
 			}
+			socket.close();
 		}
-		socket.close();
 	}
 	
 	/**
@@ -800,4 +784,69 @@ class Node : Session {
 		return "Node(" ~ to!string(this.id) ~ ", " ~ this.name ~ ", " ~ this.remoteAddress ~ ", " ~ to!string(this.n_main) ~ ")";
 	}
 	
+}
+
+static import std.concurrency;
+
+class MessagePassingNode : Node {
+
+	public shared static bool ready = false;
+
+	public shared static std.concurrency.Tid tid;
+
+	private std.concurrency.Tid node;
+
+	public shared this(shared Server server, shared string* additionalJson, shared string* socialJson) {
+		super(server, null, cast()*additionalJson, socialJson);
+		Thread.getThis().name = "hncomHanlder";
+		tid = cast(shared)std.concurrency.thisTid;
+		ready = true;
+		this.node = cast(shared)std.concurrency.receiveOnly!(std.concurrency.Tid)();
+		// the login process (ConnectionRequest and ConnectionResponse) is skipped
+		// send hub info
+		with(cast()server.settings) {
+			Types.GameInfo[] games;
+			if(minecraft) games ~= Types.GameInfo(Types.Game(Types.Game.MINECRAFT, minecraft.protocols), minecraft.motd, minecraft.onlineMode, minecraft.port);
+			if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocket.protocols), pocket.motd, pocket.onlineMode, pocket.port);
+			this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, *additionalJson).encode());
+		}
+		// wait for node info
+		auto receiver = new Receiver!(uint, Endian.littleEndian)();
+		receiver.add(std.concurrency.receiveOnly!(immutable(ubyte)[])().dup);
+		auto info = Login.NodeInfo.fromBuffer(receiver.next);
+		this.n_latency = 0; // no latency
+		this.n_max = info.max;
+		foreach(game ; info.acceptedGames) this.accepted[game.type] = cast(shared uint[])game.protocols;
+		this.plugins = cast(shared)info.plugins;
+		foreach(node ; server.nodesList) this.send(node.addPacket.encode());
+		this.loop(receiver);
+		this.onClosed(); // just kick the players
+	}
+
+	protected shared override void loop(Receiver!(uint, Endian.littleEndian) receiver) {
+		Socket socket = cast()this.socket;
+		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // blocking without timeout
+		immutable(ubyte)[] buffer;
+		while((buffer = std.concurrency.receiveOnly!(immutable(ubyte)[])()).length) {
+			receiver.add(buffer.dup);
+			while(receiver.has) {
+				if(receiver.length == 0) {
+					// connectio closed
+					return;
+				}
+				this.handlePacket(receiver.next);
+			}
+		}
+	}
+
+	public override shared ptrdiff_t send(const(void)[] buffer) {
+		auto b = nativeToLittleEndian(buffer.length.to!uint) ~ cast(ubyte[])buffer;
+		std.concurrency.send(cast()this.node, b.idup);
+		return buffer.length;
+	}
+
+	public override shared inout string toString() {
+		return "MessagePassingNode()";
+	}
+
 }

@@ -22,13 +22,14 @@ import std.socket;
 import std.string;
 
 import sel.about : Software;
+import sel.config : ConfigType;
 import sel.constants;
 import sel.lang : translate;
 import sel.format : Text;
 import sel.hub.settings;
 import sel.hub.server : Server;
 import sel.session.externalconsole : ExternalConsoleHandler;
-import sel.session.hncom : HncomHandler;
+import sel.session.hncom : HncomHandler, MessagePassingNode;
 import sel.session.http : HttpHandler;
 import sel.session.minecraft : MinecraftHandler, MinecraftQueryHandler;
 import sel.session.panel : PanelHandler;
@@ -77,14 +78,10 @@ class Handler {
 
 		with(server.settings) {
 
-			bool shncom = acceptedNodes.length != 0;
-
-			version(Posix) {
-				shncom |= hncomUseUnixSockets;
-			}
-
-			if(shncom) {
-				this.n_hncom_address = this.startThread!HncomHandler(server, &this.additionalJson, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort).localAddress;
+			if(config.type == ConfigType.hub) {
+				this.startThread!HncomHandler(server, &this.additionalJson, &this.socialJson);
+			} else {
+				new SafeThread({ new shared MessagePassingNode(server, &this.additionalJson, &this.socialJson); }).start();
 			}
 
 			if(pocket) {

@@ -51,7 +51,7 @@ import sel.util.lang;
 import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
-import sel.world.world : World;
+import sel.world.world : World, Dimension;
 
 import sul.utils.var : varuint;
 
@@ -503,7 +503,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		foreach(tile ; chunk.tiles) {
 			if(tile.pocketCompound !is null) {
 				auto compound = tile.pocketCompound.dup;
-				compound["id"] = new String(tile.spawnId.pe);
+				compound["id"] = new String(tile.pocketSpawnId);
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
@@ -525,9 +525,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		// no UnloadChunk packet :(
 	}
 
-	public override void sendChangeDimension(group!byte from, group!byte to) {
-		//if(from.pe == to.pe) this.sendPacket(new Play.ChangeDimension((to.pe + 1) % 3, typeof(Play.ChangeDimension.position)(0, 128, 0), true));
-		if(from.pe != to.pe) this.sendPacket(new Play.ChangeDimension(to.pe));
+	public override void sendChangeDimension(Dimension from, Dimension to) {
+		//if(from == to) this.sendPacket(new Play.ChangeDimension((to + 1) % 3, typeof(Play.ChangeDimension.position)(0, 128, 0), true));
+		if(from != to) this.sendPacket(new Play.ChangeDimension(to));
 	}
 	
 	public override void sendInventory(ubyte flag=PlayerInventory.ALL, bool[] slots=[]) {
@@ -655,7 +655,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendJoinPacket() {
 		//TODO send thunders
-		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension.pe, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
 	}
 	
 	public override void sendTimePacket() {

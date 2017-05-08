@@ -16,8 +16,10 @@ module sel.about;
 
 import std.algorithm : sort, reverse;
 import std.conv : to;
+import std.json : JSONValue;
 import std.string : toLower, split, join, startsWith;
 import std.typecons : Tuple;
+import std.typetuple : TypeTuple;
 
 
 alias suuid_t = immutable(ubyte)[17];
@@ -27,12 +29,6 @@ alias tick_t = size_t;
 alias block_t = ushort;
 
 alias item_t = size_t;
-
-public struct group(T) { T pe, pc; } // using a tuple causes a dmd segfault
-alias bytegroup = group!ubyte;
-alias shortgroup = group!ushort;
-alias intgroup = group!uint;
-alias longgroup = group!ulong;
 
 
 enum ubyte PE = 1;
@@ -149,6 +145,15 @@ const struct Software {
 	enum ubyte externalConsole = 2; // scheduled to be replaced by the panel protocol after 1.1
 	
 	enum ubyte panel = 1;
+
+	public static JSONValue toJSON(string type) {
+		JSONValue[string] ret;
+		foreach(member ; TypeTuple!("name", "website", "stable", "codename", "display", "api", "hncom", "externalConsole")) {
+			ret[member] = JSONValue(mixin(member));
+		}
+		ret["version"] = ["major": major, "minor": minor, "patch": patch];
+		return JSONValue(["type": JSONValue(type), "software": JSONValue(ret)]);
+	}
 	
 }
 
@@ -214,34 +219,3 @@ enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
 
 /// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];
-
-version(CommonMain) {
-	
-	import std.json;
-	import std.stdio : write;
-	
-	void main(string[] args) {
-		
-		with(Software) {
-			
-			JSONValue json;
-			json["name"] = name;
-			json["lname"] = lname;
-			json["website"] = website;
-			json["codename"] = codename;
-			json["codenameEmoji"] = codenameEmoji;
-			json["fullCodename"] = fullCodename;
-			json["version"] = versions;
-			json["stable"] = stable;
-			json["api"] = api;
-			json["sul"] = sul;
-			json["hncom"] = hncom;
-			json["externalConsole"] = externalConsole;
-			
-			write(json.toString());
-			
-		}
-		
-	}
-	
-}

@@ -50,6 +50,15 @@ sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=]
 
 ### Using DUB
 
+#### Lite
+
+```
+cd build
+dub init.d
+dub build --single lite.d
+./sel-lite [-edu] [-realm]
+```
+
 #### Hub
 
 ```

@@ -39,6 +39,27 @@ enum size_t __GENERATOR__ = 46;
 
 void main(string[] args) {
 
+	if(args.canFind("-p") || args.canFind("--portable") || args.canFind("/p") || args.canFind("/P")) {
+
+		// init for portable (it'll be used only for lite.d)
+
+		if(!exists("views")) mkdir("views");
+
+		ubyte[][string] files;
+
+		// get all files in res
+		foreach(string file ; dirEntries("../res/", SpanMode.breadth)) {
+			if(file.isFile) files[file[7..$].replace("\\", "/")] = cast(ubyte[])read(file);
+		}
+		write("views/portable.txt", files.to!string.replace(" ", ""));
+
+	} else if(exists("views/portable.txt")) {
+
+		remove("views/portable.txt");
+		rmdir("views");
+
+	}
+
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 
 	void loadPlugin(string path) {

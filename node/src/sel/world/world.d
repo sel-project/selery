@@ -145,7 +145,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	protected Server n_server;
 
-	protected group!byte n_dimension = Dimension.overworld;
+	protected Dimension n_dimension = Dimension.overworld;
 	protected uint n_seed;
 	protected string n_type;
 
@@ -294,7 +294,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc const(group!byte) dimension() {
+	public final pure nothrow @property @safe @nogc Dimension dimension() {
 		return this.n_dimension;
 	}
 
@@ -1484,10 +1484,10 @@ enum Time : tick_t {
 
 }
 
-enum Dimension : group!byte {
+enum Dimension : ubyte {
 
-	overworld = group!byte(0, 0),
-	nether = group!byte(1, -1),
-	end = group!byte(2, 1)
+	overworld = 0,
+	nether = 1,
+	end = 2
 
 }

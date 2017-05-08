@@ -47,11 +47,19 @@ import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.music : Instruments;
-import sel.world.world : World;
+import sel.world.world : World, Dimension;
 
 import sul.utils.var : varuint;
 
 abstract class MinecraftPlayer : Player {
+
+	protected static byte convertDimension(Dimension dimension) {
+		with(Dimension) final switch(dimension) {
+			case overworld: return 0;
+			case nether: return -1;
+			case end: return 1;
+		}
+	}
 
 	protected static Stream stream;
 
@@ -322,7 +330,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	
 	public override void sendChunk(Chunk chunk) {
 
-		immutable overworld = chunk.world.dimension.pc == 0;
+		immutable overworld = chunk.world.dimension == Dimension.overworld;
 
 		uint sections = 0;
 		ubyte[] buffer;
@@ -406,9 +414,11 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		this.sendPacket(new Clientbound.UnloadChunk(pos.tuple));
 	}
 
-	public override void sendChangeDimension(group!byte from, group!byte to) {
-		if(from.pc != to.pc) this.sendPacket(new Clientbound.Respawn(to.pc==-1?1:to.pc-1));
-		this.sendPacket(new Clientbound.Respawn(to.pc, this.world.rules.difficulty, this.world.rules.gamemode, this.world.type));
+	public override void sendChangeDimension(Dimension _from, Dimension _to) {
+		auto from = convertDimension(_from);
+		auto to = convertDimension(_to);
+		if(from != to) this.sendPacket(new Clientbound.Respawn(to==-1?1:to-1));
+		this.sendPacket(new Clientbound.Respawn(to, this.world.rules.difficulty, this.world.rules.gamemode, this.world.type));
 	}
 
 	public override void sendInventory(ubyte flag=PlayerInventory.ALL, bool[] slots=[]) {
@@ -519,7 +529,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 	public override void sendJoinPacket() {
 		if(!this.first_spawned) {
-			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode & 0b11, this.world.dimension.pc, this.world.rules.difficulty, ubyte.max, this.world.type, false));
+			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode & 0b11, convertDimension(this.world.dimension), this.world.rules.difficulty, ubyte.max, this.world.type, false));
 			this.first_spawned = true;
 		}
 		//this.sendPacket(new MinecraftJoinGame(this.gamemode!int, this.world.dimension, this.world.rules.difficulty, server.max));
@@ -540,7 +550,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 	
 	public override void sendRespawnPacket() {
-		this.sendPacket(new Clientbound.Respawn(this.world.dimension.pc, this.world.rules.difficulty, to!ubyte(this.gamemode), this.world.type));
+		this.sendPacket(new Clientbound.Respawn(convertDimension(this.world.dimension), this.world.rules.difficulty, to!ubyte(this.gamemode), this.world.type));
 	}
 	
 	public override void setAsReadyToSpawn() {

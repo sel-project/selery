@@ -50,19 +50,9 @@ void main(string[] args) {
 
 	if(action == "about") {
 
-		import std.json : JSONValue;
 		import std.stdio : writeln;
 
-		auto json = JSONValue([
-			"type": JSONValue("hub"),
-			"software": JSONValue([
-				"name": JSONValue(Software.name),
-				"version": JSONValue(Software.displayVersion),
-				"stable": JSONValue(Software.stable)
-			])
-		]);
-
-		writeln(json.toString());
+		writeln(Software.toJSON("hub").toString());
 
 	} else if(action == "init") {
 

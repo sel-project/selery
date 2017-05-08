@@ -72,7 +72,10 @@ abstract class Tile : Block {
 	 * They're usually in snake case in Minecraft (flower_pot) and
 	 * in pascal case in Minecraft: Pocket Edition (FlowerPot).
 	 */
-	public abstract pure nothrow @property @safe group!string spawnId();
+	public abstract pure nothrow @property @safe string minecraftSpawnId();
+
+	/// ditto
+	public abstract pure nothrow @property @safe string pocketSpawnId();
 
 	/**
 	 * Gets the named binary tag.
@@ -215,8 +218,12 @@ abstract class Sign : Tile {
 		this(data, a ? *a : "", b ? *b : "", c ? *c : "", d ? *d : "");
 	}
 	
-	public override pure nothrow @property @safe group!string spawnId() {
-		return group!string("Sign", "sign");
+	public override pure nothrow @property @safe string minecraftSpawnId() {
+		return "sign";
+	}
+	
+	public override pure nothrow @property @safe string pocketSpawnId() {
+		return "Sign";
 	}
 
 	/**
@@ -431,8 +438,12 @@ class FlowerPot : Tile {
 		if(item !is null) this.item = item;
 	}
 	
-	public override pure nothrow @property @safe group!string spawnId() {
-		return group!string("FlowerPot", "flower_pot");
+	public override pure nothrow @property @safe string minecraftSpawnId() {
+		return "flower_pot";
+	}
+	
+	public override pure nothrow @property @safe string pocketSpawnId() {
+		return "FlowerPot";
 	}
 
 	/**

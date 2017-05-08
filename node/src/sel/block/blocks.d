@@ -140,7 +140,7 @@ public class BlockStorage {
 		const diamondPickaxe = MiningTool(true, Tools.pickaxe, Tools.diamond);
 
 		const woodAxe = MiningTool(false, Tools.axe, Tools.wood);
-
+		/+
 		this.register(new Block(_.air));
 		this.register(new StoneBlock(_.stone, Items.cobblestone, Items.stone));
 		this.register(new StoneBlock(_.granite, Items.granite));
@@ -787,7 +787,7 @@ public class BlockStorage {
 		this.register(new Block(_.structureVoid));
 		this.register(new Block(_.updateBlock));
 		this.register(new Block(_.ateupdBlock));
-
++/
 	}
 
 }

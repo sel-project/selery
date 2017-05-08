@@ -18,7 +18,6 @@ import core.thread : getpid, Thr = Thread;
 import std.algorithm : canFind;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
-import std.concurrency : receiveTimeout, send, Tid, thisTid;
 import std.conv : to;
 import std.datetime : dur, StopWatch, Duration;
 static import std.file;
@@ -62,7 +61,7 @@ import sel.util.log;
 import sel.util.node : Node;
 import sel.util.task;
 import sel.world.rules : Rules;
-import sel.world.world : World;
+import sel.world.world : World, Dimension;
 
 mixin((){
 	string imports;
@@ -184,12 +183,19 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 	public this(Address hub, string name, string password, bool main, Plugin[] plugins) {
 
+		immutable bool lite = cast(TidAddress)hub !is null;
+
 		this.node_name = name;
 		this.node_main = main;
 
 		this.n_plugins = plugins;
 		
 		n_server = this;
+		
+		this.n_hub_address = hub;
+		
+		this.last_tps.length = 20;
+		this.last_tps[] = 20;
 		
 		{
 			// load language from the last execution (or default language)
@@ -203,56 +209,56 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			Lang.init(this.n_settings.acceptedLanguages, [Paths.langSystem]);
 		}
 
-		if(hub !is null) log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
+		if(lite) {
 
-		try {
-			if(hub !is null) {
-				this.handler = new SocketHandler(hub);
-			} else {
-				//TODO lite
-			}
-			this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
-		} catch(SocketException e) {
-			error_log(translate("{warning.connectionError}", this.n_settings.language, [to!string(hub), e.msg]));
-			return;
-		}
+			this.handler = new MessagePassingHandler(cast(TidAddress)hub);
+			this.handleInfo();
 
-		this.n_hub_address = hub;
-		
-		this.last_tps.length = 20;
-		this.last_tps[] = 20;
-
-		// wait for ConnectionResponse
-		bool error;
-		ubyte[] buffer = this.handler.next(error);
-		if(!error && buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
-			auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
-			if(response.status == HncomLogin.ConnectionResponse.OK) {
-				this.handleInfo();
-			} else {
-				immutable reason = (){
-					switch(response.status) {
-						case HncomLogin.ConnectionResponse.OUTDATED_HUB: return "outdatedHub";
-						case HncomLogin.ConnectionResponse.OUTDATED_NODE: return "outdatedNode";
-						case HncomLogin.ConnectionResponse.PASSWORD_REQUIRED: return "passwordRequired";
-						case HncomLogin.ConnectionResponse.WRONG_PASSWORD: return "wrongPassword";
-						case HncomLogin.ConnectionResponse.INVALID_NAME_LENGTH: return "invalidNameLength";
-						case HncomLogin.ConnectionResponse.INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
-						case HncomLogin.ConnectionResponse.NAME_ALREADY_USED: return "nameAlreadyUsed";
-						case HncomLogin.ConnectionResponse.NAME_RESERVED: return "nameReserved";
-						default: return "unknown";
-					}
-				}();
-				error_log(translate("{status." ~ reason ~ "}", this.n_settings.language, []));
-				if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-					error_log(translate("{warning.protocolRequired}", this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
-				}
-			}
 		} else {
-			error_log(translate("{warning.refused}", this.n_settings.language, []));
-		}
 
-		this.handler.close();
+			log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
+
+			try {
+				this.handler = new SocketHandler(hub);
+				this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
+			} catch(SocketException e) {
+				error_log(translate("{warning.connectionError}", this.n_settings.language, [to!string(hub), e.msg]));
+				return;
+			}
+
+			// wait for ConnectionResponse
+			bool error;
+			ubyte[] buffer = this.handler.next(error);
+			if(!error && buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
+				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
+				if(response.status == HncomLogin.ConnectionResponse.OK) {
+					this.handleInfo();
+				} else {
+					immutable reason = (){
+						switch(response.status) {
+							case HncomLogin.ConnectionResponse.OUTDATED_HUB: return "outdatedHub";
+							case HncomLogin.ConnectionResponse.OUTDATED_NODE: return "outdatedNode";
+							case HncomLogin.ConnectionResponse.PASSWORD_REQUIRED: return "passwordRequired";
+							case HncomLogin.ConnectionResponse.WRONG_PASSWORD: return "wrongPassword";
+							case HncomLogin.ConnectionResponse.INVALID_NAME_LENGTH: return "invalidNameLength";
+							case HncomLogin.ConnectionResponse.INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
+							case HncomLogin.ConnectionResponse.NAME_ALREADY_USED: return "nameAlreadyUsed";
+							case HncomLogin.ConnectionResponse.NAME_RESERVED: return "nameReserved";
+							default: return "unknown";
+						}
+					}();
+					error_log(translate("{status." ~ reason ~ "}", this.n_settings.language, []));
+					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
+						error_log(translate("{warning.protocolRequired}", this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
+					}
+				}
+			} else {
+				error_log(translate("{warning.refused}", this.n_settings.language, []));
+			}
+
+			this.handler.close();
+
+		}
 		
 	}
 
@@ -380,7 +386,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Steve.bin"));
 		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Alex.bin"));
 
-		version(DoNotCollect) {} else {
+		/*version(DoNotCollect) {} else {
 
 			import core.memory : GC;
 
@@ -400,7 +406,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			auto collector = thread!Collector();
 			send(collector, thisTid);
 
-		}
+		}*/
 		
 		this.tasks = new TaskManager();
 
@@ -1016,7 +1022,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		World.startWorld(this, world, null);
 		this.m_worlds ~= cast(World)world; // default if there are no worlds
 		this.sendPacket(new HncomWorld.Add(
-			world.id, world.name, world.dimension.pe,
+			world.id, world.name, world.dimension,
 			world.type=="flat" ? HncomWorld.Add.FLAT : HncomWorld.Add.DEFAULT,
 			world.rules.difficulty, world.rules.gamemode, //TODO use world.difficulty and world.gamemode
 			typeof(HncomWorld.Add.spawnPoint)(world.spawnPoint.x, world.spawnPoint.z),
@@ -1351,7 +1357,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			if(player.world is null) player.world = this.world;
 			World world = player.world;
 			if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
-				player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
+				player.sendChangeDimension(cast(Dimension)packet.dimension, world.dimension);
 			}
 			player.world = null;
 			player.joined = true;

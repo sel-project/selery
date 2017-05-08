@@ -61,7 +61,7 @@ import sel.util.node : Node;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.rules : Rules, Gamemode;
-import sel.world.world : World;
+import sel.world.world : World, Dimension;
 
 /**
  * Variables unique for every player that can be used
@@ -488,13 +488,6 @@ abstract class Player : Human, WorldCommandSender {
 
 		return world;
 
-	}
-
-	/**
-	 * Gets hncom's dimension.
-	 */
-	public pure nothrow @property @safe @nogc ubyte dimension() {
-		return this.world.dimension.pe;
 	}
 	
 	// overrides the attack function for the self hurt animation.
@@ -1039,7 +1032,7 @@ abstract class Player : Human, WorldCommandSender {
 
 	public abstract void unloadChunk(ChunkPosition pos);
 
-	public abstract void sendChangeDimension(group!byte from, group!byte to);
+	public abstract void sendChangeDimension(Dimension from, Dimension to);
 
 	public abstract void sendInventory(ubyte flag=PlayerInventory.ALL, bool[] slots=[]);
 

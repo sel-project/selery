@@ -21,7 +21,7 @@
  */
 module buildlite;
 
-import core.thread : Thread;
+import core.thread : Thread, dur;
 
 import std.algorithm : canFind;
 import std.concurrency : LinkTerminated;
@@ -34,6 +34,8 @@ import sel.config;
 import sel.crash : logCrash;
 import sel.path : Paths;
 import sel.utils : UnloggedException;
+import sel.network.hncom : TidAddress;
+import sel.session.hncom : MessagePassingNode;
 
 static import sel.hub.server;
 static import sel.node.server;
@@ -42,6 +44,16 @@ static import pluginloader.hub;
 static import pluginloader.node;
 
 void main(string[] args) {
+
+	static if(__traits(compiles, import("portable.txt"))) {
+		// should be executed in an empty directory
+		Paths.load("." ~ dirSeparator);
+		mkdirRecurse(Paths.res);
+		foreach(name, data; mixin(import("portable.txt"))) {
+			if(name.indexOf("/") != -1) mkdirRecurse(Paths.res ~ name[0..name.lastIndexOf("/")]);
+			write(Paths.res ~ name, data);
+		}
+	}
 	
 	@property bool arg(string name) {
 		if(exists(Paths.hidden ~ name)) {
@@ -57,31 +69,23 @@ void main(string[] args) {
 
 	if(action == "about") {
 
-		import std.json : JSONValue;
 		import std.stdio : writeln;
 
-		auto json = JSONValue([
-			"type": JSONValue("lite"),
-			"software": JSONValue([
-				"name": JSONValue(Software.name),
-				"version": JSONValue(Software.displayVersion),
-				"stable": JSONValue(Software.stable)
-			])
-		]);
-
-		writeln(json.toString());
+		writeln(Software.toJSON("lite").toString());
 
 	} else if(action == "init") {
 
 		Config(ConfigType.lite, arg("edu"), arg("realm")).load();
 
 	} else {
+
+		new Thread({ new shared sel.hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
+
+		while(!MessagePassingNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
-
-			new Thread({ new shared sel.hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
 			
-			new sel.node.server.Server(null, "", "", true, pluginloader.node.loadPlugins());
+			new sel.node.server.Server(new TidAddress(cast()MessagePassingNode.tid), "", "", true, pluginloader.node.loadPlugins());
 			
 		} catch(LinkTerminated) {
 			
@@ -89,7 +93,7 @@ void main(string[] args) {
 			
 		} catch(Throwable e) {
 
-			logCrash("lite", sel.node.server.server is null ? "en_GB" : sel.node.server.server.settings.language, e);
+			logCrash("node", sel.node.server.server is null ? "en_GB" : sel.node.server.server.settings.language, e);
 			
 		} finally {
 			

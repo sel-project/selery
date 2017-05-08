@@ -42,19 +42,9 @@ void main(string[] args) {
 	
 	if(args.length && args[0] == "about") {
 		
-		import std.json : JSONValue;
 		import std.stdio : writeln;
-		
-		auto json = JSONValue([
-			"type": JSONValue("node"),
-			"software": JSONValue([
-				"name": JSONValue(Software.name),
-				"version": JSONValue(Software.displayVersion),
-				"stable": JSONValue(Software.stable)
-			])
-		]);
-		
-		writeln(json.toString());
+
+		writeln(Software.toJSON("node").toString());
 		
 	} else {
 		
