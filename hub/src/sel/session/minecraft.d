@@ -39,6 +39,7 @@ import sel.network.handler : HandlerThread, UnconnectedHandler;
 import sel.network.session;
 import sel.session.player : PlayerSession, Skin;
 import sel.util.logh : log;
+import sel.util.queue : Queueable, Queue;
 import sel.util.thread : SafeThread;
 
 import sul.utils.var : varuint;
@@ -61,7 +62,7 @@ class MinecraftHandler : HandlerThread {
 	public shared JSONValue[string] status;
 	private shared ubyte[]* legacyStatus, legacyStatusOld;
 	
-	private shared IMinecraftSession[] sessions;
+	private shared Queue!IMinecraftSession sessions;
 	private shared Socket[] newConnections;
 	
 	private __gshared Mutex mutex;
@@ -73,6 +74,7 @@ class MinecraftHandler : HandlerThread {
 		this.acceptIp = acceptIp;
 		this.legacyStatus = legacyStatus;
 		this.legacyStatusOld = legacyStatusOld;
+		this.sessions = new shared Queue!IMinecraftSession();
 		(cast(shared)this).reload();
 	}
 		
@@ -87,7 +89,7 @@ class MinecraftHandler : HandlerThread {
 		while(true) {
 			watch.reset();
 			watch.start();
-			foreach(shared IMinecraftSession session ; this.sessions) {
+			foreach(shared IMinecraftSession session ; this.sessions.sessions) {
 				Socket socket = cast()session.socket;
 				do {
 					recv = socket.receive(buffer);
@@ -116,7 +118,7 @@ class MinecraftHandler : HandlerThread {
 				}
 			}
 			watch.stop();
-			if(this.sessions.length || this.newConnections.length) {
+			if(this.sessions.sessions.length || this.newConnections.length) {
 				auto time = watch.peek().usecs;
 				if(time < tps) {
 					Thread.sleep(dur!"usecs"(tps - time));
@@ -167,7 +169,7 @@ class MinecraftHandler : HandlerThread {
 							session = new shared MinecraftSession(this.server, cast(shared)client, this, handshake);
 						}
 						if(session !is null) {
-							this.sessions ~= session;
+							this.sessions.push(session);
 							if(payload.length > length) {
 								session.handle(payload[length..$]);
 							}
@@ -208,20 +210,16 @@ class MinecraftHandler : HandlerThread {
 		Thread.getThis().name = "minecraftHandler" ~ dirSeparator ~ "timeout";
 		while(true) {
 			Thread.sleep(dur!"seconds"(1));
-			foreach(shared IMinecraftSession session ; this.sessions) {
+			foreach(shared IMinecraftSession session ; this.sessions.sessions) {
 				session.checkTimeout();
 			}
 		}
 	}
 	
-	public shared synchronized nothrow void removeSession(shared IMinecraftSession session) {
-		for(size_t i=0; i<this.sessions.length; i++) {
-			if(session.sessionId == this.sessions[i].sessionId) {
-				this.sessions = this.sessions[0..i] ~ this.sessions[i+1..$]; // crashes the software in release mode
-				break;
-			}
+	public shared void removeSession(shared IMinecraftSession session) {
+		if(this.sessions.remove(session)) {
+			delete session;
 		}
-		delete session;
 	}
 
 	public override shared void reload() {
@@ -279,9 +277,9 @@ class MinecraftQueryHandler : UnconnectedHandler {
 	
 }
 
-interface IMinecraftSession {
+interface IMinecraftSession : Queueable {
 
-	public shared nothrow @property @safe @nogc immutable(uint) sessionId();
+	public shared nothrow @property @safe @nogc uint sessionId();
 
 	public shared nothrow @property @safe @nogc ref shared(Socket) socket();
 
@@ -315,6 +313,10 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 
 	public override shared nothrow @property @safe @nogc immutable(uint) sessionId() {
 		return this.id;
+	}
+	
+	public final override shared nothrow @property @safe @nogc uint queueId() {
+		return this.sessionId;
 	}
 
 	public override shared nothrow @property @safe @nogc ref shared(Socket) socket() {
@@ -426,6 +428,10 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 
 	public override shared nothrow @property @safe @nogc immutable(uint) sessionId() {
 		return this.id;
+	}
+
+	public final shared nothrow @property @safe @nogc uint queueId() {
+		return this.sessionId;
 	}
 
 	public override shared nothrow @property @safe @nogc ref shared(Socket) socket() {

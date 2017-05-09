@@ -1,0 +1,5 @@
+name "hub"
+authors "sel-project"
+license "LGPL-3.0"
+targetType "library"
+dependency "sel-server:common" version="*"

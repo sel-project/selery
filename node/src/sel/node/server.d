@@ -14,7 +14,7 @@
  */
 module sel.node.server;
 
-import core.thread : getpid, Thr = Thread;
+import core.thread : getpid, Thread;
 import std.algorithm : canFind;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
@@ -55,7 +55,6 @@ import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player;
 import sel.player.pocket : PocketPlayerImpl;
 import sel.util.command : Command, CommandSender;
-import sel.util.concurrency : thread, Thread;
 import sel.util.lang : Lang, translate, Variables;
 import sel.util.log;
 import sel.util.node : Node;
@@ -385,28 +384,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		// default skins for players that connect with invalid skins
 		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Steve.bin"));
 		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Alex.bin"));
-
-		/*version(DoNotCollect) {} else {
-
-			import core.memory : GC;
-
-			static class Collector : Thread {
-				
-				public override void run() {
-					auto duration = dur!"seconds"(14);
-					while(this.running) {
-						Thr.sleep(duration);
-						GC.collect();
-						GC.minimize();
-					}
-				}
-				
-			}
-
-			auto collector = thread!Collector();
-			send(collector, thisTid);
-
-		}*/
 		
 		this.tasks = new TaskManager();
 
@@ -508,7 +485,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 			double diff = watch.peek.usecs;
 			if(diff < 50000) {
-				Thr.sleep(dur!"usecs"(to!ulong(50000 - diff)));
+				Thread.sleep(dur!"usecs"(to!ulong(50000 - diff)));
 				this.last_tps[this.tps_pointer] = 20;
 				this.warn = 0;
 			} else {

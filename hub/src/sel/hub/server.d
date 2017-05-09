@@ -542,15 +542,10 @@ class Server {
 	}
 
 	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
-		static if(__oneNode) {
-			log("[", logger, "] ", message);
-			node = "";
+		if(node.length) {
+			log("[", node, "][", logger, "] ", message);
 		} else {
-			if(node.length) {
-				log("[", node, "][", logger, "] ", message);
-			} else {
-				log("[", logger, "] ", message);
-			}
+			log("[", logger, "] ", message);
 		}
 		foreach(externalConsole ; this.externalConsoles) {
 			externalConsole.consoleMessage(node, timestamp, logger, message, commandId);
@@ -745,17 +740,8 @@ class Server {
 	}
 
 	public shared shared(PlayerSession) playerFromIdentifier(ubyte[] idf) {
-		static if(__onlineMode) {
-			if(idf.length != 17) return null;
-			ubyte type = idf[0];
-			ubyte[16] uuid = idf[1..$];
-		}
 		foreach(shared PlayerSession player ; this.players) {
-			static if(__onlineMode) {
-				if(player.type == idf[0] && player.uuid.data == uuid) return player;
-			} else {
-				if(player.iusername == idf) return player;
-			}
+			if(player.iusername == idf) return player;
 		}
 		return null;
 	}

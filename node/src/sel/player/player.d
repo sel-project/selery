@@ -17,10 +17,10 @@
  * License: <a href="http://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">GNU General Lesser Public License v3</a>
  */
 module sel.player.player;
-import std.algorithm : count, max, min, reverse, sort, canFind, clamp;
 
 mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
 
+import std.algorithm : count, max, min, reverse, sort, canFind, clamp;
 import std.array : join, split;
 static import std.bitmanip;
 import std.concurrency : Tid, thisTid, send, receiveOnly;
@@ -54,7 +54,6 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network.hncom : Handler;
 import sel.util.command : Command, WorldCommandSender;
-import sel.util.concurrency : thread, Thread;
 import sel.util.lang;
 import sel.util.log;
 import sel.util.node : Node;
@@ -1486,13 +1485,12 @@ abstract class Player : Human, WorldCommandSender {
 	private Tid compression;
 
 	protected void startCompression(T:Compression)(uint hubId) {
-		this.compression = thread!T();
-		send(this.compression, thisTid);
-		send(this.compression, hubId);
+		static import std.concurrency;
+		this.compression = std.concurrency.spawn(&startCompressionImpl!T, hubId);
 	}
 
 	protected void stopCompression() {
-		// notice me garbage collector
+		// send a stop message
 		send(this.compression, uint.max, (immutable(ubyte)[]).init);
 	}
 
@@ -1500,17 +1498,15 @@ abstract class Player : Human, WorldCommandSender {
 		send(this.compression, this.order++, payload.idup);
 	}
 
-	protected abstract static class Compression : Thread {
+	protected static abstract class Compression {
 
-		public override void run() {
-
-			immutable hubId = receiveOnly!uint();
+		public void start(uint hubId) {
 
 			auto handler = Handler.sharedInstance();
 
 			while(true) {
 
-				auto data = receiveOnly!(uint, immutable(ubyte)[]);
+				auto data = receiveOnly!(uint, immutable(ubyte)[]); // tuple(order, uncompressed payload)
 
 				if(data[0] == uint.max) break;
 
@@ -1524,6 +1520,11 @@ abstract class Player : Human, WorldCommandSender {
 
 	}
 
+}
+
+private void startCompressionImpl(T)(uint hubId) {
+	auto c = new T();
+	c.start(hubId);
 }
 
 enum InputMode : ubyte {

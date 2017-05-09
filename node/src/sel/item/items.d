@@ -40,15 +40,17 @@ public class ItemStorage {
 	
 	public this() {
 		if(instance is null) {
-			foreach_reverse(a ; __traits(allMembers, Items)) {
-				mixin("alias T = Items." ~ a ~ ";");
-				/*static if(is(T : Item)) {
-					static if(__traits(compiles, new T(ushort.max))) {
-						this.register((ushort damage){ return cast(Item)new T(damage); });
-					} else {
-						this.register((ushort damage){ return cast(Item)new T(); });
+			version(NoItems) {} else {
+				foreach_reverse(a ; __traits(allMembers, Items)) {
+					mixin("alias T = Items." ~ a ~ ";");
+					static if(is(T : Item)) {
+						static if(__traits(compiles, new T(ushort.max))) {
+							this.register((ushort damage){ return cast(Item)new T(damage); });
+						} else {
+							this.register((ushort damage){ return cast(Item)new T(); });
+						}
 					}
-				}*/
+				}
 			}
 			instance = this;
 		} else {
