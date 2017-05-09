@@ -46,15 +46,31 @@ static import pluginloader.node;
 
 void main(string[] args) {
 
-	static if(__traits(compiles, import("portable.txt"))) {
+	static if(__traits(compiles, import("portable.zip"))) {
+
 		// should be executed in an empty directory
 		Paths.load("." ~ dirSeparator);
 		mkdirRecurse(Paths.res);
-		foreach(name, data; mixin(import("portable.txt"))) {
+
+		import std.zip;
+
+		auto zip = new ZipArchive(cast(void[])import("portable.zip"));
+
+		foreach(name, member; zip.directory) {
 			if(name.indexOf("/") != -1) mkdirRecurse(Paths.res ~ name[0..name.lastIndexOf("/")]);
-			write(Paths.res ~ name, data);
+			if(!exists(Paths.res ~ name)) {
+				zip.expand(member);
+				write(Paths.res ~ name, member.expandedData);
+			}
 		}
+
+		immutable type = "portable";
+
+	} else {
+		immutable type = "lite";
 	}
+
+	Paths.create();
 	
 	@property bool arg(string name) {
 		if(exists(Paths.hidden ~ name)) {
@@ -72,7 +88,7 @@ void main(string[] args) {
 
 		import std.stdio : writeln;
 
-		writeln(Software.toJSON("lite").toString());
+		writeln(Software.toJSON(type).toString());
 
 	} else if(action == "init") {
 

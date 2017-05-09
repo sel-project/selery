@@ -47,6 +47,8 @@ void main(string[] args) {
 		writeln(Software.toJSON("node").toString());
 		
 	} else {
+
+		Paths.create();
 		
 		try {
 			

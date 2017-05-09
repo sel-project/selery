@@ -87,16 +87,22 @@ before_build:
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
+  - mkdir portable_plugins
+  - cd portable_plugins
+  - git clone https://github.com/sel-plugins/commands.git commands
 
 build_script:
  - cd build
- - dub init.d -p --arch=%Darch% --compiler=$DC% --build=release
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
- - rename sel-lite.exe sel-portable.exe
  - dub init.d --arch=%Darch% --compiler=%DC% --build=release
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release node.d
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
+ - rename sel-lite.exe sel-lite-copy.exe
+ - rename portable_plugins plugins
+ - dub init.d -p --arch=%Darch% --compiler=$DC% --build=release
+ - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
+ - rename sel-lite.exe sel-portable.exe
+ - rename sel-lite-copy.exe sel-lite.exe
 
 test_script:
  - echo %PLATFORM%

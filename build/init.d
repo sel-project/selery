@@ -35,7 +35,7 @@ import sel.about;
 import sel.format : Text, writeln;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 46;
+enum size_t __GENERATOR__ = 47;
 
 void main(string[] args) {
 
@@ -45,20 +45,30 @@ void main(string[] args) {
 
 		if(!exists("views")) mkdir("views");
 
-		ubyte[][string] files;
+		import std.zip;
+
+		auto zip = new ZipArchive();
 
 		// get all files in res
 		foreach(string file ; dirEntries("../res/", SpanMode.breadth)) {
-			if(file.isFile) files[file[7..$].replace("\\", "/")] = cast(ubyte[])read(file);
+			if(file.isFile) {
+				auto member = new ArchiveMember();
+				member.name = file[7..$].replace("\\", "/");
+				member.expandedData(cast(ubyte[])read(file));
+				member.compressionMethod = CompressionMethod.deflate;
+				zip.addMember(member);
+			}
 		}
-		write("views/portable.txt", files.to!string.replace(" ", ""));
+		write("views/portable.zip", zip.build());
 
-	} else if(exists("views/portable.txt")) {
+	} else if(exists("views/portable.zip")) {
 
-		remove("views/portable.txt");
+		remove("views/portable.zip");
 		rmdir("views");
 
 	}
+
+	Paths.create();
 
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 

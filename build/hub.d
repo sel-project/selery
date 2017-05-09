@@ -36,6 +36,8 @@ import pluginloader.hub : loadPlugins;
 
 void main(string[] args) {
 
+	Paths.create();
+
 	@property bool arg(string name) {
 		if(exists(Paths.hidden ~ name)) {
 			return to!bool(cast(string)read(Paths.hidden ~ name));

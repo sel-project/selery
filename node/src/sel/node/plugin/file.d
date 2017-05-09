@@ -20,7 +20,9 @@ import std.string : split, join, replace;
 
 import sel.path : Paths;
 
-enum path(string mod) = "../resources/" ~ mod.split(".")[0] ~ dirSeparator;
+private string path(string mod)() {
+	return Paths.resources ~ mod.split(".")[0] ~ dirSeparator;
+}
 
 public @property bool exists(string mod=__MODULE__)(string file) {
 	return std.file.exists(path!mod ~ file);

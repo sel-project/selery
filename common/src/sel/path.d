@@ -49,6 +49,10 @@ class Paths {
 
 		hidden = home ~ ".sel" ~ dirSeparator;
 
+	}
+
+	public static void create() {
+
 		mkdirRecurse(hidden);
 
 		version(Windows) {
