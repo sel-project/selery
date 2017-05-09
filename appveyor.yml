@@ -90,6 +90,7 @@ before_build:
   - mkdir portable_plugins
   - cd portable_plugins
   - git clone https://github.com/sel-plugins/commands.git commands
+  - cd ..
 
 build_script:
  - cd build
