@@ -9,7 +9,15 @@ environment:
     arch: x64
   - DC: ldc
     DVersion: 1.2.0
+    arch: x86
+  - DC: ldc
+    DVersion: 1.2.0
     arch: x64
+
+matrix:
+  allow_failures:
+    - DC: ldc
+      arch: x86
 
 skip_tags: true
 branches:
@@ -87,25 +95,21 @@ before_build:
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
-  - mkdir portable_plugins
-  - cd portable_plugins
+  - mkdir plugins
+  - cd plugins
   - git clone https://github.com/sel-plugins/commands.git commands
   - cd ..
 
 build_script:
  - cd build
+ - dub init.d -p --arch=%Darch% --compiler=$DC% --build=release
+ - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
+ - rename sel-lite.exe sel-portable.exe
+ - rmdir ..\plugins /s /q
  - dub init.d --arch=%Darch% --compiler=%DC% --build=release
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release node.d
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
- - rename sel-lite.exe sel-lite-copy.exe
- - cd ..
- - rename portable_plugins plugins
- - cd build
- - dub init.d -p --arch=%Darch% --compiler=$DC% --build=release
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
- - rename sel-lite.exe sel-portable.exe
- - rename sel-lite-copy.exe sel-lite.exe
 
 test_script:
  - echo %PLATFORM%
