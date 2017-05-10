@@ -219,3 +219,19 @@ enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
 
 /// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];
+
+version(D_Ddoc) {
+
+	/// Indicates whether the software has been tested on the current OS
+	enum bool __supported = true;
+
+} else {
+
+	version(Windows) enum bool __supported = true;
+	else version(linux) enum bool __supported = true;
+	else version(FreeBSD) enum bool __supported = false;
+	else version(OSX) enum bool __supported = false;
+	else version(Android) enum bool __supported = false;
+	else enum bool __supported = false;
+
+}

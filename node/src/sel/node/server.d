@@ -371,7 +371,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullCodename ~ Text.white ~ " " ~ Software.fullVersion ~ Text.green ~ " API " ~ Text.white ~ "v" ~ to!string(Software.api)]));
 
-		version(linux) {} else version(Windows) {} else {
+		static if(!__supported) {
 			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
 		}
 
@@ -533,14 +533,14 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		log(translate("{startup.stopped}", this.n_settings.language, []));
 
-		version(Windows) {
+		/*version(Windows) {
 			// forcefully kill this process to make sure also children
 			// processes are terminated
 			executeShell("taskkill /PID " ~ to!string(getpid) ~ " /F");
-		} else {
+		} else {*/
 			import std.c.stdlib : exit;
 			exit(0);
-		}
+		//}
 
 	}
 

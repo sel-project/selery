@@ -25,10 +25,10 @@ matrix:
 
 script:
   - cd build
-  - dub init.d --arch "$ARCH" --compiler=$DC --build=release
-  - travis_wait 30 dub build --single --arch "$ARCH" --compiler=$DC --build=release lite.d
-  - dub build --single --arch "$ARCH" --compiler=$DC --build=release hub.d
-  - dub build --single --arch "$ARCH" --compiler=$DC --build=release node.d
+  - dub init.d --arch=$ARCH --compiler=$DC --build=release
+  - travis_wait 30 dub build --single --arch=$ARCH --compiler=$DC --build=release lite.d
+  - dub build --single --arch=$ARCH --compiler=$DC --build=release hub.d
+  - dub build --single --arch=$ARCH --compiler=$DC --build=release node.d
 
 notifications:
   - email: false

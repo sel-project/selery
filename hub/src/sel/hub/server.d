@@ -58,7 +58,7 @@ mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : Remote
 
 mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".types : NodeStats;");
 
-version(Windows) {
+/+version(Windows) {
 	
 	import core.sys.windows.wincon : CTRL_C_EVENT;
 	import core.sys.windows.windef : DWORD, BOOL;
@@ -83,7 +83,7 @@ version(Windows) {
 		//server.stop();
 	}
 	
-}
+}+/
 
 class Server {
 
@@ -150,8 +150,15 @@ class Server {
 		log(translate("{startup.started}", this.n_settings.language, []));
 		log("");
 
-		version(linux) {} else version(Windows) {} else {
+		static if(!__supported) {
 			log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
+		}
+
+		version(DigitalMars) {
+			debug {} else {
+				// buggy in DMD's release mode
+				//TODO print message
+			}
 		}
 
 		long id;
@@ -525,16 +532,16 @@ class Server {
 					break;
 				default:
 					shared Node node;
-					static if(__oneNode) {
-						if(this.nodes.length) node = this.nodes[0];
-						args = cmd ~ args;
+					if(this.nodes.length == 1) {
+						node = this.nodes[0];
+						if(node.name != cmd) args = cmd ~ args;
 					} else {
 						node = this.nodeByName(cmd.idup);
 					}
 					if(node !is null) {
 						if(args.length) node.remoteCommand(args.join(" "), origin, source, commandId);
 					} else {
-						static if(!__oneNode) this.command("Node '" ~ cmd ~ "' is not connected", commandId);
+						this.command("Node '" ~ cmd ~ "' is not connected", commandId);
 					}
 					break;
 			}
