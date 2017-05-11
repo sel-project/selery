@@ -21,7 +21,7 @@ class Paths {
 
 	@disable this();
 
-	public shared static string home, res, langSystem, langMessages, music, skin, plugins, resources, logs, crash, worlds, hidden;
+	public shared static string home, res, langSystem, langMessages, music, skin, textures, plugins, resources, logs, crash, worlds, hidden;
 
 	public shared static this() {
 		load(".." ~ dirSeparator);
@@ -40,6 +40,7 @@ class Paths {
 		langMessages = res ~ "lang" ~ dirSeparator ~ "messages" ~ dirSeparator;
 		music = res ~ "music" ~ dirSeparator;
 		skin = res ~ "skin" ~ dirSeparator;
+		textures = res ~ "textures" ~ dirSeparator;
 	
 		plugins = home ~ "plugins" ~ dirSeparator;
 		resources = home ~ "resources" ~ dirSeparator;

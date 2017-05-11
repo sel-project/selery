@@ -26,7 +26,8 @@ class Plugin {
 	protected string n_version;
 	protected bool n_api;
 	public bool hasMain;
-	protected string n_language;
+
+	protected string n_languages, n_textures;
 	
 	public void delegate()[] onstart, onreload, onstop;
 	
@@ -80,11 +81,19 @@ class Plugin {
 	}
 
 	/**
-	 * Gets the location of the plugin's language files.
-	 * Returns: null if the plugin has no language files, a full path otherwise
+	 * Gets the absolute location of the plugin's language files.
+	 * Returns: null if the plugin has no language files, a path otherwise
 	 */
-	public pure nothrow @property @safe @nogc string language() {
-		return this.n_language;
+	public pure nothrow @property @safe @nogc string languages() {
+		return this.n_languages;
+	}
+
+	/**
+	 * Gets the absolute location of the plugin's textures.
+	 * Returns: null if the plugin has no textures, a path otherwise
+	 */
+	public pure nothrow @property @safe @nogc string textures() {
+		return this.n_textures;
 	}
 	
 	public abstract void load();

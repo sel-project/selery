@@ -49,7 +49,7 @@ import sel.session.player : PlayerSession;
 import sel.session.rcon : RconSession;
 import sel.util.analytics : GoogleAnalytics;
 import sel.util.block : Blocks;
-import sel.util.ip;
+import sel.util.ip : localAddresses, publicAddresses;
 import sel.util.logh : log;
 import sel.util.thread;
 
@@ -193,19 +193,8 @@ class Server {
 			this.n_blacklist.save();
 		}*/
 		
-		/*try {
-			log("Public ip (ipv4): ", publicIpv4);
-		} catch(Exception) {}
-		try {
-			log("Public ip (ipv6): ", publicIpv6);
-		} catch(Exception) {}
-		try {
-			log("Local ip (ipv4): ", localIpv4);
-		} catch(Exception) {}
-		try {
-			log("Local ip (ipv6): ", localIpv6);
-		} catch(Exception) {}
-		log("");*/
+		auto pa = publicAddresses;
+		if(pa.v4.length) log("public ip: ", pa.v4);
 		
 		this.blocks = new Blocks();
 

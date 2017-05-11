@@ -2,12 +2,16 @@
 # VERSION 3
 # COMPLETE
 
-language.name = Italiano (Italia)
+language.name = Italiano
+language.region = Italia
+language.bidirectional = false
 
 startup.connecting = Connessione a {0} in corso come "{1}"
 startup.running = Compilato con {0} il {1} su {2}
 startup.starting = Inizializzando il server con {0}
-startup.plugin.enabled = Abilitato {0} di {1}
+startup.resourcePacks = Costruendo le resource pack
+startup.plugin.enabled = Abilitato {0}
+startup.plugin.enabled.author = Abilitato {0} di {1}
 startup.plugin.enabled.version = Abilitato {0} di {1} versione {2}
 startup.started = Server pronto
 startup.stopped = Server chiuso

@@ -106,6 +106,8 @@ abstract class Player : Human, WorldCommandSender {
 	private ushort address_port;
 	private string server_address_ip;
 	private ushort server_address_port;
+
+	protected bool connectedSameMachine, connectedSameNetwork;
 	
 	private string m_lang;
 	
@@ -152,6 +154,8 @@ abstract class Player : Human, WorldCommandSender {
 
 	public bool joined = false;
 	
+	protected bool hasResourcePack = false;
+	
 	public this(uint hubId, World world, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
 		this.hubId = hubId;
 		super(world, position, skin);
@@ -165,6 +169,8 @@ abstract class Player : Human, WorldCommandSender {
 		this.address_port = to!ushort(address.toPortString());
 		this.server_address_ip = serverAddress;
 		this.server_address_port = serverPort;
+		this.connectedSameMachine = this.address_ip.startsWith("127.0.");
+		this.connectedSameNetwork = this.address_ip.startsWith("192.168.");
 		this.showNametag = true;
 		this.nametag = name;
 		this.m_lang = language;
@@ -1050,6 +1056,8 @@ abstract class Player : Human, WorldCommandSender {
 	protected abstract override void experienceUpdated();
 	
 	public abstract void sendJoinPacket();
+
+	public abstract void sendResourcePack();
 	
 	public abstract void sendTimePacket();
 	
@@ -1735,6 +1743,8 @@ class Puppet : Player {
 	protected override @safe @nogc void experienceUpdated() {}
 	
 	public override @safe @nogc void sendJoinPacket() {}
+
+	public override @safe @nogc void sendResourcePack() {}
 	
 	public override @safe @nogc void sendTimePacket() {}
 	

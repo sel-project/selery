@@ -14,8 +14,9 @@
  */
 module sel.event.world.player;
 
+import sel.format : Text;
 import sel.block.block : Block;
-import sel.entity : Entity, ItemEntity;
+import sel.entity.entity : Entity;
 import sel.event.event : Cancellable;
 import sel.event.world.damage : EntityDamageEvent;
 import sel.event.world.entity : EntityDeathEvent;
@@ -96,7 +97,7 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 	public bool spawn = true;
 	
 	public @safe this(Player player) {
-		super(player, "{yellow}{connection.join}");
+		super(player, Text.yellow ~ "{connection.join}");
 	}
 	
 }
@@ -105,7 +106,7 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 final class PlayerDespawnEvent : PlayerAnnounceEvent {
 	
 	public @safe this(Player player) {
-		super(player, "{yellow}{connection.left}");
+		super(player, Text.yellow ~ "{connection.left}");
 	}
 	
 }

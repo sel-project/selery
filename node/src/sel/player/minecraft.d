@@ -19,7 +19,7 @@ import std.conv : to;
 import std.json : JSONValue;
 import std.math : abs, log2, ceil;
 import std.socket : Address;
-import std.string : split, join;
+import std.string : split, join, toLower;
 import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
@@ -53,6 +53,14 @@ import sul.utils.var : varuint;
 
 abstract class MinecraftPlayer : Player {
 
+	protected static Stream stream;
+
+	protected static string resourcePack, resourcePackPort, resourcePack2Hash, resourcePack3Hash;
+
+	public static this() {
+		stream = new ClassicStream!(Endian.bigEndian)();
+	}
+	
 	protected static byte convertDimension(Dimension dimension) {
 		with(Dimension) final switch(dimension) {
 			case overworld: return 0;
@@ -61,10 +69,13 @@ abstract class MinecraftPlayer : Player {
 		}
 	}
 
-	protected static Stream stream;
-
-	public static this() {
-		stream = new ClassicStream!(Endian.bigEndian)();
+	public static void updateResourcePacks(void[] rp2, void[] rp3, string url, ushort port) {
+		import std.digest.digest : toHexString;
+		import std.digest.sha : sha1Of;
+		resourcePack = url;
+		resourcePackPort = ":" ~ to!string(port);
+		resourcePack2Hash = toLower(toHexString(sha1Of(rp2)));
+		resourcePack3Hash = toLower(toHexString(sha1Of(rp3)));
 	}
 
 	private bool consuming;
@@ -76,6 +87,10 @@ abstract class MinecraftPlayer : Player {
 	
 	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
 		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
+		if(resourcePack.length == 0) {
+			// no resource pack
+			this.hasResourcePack = true;
+		}
 	}
 	
 	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
@@ -116,6 +131,11 @@ abstract class MinecraftPlayer : Player {
 		this.respawn();
 		this.sendRespawnPacket();
 		this.sendPosition();
+	}
+
+	public void handleResourcePackStatusPacket(uint status) {
+		this.hasResourcePack = (status == 0);
+		//log(status);
 	}
 	
 }
@@ -529,11 +549,25 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 
 	public override void sendJoinPacket() {
 		if(!this.first_spawned) {
-			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode & 0b11, convertDimension(this.world.dimension), this.world.rules.difficulty, ubyte.max, this.world.type, false));
+			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode, convertDimension(this.world.dimension), this.world.rules.difficulty, ubyte.max, this.world.type, false));
 			this.first_spawned = true;
 		}
-		//this.sendPacket(new MinecraftJoinGame(this.gamemode!int, this.world.dimension, this.world.rules.difficulty, server.max));
 		this.sendPacket(new Clientbound.PluginMessage("MC|Brand", cast(ubyte[])Software.name));
+	}
+
+	public override void sendResourcePack() {
+		if(!this.hasResourcePack) {
+			// the game will show a confirmation popup for the first time the texture is downloaded
+			static if(__protocol < 301) {
+				enum v = "2";
+			} else {
+				enum v = "3";
+			}
+			string url = resourcePack;
+			if(this.connectedSameMachine) url = "127.0.0.1";
+			else if(this.connectedSameNetwork) url = this.ip; // not tested
+			this.sendPacket(new Clientbound.ResourcePackSend("http://" ~ url ~ resourcePackPort ~ "/" ~ v, mixin("resourcePack" ~ v ~ "Hash")));
+		}
 	}
 	
 	public override void sendTimePacket() {
@@ -557,8 +591,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		//if(!this.first_spawned) {
 		//this.sendPacket(packet!"PlayerPositionAndLook"(this));
 		this.sendPosition();
-		//this.first_spawned = true;
-		//}
 	}
 	
 	public override void sendWeather() {
@@ -994,8 +1026,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 
 	protected void handleSteerVehiclePacket(float sideways, float forward, ubyte flags) {}
-
-	protected void handleResourcePackStatusPacket(uint status) {}
 
 	protected void handleHeldItemChangePacket(ushort slot) {
 		if(slot < 9) {

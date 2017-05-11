@@ -16,14 +16,14 @@ module sel.player.pocket;
 
 import etc.c.curl : CurlOption;
 
-import std.algorithm : max, sort;
+import std.algorithm : max, min, sort;
 import std.conv : to;
 import std.file : read, write, exists, mkdirRecurse;
 import std.json;
 import std.net.curl : get, HTTP, CurlException;
 import std.process : executeShell;
 import std.socket : Address;
-import std.string : split, join, startsWith, replace, strip;
+import std.string : split, join, startsWith, replace, strip, toLower;
 import std.system : Endian;
 import std.typecons : Tuple;
 import std.uuid : UUID;
@@ -59,9 +59,25 @@ abstract class PocketPlayer : Player {
 
 	protected static Stream stream, networkStream;
 
+	protected static ubyte[][] resourcePackChunks;
+	protected static size_t resourcePackSize;
+	protected static string resourcePackId;
+	protected static string resourcePackHash;
+
 	public static this() {
 		stream = new ClassicStream!(Endian.littleEndian)();
 		networkStream = new NetworkStream!(Endian.littleEndian)();
+	}
+
+	public static void updateResourcePacks(UUID uuid, void[] rp) {
+		for(size_t i=0; i<rp.length; i+=4096) {
+			resourcePackChunks ~= cast(ubyte[])rp[i..min($, i+4096)];
+		}
+		resourcePackSize = rp.length;
+		resourcePackId = uuid.toString();
+		import std.digest.digest : toHexString;
+		import std.digest.sha : sha256Of;
+		resourcePackHash = toLower(toHexString(sha256Of(rp)));
 	}
 
 	private bool n_edu;
@@ -85,6 +101,10 @@ abstract class PocketPlayer : Player {
 		this.n_xuid = xuid;
 		this.n_os = deviceOs;
 		this.n_device_model = deviceModel;
+		if(resourcePackId.length == 0) {
+			// no resource pack
+			this.hasResourcePack = true;
+		}
 	}
 	
 	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
@@ -198,7 +218,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				auto http = HTTP();
 				http.handle.set(CurlOption.ssl_verifypeer, false);
 				http.handle.set(CurlOption.timeout, 5);
-				foreach(item ; parseJSON(get("https://raw.githubusercontent.com/sel-utils/sel-utils.github.io/master/json/creative/pocket" ~ __protocol.to!string ~ ".min.json", http).idup)["items"].array) {
+				foreach(item ; parseJSON(get("https://sel-utils.github.io/api/json/creative/pocket" ~ __protocol.to!string ~ ".min.json", http).idup)["items"].array) {
 					auto obj = item.object;
 					auto meta = "meta" in obj;
 					auto ench = "enchantments" in obj;
@@ -657,6 +677,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		//TODO send thunders
 		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
 	}
+
+	public override void sendResourcePack() {}
 	
 	public override void sendTimePacket() {
 		this.sendPacket(new Play.SetTime(this.world.time.to!uint));
@@ -684,7 +706,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void setAsReadyToSpawn() {
 		this.sendPacket(new Play.PlayStatus(Play.PlayStatus.SPAWNED));
-		this.sendPacket(new Play.ResourcePacksInfo(false)); //TODO custom texture packs
+		if(!this.hasResourcePack) {
+			// require custom texture
+			this.sendPacket(new Play.ResourcePacksInfo(true, new Types.PackWithSize[0], [Types.PackWithSize(resourcePackId, Software.fullVersion, resourcePackSize)]));
+		} else if(resourcePackChunks.length == 0) {
+			// no resource pack
+			this.sendPacket(new Play.ResourcePacksInfo(false));
+		}
 		this.send_commands = true;
 		this.sendCommands();
 	}
@@ -809,7 +837,23 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	mixin generateHandlers!(Play.Packets);
 
-	protected void handleResourcePackClientResponsePacket(ubyte status, string[] resourcePackVersion) {}
+	protected void handleResourcePackClientResponsePacket(ubyte status, string[] packIds) {
+		if(resourcePackId.length) {
+			// only handle if the server has a resource pack to serve
+			if(status == Play.ResourcePackClientResponse.SEND_PACKS) {
+				this.sendPacket(new Play.ResourcePackDataInfo(resourcePackId, 4096u, resourcePackChunks.length.to!uint, resourcePackSize, resourcePackHash));
+				foreach(uint i, chunk; resourcePackChunks) {
+					this.sendPacket(new Play.ResourcePackChunkData(resourcePackId, i, i*4096u, chunk));
+				}
+			} else {
+				//TODO
+			}
+		}
+	}
+
+	protected void handleResourcePackChunkDataRequestPacket(string id, uint index) {
+		//TODO send chunk
+	}
 
 	protected void handleTextChatPacket(string sender, string message) {
 		this.handleTextMessage(message);

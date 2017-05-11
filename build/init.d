@@ -30,7 +30,6 @@ import std.json;
 import std.path : dirSeparator, buildNormalizedPath, absolutePath;
 import std.process : executeShell;
 import std.string;
-import std.typetuple : TypeTuple;
 
 import sel.about;
 import sel.format : Text, writeln;

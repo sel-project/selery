@@ -24,7 +24,7 @@ import sel.format : Text;
 import sel.path : Paths;
 
 struct Lang {
-	
+
 	private static shared(Lang) instance;
 
 	public static void init(string[] langs, string[] dirs) {
@@ -33,6 +33,10 @@ struct Lang {
 
 	private shared string[] supported;
 	private shared string[string][string] langs;
+
+	public static string[string][string] getAll() {
+		return cast(string[string][string])instance.langs;
+	}
 
 	// ["../res/lang/system/", "../plugins/example/lang/"]
 	private shared this(string[] langs, string[] dirs) {
@@ -49,7 +53,7 @@ struct Lang {
 			}
 		}
 		//add colours in all the languages
-		string[string] colors;
+		/*string[string] colors;
 		foreach(immutable color ; EnumMembers!Text) {
 			mixin("colors[\"" ~ color.to!string ~ "\"] = \"" ~ color ~ "\";");
 			mixin("colors[\"" ~ color.to!string.toLower ~ "\"] = \"" ~ color ~ "\";");
@@ -58,7 +62,7 @@ struct Lang {
 			foreach(cname, color; colors) {
 				this.langs[lang][cname] = color;
 			}
-		}
+		}*/
 	}
 
 	private shared bool hasImpl(string lang, string str) {

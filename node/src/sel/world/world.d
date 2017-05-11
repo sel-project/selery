@@ -739,6 +739,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		player.sendJoinPacket();
 		player.spawn = this.spawnPoint; // sends spawn position
 		player.move(this.spawnPoint.entityPosition);
+
+		player.sendResourcePack();
 		
 		//send chunks
 		foreach(ChunkPosition pos ; this.defaultChunks) {

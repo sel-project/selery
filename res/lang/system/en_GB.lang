@@ -2,12 +2,16 @@
 # VERSION 3
 # COMPLETE
 
-language.name = English (United Kingdom)
+language.name = English
+language.region = United Kingdom
+language.bidirectional = false
 
 startup.connecting = Connecting to {0} with name "{1}"
 startup.running = Running on {0} compiled {1} on {2}
 startup.starting = Starting server with {0}
-startup.plugin.enabled = Enabled {0} by {1}
+startup.resourcePacks = Building resource packs
+startup.plugin.enabled = Enabled {0}
+startup.plugin.enabled.author = Enabled {0} by {1}
 startup.plugin.enabled.version = Enabled {0} by {1} version {2}
 startup.started = Server started
 startup.stopped = Server stopped

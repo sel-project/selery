@@ -18,6 +18,7 @@ import core.thread : getpid, Thread;
 import std.algorithm : canFind;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
+static import std.concurrency;
 import std.conv : to;
 import std.datetime : dur, StopWatch, Duration;
 static import std.file;
@@ -51,13 +52,16 @@ import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.math.vector : BlockPosition;
-import sel.player.minecraft : MinecraftPlayerImpl;
+import sel.network.http : serveResourcePacks;
+import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
 import sel.player.player : Player;
-import sel.player.pocket : PocketPlayerImpl;
+import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
 import sel.util.command : Command, CommandSender;
+import sel.util.ip : publicAddresses;
 import sel.util.lang : Lang, translate, Variables;
 import sel.util.log;
 import sel.util.node : Node;
+import sel.util.resourcepack : createResourcePacks;
 import sel.util.task;
 import sel.world.rules : Rules;
 import sel.world.world : World, Dimension;
@@ -315,7 +319,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			// reload languages and save cache
 			string[] paths;
 			foreach(plugin ; this.n_plugins) {
-				if(plugin.language !is null) paths ~= plugin.language;
+				if(plugin.languages !is null) paths ~= plugin.languages;
 			}
 			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
@@ -369,7 +373,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullCodename ~ Text.white ~ " " ~ Software.fullVersion ~ Text.green ~ " API " ~ Text.white ~ "v" ~ to!string(Software.api)]));
+		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
 
 		static if(!__supported) {
 			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
@@ -378,8 +382,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		this.n_variables = ServerVariables(&this.n_settings.displayName, &this.n_ticks, &this.n_online, &this.n_max);
 
 		this.globalListener = new EventListener!WorldEvent();
-
-		//TODO read creative (default) creative items on startup
 
 		// default skins for players that connect with invalid skins
 		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Steve.bin"));
@@ -400,6 +402,30 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			}
 		}
 
+		log(translate("{startup.resourcePacks}", this.n_settings.language, []));
+
+		// create resource pack files
+		string[] textures = [Paths.textures]; // ordered from least prioritised to most prioritised
+		bool serve = false;
+		foreach_reverse(plugin ; this.n_plugins) {
+			serve |= plugin.textures !is null || plugin.languages !is null;
+			if(plugin.textures !is null) textures ~= plugin.textures;
+		}
+		if(serve) {
+
+			auto rp_uuid = this.nextUUID;
+			auto rp = createResourcePacks(this, rp_uuid, textures);
+			std.concurrency.spawn(&serveResourcePacks, std.concurrency.thisTid, cast(string)rp.minecraft2.idup, cast(string)rp.minecraft3.idup);
+			ushort port = std.concurrency.receiveOnly!ushort();
+
+			auto ip = publicAddresses();
+			//TODO also try to use local address before using 127.0.0.1
+
+			MinecraftPlayer.updateResourcePacks(rp.minecraft2, rp.minecraft3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
+			PocketPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
+
+		}
+
 		this.n_node_max = this.n_settings.maxPlayers;
 
 		// remove plugins from list if deactivated
@@ -418,7 +444,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			foreach(plugin ; this.n_plugins) {
 				plugins ~= "\t\"" ~ plugin.namespace ~ "\": true";
 			}
-			std.file.write(Paths.home ~ "plugins.json", "{" ~ newline ~ plugins.join("," ~ newline) ~ newline ~ "}" ~ newline);
+			//std.file.write(Paths.home ~ "plugins.json", "{" ~ newline ~ plugins.join("," ~ newline) ~ newline ~ "}" ~ newline);
 		}
 
 		this.start_time = milliseconds;
@@ -430,7 +456,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
 				Text.white ~ plugin.vers
 			];
-			log(translate("{startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : "") ~ "}", this.n_settings.language, args));
+			log(translate("{startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : "")) ~ "}", this.n_settings.language, args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
