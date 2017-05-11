@@ -25,13 +25,13 @@ branches:
     - master
 
 artifacts:
-  - path: build\sel-hub.exe
+  - path: build\hub.exe
     name: sel-hub
-  - path: build\sel-node.exe
+  - path: build\node.exe
     name: sel-node
-  - path: build\sel-lite.exe
+  - path: build\lite.exe
     name: sel-lite
-  - path: build\sel-portable.exe
+  - path: build\portable.exe
     name: sel-portable
 
 install:
@@ -97,9 +97,9 @@ before_build:
 
 build_script:
  - cd build
- - dub init.d --portable --arch=%Darch% --compiler=$DC% --build=release
+ - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=release
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
- - rename sel-lite.exe sel-portable.exe
+ - rename lite.exe portable.exe
  - rmdir ..\plugins /s /q
  - dub init.d --arch=%Darch% --compiler=%DC% --build=release
  - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d

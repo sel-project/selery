@@ -3,7 +3,7 @@
    authors "sel-project"
    targetType "executable"
    //dependency "sel-server:common" path="../"
-   dependency "common" path="../common"
+   dependency "sel-common" path="../common"
 +/
 /*
  * Copyright (c) 2016-2017 SEL
@@ -30,16 +30,21 @@ import std.json;
 import std.path : dirSeparator, buildNormalizedPath, absolutePath;
 import std.process : executeShell;
 import std.string;
+import std.typetuple : TypeTuple;
 
 import sel.about;
 import sel.format : Text, writeln;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 47;
+enum size_t __GENERATOR__ = 52;
 
 void main(string[] args) {
 
-	if(args.canFind("-p") || args.canFind("--portable") || args.canFind("/p") || args.canFind("/P")) {
+	if(args.canFind("--version")) {
+		return writeln("init.d version " ~ to!string(__GENERATOR__));
+	}
+
+	if(args.canFind("-p") || args.canFind("--portable")) {
 
 		// init for portable (it'll be used only for lite.d)
 
@@ -70,15 +75,68 @@ void main(string[] args) {
 
 	Paths.create();
 
+	string libraries;
+	if(exists(Paths.hidden ~ "libraries")) {
+		// should be an absolute normalised path
+		libraries = cast(string)read(Paths.hidden ~ "libraries");
+	} else {
+		// assuming this file is executed in build/ and the libraries are in ../
+		libraries = buildNormalizedPath(absolutePath("../"));
+	}
+	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
+
 	JSONValue[string] plugs; // plugs[location] = settingsfile
 
 	void loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		if(exists(path ~ "package.json")) {
-			try {
-				plugs[path] = parseJSON(cast(string)read(path ~ "package.json"));
-			} catch(JSONException e) {
-				writeln(Text.red ~ "JSONException whilst reading " ~ path ~ dirSeparator ~ "package.json: " ~ e.msg);
+		foreach(pack ; ["package.json", "sel.json"]) {
+			if(exists(path ~ pack)) {
+				auto json = parseJSON(cast(string)read(path ~ pack));
+				if(json.type == JSON_TYPE.OBJECT) {
+					json["single"] = false;
+					plugs[path] = json;
+					return;
+				}
+			}
+		}
+	}
+
+	void loadSinglePlugin(string location) {
+		immutable expectedModule = location[location.lastIndexOf(dirSeparator)+1..$-2];
+		auto file = cast(string)read(location);
+		auto s = file.split("\n");
+		if(s.length) {
+			auto fl = s[0].strip;
+			if(fl.startsWith("/+") && fl.endsWith(":")) {
+				string pack;
+				bool closed = false;
+				s = s[1..$];
+				while(s.length) {
+					immutable line = s[0].strip;
+					s = s[1..$];
+					if(line == "+/") {
+						closed = true;
+						break;
+					} else {
+						pack ~= line;
+					}
+				}
+				if(closed && s.length && s[0].strip == "module " ~ expectedModule ~ ";") {
+					switch(fl[2..$-1].strip) {
+						case "package.json":
+						case "sel.json":
+							auto json = parseJSON(pack);
+							if(json.type == JSON_TYPE.OBJECT) {
+								mkdirRecurse(Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src");
+								writeDiff(Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src" ~ dirSeparator ~ expectedModule ~ ".d", file);
+								json["single"] = true;
+								plugs[Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule] = json;
+							}
+							break;
+						default:
+							break;
+					}
+				}
 			}
 		}
 	}
@@ -89,6 +147,8 @@ void main(string[] args) {
 			if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
 				if(ppath.isDir) {
 					loadPlugin(ppath);
+				} else if(ppath.isFile && ppath.endsWith(".d")) {
+					loadSinglePlugin(ppath);
 				}
 			}
 		}
@@ -102,8 +162,10 @@ void main(string[] args) {
 		if(index !in info) {
 			auto plugin = Info();
 			plugin.json = value;
-			plugin.id = index[index.lastIndexOf("/")+1..$];
-			plugin.path = path;
+			plugin.id = index;
+			plugin.path = buildNormalizedPath(absolutePath(path));
+			if(!plugin.path.endsWith(dirSeparator)) plugin.path ~= dirSeparator;
+			plugin.single = "single" in value && value["single"].type == JSON_TYPE.TRUE;
 			auto target = "target" in value;
 			if(target && target.type == JSON_TYPE.STRING) {
 				plugin.target = target.str.toLower;
@@ -147,6 +209,9 @@ void main(string[] args) {
 				plugin.main = main.str;
 			}
 			plugin.api = exists(path ~ "api.d");
+			if(plugin.single) {
+				plugin.vers = "~single";
+			}
 			info[index] = plugin;
 		}
 	}
@@ -203,7 +268,7 @@ void main(string[] args) {
 		string[] fimports;
 
 		JSONValue[string] dub;
-		dub["sel-server:" ~ target] = JSONValue(["path": "../../../"]);
+		dub["sel-" ~ target] = JSONValue(["path": libraries ~ target]);
 
 		foreach(ref value ; ordered) {
 			if(value.target == target && value.active) {
@@ -212,13 +277,10 @@ void main(string[] args) {
 					mkdirRecurse(value.path ~ "/.dub");
 					write(value.path ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
 				}
-				dub[value.id] = ["path": value.path.startsWith(Paths.plugins) ? "../../../plugins/" ~ value.id : value.path];
+				dub[value.id] = ["path": value.path];
 				if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
-				if("versions" !in value.dub) value.dub["versions"] = new JSONValue[0];
 				value.dub["name"] = value.id;
 				value.dub["targetType"] = "library";
-				value.dub["dependencies"]["sel-server:" ~ target] = ["path": "../../"];
-				//value.dub["versions"].array ~= JSONValue(capitalize(target));
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {
@@ -227,16 +289,21 @@ void main(string[] args) {
 						}
 					}
 				}
-				auto lang = value.path ~ "lang";
-				if((value.main.length || value.api) && exists(lang) && lang.isDir) {
-					lang = "`" ~ buildNormalizedPath(absolutePath(lang)) ~ dirSeparator ~ "`";
-				} else {
-					lang = "null";
+				value.dub["dependencies"]["sel-" ~ target] = ["path": libraries ~ target];
+				string extra(string path) {
+					auto ret = value.path ~ path;
+					if((value.main.length || value.api) && exists(ret) && ret.isDir) {
+						foreach(f ; dirEntries(ret, SpanMode.breadth)) {
+							// at least one element inside
+							return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
+						}
+					}
+					return "null";
 				}
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";";
 				}
-				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ lang ~ "),";
+				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ "),";
 			}
 		}
 
@@ -275,6 +342,8 @@ struct Info {
 	public string target = "node";
 
 	public JSONValue json;
+
+	public bool single = false;
 
 	public bool active = true;
 	public size_t priority = 1;

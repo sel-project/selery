@@ -1,5 +1,5 @@
-name "common"
+name "sel-common"
 authors "sel-project"
 license "LGPL-3.0"
 targetType "library"
-dependency "sel-utils" version="==1.2.10"
+dependency "sel-utils" version="==1.2.14"

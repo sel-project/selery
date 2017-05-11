@@ -1,5 +1,5 @@
-name "hub"
+name "sel-hub"
 authors "sel-project"
 license "LGPL-3.0"
 targetType "library"
-dependency "sel-server:common" version="*"
+dependency "sel-common" path="../common"

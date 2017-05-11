@@ -20,8 +20,8 @@ matrix:
     - d: dmd-2.074.0
       os: osx
   allow_failures:
-    - d: dmd-2.074.0
     - os: osx
+      d: dmd-2.073.2
 
 script:
   - cd build

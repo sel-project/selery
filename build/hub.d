@@ -1,9 +1,9 @@
 /+ dub.sdl:
-   name "sel-hub"
+   name "hub"
    authors "sel-project"
    targetType "executable"
-   dependency "sel-server:common" path="../"
-   dependency "sel-server:hub" path="../"
+   dependency "sel-common" path="../common"
+   dependency "sel-hub" path="../hub"
    dependency "plugin-loader:hub" path="../.sel/plugin-loader"
 +/
 /*
