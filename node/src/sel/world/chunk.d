@@ -31,7 +31,6 @@ import sel.block.block : Block;
 import sel.block.blocks : BlockStorage;
 import sel.block.tile : Tile;
 import sel.math.vector;
-import sel.util.lang : ITranslatable;
 import sel.world.io;
 import sel.world.world : World;
 
@@ -63,7 +62,6 @@ class Chunk {
 	private immutable(ubyte)[] m_compressed_pc;
 	
 	public Tile[ushort] tiles;
-	public Tile[uint] translatable_tiles;
 
 	// snowing informations
 	private Vector2!ubyte[] next_snow;
@@ -158,7 +156,7 @@ class Chunk {
 
 		auto spos = shortBlockPosition(position);
 		if(spos in this.tiles) {
-			this.translatable_tiles.remove(this.tiles[spos].tid);
+			//this.translatable_tiles.remove(this.tiles[spos].tid);
 			this.tiles[spos].unplace();
 			this.tiles.remove(spos);
 		}
@@ -184,11 +182,7 @@ class Chunk {
 	/// Registers a tile.
 	public @safe void registerTile(T)(T tile) if(is(T : Tile) && is(T : Block)) {
 		this.tiles[shortBlockPosition(tile.position & [15, 255, 15])] = tile;
-		static if(is(T : ITranslatable)) {
-			this.translatable_tiles[tile.tid] = tile;
-		} else {
-			this.changed_tiles[shortBlockPosition(tile.position)] = tile;
-		}
+		this.changed_tiles[shortBlockPosition(tile.position)] = tile;
 	}
 
 	/// Gets a tile.

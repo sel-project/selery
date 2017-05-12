@@ -3,7 +3,7 @@
 # COMPLETE
 
 language.name = English
-language.region = US
+language.region = United States
 language.bidirectional = false
 
 startup.connecting = Connecting to {0} with name "{1}"
@@ -15,7 +15,7 @@ startup.plugin.enabled.author = Enabled {0} by {1}
 startup.plugin.enabled.version = Enabled {0} by {1} version {2}
 startup.started = Server started
 startup.stopped = Server stopped
-startup.unsupported = This OS is not fully supported by {}. Something may not work correctly
+startup.unsupported = This OS is not fully supported by {0}. Something may not work correctly
 
 warning.overload = Warning! The server is overloaded and the ticking is low!
 warning.connectionError = A connection with the hub at "{0}" cannot be established: {1}

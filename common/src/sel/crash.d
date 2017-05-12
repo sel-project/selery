@@ -23,14 +23,14 @@ import std.string : split, replace;
 
 import sel.about;
 import sel.format : Text, writeln;
-import sel.lang : translate;
+import sel.lang : translate, Translation;
 import sel.path : Paths;
 
 public string logCrash(string type, string lang, Throwable e) {
 
 	string filename = Paths.crash ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
 
-	writeln(translate("{red}{warning.crash}", lang, [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
+	writeln(Text.red ~ translate(Translation("warning.crash"), lang, [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
 
 	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
 	file ~= "Message: " ~ e.msg ~ newline;
@@ -48,7 +48,7 @@ public string logCrash(string type, string lang, Throwable e) {
 	if(!exists(Paths.crash)) mkdirRecurse(Paths.crash);
 	write(filename, file);
 
-	writeln(translate("{red}{warning.savedCrash}", lang, [filename]));
+	writeln(Text.red ~ translate(Translation("warning.savedCrash"), lang, [filename]));
 
 	return filename;
 

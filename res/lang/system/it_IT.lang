@@ -13,9 +13,9 @@ startup.resourcePacks = Costruendo le resource pack
 startup.plugin.enabled = Abilitato {0}
 startup.plugin.enabled.author = Abilitato {0} di {1}
 startup.plugin.enabled.version = Abilitato {0} di {1} versione {2}
-startup.started = Server pronto
-startup.stopped = Server chiuso
-startup.unsupported = Questo sistema operativo non è completamente supportato da {}. Alcune cose potrebbero non funzionare correttamente
+startup.started = Server inizializzato
+startup.stopped = Server terminato
+startup.unsupported = Questo sistema operativo non è completamente supportato da {0}. Alcune funzionalità potrebbero non operare correttamente
 
 warning.overload = Attenzione! Il server è in sovraccarico ed il numero di tick è basso!
 warning.connectionError = Impossibilire stabilire una connession con l'hub all'indirizzo "{0}": {1}

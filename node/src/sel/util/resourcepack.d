@@ -52,19 +52,6 @@ auto createResourcePacks(Server server, UUID uuid, string[] textures) {
 		}
 	}
 
-	// add languages
-	JSONValue[string] language;
-	foreach(lang, data; Lang.getAll()) {
-		language[lang] = ["name": JSONValue(data["language.name"]), "region": JSONValue(data["language.region"]), "bidirectional": JSONValue(to!bool(data["language.bidirectional"]))];
-		string[] file;
-		foreach(key, value; data) {
-			file ~= key ~ "=" ~ value.replaceAll(ctRegex!`\{[0-9]{0,1}\}`, "%s");
-		}
-		auto file_c = cast(ubyte[])file.join("\n");
-		add(create("assets/minecraft/lang/" ~ lang ~ ".lang", file_c));
-		pocket.addMember(create("texts/" ~ lang ~ ".lang", file_c));
-	}
-
 	// add icon
 	auto icon = cast(ubyte[])read(Paths.res ~ "icon.png");
 	add(create("pack.png", icon));
@@ -72,11 +59,8 @@ auto createResourcePacks(Server server, UUID uuid, string[] textures) {
 
 	// create minecraft's manifest
 	auto description = JSONValue("The default look of SEL");
-	minecraft2.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(2), "description": description]), "language": JSONValue(language)]).toString()));
-	minecraft3.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(3), "description": description]), "language": JSONValue(language)]).toString()));
-
-	// adds a list of every language to the pocket resource pack
-	pocket.addMember(create("texts/languages.json", cast(ubyte[])JSONValue(Lang.getAll().keys).toString()));
+	minecraft2.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(2), "description": description])]).toString()));
+	minecraft3.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(3), "description": description])]).toString()));
 
 	// create pocket's manifest
 	auto vers = JSONValue(cast(ubyte[])Software.versions);

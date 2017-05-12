@@ -18,6 +18,7 @@ module sel.node.plugin;
 // common
 public import sel.about : Software, tick_t, block_t, item_t;
 public import sel.format : Text;
+public import sel.lang : Translation;
 public import sel.utils;
 
 // server

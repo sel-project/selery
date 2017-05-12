@@ -37,7 +37,7 @@ import std.utf : UTFException;
 
 import sel.about;
 import sel.format : Text;
-import sel.lang;
+import sel.lang : Lang, translate, Translation;
 import sel.path : Paths;
 import sel.plugin : Plugin;
 import sel.utils : milliseconds;
@@ -141,17 +141,13 @@ class Server {
 			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.display);
 		}
 
-		Lang.init([this.n_settings.language], [Paths.langSystem]);
+		Lang.init([this.n_settings.language], [Paths.langSystem]); //TODO load plugin's lang files
 
-		this.n_settings.minecraft.motd = translate(this.n_settings.minecraft.motd, this.n_settings.language, []);
-		this.n_settings.pocket.motd = translate(this.n_settings.pocket.motd, this.n_settings.language, []);
-
-		log(translate("{startup.starting}", this.n_settings.language, ["{green}" ~ Software.name ~ "{reset} " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
-		log(translate("{startup.started}", this.n_settings.language, []));
-		log("");
+		log(translate(Translation("startup.starting"), this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
+		log(translate(Translation("startup.started"), this.n_settings.language), "\n");
 
 		static if(!__supported) {
-			log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
+			log(translate(Translation("startup.unsupported"), this.n_settings.language, [Software.name]));
 		}
 
 		version(DigitalMars) {
@@ -194,17 +190,15 @@ class Server {
 		}*/
 		
 		auto pa = publicAddresses;
-		if(pa.v4.length) log("public ip: ", pa.v4);
+		if(pa.v4.length || pa.v6.length) {
+			if(pa.v4.length) log("Public ip: ", pa.v4);
+			if(pa.v6.length) log("Public ipv6: ", pa.v6);
+			log();
+		}
 		
 		this.blocks = new Blocks();
 
-		try {
-			this.handler = new shared Handler(this);
-		} catch(SocketException e) {
-			log(Text.red, "cannot start server!");
-			log(e);
-			return;
-		}
+		this.handler = new shared Handler(this);
 
 		// listen for commands
 		auto reader = new Thread({
@@ -290,7 +284,7 @@ class Server {
 		this.handler.shutdown();
 		foreach(node ; this.nodes) node.onClosed(false);
 		import core.stdc.stdlib : exit;
-		log("shutting down");
+		log("Shutting down");
 		exit(0);
 	}
 
@@ -563,7 +557,7 @@ class Server {
 
 	public shared bool block(Address address, size_t seconds) {
 		if(this.blocks.block(address, seconds)) {
-			log(translate("{warning.blocked}", this.n_settings.language, [to!string(address), to!string(seconds)]));
+			log(translate(Translation("warning.blocked"), this.n_settings.language, [to!string(address), to!string(seconds)]));
 			return true;
 		} else {
 			return false;

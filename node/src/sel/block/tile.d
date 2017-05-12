@@ -37,7 +37,6 @@ import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, entityPosition;
 import sel.player.player : Player;
-import sel.util.lang : GenericTranslatable = Translatable;
 import sel.world.world : World;
 
 static import sul.blocks;

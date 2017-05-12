@@ -22,6 +22,8 @@ import std.string : split, replace, toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
 import std.typecons : Tuple;
 
+import sel.format : Text;
+import sel.lang : Translation, Messageable;
 import sel.entity.entity : Entity;
 import sel.math.vector;
 import sel.player.player : Player, Gamemode;
@@ -231,7 +233,7 @@ class Command {
 /**
  * Interface for command senders.
  */
-interface CommandSender {
+interface CommandSender : Messageable {
 
 	/**
 	 * Gets the command sender's current position.
@@ -251,9 +253,31 @@ interface CommandSender {
 	public Player[] visiblePlayers();
 
 	/**
-	 * Sends a translatable message to the command sender.
+	 * Sends a message to the command sender.
+	 * The message can be either a raw string or a translation (server-side
+	 * or client-side).
+	 * Example:
+	 * ---
+	 * // simple message
+	 * sender.sendMessage("Nothing to see here");
+	 * 
+	 * // with colours
+	 * sender.sendMessage(Text.red, "This is red! §rThis has no colour!");
+	 * 
+	 * // everything is converted to string line in `writeln`
+	 * sender.sendMessage("Your instance: ", sender);
+	 * sender.sendMessage(1, " ", 1.44f);
+	 * 
+	 * // simple client-side translation with one arguments
+	 * sender.sendTranslation(Translation.CONNECTION_JOIN, sender.displayName);
+	 * 
+	 * // client-side translation with array of arguments (string[])
+	 * sender.sendTranslation(Translation.DEATH_GENERIC, [sender.displayName, "Steve"]);
+	 * 
+	 * // coloured translated output
+	 * sender.sendTranslation(Text.red, Translation("commands.generic.error"));
+	 * ---
 	 */
-	public void sendMessage(string, string[]=[]);
 
 }
 
@@ -269,6 +293,18 @@ interface WorldCommandSender : CommandSender {
 
 }
 
+/**
+ * Created an enum with a single value that can be used in
+ * commands with a single argument.
+ * Example:
+ * ---
+ * // test add @a
+ * @command("test") test0(SingleEnum!"add", Target target) {}
+ * 
+ * // test remove @a
+ * @command("test") test1(SingleEnum!"remove", Target target) {}
+ * ---
+ */
 template SingleEnum(string value) {
 
 	mixin("enum SingleEnum { " ~ value ~ " }");

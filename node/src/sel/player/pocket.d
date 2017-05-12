@@ -18,6 +18,8 @@ import etc.c.curl : CurlOption;
 
 import std.algorithm : max, min, sort;
 import std.conv : to;
+import std.digest.digest : toHexString;
+import std.digest.sha : sha256Of;
 import std.file : read, write, exists, mkdirRecurse;
 import std.json;
 import std.net.curl : get, HTTP, CurlException;
@@ -33,6 +35,8 @@ import nbt.stream;
 import nbt.tags;
 
 import sel.about;
+import sel.format : Text;
+import sel.lang : Translation, translate;
 import sel.path : Paths;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
@@ -47,7 +51,6 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
 import sel.util.command : Command;
-import sel.util.lang;
 import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
@@ -75,8 +78,6 @@ abstract class PocketPlayer : Player {
 		}
 		resourcePackSize = rp.length;
 		resourcePackId = uuid.toString();
-		import std.digest.digest : toHexString;
-		import std.digest.sha : sha256Of;
 		resourcePackHash = toLower(toHexString(sha256Of(rp)));
 	}
 
@@ -391,12 +392,28 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.recalculateSpeed();
 	}
 
-	protected override void sendCompletedMessages(string[] messages) {
-		// unsupported
+	protected override void sendMessageImpl(string message) {
+		this.sendPacket(new Play.Text().new Raw(message));
 	}
 	
-	protected override void sendChatMessage(string message) {
-		this.sendPacket(new Play.Text().new Raw(message));
+	protected override void sendTranslationImpl(Translation message, string[] args) {
+		if(message.pocket.length) {
+			this.sendPacket(new Play.Text().new Translation(message.pocket, args));
+		} else {
+			this.sendMessageImpl(translate(message, this.lang, args));
+		}
+	}
+	
+	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+		if(message.pocket.length) {
+			this.sendPacket(new Play.Text().new Translation(color ~ "%" ~ message.pocket, args));
+		} else {
+			this.sendMessageImpl(color ~ "%" ~ translate(message, this.lang, args));
+		}
+	}
+
+	protected override void sendCompletedMessages(string[] messages) {
+		// unsupported
 	}
 	
 	protected override void sendTipMessage(string message) {
@@ -805,7 +822,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					Tuple!(string, string)[] sent_params;
 					JSONValue[] params;
 					foreach(j, name; overload.params) {
-						auto name_type = Tuple!(string, string)(translate(name, this.lang, []), overload.pocketTypeOf(j));
+						auto name_type = Tuple!(string, string)(name, overload.pocketTypeOf(j));
 						sent_params ~= name_type;
 						JSONValue[string] p;
 						p["name"] = name_type[0];
@@ -815,7 +832,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 							if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
 						}*/
 						if(j >= overload.requiredArgs) p["optional"] = true;
-						if(overload.pocketTypeOf(j) == "stringenum") p["enum_values"] = overload.enumMembers(j);
+						if(name_type[1] == "stringenum") p["enum_values"] = overload.enumMembers(j);
 						params ~= JSONValue(p);
 					}
 					foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
@@ -1026,7 +1043,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		auto cmd = command in this.sent_commands;
 		if(cmd) {
 			try {
-				// BROKEN IN 1.1.0.5 for commands with the same args of the singleplayer ones
+				// BROKEN IN 1.1.0.5-1.1.0.9 for commands with the same args of the singleplayer ones
 				auto overload = to!size_t(overload_str);
 				if(overload < (*cmd).length) {
 					auto data = parseJSON(input);
@@ -1108,9 +1125,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					}
 					this.callCommandOverload(command, overload, args.idup);
 				}
-			} catch(Exception e) {
-				error_log(e);
-			}
+			} catch(Exception) {}
 		}
 	}
 	

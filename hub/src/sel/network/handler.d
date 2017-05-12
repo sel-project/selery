@@ -24,7 +24,7 @@ import std.string;
 import sel.about : Software;
 import sel.config : ConfigType;
 import sel.constants;
-import sel.lang : translate;
+import sel.lang : translate, Translation;
 import sel.format : Text;
 import sel.hub.settings;
 import sel.hub.server : Server;
@@ -174,11 +174,11 @@ abstract class HandlerThread : SafeThread {
 		foreach(string address ; addresses) {
 			try {
 				sockets ~= cast(shared)socketFromAddress!(BlockingSocket!T)(address, port, backlog);
-				log(translate("{handler.listening}", Settings.defaultLanguage, [Text.green ~ handler ~ Text.reset, address]));
+				log(translate(Translation("handler.listening"), Settings.defaultLanguage, [Text.green ~ handler ~ Text.reset, address]));
 			} catch(SocketException e) {
-				log(translate("{handler.error.bind}", Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address, Text.yellow ~ (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
+				log(translate(Translation("handler.error.bind"), Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address, Text.yellow ~ (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
 			} catch(Throwable t) {
-				log(translate("{handler.error.address}", Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address]));
+				log(translate(Translation("handler.error.address"), Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address]));
 			}
 		}
 		return sockets;

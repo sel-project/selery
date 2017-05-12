@@ -12,10 +12,6 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/**
- * Player's classes and related utilities.
- * License: <a href="http://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">GNU General Lesser Public License v3</a>
- */
 module sel.player.player;
 
 mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
@@ -35,6 +31,8 @@ import std.typetuple : TypeTuple;
 import std.uuid : UUID, randomUUID;
 
 import sel.about;
+import sel.format : Text;
+import sel.lang : Translation;
 import sel.utils : milliseconds, call;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.blocks : Blocks;
@@ -54,30 +52,12 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network.hncom : Handler;
 import sel.util.command : Command, WorldCommandSender;
-import sel.util.lang;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.rules : Rules, Gamemode;
 import sel.world.world : World, Dimension;
-
-/**
- * Variables unique for every player that can be used
- * as translation variables.
- * Example:
- * ---
- * // Hello, Steve!
- * player.sendMessage("Hello, {player:name}!");
- * 
- * // Welcome to world in "A Minecraft Server", Steve.
- * player.sendMessage("Welcome to {player:world} in \"{server:name}\", {player:displayName}.");
- * 
- * // You're connect through 192.168.4.15:25565 and your ping is 4 ms
- * player.sendMessage("You're connected through {player:ip}:{player:port} and your latency is {player:latency} ms");
- * ---
- */
-alias PlayerVariables = Variables!("player", string, "name", string, "iname", string, "displayName", string, "chatName", string, "ip", ushort, "port", uint, "ping", uint, "latenct", float, "packetLoss", immutable(string), "world", EntityPosition, "position");
 
 /**
  * Abstract class with abstract packet-related functions.
@@ -91,8 +71,6 @@ abstract class Player : Human, WorldCommandSender {
 	private immutable ulong connection_time;
 
 	public immutable uint hubId;
-	
-	private PlayerVariables n_variables;
 	
 	private string n_name;
 	private string n_iname;
@@ -180,7 +158,6 @@ abstract class Player : Human, WorldCommandSender {
 		this.pe = this.gameVersion == PE;
 		this.pc = this.gameVersion == PC;
 		this.connection_time = milliseconds;
-		this.n_variables = PlayerVariables(&this.n_name, &this.n_iname, &this.n_display_name, &this.chatName, &this.address_ip, &this.address_port, &this.n_latency, &this.n_latency, &this.n_packet_loss, &this.n_world.n_name, &this.m_position);
 		this.last_chunk_position = this.chunk;
 	}
 
@@ -190,10 +167,6 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	// *** PLAYER-RELATED PROPERTIES ***
-	
-	public final pure nothrow @property @safe @nogc PlayerVariables variables() {
-		return this.n_variables;
-	}
 	
 	/**
 	 * Gets the player's connection informations.
@@ -339,15 +312,7 @@ abstract class Player : Human, WorldCommandSender {
 		// check if it's valid (call the event and notify the hub)
 		if(this.server.changePlayerLanguage(this, lang)) {
 			this.m_lang = lang;
-			// update translatable signs in the loaded chunks
-			foreach(ChunkPosition position ; this.loaded_chunks) {
-				auto chunk = position in this.world;
-				if(chunk) {
-					foreach(Tile tile ; (*chunk).translatable_tiles) {
-						this.sendTile(tile, true);
-					}
-				}
-			}
+			//TODO update translatable tiles in the loaded chunks
 		}
 		return this.m_lang;
 	}
@@ -526,18 +491,11 @@ abstract class Player : Human, WorldCommandSender {
 
 	// *** PLAYER-RELATED METHODS ***
 	
-	/**
-	 * Sends a direct message to the player that will be displayed in its chat box.
-	 * Example:
-	 * ---
-	 * player.sendMessage("Hello!");
-	 * player.sendMessage("{red}You cannot enter here!");
-	 * player.sendMessage("Translated stuff: {0}", "a", "b", "c");
-	 * ---
-	 */
-	public override void sendMessage(string message, string[] args=[]) {
-		this.sendChatMessage(translate(message, this.lang, args, this.server.variables, this.variables));
-	}
+	protected override abstract void sendMessageImpl(string);
+	
+	protected override abstract void sendTranslationImpl(Translation, string[]);
+	
+	protected override abstract void sendColoredTranslationImpl(Text, Translation, string[]);
 
 	/**
 	 * Sends a tip message that will be displayed above the hotbar for two
@@ -551,8 +509,8 @@ abstract class Player : Human, WorldCommandSender {
 	 * }
 	 * ---
 	 */
-	public void sendTip(string message, string[] args=[]) {
-		this.sendTipMessage(translate(message, this.lang, args, this.server.variables, this.variables));
+	public void sendTip(string message) {
+		this.sendTipMessage(message);
 	}
 
 	/// ditto
@@ -568,15 +526,15 @@ abstract class Player : Human, WorldCommandSender {
 	 * player.title = Title("title", "subtitle");
 	 *
 	 * // display a title for 3 seconds
-	 * player.title = Title("{green}green title", 60);
+	 * player.title = Title(Text.green ~ "green title", 60);
 	 *
 	 * // display a subtitle for 10 seconds and fade out in 5 seconds
 	 * player.title = Title("", "subtitle", 0, 200, 100);
 	 * ---
 	 */
-	public Title title(Title title, string[] args=[]) {
-		if(title.title.length) title.title = translate(title.title, this.lang, args, this.server.variables, this.variables);
-		if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args, this.server.variables, this.variables);
+	public Title title(Title title) {
+		//if(title.title.length) title.title = translate(title.title, this.lang, args);
+		//if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args);
 		this.sendTitleMessage(title);
 		return title;
 	}
@@ -701,17 +659,19 @@ abstract class Player : Human, WorldCommandSender {
 	/**
 	 * Disconnects the player from the server (from both
 	 * the node and the hub).
+	 * The reason can be a Translation.
 	 * Params:
 	 * 		reason = reason of the disconnection
 	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
-	public void disconnect(string reason="disconnect.closed", string[] args=[], bool translation=true) {
-		this.server.disconnect(this, reason.translate(this.lang, args, this.server.variables, this.variables), translation);
+	public void disconnect(Translation translation=Translation("", "disconnect.closed", "disconnect.closed"), string[] args=[]) {
+		//TODO
+		//this.server.disconnect(this, reason.translate(this.lang, args), translation);
 	}
 
 	/// ditto
-	public void disconnect(string reason, string[] args=[]) {
-		this.disconnect(reason, args, false);
+	public void disconnect(string message) {
+		this.server.disconnect(this, message);
 	}
 
 	/// ditto
@@ -998,8 +958,6 @@ abstract class Player : Human, WorldCommandSender {
 	protected abstract void sendMotionUpdates(Entity[] entities);
 
 	protected abstract void sendCompletedMessages(string[] messages);
-
-	protected abstract void sendChatMessage(string message);
 	
 	protected abstract void sendTipMessage(string message);
 
@@ -1300,7 +1258,7 @@ abstract class Player : Human, WorldCommandSender {
 			this.sendBlock(PlacedBlock(this.breaking, this.world[this.breaking].data));
 			auto tile = this.world.tileAt(this.breaking);
 			if(tile !is null) {
-				this.sendTile(tile, cast(ITranslatable)tile ? true : false);
+				this.sendTile(tile, false);
 			}
 		}
 		if(cancelitem && !this.inventory.held.empty && this.inventory.held.item.tool) {
@@ -1693,8 +1651,6 @@ class Puppet : Player {
 	protected override @safe @nogc void sendMovementUpdates(Entity[] entities) {}
 	
 	protected override @safe @nogc void sendMotionUpdates(Entity[] entities) {}
-	
-	protected override @safe @nogc void sendChatMessage(string message) {}
 	
 	protected override @safe @nogc void sendTitleMessage(Title message) {}
 	

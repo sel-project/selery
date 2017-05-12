@@ -24,6 +24,8 @@ import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
 import sel.about;
+import sel.format : Text;
+import sel.lang : Messageable, Translation, translate;
 import sel.utils : call;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import sel.block.blocks : BlockStorage, Blocks;
@@ -33,20 +35,18 @@ import sel.entity.living : Living;
 import sel.entity.noai : ItemEntity, Lightning;
 import sel.event.event : Event, EventListener;
 import sel.event.server : PlayerJoinEvent;
-import sel.event.world;
 import sel.event.world.entity : EntityEvent;
-import sel.event.world.player : PlayerEvent;
+import sel.event.world.player : PlayerEvent, PlayerSpawnEvent, PlayerAfterSpawnEvent, PlayerDespawnEvent, PlayerAfterDespawnEvent;
 import sel.event.world.world : WorldEvent;
 import sel.item.item : Item;
 import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
-import sel.node.plugin;
+import sel.node.plugin.plugin;
 import sel.node.server : Server;
 import sel.player.player : Player, isPlayer;
 import sel.util.color : Color;
 import sel.util.command : Command;
-import sel.util.lang : translate, ITranslatable;
 import sel.util.log;
 import sel.util.random : Random;
 import sel.util.task;
@@ -60,7 +60,7 @@ static import sul.blocks;
 /**
  * Basic world.
  */
-class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player") {
+class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player"), Messageable {
 	
 	public static void registerAttributes(T:World)(T world) {
 		foreach(immutable fname ; __traits(allMembers, T)) {
@@ -124,7 +124,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				auto c = from.w_players.length;
 				if(c) {
 					static import sel.node.server;
-					warning_log(translate("{warning.removingWithPlayers}", sel.node.server.server.settings.language, [from.name, to!string(c)]));
+					warning_log(translate(Translation("warning.removingWithPlayers"), sel.node.server.server.settings.language, [from.name, to!string(c)]));
 					foreach(player ; from.w_players) {
 						player.world = transferTo;
 					}
@@ -565,7 +565,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		// send the updated tiles
 		if(this.updated_tiles.length > 0) {
 			foreach(Tile tile ; this.updated_tiles) {
-				this.w_players.call!"sendTile"(tile, cast(ITranslatable)tile ? true : false);
+				this.w_players.call!"sendTile"(tile, false);
 			}
 			//reset
 			this.updated_tiles.clear();
@@ -586,13 +586,26 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/**
-	 * Broadcasts a message to every player in the world.
+	 * Broadcasts a message (raw or translatable) to every player in the world.
 	 */
-	public void broadcast(string message, string[] params=[]) {
+	public final void broadcast(E...)(E args) {
+		//TODO optimise this
 		foreach(player ; this.w_players) {
-			player.sendMessage(message, params);
+			player.sendMessage(args);
 		}
-		world_log(this, translate(message, server.settings.language, params, server.variables));
+		this.sendMessage(args);
+	}
+
+	protected override void sendMessageImpl(string message) {
+		world_log(this, message);
+	}
+
+	protected override void sendTranslationImpl(Translation translation, string[] args) {
+		world_log(this, translate(translation, this.server.settings.language, args));
+	}
+
+	protected override void sendColoredTranslationImpl(Text color, Translation translation, string[] args) {
+		world_log(this, cast(string)color, translate(translation, this.server.settings.language, args));
 	}
 
 	/**
@@ -772,7 +785,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		PlayerSpawnEvent event = new PlayerSpawnEvent(player);
 		this.callEvent(event);
 		if(event.announce) {
-			this.broadcast(event.message, [player.displayName]);
+			//TODO custom message
+			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
 		}
 		//TODO find a better solution for this
 		if(player.pc) {
@@ -806,7 +820,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			PlayerDespawnEvent event = new PlayerDespawnEvent(player);
 			this.callEvent(event);
 			if(event.announce) {
-				this.broadcast(event.message, [player.displayName]);
+				//TODO custom message
+				this.broadcast(Text.yellow, Translation.CONNECTION_LEFT, player.displayName);
 			}
 			foreach(ref Entity viewer ; player.viewers) {
 				viewer.hide(player);

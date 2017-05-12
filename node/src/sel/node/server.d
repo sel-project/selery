@@ -41,6 +41,7 @@ import sel.network.hncom; // do not move this import down
 import sel.about;
 import sel.config : Config, ConfigType;
 import sel.format : Text;
+import sel.lang : Lang, translate, Translation;
 import sel.memory : Memory;
 import sel.path : Paths;
 import sel.plugin : Plugin;
@@ -58,7 +59,6 @@ import sel.player.player : Player;
 import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
 import sel.util.command : Command, CommandSender;
 import sel.util.ip : publicAddresses;
-import sel.util.lang : Lang, translate, Variables;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.util.resourcepack : createResourcePacks;
@@ -73,8 +73,6 @@ mixin((){
 	}
 	return imports;
 }());
-
-alias ServerVariables = Variables!("server", string, "name", size_t, "ticks", size_t, "online", size_t, "max");
 
 // Server's instance
 private Server n_server;
@@ -130,8 +128,6 @@ version(Windows) {
 final class Server : EventListener!ServerEvent, CommandSender {
 
 	private ulong start_time;
-
-	private ServerVariables n_variables;
 
 	private Handler handler;
 	private Address n_hub_address;
@@ -219,13 +215,13 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		} else {
 
-			log(translate("{startup.connecting}", this.n_settings.language, [to!string(hub), name]));
+			log(translate(Translation("startup.connecting"), this.n_settings.language, [to!string(hub), name]));
 
 			try {
 				this.handler = new SocketHandler(hub);
 				this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
 			} catch(SocketException e) {
-				error_log(translate("{warning.connectionError}", this.n_settings.language, [to!string(hub), e.msg]));
+				error_log(translate(Translation("warning.connectionError"), this.n_settings.language, [to!string(hub), e.msg]));
 				return;
 			}
 
@@ -250,13 +246,13 @@ final class Server : EventListener!ServerEvent, CommandSender {
 							default: return "unknown";
 						}
 					}();
-					error_log(translate("{status." ~ reason ~ "}", this.n_settings.language, []));
+					error_log(translate(Translation("status." ~ reason), this.n_settings.language));
 					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-						error_log(translate("{warning.protocolRequired}", this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
+						error_log(translate(Translation("warning.protocolRequired"), this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
 					}
 				}
 			} else {
-				error_log(translate("{warning.refused}", this.n_settings.language, []));
+				error_log(translate(Translation("warning.refused"), this.n_settings.language));
 			}
 
 			this.handler.close();
@@ -333,7 +329,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			void check(ubyte type, string name, uint[] requested, uint[] supported) {
 				foreach(req ; requested) {
 					if(!supported.canFind(req)) {
-						warning_log(translate("{warning.invalidProtocol}", this.n_settings.language, [to!string(req), name]));
+						warning_log(translate(Translation("warning.invalidProtocol"), this.n_settings.language, [to!string(req), name]));
 					}
 				}
 			}
@@ -344,7 +340,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			this.finishConstruction();
 
 		} else {
-			error_log(translate("{warning.closed}", this.n_settings.language, []));
+			error_log(translate(Translation("warning.closed"), this.n_settings.language));
 		}
 
 	}
@@ -362,7 +358,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		} else if(info.game.type == HncomTypes.Game.MINECRAFT) {
 			set(this.n_settings.minecraft);
 		} else {
-			error_log(translate("{warning.invalidGame}", this.n_settings.language, [to!string(info.game.type), Software.name]));
+			error_log(translate(Translation("warning.invalidGame"), this.n_settings.language, [to!string(info.game.type), Software.name]));
 		}
 	}
 
@@ -373,13 +369,11 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		log(translate("{startup.starting}", this.n_settings.language, [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
+		log(translate(Translation("startup.starting"), this.n_settings.language, [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
 
 		static if(!__supported) {
-			warning_log(translate("{startup.unsupported}", this.n_settings.language, [Software.name]));
+			warning_log(translate(Translation("startup.unsupported"), this.n_settings.language, [Software.name]));
 		}
-
-		this.n_variables = ServerVariables(&this.n_settings.displayName, &this.n_ticks, &this.n_online, &this.n_max);
 
 		this.globalListener = new EventListener!WorldEvent();
 
@@ -398,20 +392,18 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				}
 			}
 			if(failed.length) {
-				warning_log(translate("{warning.creativeFailed}", this.n_settings.language, [failed.join(", ")]));
+				warning_log(translate(Translation("warning.creativeFailed"), this.n_settings.language, [failed.join(", ")]));
 			}
 		}
 
-		log(translate("{startup.resourcePacks}", this.n_settings.language, []));
+		log(translate(Translation("startup.resourcePacks"), this.n_settings.language));
 
 		// create resource pack files
 		string[] textures = [Paths.textures]; // ordered from least prioritised to most prioritised
-		bool serve = false;
 		foreach_reverse(plugin ; this.n_plugins) {
-			serve |= plugin.textures !is null || plugin.languages !is null;
 			if(plugin.textures !is null) textures ~= plugin.textures;
 		}
-		if(serve) {
+		if(textures.length > 1) {
 
 			auto rp_uuid = this.nextUUID;
 			auto rp = createResourcePacks(this, rp_uuid, textures);
@@ -456,7 +448,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
 				Text.white ~ plugin.vers
 			];
-			log(translate("{startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : "")) ~ "}", this.n_settings.language, args));
+			log(translate(Translation("startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : ""))), this.n_settings.language, args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
@@ -489,7 +481,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			sigset(SIGINT, &extsig);
 		}
 
-		log(translate("{startup.started}", this.n_settings.language, []));
+		log(translate(Translation("startup.started"), this.n_settings.language));
 
 		getAndClearLoggedMessages();
 		
@@ -517,7 +509,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			} else {
 				this.last_tps[this.tps_pointer] = 20 - diff / 50000;
 				if(++this.warn == 3 && this.ticks - this.last_warn > 100) {
-					warning_log(translate("{warning.overload}", this.n_settings.language, []));
+					warning_log(translate(Translation("warning.overload"), this.n_settings.language, []));
 					this.last_warn = this.ticks;
 					this.warn = 0;
 				}
@@ -557,7 +549,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		import std.file : exists, remove;
 		if(exists(Paths.hidden ~ "status")) remove(Paths.hidden ~ "status");
 
-		log(translate("{startup.stopped}", this.n_settings.language, []));
+		log(translate(Translation("startup.stopped"), this.n_settings.language, []));
 
 		/*version(Windows) {
 			// forcefully kill this process to make sure also children
@@ -584,7 +576,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		
 		// try to receive packets
 		if(!this.handleHncomPackets()) {
-			error_log(translate("{warning.closed}", this.n_settings.language, []));
+			error_log(translate(Translation("warning.closed"), this.n_settings.language, []));
 			running = false;
 			return;
 		}
@@ -741,26 +733,6 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 */
 	public pure nothrow @property @safe @nogc string website() {
 		return this.social.website;
-	}
-
-	/*
-	 * Gets the pointers to the server's variables, used in translations.
-	 * Example:
-	 * ---
-	 * player.sendMessage("Welcome to \"{server:name}\", {player:name}");
-	 * // Welcome to "A Minecraft Server", Steve
-	 * 
-	 * player.sendMessage("Now there are {server:online}/{server:max} players online");
-	 * // Now there are 12/1024 players online
-	 * ---
-	 * Variables:
-	 * 		name = server's name as indicated in Settings.DISPLAY_NAME
-	 * 		ticks = number of ticks from the server's start
-	 * 		online = number of online players (not just in this node)
-	 * 		max = highest number of player that can be in the server
-	 */
-	public pure nothrow @property @safe @nogc ServerVariables variables() {
-		return this.n_variables;
 	}
 
 	/**
@@ -1053,7 +1025,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 					}
 				}
 			} else {
-				warning_log(translate("{warning.removingDefaultWorld}", this.n_settings.language, [world.name]));
+				warning_log(translate(Translation("warning.removingDefaultWorld"), this.n_settings.language, [world.name]));
 			}
 		}
 		return false;
@@ -1095,9 +1067,9 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	 * Broadcasts a message in every registered world and their children
 	 * calling the world's broadcast method.
 	 */
-	public void broadcast(string message, string[] params=[]) {
+	public void broadcast(E...)(E args) {
 		void broadcastImpl(World world) {
-			world.broadcast(message, params);
+			world.broadcast(args);
 			foreach(child ; world.children) {
 				broadcastImpl(child);
 			}
@@ -1132,9 +1104,17 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	public override Player[] visiblePlayers() {
 		return this.players;
 	}
-
-	public override void sendMessage(string message, string[] args=[]) {
+	
+	protected override void sendMessageImpl(string message) {
+		log(message);
+	}
+	
+	protected override void sendTranslationImpl(Translation message, string[] args) {
 		log(translate(message, this.settings.language, args));
+	}
+	
+	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+		log(color, translate(message, this.settings.language, args));
 	}
 
 	// hub-node communication and related methods
@@ -1142,7 +1122,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	private void sendPacket(ubyte[] packet) {
 		if(Handler.sharedInstance.send(packet) != packet.length + 4 && running) {
 			// something Socket.receive doesn't return 0 when the connection is closed
-			error_log(translate("{warning.closed}", this.n_settings.language, []));
+			error_log(translate(Translation("warning.closed"), this.n_settings.language));
 			running = false;
 		}
 	}

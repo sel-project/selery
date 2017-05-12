@@ -16,6 +16,8 @@ module sel.player.minecraft;
 
 import std.algorithm : sort, min, canFind, clamp;
 import std.conv : to;
+import std.digest.digest : toHexString;
+import std.digest.sha : sha1Of;
 import std.json : JSONValue;
 import std.math : abs, log2, ceil;
 import std.socket : Address;
@@ -28,6 +30,8 @@ import nbt.stream;
 import nbt.tags;
 
 import sel.about;
+import sel.format : Text;
+import sel.lang : Translation, translate;
 import sel.utils : array_index;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
@@ -42,7 +46,6 @@ import sel.item.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
-import sel.util.lang : translate;
 import sel.util.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
@@ -61,6 +64,18 @@ abstract class MinecraftPlayer : Player {
 		stream = new ClassicStream!(Endian.bigEndian)();
 	}
 	
+	public static ulong ulongPosition(BlockPosition position) {
+		return (to!long(position.x & 0x3FFFFFF) << 38) | (to!long(position.y & 0xFFF) << 26) | (position.z & 0x3FFFFFF);
+	}
+	
+	public static BlockPosition blockPosition(ulong position) {
+		int nval(uint num) {
+			if((num & 0x3000000) == 0) return num;
+			else return -(num ^ 0x3FFFFFF) - 1;
+		}
+		return BlockPosition(nval((position >> 38) & 0x3FFFFFF), (position >> 26) & 0xFFF, nval(position & 0x3FFFFFF));
+	}
+	
 	protected static byte convertDimension(Dimension dimension) {
 		with(Dimension) final switch(dimension) {
 			case overworld: return 0;
@@ -70,8 +85,6 @@ abstract class MinecraftPlayer : Player {
 	}
 
 	public static void updateResourcePacks(void[] rp2, void[] rp3, string url, ushort port) {
-		import std.digest.digest : toHexString;
-		import std.digest.sha : sha1Of;
 		resourcePack = url;
 		resourcePackPort = ":" ~ to!string(port);
 		resourcePack2Hash = toLower(toHexString(sha1Of(rp2)));
@@ -194,18 +207,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		return ret;
 	}
 
-	public static ulong ulongPosition(BlockPosition position) {
-		return (to!long(position.x & 0x3FFFFFF) << 38) | (to!long(position.y & 0xFFF) << 26) | (position.z & 0x3FFFFFF);
-	}
-
-	public static BlockPosition blockPosition(ulong position) {
-		int nval(uint num) {
-			if((num & 0x3000000) == 0) return num;
-			else return -(num ^ 0x3FFFFFF) - 1;
-		}
-		return BlockPosition(nval((position >> 38) & 0x3FFFFFF), (position >> 26) & 0xFFF, nval(position & 0x3FFFFFF));
-	}
-
 	public Metadata metadataOf(SelMetadata metadata) {
 		mixin("return metadata.minecraft" ~ __protocol.to!string ~ ";");
 	}
@@ -250,8 +251,42 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		this.sendPacket(new Clientbound.TabComplete(messages));
 	}
 	
-	protected override void sendChatMessage(string message) {
+	protected override void sendMessageImpl(string message) {
 		this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.CHAT));
+	}
+	
+	protected override void sendTranslationImpl(Translation message, string[] args) {
+		this.sendGenericTranslation!false(Text.black, message, args);
+	}
+
+	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+		this.sendGenericTranslation!true(color, message, args);
+	}
+
+	private void sendGenericTranslation(bool colored)(Text color, Translation message, string[] args) {
+		if(message.minecraft.length) {
+			JSONValue[string] json;
+			json["translate"] = message.minecraft;
+			if(args.length) {
+				JSONValue[] a;
+				foreach(arg ; args) {
+					a ~= JSONValue(["text": arg]);
+				}
+				json["with"] = a;
+			}
+			static if(colored) {
+				//TODO convert color to camel case
+				json["color"] = color.to!string;
+			}
+			this.sendPacket(new Clientbound.ChatMessage(JSONValue(json).toString(), Clientbound.ChatMessage.CHAT));
+		} else {
+			static if(colored) {
+				string m = color;
+			} else {
+				string m;
+			}
+			this.sendMessageImpl(m ~ translate(message, this.lang, args));
+		}
 	}
 	
 	protected override void sendTipMessage(string message) {

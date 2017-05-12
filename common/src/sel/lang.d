@@ -15,15 +15,15 @@
 module sel.lang;
 
 import std.algorithm : canFind;
+import std.array : Appender;
 import std.conv : to;
 import std.file : exists, read;
 import std.string;
-import std.traits : EnumMembers;
+import std.traits : isArray;
 
 import sel.format : Text;
-import sel.path : Paths;
 
-struct Lang {
+shared struct Lang {
 
 	private static shared(Lang) instance;
 
@@ -33,10 +33,6 @@ struct Lang {
 
 	private shared string[] supported;
 	private shared string[string][string] langs;
-
-	public static string[string][string] getAll() {
-		return cast(string[string][string])instance.langs;
-	}
 
 	// ["../res/lang/system/", "../plugins/example/lang/"]
 	private shared this(string[] langs, string[] dirs) {
@@ -52,17 +48,6 @@ struct Lang {
 				}
 			}
 		}
-		//add colours in all the languages
-		/*string[string] colors;
-		foreach(immutable color ; EnumMembers!Text) {
-			mixin("colors[\"" ~ color.to!string ~ "\"] = \"" ~ color ~ "\";");
-			mixin("colors[\"" ~ color.to!string.toLower ~ "\"] = \"" ~ color ~ "\";");
-		}
-		foreach(lang, val; this.langs) {
-			foreach(cname, color; colors) {
-				this.langs[lang][cname] = color;
-			}
-		}*/
 	}
 
 	private shared bool hasImpl(string lang, string str) {
@@ -100,87 +85,91 @@ struct Lang {
 			return instance.supported[0];
 		}
 	}
+
+	private static class Translatable {
+
+		public abstract string build(string[]);
+
+	}
+
+	private static class Static : Translatable {
+
+		private string str;
+
+		public this(string str) {
+			this.str = str;
+		}
+
+		public override string build(string[] args) {
+			return this.str;
+		}
+
+	}
 	
 }
 
-/**
- * Translates the translatable content of a string between two brackets
- * and replaces the dollars symbols with the given parameters.
- * Params:
- * 		message = A string that may contain a translation
- * 		lang = The language to translate the string to in format
- * 		params = Optional parameters that will be used intead of dollar symbols
- * 		variables = instances of aliases to the Variable struct that contains specific variables
- * Returns: the new string, translated if possible
- * Standards:
- * 		The langauges are encoded as (ISO 639-1 language code)_(ISO 3166-1 alpha-2 country code).
- * 		If the language is not in the ISO 639-1 list ISO 639-3 is used instead.
- * Example:
- * ---
- * string simple = "{language.name}";
- * assert(simple.translate("en_GB") == "English (United Kingdom)");
- * 
- * string complex = "Test string ({}): {connection.join}";
- * assert(complex.translate("en_GB", ["12345", "Steve"]) == "Test string (12345): Steve joined the game");
- * 
- * string notranslate = "Don't! {{language.name}}";
- * assert(notranslate.translate("en_GB") == "Don't! {language.name}");
- * ---
- */
-public string translate(E...)(string message, string lang, string[] params, E variables) {
-	size_t open = -1;
-	for(size_t index=0; index<message.length; index++) {
-		switch(message[index]) {
-			case '{':
-				if(index < message.length - 1 && message[index + 1] == '{') {
-					message = message[0..index] ~ message[index+1..$];
-				} else {
-					open = index;
-				}
-				break;
-			case '}':
-				if(index < message.length - 1 && message[index + 1] == '}') {
-					message = message[0..index] ~ message[index+1..$];
-				} else {
-					string translation = message[open+1..index];
-					string msg = null;
-					if(translation.length == 0) {
-						// translated with next args
-						if(params.length > 0) {
-							// do not cause range errors
-							msg = params[0];
-							params = params[1..$];
-						}
-					} else if((){foreach(char c;translation){if(c<'0'||c>'9')return false;}return true;}()) {
-						// translated with an argument
-						auto i = to!size_t(translation);
-						if(i < params.length) msg = params[i];
-					} else {
-						auto i = translation.indexOf(":");
-						if(i >= 0) {
-							// translated with a variable
-							string name = translation[0..i];
-							foreach(var ; variables) {
-								if(var.name == name) {
-									msg = var.get(translation[i+1..$]);
-									break;
-								}
-							}
-						} else if(Lang.has(lang, translation)) {
-							// translated with a lang string
-							msg = Lang.get(lang, translation);
-						}
-					}
-					if(msg !is null) {
-						message = message[0..open] ~ msg ~ message[index+1..$];
-						index = open - 1;
-						open = -1;
-					}
-				}
-				break;
-			default:
-				break;
+public string translate(Translation translation, string lang, string[] args=[]) {
+	string message = translation.sel;
+	if(Lang.has(lang, message)) {
+		message = Lang.get(lang, message);
+		foreach(i, arg; args) {
+			//TODO faster solution
+			message = message.replace("{" ~ to!string(i) ~ "}", arg);
 		}
 	}
 	return message;
+}
+
+deprecated alias translateSel = translate;
+
+struct Translation {
+
+	enum CONNECTION_JOIN = Translation("connection.join", "multiplayer.player.joined", "multiplayer.player.joined");
+	enum CONNECTION_LEFT = Translation("connection.left", "multiplayer.player.left", "multiplayer.player.left");
+
+	public string sel, minecraft, pocket;
+
+}
+
+interface Messageable {
+
+	public void sendMessage(E...)(E args) {
+		static if(E.length && (is(E[0] == Text) && E.length > 1 && is(E[1] : Translation) || is(E[0] : Translation))) {
+			string[] message_args;
+			static if(is(E[0] == Text)) {
+				alias _args = args[2..$];
+			} else {
+				alias _args = args[1..$];
+			}
+			foreach(arg ; _args) {
+				static if(is(typeof(arg) : string) || (isArray!(typeof(arg)) && is(typeof(arg[0]) : string))) {
+					message_args ~= arg;
+				} else {
+					message_args ~= to!string(arg);
+				}
+			}
+			static if(is(E[0] == Text)) {
+				this.sendColoredTranslationImpl(args[0], args[1], message_args);
+			} else {
+				this.sendTranslationImpl(args[0], message_args);
+			}
+		} else {
+			Appender!string message;
+			foreach(i, arg; args) {
+				static if(is(typeof(arg) : string)) {
+					message.put(arg);
+				} else {
+					message.put(to!string(arg));
+				}
+			}
+			this.sendMessageImpl(message.data);
+		}
+	}
+	
+	protected void sendMessageImpl(string);
+	
+	protected void sendTranslationImpl(Translation, string[]);
+	
+	protected void sendColoredTranslationImpl(Text, Translation, string[]);
+
 }
