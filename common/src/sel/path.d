@@ -14,7 +14,7 @@
  */
 module sel.path;
 
-import std.file : mkdirRecurse, setAttributes;
+import std.file : exists, read, mkdirRecurse, setAttributes;
 import std.path : dirSeparator;
 
 class Paths {
@@ -28,7 +28,8 @@ class Paths {
 	}
 
 	public static void load(string h) {
-		load(h, h ~ "res" ~ dirSeparator);
+		immutable libs = h ~ ".sel" ~ dirSeparator ~ "libraries";
+		load(h, (exists(libs) ? cast(string)read(libs) : h) ~ "res" ~ dirSeparator);
 	}
 
 	public static void load(string h, string r) {

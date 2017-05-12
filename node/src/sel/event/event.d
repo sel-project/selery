@@ -233,10 +233,10 @@ interface Cancellable {
 	 * if there's any.
 	 * Example:
 	 * ---
-	 * example += (Canc event){ log("1"); };
-	 * example += (Canc event){ log("2"); event.cancel(); };
-	 * example += (Canc event){ log("3"); };
-	 * assert(event.callCancellableIfExists!Canc());
+	 * example += (ExampleEvent event){ log("1"); };
+	 * example += (ExampleEvent event){ log("2"); event.cancel(); };
+	 * example += (ExampleEvent event){ log("3"); };
+	 * assert(event.callCancellableIfExists!ExampleEvent());
 	 * ---
 	 * The example will print
 	 * ---
@@ -252,6 +252,7 @@ interface Cancellable {
 	 */
 	public pure nothrow @property @safe @nogc bool cancelled();
 
+	/// ditto
 	alias canceled = cancelled;
 
 	public static mixin template Implementation() {
@@ -282,4 +283,5 @@ interface Cancellable {
 
 }
 
+/// ditto
 alias Cancelable = Cancellable;

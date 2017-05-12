@@ -2,7 +2,6 @@
    name "init"
    authors "sel-project"
    targetType "executable"
-   //dependency "sel-server:common" path="../"
    dependency "sel-common" path="../common"
 +/
 /*
