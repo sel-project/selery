@@ -39,6 +39,7 @@ import resusage.cpu;
 import sel.network.hncom; // do not move this import down
 
 import sel.about;
+import sel.command : Command, CommandSender;
 import sel.config : Config, ConfigType;
 import sel.format : Text;
 import sel.lang : Lang, translate, Translation;
@@ -57,7 +58,6 @@ import sel.network.http : serveResourcePacks;
 import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
 import sel.player.player : Player;
 import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
-import sel.util.command : Command, CommandSender;
 import sel.util.ip : publicAddresses;
 import sel.util.log;
 import sel.util.node : Node;

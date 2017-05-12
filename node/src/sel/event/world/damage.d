@@ -17,7 +17,8 @@ module sel.event.world.damage;
 import std.algorithm : max;
 
 import sel.block.block : Block;
-import sel.entity.effect;
+import sel.enchantment;
+import sel.effect;
 import sel.entity.entity : Entity;
 import sel.entity.human : Human;
 import sel.entity.interfaces;
@@ -26,7 +27,6 @@ import sel.entity.noai : Lightning;
 import sel.event.event : Cancellable;
 import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent;
-import sel.item.enchantment;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;

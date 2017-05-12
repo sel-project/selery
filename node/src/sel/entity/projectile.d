@@ -20,7 +20,7 @@ import std.math : abs, sqrt, atan2, PI;
 import sel.about;
 import sel.block.block : Block, blockInto;
 import sel.block.blocks : Blocks;
-import sel.entity.effect;
+import sel.effect;
 import sel.entity.entity : Entity, Entities;
 import sel.entity.living : Living;
 import sel.entity.metadata;

@@ -16,7 +16,6 @@
 module sel.item;
 
 public import sel.about : item_t;
-public import sel.item.inventory : Inventory;
 public import sel.item.item : Item;
 public import sel.item.items : Items;
 public import sel.item.slot : Slot;

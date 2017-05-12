@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.entity.effect;
+module sel.effect;
 
 import sel.about : tick_t;
 import sel.entity.human : Human;
@@ -25,9 +25,9 @@ static import sul.effects;
 public import sul.effects : Effects;
 
 class Effect {
-
+	
 	public enum tick_t UNLIMITED = int.max / 20;
-
+	
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker=null) {
 		switch(effect.minecraft.id) {
 			case Effects.speed.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
@@ -39,35 +39,35 @@ class Effect {
 			case Effects.hunger.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
 			case Effects.poison.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
 			case Effects.wither.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
-			//TODO health boost
-			//TODO absorption
+				//TODO health boost
+				//TODO absorption
 			case Effects.saturation.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
 			case Effects.levitation.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
 			default: return new Effect(effect, victim, level, duration, attacker);
 		}
 	}
-
+	
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, Living attacker=null) {
 		return fromId(effect, victim, level, 30, attacker);
 	}
-
+	
 	//TODO from string
-
+	
 	//TODO from minecraft
-
+	
 	//TODO from pocket
-
+	
 	public const sul.effects.Effect effect;
-
+	
 	private Living n_victim;
 	private Living n_attacker;
-
+	
 	public immutable ubyte level;
 	public immutable uint levelFromOne;
-
+	
 	public immutable tick_t duration;
 	protected tick_t ticks = 0;
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		this.effect = effect;
 		this.n_victim = victim;
@@ -76,77 +76,77 @@ class Effect {
 		this.levelFromOne = 1 + level;
 		this.duration = duration * 20;
 	}
-
+	
 	public final pure nothrow @property @safe @nogc ubyte id() {
 		return this.effect.minecraft;
 	}
-
+	
 	public final pure nothrow @property @safe @nogc Living victim() {
 		return this.n_victim;
 	}
-
+	
 	public final pure nothrow @property @safe @nogc Living attacker() {
 		return this.n_attacker;
 	}
-
+	
 	public pure nothrow @property @safe @nogc bool instant() {
 		return false;
 	}
-
+	
 	// called after the effect is added
 	public void onStart() {}
-
+	
 	// called after the effect id removed
 	public void onStop() {}
-
+	
 	public void tick() {
 		this.ticks++;
 	}
-
+	
 	public final pure nothrow @property @safe @nogc bool finished() {
 		return this.ticks >= this.duration;
 	}
-
+	
 	public bool opEquals(sul.effects.Effect e) {
 		return this.id == e.minecraft.id;
 	}
-
+	
 	alias effect this;
-
+	
 }
 
 class SpeedChange : Effect {
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 	}
-
+	
 	public override void onStart() {
 		this.victim.recalculateSpeed();
 	}
-
+	
 	public override void onStop() {
 		this.victim.recalculateSpeed();
 	}
-
+	
 }
 
 abstract class InstantEffect : Effect {
-
+	
 	public this(sul.effects.Effect, Living victim, ubyte level, Living attacker) {
 		super(effect, victim, level, 0, attacker);
 	}
-
+	
 	public final override pure nothrow @property @safe @nogc bool instant() {
 		return true;
 	}
-
+	
 	public override void onStart() {
 		this.apply();
 	}
-
+	
 	protected abstract void apply();
-
+	
 }
 
 class InstantHealth : InstantEffect {
@@ -198,55 +198,55 @@ abstract class RepetitionEffect(tick_t[] repetitions) : Effect {
 }
 
 class Regeneration : RepetitionEffect!([50, 25, 12, 6, 3, 1]) {
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 	}
-
+	
 	public override void onRepeat() {
 		this.victim.heal(new EntityHealEvent(this.victim, 1));
 	}
-
+	
 }
 
 class Invisibility : Effect {
-
+	
 	private bool invisible, show_nametag;
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 	}
-
+	
 	public override void onStart() {
 		this.invisible = this.victim.invisible;
 		this.show_nametag = this.victim.showNametag;
 		this.victim.invisible = true;
 		this.victim.showNametag = false;
 	}
-
+	
 	public override void onStop() {
 		this.victim.invisible = this.invisible;
 		this.victim.showNametag = this.show_nametag;
 	}
-
+	
 }
 
 class Hunger : Effect {
-
+	
 	private Human human;
 	private immutable float exhaustion;
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 		this.human = cast(Human)victim; //TODO assert this
 		this.exhaustion = .005f * levelFromOne;
 	}
-
+	
 	public override void tick() {
 		super.tick();
 		this.human.exhaust(this.exhaustion);
 	}
-
+	
 }
 
 class Poison : RepetitionEffect!([25, 12, 6, 3, 1]) {
@@ -276,31 +276,31 @@ class Wither : RepetitionEffect!([40, 20, 10, 5, 2, 1]) {
 }
 
 class Saturation : Effect {
-
+	
 	private Human human;
 	private immutable uint food;
 	private immutable float saturation;
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 		this.human = cast(Human)victim; //TODO assert this
 		this.food = this.levelFromOne;
 		this.saturation = this.levelFromOne * 2;
 	}
-
+	
 	public override void tick() {
 		super.tick();
 		if(this.human.hunger < 20) this.human.hunger = this.human.hunger + this.food;
 		this.human.saturate(this.saturation);
 	}
-
+	
 }
 
 class Levitation : Effect {
-
+	
 	private void delegate() apply;
 	private immutable double distance;
-
+	
 	public this(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker) {
 		super(effect, victim, level, duration, attacker);
 		this.distance = .9 * this.levelFromOne / 20;
@@ -310,18 +310,18 @@ class Levitation : Effect {
 			this.apply = &this.doNothing;
 		}
 	}
-
+	
 	public override void tick() {
 		super.tick();
 		this.apply();
 	}
-
+	
 	private void move() {
 		//TODO check flying and underwater
 		//TODO do not move into a block
 		this.victim.move(this.victim.position + [0, this.distance, 0]);
 	}
-
+	
 	private void doNothing() {}
-
+	
 }

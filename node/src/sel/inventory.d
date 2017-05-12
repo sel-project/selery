@@ -16,7 +16,7 @@
  * Various inventories and related utilities.
  * License: <a href="http://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">GNU General Lesser Public License v3</a>
  */
-module sel.item.inventory;
+module sel.inventory;
 
 import std.conv : to;
 import std.exception : enforce;
@@ -36,15 +36,15 @@ private alias Slice = Tuple!(size_t, "min", size_t, "max");
  * of the problem.
  */
 class InventoryRangeError : Error {
-
+	
 	public pure nothrow @safe this(string message, string file=__FILE__, size_t line=__LINE__) {
 		super(message, file, line, null);
 	}
-
+	
 	public pure nothrow @safe this(size_t index, Inventory inventory, string file=__FILE__, size_t line=__LINE__) {
 		this("Index " ~ to!string(index) ~ " exceeds the inventory range of 0.." ~ to!string(inventory.length), file, line);
 	}
-
+	
 }
 
 /**
@@ -70,9 +70,9 @@ class InventoryRangeError : Error {
  * ---
  */
 class Inventory {
-
+	
 	private Slot[] n_slots;
-
+	
 	/**
 	 * Creates an inventory with the given number of slots.
 	 * The number of slots must be higher than 0 and shorter than 2^16.
@@ -82,7 +82,7 @@ class Inventory {
 	public @safe this(size_t size) {
 		this.n_slots.length = size;
 	}
-
+	
 	/**
 	 * Constructs an inventory giving an array of slots.
 	 * The length of the inventory will be the same as the given array.
@@ -98,12 +98,12 @@ class Inventory {
 	public @safe this(Slot[] slots ...) {
 		this.n_slots = slots;
 	}
-
+	
 	/// ditto
 	public @safe this(Inventory inventory) {
 		this(cast(Slot[])inventory);
 	}
-
+	
 	/**
 	 * Gets every slots of the inventory (0..$).
 	 * This property should only be used when the full inventory is needed,
@@ -120,12 +120,12 @@ class Inventory {
 	public @safe Slot[] opIndex() {
 		return this.n_slots[0..$];
 	}
-
+	
 	/// ditto
 	public @safe T opCast(T)() if(is(T == Slot[])) {
 		return this.opIndex();
 	}
-
+	
 	/**
 	 * Gets the slot at the given index.
 	 * Params:
@@ -141,7 +141,7 @@ class Inventory {
 		//if(index >= this.length) throw new InventoryRangeError(index, this);
 		return this.n_slots[index];
 	}
-
+	
 	/**
 	 * Gets the slots in a specific range.
 	 * Params:
@@ -159,7 +159,7 @@ class Inventory {
 		//if(slice.max > this.length) throw new InventoryRangeError(slice.max, this);
 		return new InventoryRange(this, slice.min, slice.max);
 	}
-
+	
 	/**
 	 * Sets the slot at the given index.
 	 * Params:
@@ -178,7 +178,7 @@ class Inventory {
 		// TODO create a duplicate for the item (mantaining the class type)
 		this.n_slots[index] = slot.empty ? slot : Slot(slot.item/*.exactDuplicate*/, slot.count);
 	}
-
+	
 	/**
 	 * Sets the slots in the given range.
 	 * Params:
@@ -196,7 +196,7 @@ class Inventory {
 			this[index] = slot;
 		}
 	}
-
+	
 	/// ditto
 	public @safe void opIndexAssign(Slot[] slots, Slice slice) {
 		foreach(size_t index ; slice) {
@@ -218,7 +218,7 @@ class Inventory {
 	public pure nothrow @safe @nogc size_t opDollar(size_t pos)() {
 		return this.length;
 	}
-
+	
 	/**
 	 * Concatenates two inventories (or an inventory and an array of slots)
 	 * and returns a new one.
@@ -233,27 +233,27 @@ class Inventory {
 	public @safe Inventory opBinary(string op)(Slot[] slots) if(op == "~") {
 		return new Inventory(this[] ~ slots);
 	}
-
+	
 	/// ditto
 	public @safe Inventory opBinary(string op)(Inventory inventory) if(op == "~") {
 		return this.opBinary!op(inventory[]);
 	}
-
+	
 	/// ditto
 	public @safe Inventory opBinary(string op)(Slot slot) if(op == "~") {
 		return this.opBinary!op([slot]);
 	}
-
+	
 	/// ditto
 	public @safe Inventory opBinaryRight(string op)(Slot[] slots) if(op == "~") {
 		return this.opBinary!op(slots);
 	}
-
+	
 	/// ditto
 	public @safe Inventory opBinaryRight(string op)(Slot slot) if(op == "~") {
 		return this.opBinaryRight!op([slot]);
 	}
-
+	
 	/**
 	 * Adds slot(s) to the inventory (if there's enough space).
 	 * Note that this function will only mutate the the inventory's
@@ -298,7 +298,7 @@ class Inventory {
 		}
 		return slot;
 	}
-
+	
 	/// ditto
 	public @safe Slot[] opOpAssign(string op)(Slot[] slots) if(op == "+") {
 		Slot[] ret;
@@ -310,7 +310,7 @@ class Inventory {
 		}
 		return ret;
 	}
-
+	
 	/**
 	 * Removes slot(s) from the inventory.
 	 * Params:
@@ -344,7 +344,7 @@ class Inventory {
 		}
 		return removed;
 	}
-
+	
 	/// ditto
 	public @safe uint opOpAssign(string op, T)(T[] items) if(op == "-" && (is(T == Slot) || is(T == Item))) {
 		uint removed = 0;
@@ -353,7 +353,7 @@ class Inventory {
 		}
 		return removed;
 	}
-
+	
 	/**
 	 * Matches the first occurence and returns the pointer to the slot.
 	 * Params:
@@ -383,7 +383,7 @@ class Inventory {
 		}
 		return null;
 	}
-
+	
 	/**
 	 * Groups an item type into the given slot, if possible.
 	 * Params:
@@ -419,7 +419,7 @@ class Inventory {
 			if(count != target.count) this[index] = Slot(item, count & ubyte.max);
 		}
 	}
-
+	
 	/**
 	 * Performs a basic math operation on every slot's count in
 	 * the inventory, if not empty.
@@ -444,7 +444,7 @@ class Inventory {
 			}
 		}
 	}
-
+	
 	/**
 	 * Checks whether or not the inventory is empty.
 	 * Returns: true if the inventory is empty, false otherwise
@@ -462,7 +462,7 @@ class Inventory {
 		}
 		return true;
 	}
-
+	
 	/**
 	 * Removes every item from inventory if empty is true.
 	 * Example:
@@ -480,7 +480,7 @@ class Inventory {
 			return true;
 		}
 	}
-
+	
 	/**
 	 * Compares the inventory with an array of slots.
 	 * Returns: true if the length and the item at every index is equals to the array's ones
@@ -499,12 +499,12 @@ class Inventory {
 		}
 		return true;
 	}
-
+	
 	/// ditto
 	public override bool opEquals(Object object) {
 		return cast(Inventory)object ? this.opEquals(cast(Slot[])cast(Inventory)object) : false;
 	}
-
+	
 	/**
 	 * Returns a string with representing the inventory and its
 	 * array of slots.
@@ -512,35 +512,35 @@ class Inventory {
 	public override string toString() {
 		return "Inventory(" ~ to!string(this.length) ~ ", " ~ to!string(this[]) ~ ")";
 	}
-
+	
 }
 
 unittest {
-
+	
 	import sel.item.items : Items;
-
+	
 	// creation
 	auto inventory = new Inventory(10);
 	assert(inventory.empty && inventory.length == 10);
-
+	
 	// assignment
 	inventory[2] = Slot(new Items.Apple(), 64);
 	assert(!inventory.empty && inventory[2] == Slot(new Items.Apple(), 64));
-
+	
 	// range assignment
 	inventory[1..4] = Slot(new Items.Cookie(), 60);
 	assert(inventory[3] == Slot(new Items.Cookie(), 60));
-
+	
 	// concatenation
 	assert((inventory ~ inventory).length == 20);
 	assert((inventory ~ Slot(null))[$-1] == Slot(null));
-
+	
 	// adding an item
 	inventory += Slot(new Items.Cookie(), 1);
 	assert(inventory[1] == Slot(new Items.Cookie(), 61));
 	inventory += Slot(new Items.Cookie("{\"customName\":\"Special Cookie\"}"), 1);
 	assert(inventory[1].count == 61 && inventory[0].item.customName == "Special Cookie");
-
+	
 	// removing an item
 	inventory -= Slot(new Items.Cookie(), 61);
 	assert(inventory[1].empty);
@@ -548,7 +548,7 @@ unittest {
 	assert(inventory[2].empty && !inventory[0].empty);
 	inventory -= Items.COOKIE;
 	assert(inventory.empty);
-
+	
 	// math
 	inventory += Slot(new Items.Cookie(), 12);
 	inventory += 12;	// 24
@@ -556,13 +556,13 @@ unittest {
 	inventory *= 4;		// 64
 	inventory /= 32;	// 2
 	assert(inventory[0] == Slot(new Items.Cookie(), 2));
-
+	
 	// group
 	inventory[2..4] = Slot(new Items.Cookie(), 32);
 	inventory[1] = Slot(new Items.Cookie("{\"customName\":\"Ungroupable\"}"), 32);
 	inventory.group(2);
 	assert(inventory[0].empty && inventory[2].count == 64 && inventory[3].count == 2);
-
+	
 }
 
 /**
@@ -580,47 +580,47 @@ unittest {
  * ---
  */
 class InventoryRange : Inventory {
-
+	
 	private Inventory inventory;
 	public immutable size_t start, end;
-
+	
 	public @safe this(Inventory inventory, size_t start, size_t end) {
 		super(0);
 		this.inventory = inventory;
 		this.start = start;
 		this.end = end;
 	}
-
+	
 	public override @safe Slot[] opIndex() {
 		return this.inventory[][this.start..this.end];
 	}
-
+	
 	public override @safe Slot opIndex(size_t index) {
 		return this.inventory[index + this.start];
 	}
-
+	
 	public override @safe void opIndexAssign(Slot slot, size_t index) {
 		this.inventory[index + this.start] = slot;
 	}
-
+	
 	public override pure nothrow @property @safe @nogc size_t length() {
 		return this.end - this.start;
 	}
-
+	
 }
 
 unittest {
-
+	
 	import sel.item.items : Items;
-
+	
 	auto inventory = new Inventory(10);
 	auto range = inventory[2..4];
 	assert(range.length == 2);
-
+	
 	inventory[2] = Slot(new Items.Cookie(), 12);
 	assert(inventory[2] == range[0]);
 	assert(inventory[2..4] == range);
-
+	
 }
 
 /**
@@ -637,10 +637,10 @@ unittest {
  * ---
  */
 class InventoryGroup : Inventory {
-
+	
 	private Inventory[] inventories;
 	private size_t n_length;
-
+	
 	public this(Inventory[] inventories ...) {
 		super(0);
 		this.inventories = inventories;
@@ -648,7 +648,7 @@ class InventoryGroup : Inventory {
 			this.n_length += inventory.length;
 		}
 	}
-
+	
 	public override @safe Slot[] opIndex() {
 		Slot[] ret;
 		ret.reserve(this.length);
@@ -657,7 +657,7 @@ class InventoryGroup : Inventory {
 		}
 		return ret;
 	}
-
+	
 	public override @safe Slot opIndex(size_t index) {
 		size_t i = index;
 		foreach(Inventory inventory ; this.inventories) {
@@ -669,7 +669,7 @@ class InventoryGroup : Inventory {
 		}
 		throw new InventoryRangeError(index, this);
 	}
-
+	
 	public override @safe void opIndexAssign(Slot slot, size_t index) {
 		size_t i = index;
 		foreach(Inventory inventory ; this.inventories) {
@@ -681,23 +681,23 @@ class InventoryGroup : Inventory {
 		}
 		throw new InventoryRangeError(index, this);
 	}
-
+	
 	public override pure nothrow @property @safe @nogc size_t length() {
 		return this.n_length;
 	}
-
+	
 }
 
 unittest {
-
+	
 	import sel.item.items : Items;
-
+	
 	auto inventory = new Inventory(10);
 	auto igroup = new InventoryGroup(inventory[4..$], inventory[0..4]);
-
+	
 	igroup += Slot(new Items.Cookie(), 1);
 	assert(inventory[0].empty && inventory[4] == Slot(new Items.Cookie(), 1));
-
+	
 }
 
 /**
@@ -705,19 +705,19 @@ unittest {
  * is updated.
  */
 class NotifiedInventory : Inventory {
-
+	
 	protected InventoryHolder holder;
-
+	
 	public @safe this(InventoryHolder holder, size_t slots) {
 		super(slots);
 		this.holder = holder;
 	}
-
+	
 	public override @safe void opIndexAssign(Slot slot, size_t index) {
 		super.opIndexAssign(slot, index);
 		this.holder.slotUpdated(index);
 	}
-
+	
 }
 
 /**
@@ -725,48 +725,48 @@ class NotifiedInventory : Inventory {
  * for armour and item's holding.
  */
 class PlayerInventory : Inventory {
-
+	
 	public static immutable ubyte HELD = 1u;
 	public static immutable ubyte INVENTORY = 2u;
 	public static immutable ubyte ARMOR = 4u;
 	public static immutable ubyte ALL = HELD | INVENTORY | ARMOR;
-
+	
 	public ubyte update = ALL;
 	public bool[] slot_updates;
 	public ubyte update_viewers = 0;
-
+	
 	protected Human holder;
-
+	
 	private Hotbar m_hotbar = Hotbar(9);
 	private uint m_selected = 0;
-
+	
 	public @safe this(Human holder) {
 		super(36 + 4);
 		this.slot_updates.length = 36;
 		this.holder = holder;
 		this.reset();
 	}
-
+	
 	public final @safe @nogc void reset() {
 		foreach(uint i ; 0..9) {
 			this.m_hotbar[i] = i;
 		}
 		this.m_selected = 0;
 	}
-
+	
 	public @property @safe @nogc ref Hotbar hotbar() {
 		return this.m_hotbar;
 	}
-
+	
 	public @property @safe @nogc uint selected() {
 		return this.m_selected;
 	}
-
+	
 	public @property @safe @nogc uint selected(uint selected) {
 		this.update_viewers |= HELD;
 		return this.m_selected = selected;
 	}
-
+	
 	/**
 	 * Gets the slot the entity has in its hand.
 	 * Example:
@@ -779,7 +779,7 @@ class PlayerInventory : Inventory {
 	public @property @safe Slot held() {
 		return this.hotbar[this.selected] == 255 ? Slot(null) : this[this.hotbar[this.selected]];
 	}
-
+	
 	/**
 	 * Sets the slot the entity has in its hand.
 	 * Example:
@@ -796,7 +796,7 @@ class PlayerInventory : Inventory {
 		this.update_viewers |= HELD;
 		return this.held;
 	}
-
+	
 	// called when a player is using this item but it didn't send any MobEquipment packet (because it's a shitty buggy game)
 	public bool heldFromHotbar(Slot item) {
 		if(item == this.held) return true;
@@ -809,20 +809,20 @@ class PlayerInventory : Inventory {
 		}
 		return false;
 	}
-
+	
 	public @safe void resetSlotUpdates() {
 		foreach(size_t index ; 0..this.slot_updates.length) {
 			this.slot_updates[index] = false;
 		}
 	}
-
+	
 	alias opIndex = super.opIndex;
-
+	
 	public override @safe Slot opIndex(size_t index) {
 		auto test = this[][index]; // test access violation
 		return super.opIndex(index);
 	}
-
+	
 	public override @safe void opIndexAssign(Slot item, size_t index) {
 		//this.update |= INVENTORY;
 		if(index < this.slot_updates.length) this.slot_updates[index] = true;
@@ -830,7 +830,7 @@ class PlayerInventory : Inventory {
 		auto test = this[][index]; // test access violation
 		super.opIndexAssign(item, index);
 	}
-
+	
 	/**
 	 * Sets a slot using a string, creating the Item object from
 	 * the holder's world's items.
@@ -846,83 +846,83 @@ class PlayerInventory : Inventory {
 	public void opIndexAssign(item_t item, size_t index) {
 		this[index] = this.holder.world.items.get(item);
 	}
-
+	
 	public override @property @safe @nogc size_t length() {
 		return super.length - 4;
 	}
-
+	
 	/*public override @property @safe size_t length(size_t length) {
 		this.slot_updates.length = length;
 		return super.length(length + 4);
 	}*/
-
+	
 	public @property @safe Slot helmet() {
 		return super[super.length-4];
 	}
-
+	
 	public @property @safe Slot helmet(Slot helmet) {
 		super.opIndexAssign(helmet, super.length-4);
 		this.update |= ARMOR;
 		this.update_viewers |= ARMOR;
 		return this.helmet;
 	}
-
+	
 	public @property @safe Slot chestplate() {
 		return super[super.length-3];
 	}
-
+	
 	public @property @safe Slot chestplate(Slot chestplate) {
 		super.opIndexAssign(chestplate, super.length-3);
 		this.update |= ARMOR;
 		this.update_viewers |= ARMOR;
 		return this.chestplate;
 	}
-
+	
 	public @property @safe Slot leggings() {
 		return super[super.length-2];
 	}
-
+	
 	public @property @safe Slot leggings(Slot leggings) {
 		super.opIndexAssign(leggings, super.length-2);
 		this.update |= ARMOR;
 		this.update_viewers |= ARMOR;
 		return this.leggings;
 	}
-
+	
 	public @property @safe Slot boots() {
 		return super[super.length-1];
 	}
-
+	
 	public @property @safe Slot boots(Slot boots) {
 		super.opIndexAssign(boots, super.length-1);
 		this.update |= ARMOR;
 		this.update_viewers |= ARMOR;
 		return this.boots;
 	}
-
+	
 	alias cap = this.helmet;
 	alias tunic = this.chestplate;
 	alias pants = this.leggings;
-
+	
 	public @property @safe Inventory armor() {
 		return super.opIndex(Slice(super.length-4, super.length));
 	}
-
+	
 	public @property @safe Slot armor(uint type) {
 		return super.opIndex(this.length + type);
 	}
-
+	
 	public @property @safe Slot[] armor(uint type, Slot armor) {
 		super.opIndexAssign(armor, this.length + type);
 		this.update |= ARMOR;
 		this.update_viewers |= ARMOR;
 		return cast(Slot[])this.armor;
 	}
-
+	
 	public @property @safe bool hasArmor() {
 		return !this.helmet.empty || !this.chestplate.empty || !this.leggings.empty || !this.boots.empty;
 	}
-
+	
 	public @property @trusted uint protection() {
 		uint ret = 0;
 		foreach(Slot slot ; this.armor) {
@@ -930,47 +930,47 @@ class PlayerInventory : Inventory {
 		}
 		return ret;
 	}
-
+	
 	public @property @safe Slot[] full() {
 		return super[];
 	}
-
+	
 	private struct Hotbar {
-
+		
 		private uint[] m_hotbar;
-
+		
 		public @safe this(size_t length) {
 			this.m_hotbar.length = length;
 		}
-
+		
 		public @property @safe @nogc size_t length() {
 			return this.m_hotbar.length;
 		}
-
+		
 		public @property @safe @nogc size_t opDollar() {
 			return this.length;
 		}
-
+		
 		public @safe @nogc uint opIndex(size_t index) {
 			return this.m_hotbar[index];
 		}
-
+		
 		public @safe @nogc void opIndexAssign(uint value, size_t index) {
 			this.m_hotbar[index] = value;
 		}
-
+		
 		public @property @safe @nogc uint[] hotbar() {
 			return this.m_hotbar;
 		}
-
+		
 		alias hotbar this;
-
+		
 	}
-
+	
 }
 
 interface InventoryHolder {
-
+	
 	public @trusted void slotUpdated(size_t slot);
-
+	
 }

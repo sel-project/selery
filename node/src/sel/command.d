@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.util.command;
+module sel.command;
 
 import std.algorithm : sort;
 import std.conv : ConvException, to;

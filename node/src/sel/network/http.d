@@ -6,7 +6,7 @@ import std.socket;
 import std.string : indexOf, startsWith;
 import std.random : uniform;
 
-void serveResourcePacks(Tid server, immutable string pack2, immutable string pack3) {
+void serveResourcePacks(Tid server, string pack2, string pack3) {
 
 	auto port = uniform(ushort(999), ushort.max);
 

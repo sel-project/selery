@@ -24,6 +24,7 @@ import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
 import sel.about;
+import sel.command : Command;
 import sel.format : Text;
 import sel.lang : Messageable, Translation, translate;
 import sel.utils : call;
@@ -46,7 +47,6 @@ import sel.node.plugin.plugin;
 import sel.node.server : Server;
 import sel.player.player : Player, isPlayer;
 import sel.util.color : Color;
-import sel.util.command : Command;
 import sel.util.log;
 import sel.util.random : Random;
 import sel.util.task;

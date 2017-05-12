@@ -16,7 +16,7 @@ module sel.lang;
 
 import std.algorithm : canFind;
 import std.array : Appender;
-import std.conv : to;
+import std.conv : to, ConvException;
 import std.file : exists, read;
 import std.string;
 import std.traits : isArray;
@@ -32,7 +32,7 @@ shared struct Lang {
 	}
 
 	private shared string[] supported;
-	private shared string[string][string] langs;
+	private shared Translatable[string][string] langs;
 
 	// ["../res/lang/system/", "../plugins/example/lang/"]
 	private shared this(string[] langs, string[] dirs) {
@@ -43,36 +43,52 @@ shared struct Lang {
 				if(!exists(realpath)) realpath = (ppath ~ lang.split("_")[0] ~ ".lang");
 				if(exists(realpath)) {
 					foreach(string line ; (cast(string)read(realpath)).split("\n")) {
-						if(line.split("=").length > 1) this.langs[lang][line.split("=")[0].strip] = line.split("=")[1..$].join("=").strip;
+						auto eq = line.split("=");
+						if(eq.length > 1) {
+							Element[] elements;
+							immutable message = eq[1..$].join("=").strip;
+							string next;
+							ptrdiff_t index = -1;
+							foreach(i, c; message) {
+								if(index >= 0) {
+									if(c == '}') {
+										try {
+											auto num = to!size_t(message[index+1..i]);
+											if(next.length) {
+												elements ~= Element(next);
+												next.length = 0;
+											}
+											elements ~= Element(num);
+										} catch(ConvException) {
+											next ~= message[index..i+1];
+										}
+										index = -1;
+									}
+								} else {
+									if(c == '{') {
+										index = i;
+									} else {
+										next ~= c;
+									}
+								}
+							}
+							if(index >= 0) next ~= message[index..$];
+							if(next.length) elements ~= Element(next);
+							if(elements.length) this.langs[lang][eq[0].strip] = cast(shared)Translatable(elements);
+						}
 					}
 				}
 			}
 		}
 	}
-
-	private shared bool hasImpl(string lang, string str) {
-		auto ptr = lang in this.langs;
-		return ptr && str in *ptr;
-	}
-	
-	private shared string getImpl(string lang, string str) {
-		return this.langs[lang][str];
-	}
 	
 	/**
-	 * Checks if a string is loaded.
-	 * Returns: true if the string was found, false otherwise
+	 * Gets the pointer to a translation from a combination
+	 * of a language and a string that identifies a translation.
 	 */
-	public static bool has(string lang, string str) {
-		return instance.hasImpl(lang, str);
-	}
-	
-	/**
-	 * Gets a string from the pool.
-	 * Throws: RangeError if has(lang, str) is false
-	 */
-	public static string get(string lang, string str) {
-		return instance.getImpl(lang, str);
+	public static shared(Translatable)* get(string lang, string str) {
+		auto l = lang in instance.langs;
+		return l ? str in *l : null;
 	}
 
 	public static string getBestLanguage(string lang) {
@@ -86,51 +102,90 @@ shared struct Lang {
 		}
 	}
 
-	private static class Translatable {
+	private static struct Translatable {
 
-		public abstract string build(string[]);
+		Element[] elements;
+
+		public shared string build(string[] args) {
+			Appender!string ret;
+			foreach(element ; this.elements) {
+				if(element.isString) {
+					ret.put(element.store.data);
+				} else if(element.store.index < args.length) {
+					ret.put(args[element.store.index]);
+				}
+			}
+			return ret.data;
+		}
 
 	}
 
-	private static class Static : Translatable {
+	private static struct Element {
 
-		private string str;
-
-		public this(string str) {
-			this.str = str;
+		private union Store {
+			string data;
+			size_t index;
 		}
 
-		public override string build(string[] args) {
-			return this.str;
+		public Store store;
+		public bool isString;
+
+		public this(string data) {
+			this.store.data = data;
+			this.isString = true;
+		}
+
+		public this(size_t index) {
+			this.store.index = index;
+			this.isString = false;
 		}
 
 	}
 	
 }
 
+/**
+ * Translates a translatable elements into a string in the given language.
+ */
 public string translate(Translation translation, string lang, string[] args=[]) {
-	string message = translation.sel;
-	if(Lang.has(lang, message)) {
-		message = Lang.get(lang, message);
-		foreach(i, arg; args) {
-			//TODO faster solution
-			message = message.replace("{" ~ to!string(i) ~ "}", arg);
-		}
+	auto t = Lang.get(lang, translation.sel);
+	if(t) {
+		return (*t).build(args);
+	} else {
+		return translation.sel;
 	}
-	return message;
 }
 
-deprecated alias translateSel = translate;
-
+/**
+ * Translation container for a multi-platform translation.
+ * The `sel` translation should never be empty and it should be a string
+ * loaded from a language file.
+ * The `minecraft` and `pocket` strings can either be a client-side translated message
+ * or empty. In that case the `sel` string is translated server-side and sent
+ * to the client.
+ * Example:
+ * ---
+ * // server-side string
+ * Translation("example.test");
+ * 
+ * // server-side for minecraft and client-side for pocket
+ * Translation("description.help", "", "commands.help.description");
+ * ---
+ */
 struct Translation {
 
 	enum CONNECTION_JOIN = Translation("connection.join", "multiplayer.player.joined", "multiplayer.player.joined");
 	enum CONNECTION_LEFT = Translation("connection.left", "multiplayer.player.left", "multiplayer.player.left");
 
+	/// Values.
 	public string sel, minecraft, pocket;
 
 }
 
+/**
+ * Interface implemented by a class that can receive raw
+ * and translatable messages.
+ */
 interface Messageable {
 
 	public void sendMessage(E...)(E args) {

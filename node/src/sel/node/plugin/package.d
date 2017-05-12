@@ -31,11 +31,11 @@ public import sel.node.plugin.plugin : PluginOf, start, reload, stop, event, glo
 
 // command sender
 public import sel.player.player : Player;
-public import sel.util.command : CommandSender, WorldCommandSender;
+public import sel.command : CommandSender, WorldCommandSender;
 public import sel.world.world : World;
 
 // command utils
-public import sel.util.command : arguments, SingleEnum, SnakeCaseEnum, Position, Target;
+public import sel.command : arguments, SingleEnum, SnakeCaseEnum, Position, Target;
 
 // logging
 public import sel.util.log : log, debug_log, warning_log, error_log;

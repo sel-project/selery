@@ -23,6 +23,7 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 
 import sel.about;
+import sel.command : Position;
 import sel.utils : safe, call;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
@@ -33,7 +34,6 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.node.server : Server;
 import sel.player.player : Player;
-import sel.util.command : Position;
 import sel.world.world : World, Rules;
 
 static import sul.entities;

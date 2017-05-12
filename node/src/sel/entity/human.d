@@ -18,14 +18,14 @@ import std.math : isNaN, sin, cos, PI;
 
 import sel.about;
 import sel.utils : call;
-import sel.entity.effect : Effect, Effects;
+import sel.effect : Effect, Effects;
+import sel.enchantment : Enchantments;
 import sel.entity.entity : Entities, Rotation;
 import sel.entity.interfaces;
 import sel.entity.living : Healing, Living;
 import sel.event.world.damage;
 import sel.event.world.entity : EntityHealEvent;
-import sel.item.enchantment : Enchantments;
-import sel.item.inventory : PlayerInventory;
+import sel.inventory : PlayerInventory;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
 import sel.player.player : Player;

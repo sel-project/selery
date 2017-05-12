@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.item.enchantment;
+module sel.enchantment;
 
 import std.algorithm : min;
 import std.conv : to;
@@ -36,10 +36,10 @@ public import sul.enchantments : Enchantments;
  * ---
  */
 final class Enchantment {
-
+	
 	private static const(sul.enchantments.Enchantment)[string] strings;
 	private static const(sul.enchantments.Enchantment)[ubyte] _minecraft, _pocket;
-
+	
 	public static this() {
 		foreach(e ; __traits(allMembers, Enchantments)) {
 			mixin("alias ench = Enchantments." ~ e ~ ";");
@@ -48,7 +48,7 @@ final class Enchantment {
 			if(ench.pocket) _pocket[ench.pocket.id] = ench;
 		}
 	}
-
+	
 	/**
 	 * Creates an enchantment from a string.
 	 * Example:
@@ -62,7 +62,7 @@ final class Enchantment {
 		auto ret = name.toLower.replaceAll(ctRegex!`[ \-]`, "_") in strings;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
-
+	
 	/**
 	 * Creates an enchantment using its Minecraft id.
 	 * Example:
@@ -74,7 +74,7 @@ final class Enchantment {
 		auto ret = id in _minecraft;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
-
+	
 	/**
 	 * Creates an enchantment using its Minecraft: Pocket Edition id.
 	 * Example:
@@ -86,19 +86,19 @@ final class Enchantment {
 		auto ret = id in _pocket;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
-
+	
 	public const sul.enchantments.Enchantment enchantment;
 	public immutable ubyte level;
-
+	
 	public @safe this(sul.enchantments.Enchantment enchantment, ubyte level) {
 		this.enchantment = enchantment;
 		this.level = min(level, ubyte(1));
 	}
-
+	
 	public @safe this(sul.enchantments.Enchantment enchantment, string level) {
 		this(enchantment, level.roman & 255);
 	}
-
+	
 	/**
 	 * Gets the enchantment's id. SEL currently uses Minecraft's
 	 * id to uniquely identify an enchantment.
@@ -111,14 +111,14 @@ final class Enchantment {
 	public pure nothrow @property @safe @nogc ubyte id() {
 		return this.enchantment.minecraft.id;
 	}
-
+	
 	public override bool opEquals(Object o) {
 		auto e = cast(Enchantment)o;
 		return e !is null && this.id == e.id && this.level == e.level;
 	}
-
+	
 	alias enchantment this;
-
+	
 }
 
 /**
@@ -126,9 +126,9 @@ final class Enchantment {
  * or is used in the wrong way.
  */
 class EnchantmentException : Exception {
-
+	
 	public @safe this(string message, string file=__FILE__, size_t line=__LINE__) {
 		super(message, file, line);
 	}
-
+	
 }
