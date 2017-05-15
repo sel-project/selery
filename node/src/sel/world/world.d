@@ -1021,13 +1021,15 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Gets the number of loaded chunks in the world and
 	 * its children.
 	 */
-	public final pure @property @safe @nogc size_t loadedChunks() {
+	public final pure @property @safe @nogc size_t loadedChunks(bool children=false)() {
 		size_t ret = 0;
 		foreach(chunks ; this.n_chunks) {
 			ret += chunks.length;
 		}
-		foreach(child ; this.n_children) {
-			ret += child.loadedChunks;
+		static if(children) {
+			foreach(child ; this.n_children) {
+				ret += child.loadedChunks!true;
+			}
 		}
 		return ret;
 	}

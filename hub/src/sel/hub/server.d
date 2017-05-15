@@ -516,7 +516,7 @@ class Server {
 				default:
 					shared Node node;
 					if(this.nodes.length == 1) {
-						node = this.nodes[0];
+						node = this.nodes.values[0];
 						if(node.name != cmd) args = cmd ~ args;
 					} else {
 						node = this.nodeByName(cmd.idup);

@@ -38,7 +38,7 @@ import pluginloader.node : loadPlugins;
 
 void main(string[] args) {
 
-	if(!startup(ConfigType.node, "node", args)) {
+	if(startup(ConfigType.node, "node", args)) {
 
 		T find(T)(T def, string[] dec...) {
 			foreach(i, arg; args) {

@@ -296,139 +296,133 @@ struct Config {
 
 	}
 
-	public void load(bool update=true) {
+	public void load() {
 
-		if(exists(Paths.home ~ "sel.json")) {
+		if(!exists(Paths.home ~ "sel.json")) this.save();
 
-			bool add = false;
-			string[] lines;
+		bool add = false;
+		string[] lines;
 
-			foreach(line ; split(cast(string)read(Paths.home ~ "sel.json"), "\n")) {
-				if(!add && line.strip.startsWith("{")) add = true;
-				if(add) lines ~= line;
-			}
+		foreach(line ; split(cast(string)read(Paths.home ~ "sel.json"), "\n")) {
+			if(!add && line.strip.startsWith("{")) add = true;
+			if(add) lines ~= line;
+		}
 
-			string file = lines.join("\n");
+		string file = lines.join("\n");
 
-			if(update) write(Paths.home ~ "sel.json", header ~ file);
+		write(Paths.home ~ "sel.json", header ~ file);
 
-			auto json = parseJSON(file);
+		auto json = parseJSON(file);
 
-			T get(T)(JSONValue target) {
-				static if(is(T == string)) {
-					return target.str;
-				} else static if(isArray!T) {
-					T ret;
-					foreach(value ; target.array) {
-						ret ~= get!(typeof(ret[0]))(value);
-					}
-					return ret;
-				} else static if(isAssociativeArray!T) {
-					T ret;
-					foreach(key, value; target.object) {
-						ret[key] = get!(typeof(ret[""]))(value);
-					}
-					return ret;
-				} else static if(is(T == JSONValue)) {
-					return target;
-				} else static if(is(T == bool)) {
-					return target.type == JSON_TYPE.TRUE;
-				} else static if(is(T == float) || is(T == double) || is(T == real)) {
-					return cast(T)target.floating;
-				} else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) {
-					return cast(T)target.integer;
-				} else {
-					static assert(0);
+		T get(T)(JSONValue target) {
+			static if(is(T == string)) {
+				return target.str;
+			} else static if(isArray!T) {
+				T ret;
+				foreach(value ; target.array) {
+					ret ~= get!(typeof(ret[0]))(value);
 				}
+				return ret;
+			} else static if(isAssociativeArray!T) {
+				T ret;
+				foreach(key, value; target.object) {
+					ret[key] = get!(typeof(ret[""]))(value);
+				}
+				return ret;
+			} else static if(is(T == JSONValue)) {
+				return target;
+			} else static if(is(T == bool)) {
+				return target.type == JSON_TYPE.TRUE;
+			} else static if(is(T == float) || is(T == double) || is(T == real)) {
+				return cast(T)target.floating;
+			} else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) {
+				return cast(T)target.integer;
+			} else {
+				static assert(0);
 			}
+		}
 
-			void set(string jv, T)(ref T value) {
-				try {
-					mixin("value = get!T(json" ~ replace(to!string(jv.split(".")), ",", "][") ~ ");");
-				} catch(JSONException) {}
-			}
+		void set(string jv, T)(ref T value) {
+			try {
+				mixin("value = get!T(json" ~ replace(to!string(jv.split(".")), ",", "][") ~ ");");
+			} catch(JSONException) {}
+		}
 
-			set!"display-name"(this.displayName);
-			set!"minecraft.enabled"(this.minecraft.enabled);
-			set!"minecraft.motd"(this.minecraft.motd);
-			//set!"minecraft.online-mode"(this.minecraft.onlineMode);
-			set!"minecraft.addresses"(this.minecraft.addresses);
-			set!"minecraft.port"(this.minecraft.port);
-			set!"minecraft.accepted-protocols"(this.minecraft.protocols);
-			set!"pocket.enabled"(this.pocket.enabled);
-			set!"pocket.motd"(this.pocket.motd);
-			//set!"pocket.online-mode"(this.pocket.onlineMode);
-			set!"pocket.addresses"(this.pocket.addresses);
-			set!"pocket.port"(this.pocket.port);
-			set!"pocket.accepted-protocols"(this.pocket.protocols);
-			set!"pocket.allow-vanilla-players"(this.allowVanillaPlayers);
-			set!"max-players"(this.maxPlayers);
-			set!"whitelist"(this.whitelist);
-			set!"blacklist"(this.blacklist);
-			set!"query"(this.query);
-			set!"language"(this.language);
-			set!"accepted-languages"(this.acceptedLanguages);
-			set!"server-ip"(this.serverIp);
-			set!"icon"(this.icon);
-			set!"world.gamemode"(this.gamemode);
-			set!"world.difficulty"(this.difficulty);
-			set!"world.pvp"(this.pvp);
-			set!"world.pvm"(this.pvm);
-			set!"world.do-daylight-cycle"(this.doDaylightCycle);
-			set!"world.do-weather-cycle"(this.doWeatherCycle);
-			set!"world.random-tick-speed"(this.randomTickSpeed);
-			set!"world.do-scheduled-ticks"(this.doScheduledTicks);
-			set!"plugins"(this.plugins);
-			set!"panel.enabled"(this.panel);
-			set!"panel.users"(this.panelUsers);
-			set!"panel.addresses"(this.panelAddresses);
-			set!"panel.port"(this.panelPort);
-			set!"external-console.enabled"(this.externalConsole);
-			set!"external-console.password"(this.externalConsolePassword);
-			set!"external-console.addresses"(this.externalConsoleAddresses);
-			set!"external-console-port"(this.externalConsolePort);
-			set!"external-console.remote-commands"(this.externalConsoleRemoteCommands);
-			set!"external-console.accept-websockets"(this.externalConsoleAcceptWebsockets);
-			set!"external-console.hash-algorithm"(this.externalConsoleHashAlgorithm);
-			set!"rcon.enabled"(this.rcon);
-			set!"rcon.password"(this.rconPassword);
-			set!"rcon.addresses"(this.rconAddresses);
-			set!"rcon.port"(this.rconPort);
-			set!"web.enabled"(this.web);
-			set!"web.addresses"(this.webAddresses);
-			set!"web.port"(this.webPort);
-			set!"hncom.accepted-addresses"(this.acceptedNodes);
-			set!"hncom.password"(this.hncomPassword);
-			set!"hncom.max"(this.maxNodes);
-			set!"hncom.port"(this.hncomPort);
-			set!"hncom.use-unix-sockets"(this.hncomUseUnixSockets);
-			set!"hncom.unix-socket-address"(this.hncomUnixSocketAddress);
-			set!"google-analytics"(this.googleAnalytics);
-			set!"social"(this.social);
+		set!"display-name"(this.displayName);
+		set!"minecraft.enabled"(this.minecraft.enabled);
+		set!"minecraft.motd"(this.minecraft.motd);
+		//set!"minecraft.online-mode"(this.minecraft.onlineMode);
+		set!"minecraft.addresses"(this.minecraft.addresses);
+		set!"minecraft.port"(this.minecraft.port);
+		set!"minecraft.accepted-protocols"(this.minecraft.protocols);
+		set!"pocket.enabled"(this.pocket.enabled);
+		set!"pocket.motd"(this.pocket.motd);
+		//set!"pocket.online-mode"(this.pocket.onlineMode);
+		set!"pocket.addresses"(this.pocket.addresses);
+		set!"pocket.port"(this.pocket.port);
+		set!"pocket.accepted-protocols"(this.pocket.protocols);
+		set!"pocket.allow-vanilla-players"(this.allowVanillaPlayers);
+		set!"max-players"(this.maxPlayers);
+		set!"whitelist"(this.whitelist);
+		set!"blacklist"(this.blacklist);
+		set!"query"(this.query);
+		set!"language"(this.language);
+		set!"accepted-languages"(this.acceptedLanguages);
+		set!"server-ip"(this.serverIp);
+		set!"icon"(this.icon);
+		set!"world.gamemode"(this.gamemode);
+		set!"world.difficulty"(this.difficulty);
+		set!"world.pvp"(this.pvp);
+		set!"world.pvm"(this.pvm);
+		set!"world.do-daylight-cycle"(this.doDaylightCycle);
+		set!"world.do-weather-cycle"(this.doWeatherCycle);
+		set!"world.random-tick-speed"(this.randomTickSpeed);
+		set!"world.do-scheduled-ticks"(this.doScheduledTicks);
+		set!"plugins"(this.plugins);
+		set!"panel.enabled"(this.panel);
+		set!"panel.users"(this.panelUsers);
+		set!"panel.addresses"(this.panelAddresses);
+		set!"panel.port"(this.panelPort);
+		set!"external-console.enabled"(this.externalConsole);
+		set!"external-console.password"(this.externalConsolePassword);
+		set!"external-console.addresses"(this.externalConsoleAddresses);
+		set!"external-console-port"(this.externalConsolePort);
+		set!"external-console.remote-commands"(this.externalConsoleRemoteCommands);
+		set!"external-console.accept-websockets"(this.externalConsoleAcceptWebsockets);
+		set!"external-console.hash-algorithm"(this.externalConsoleHashAlgorithm);
+		set!"rcon.enabled"(this.rcon);
+		set!"rcon.password"(this.rconPassword);
+		set!"rcon.addresses"(this.rconAddresses);
+		set!"rcon.port"(this.rconPort);
+		set!"web.enabled"(this.web);
+		set!"web.addresses"(this.webAddresses);
+		set!"web.port"(this.webPort);
+		set!"hncom.accepted-addresses"(this.acceptedNodes);
+		set!"hncom.password"(this.hncomPassword);
+		set!"hncom.max"(this.maxNodes);
+		set!"hncom.port"(this.hncomPort);
+		set!"hncom.use-unix-sockets"(this.hncomUseUnixSockets);
+		set!"hncom.unix-socket-address"(this.hncomUnixSocketAddress);
+		set!"google-analytics"(this.googleAnalytics);
+		set!"social"(this.social);
 
-			void checkProtocols(ref uint[] protocols, uint[] accepted) {
-				sort(protocols);
-				protocols = protocols.uniq.filter!(a => accepted.canFind(a)).array;
-			}
+		void checkProtocols(ref uint[] protocols, uint[] accepted) {
+			sort(protocols);
+			protocols = protocols.uniq.filter!(a => accepted.canFind(a)).array;
+		}
 
-			checkProtocols(this.minecraft.protocols, supportedMinecraftProtocols.keys);
-			if(this.minecraft.protocols.length == 0) this.minecraft.enabled = false;
+		checkProtocols(this.minecraft.protocols, supportedMinecraftProtocols.keys);
+		if(this.minecraft.protocols.length == 0) this.minecraft.enabled = false;
 
-			checkProtocols(this.pocket.protocols, supportedPocketProtocols.keys);
-			if(this.pocket.protocols.length == 0) this.pocket.enabled = false;
+		checkProtocols(this.pocket.protocols, supportedPocketProtocols.keys);
+		if(this.pocket.protocols.length == 0) this.pocket.enabled = false;
 
-			if("max-players" in json && json["max-players"].type == JSON_TYPE.STRING && json["max-players"].str.toLower == "unlimited") this.maxPlayers = 0;
-			
-			if("max-nodes" in json && json["max-nodes"].type == JSON_TYPE.STRING && json["max-nodes"].str.toLower == "unlimited") this.maxNodes = 0;
+		if("max-players" in json && json["max-players"].type == JSON_TYPE.STRING && json["max-players"].str.toLower == "unlimited") this.maxPlayers = 0;
+		
+		if("max-nodes" in json && json["max-nodes"].type == JSON_TYPE.STRING && json["max-nodes"].str.toLower == "unlimited") this.maxNodes = 0;
 
-			if(social.type != JSON_TYPE.OBJECT) {
-				social = parseJSON("{}");
-			}
-
-		} else if(update) {
-
-			this.save();
-
+		if(social.type != JSON_TYPE.OBJECT) {
+			social = parseJSON("{}");
 		}
 
 	}
