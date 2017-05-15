@@ -1,23 +1,22 @@
-platform: x64
+platform:
+  - x86
+  - x64
+
 environment:
- matrix:
-  - DC: dmd
-    DVersion: 2.073.2
-    arch: x86
-  - DC: dmd
-    DVersion: 2.073.2
-    arch: x64
-  - DC: ldc
-    DVersion: 1.2.0
-    arch: x86
-  - DC: ldc
-    DVersion: 1.2.0
-    arch: x64
+  SEL: "2.0.0"
+  matrix:
+    - DC: dmd
+      DVersion: 2.073.2
+    - DC: dmd
+      DVersion: 2.073.2
+    - DC: ldc
+      DVersion: 1.2.0
+    - DC: ldc
+      DVersion: 1.2.0
 
 matrix:
   allow_failures:
     - DC: ldc
-      arch: x86
 
 skip_tags: true
 branches:
@@ -31,7 +30,7 @@ artifacts:
     name: sel-node
   - path: build\lite.exe
     name: sel-lite
-  - path: build\portable.exe
+  - path: build\sel-portable-%SEL%.exe
     name: sel-portable
 
 install:
@@ -39,9 +38,11 @@ install:
         {
             if($env:arch -eq "x86"){
               $env:DConf = "m32";
+              $env:Dmodel = "32";
             }
             elseif($env:arch -eq "x64"){
               $env:DConf = "m64";
+              $env:Dmodel = "64";
             }
             if($env:DC -eq "dmd"){
               $env:toolchain = "msvc";
@@ -55,10 +56,11 @@ install:
             elseif($env:DC -eq "ldc"){
               $env:toolchain = "msvc";
               $version = $env:DVersion;
-              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-win64-msvc.zip" -OutFile "c:\ldc.zip";
+              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-win$($env:Dmodel)-msvc.zip" -OutFile "c:\ldc.zip";
               echo "finished.";
               pushd c:\\;
               7z x ldc.zip > $null;
+              mv ldc2-$($version)-win$($env:DModel)-msvc ldc2;
               popd;
             }
         }
@@ -72,17 +74,18 @@ before_build:
   - ps: if($env:arch -eq "x86"){
             $env:compilersetupargs = "x86";
             $env:Darch = "x86";
+            $env:Dmodel = "32";
           }
         elseif($env:arch -eq "x64"){
             $env:compilersetupargs = "amd64";
             $env:Darch = "x86_64";
+            $env:Dmodel = "64";
         }
   - ps : if($env:DC -eq "dmd"){
            $env:PATH += ";C:\dmd2\windows\bin;";
          }
          elseif($env:DC -eq "ldc"){
-           $version = $env:DVersion;
-           $env:PATH += ";C:\ldc2-$($version)-win64-msvc\bin";
+           $env:PATH += ";C:\ldc2\bin";
            $env:DC = "ldc2";
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
@@ -94,18 +97,16 @@ before_build:
 
 build_script:
  - cd build
- - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
- - rename lite.exe portable.exe
+ - dub init.d --portable --arch=%Darch% --compiler=%DC%
+ - dub build --single --arch=%Darch% --compiler=%DC% lite.d
+ - rename lite.exe sel-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
  - dub init.d --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release hub.d
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release node.d
- - dub build --single --arch=%Darch% --compiler=%DC% --build=release lite.d
+ - dub build --single --arch=%Darch% --compiler=%DC% hub.d
+ - dub build --single --arch=%Darch% --compiler=%DC% node.d
+ - dub build --single --arch=%Darch% --compiler=%DC% lite.d
 
 test_script:
  - echo %PLATFORM%
- - echo %Darch%
  - echo %DC%
- - echo %PATH%
  - '%DC% --version'
