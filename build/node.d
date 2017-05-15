@@ -26,55 +26,55 @@ import std.algorithm : max, min;
 import std.concurrency : LinkTerminated;
 import std.conv : to;
 import std.socket;
-import std.string : split, replace, join;
+import std.string : startsWith;
 
-import sel.about : Software;
+import sel.config : ConfigType;
 import sel.crash : logCrash;
-import sel.path : Paths;
+import sel.start : startup;
 import sel.utils : UnloggedException;
 import sel.node.server : Server, server;
 
 import pluginloader.node : loadPlugins;
 
 void main(string[] args) {
-	
-	args = args[1..$];
-	
-	if(args.length && args[0] == "about") {
-		
-		import std.stdio : writeln;
 
-		writeln(Software.toJSON("node").toString());
-		
-	} else {
+	if(!startup(ConfigType.node, "node", args)) {
 
-		Paths.create();
-		
-		try {
-			
-			string name = args.length > 0 ? args[0] : "node";
-			Address address;
-			ushort port = args.length > 2 ? to!ushort(args[2]) : 28232;
-			bool main = args.length > 3 ? to!bool(args[3]) : true;
-			string password = args.length > 4 ? args[4..$].join(" ") : "";
-			
-			if(args.length > 1) {
-				string ip = args[1];
-				try {
-					address = getAddress(ip, port)[0];
-				} catch(SocketException e) {
-					version(Posix) {
-						// assume it's a unix address
-						address = new UnixAddress(ip);
-					} else {
-						throw e;
+		T find(T)(T def, string[] dec...) {
+			foreach(i, arg; args) {
+				foreach(d ; dec) {
+					if(arg.startsWith(d ~ "=")) {
+						auto ret = to!T(arg[d.length+1..$]);
+						args = args[0..i] ~ args[i+1..$];
+						return ret;
 					}
 				}
-			} else {
-				address = getAddress("localhost", port)[0];
 			}
+			return def;
+		}
+
+		auto name = find!string("node", "--name", "-n");
+		auto password = find!string("", "--password", "-p");
+		auto ip = find!string("localhost", "--ip", "--address");
+		auto port = find!ushort(cast(ushort)28232, "--port");
+		auto main = find!bool(true, "--main", "-m");
+
+		Address address;
+
+		try {
+			address = getAddress(ip, port)[0];
+		} catch(SocketException e) {
+			version(Posix) {
+				// assume it's a unix address
+				address = new UnixAddress(ip);
+			} else {
+				throw e;
+			}
+		}
+
+		try {
 			
-			new Server(address, name, password, main, loadPlugins());
+			new Server(address, name, password, main, loadPlugins(), args);
 			
 		} catch(LinkTerminated) {
 			

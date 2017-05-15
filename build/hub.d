@@ -28,7 +28,9 @@ import std.file : exists, read, write, mkdirRecurse;
 import std.string : replace, toLower;
 
 import sel.about : Software;
+import sel.config : ConfigType;
 import sel.path : Paths;
+import sel.start : startup;
 import sel.hub.server;
 import sel.hub.settings;
 
@@ -36,33 +38,11 @@ import pluginloader.hub : loadPlugins;
 
 void main(string[] args) {
 
-	Paths.create();
+	bool edu, realm;
 
-	@property bool arg(string name) {
-		if(exists(Paths.hidden ~ name)) {
-			return to!bool(cast(string)read(Paths.hidden ~ name));
-		} else {
-			bool ret = args.canFind("-" ~ name);
-			write(Paths.hidden ~ name, to!string(ret));
-			return ret;
-		}
-	}
+	if(startup(ConfigType.hub, "hub", args, edu, realm)) {
 
-	immutable action = args.length >= 2 ? args[1].toLower : "";
-
-	if(action == "about") {
-
-		import std.stdio : writeln;
-
-		writeln(Software.toJSON("hub").toString());
-
-	} else if(action == "init") {
-
-		Settings(false, arg("edu"), arg("realm")).load();
-
-	} else {
-
-		new shared Server(false, arg("edu"), arg("realm"), loadPlugins());
+		new shared Server(false, edu, realm, loadPlugins());
 
 	}
 

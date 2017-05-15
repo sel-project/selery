@@ -600,11 +600,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world_log(this, message);
 	}
 
-	protected override void sendTranslationImpl(Translation translation, string[] args) {
+	protected override void sendTranslationImpl(const Translation translation, string[] args) {
 		world_log(this, translate(translation, this.server.settings.language, args));
 	}
 
-	protected override void sendColoredTranslationImpl(Text color, Translation translation, string[] args) {
+	protected override void sendColoredTranslationImpl(Text color, const Translation translation, string[] args) {
 		world_log(this, cast(string)color, translate(translation, this.server.settings.language, args));
 	}
 

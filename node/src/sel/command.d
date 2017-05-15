@@ -18,7 +18,7 @@ import std.algorithm : sort;
 import std.conv : ConvException, to;
 static import std.math;
 import std.random : uniform;
-import std.string : split, replace, toLower, startsWith;
+import std.string : split, join, replace, toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
 import std.typecons : Tuple;
 
@@ -252,33 +252,6 @@ interface CommandSender : Messageable {
 	 */
 	public Player[] visiblePlayers();
 
-	/**
-	 * Sends a message to the command sender.
-	 * The message can be either a raw string or a translation (server-side
-	 * or client-side).
-	 * Example:
-	 * ---
-	 * // simple message
-	 * sender.sendMessage("Nothing to see here");
-	 * 
-	 * // with colours
-	 * sender.sendMessage(Text.red, "This is red! §rThis has no colour!");
-	 * 
-	 * // everything is converted to string line in `writeln`
-	 * sender.sendMessage("Your instance: ", sender);
-	 * sender.sendMessage(1, " ", 1.44f);
-	 * 
-	 * // simple client-side translation with one arguments
-	 * sender.sendTranslation(Translation.CONNECTION_JOIN, sender.displayName);
-	 * 
-	 * // client-side translation with array of arguments (string[])
-	 * sender.sendTranslation(Translation.DEATH_GENERIC, [sender.displayName, "Steve"]);
-	 * 
-	 * // coloured translated output
-	 * sender.sendTranslation(Text.red, Translation("commands.generic.error"));
-	 * ---
-	 */
-
 }
 
 /**
@@ -368,10 +341,12 @@ struct PositionImpl(T) if(isVector!T) {
 
 	static struct Point {
 
+		private bool absolute;
 		private T.Type _value;
 		private T.Type function(T.Type, T.Type) _apply;
 
 		public this(bool absolute, immutable T.Type v) {
+			this.absolute = absolute;
 			this._value = v;
 			if(absolute) {
 				this._apply = &applyAbsolute;
@@ -390,6 +365,16 @@ struct PositionImpl(T) if(isVector!T) {
 
 		public T.Type apply(T.Type value) {
 			return this._apply(this._value, value);
+		}
+
+		public string toString() {
+			if(this.absolute) {
+				return to!string(this._value);
+			} else if(this._value == 0) {
+				return "~";
+			} else {
+				return "~" ~ to!string(this._value);		
+			}
 		}
 
 		public static Point fromString(string str) {
@@ -428,6 +413,14 @@ struct PositionImpl(T) if(isVector!T) {
 			mixin("ret[i] = this." ~ c ~ ".apply(position." ~ c ~ ");");
 		}
 		return T(ret);
+	}
+
+	public string toString() {
+		string[] ret;
+		foreach(c ; T.coords) {
+			ret ~= mixin("this." ~ c ~ ".toString()");
+		}
+		return "Position(" ~ ret.join(", ") ~ ")";
 	}
 
 }

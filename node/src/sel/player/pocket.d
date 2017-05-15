@@ -396,15 +396,15 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.sendPacket(new Play.Text().new Raw(message));
 	}
 	
-	protected override void sendTranslationImpl(Translation message, string[] args) {
+	protected override void sendTranslationImpl(const Translation message, string[] args) {
 		if(message.pocket.length) {
 			this.sendPacket(new Play.Text().new Translation(message.pocket, args));
 		} else {
 			this.sendMessageImpl(translate(message, this.lang, args));
 		}
 	}
-	
-	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+
+	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
 		if(message.pocket.length) {
 			this.sendPacket(new Play.Text().new Translation(color ~ "%" ~ message.pocket, args));
 		} else {

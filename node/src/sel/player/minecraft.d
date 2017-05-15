@@ -255,11 +255,11 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.CHAT));
 	}
 	
-	protected override void sendTranslationImpl(Translation message, string[] args) {
+	protected override void sendTranslationImpl(const Translation message, string[] args) {
 		this.sendGenericTranslation!false(Text.black, message, args);
 	}
 
-	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
 		this.sendGenericTranslation!true(color, message, args);
 	}
 

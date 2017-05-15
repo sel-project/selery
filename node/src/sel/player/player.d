@@ -493,9 +493,9 @@ abstract class Player : Human, WorldCommandSender {
 	
 	protected override abstract void sendMessageImpl(string);
 	
-	protected override abstract void sendTranslationImpl(Translation, string[]);
+	protected override abstract void sendTranslationImpl(const Translation, string[]);
 	
-	protected override abstract void sendColoredTranslationImpl(Text, Translation, string[]);
+	protected override abstract void sendColoredTranslationImpl(Text, const Translation, string[]);
 
 	/**
 	 * Sends a tip message that will be displayed above the hotbar for two

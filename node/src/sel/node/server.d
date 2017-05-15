@@ -134,6 +134,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	private immutable string node_name;
 	private immutable bool node_main;
 
+	private string[] n_args;
+
 	private ulong n_id;
 	private ulong uuid_count;
 
@@ -180,7 +182,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 	private Command[string] commands;
 
-	public this(Address hub, string name, string password, bool main, Plugin[] plugins) {
+	public this(Address hub, string name, string password, bool main, Plugin[] plugins, string[] args) {
 
 		immutable bool lite = cast(TidAddress)hub !is null;
 
@@ -188,6 +190,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		this.node_main = main;
 
 		this.n_plugins = plugins;
+
+		this.n_args = args;
 		
 		n_server = this;
 		
@@ -624,6 +628,33 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		data[0..8] = nativeToBigEndian(this.id);
 		data[8..16] = nativeToBigEndian(this.uuid_count++);
 		return UUID(data);
+	}
+
+	/**
+	 * Gets the arguments the server has been launched with, excluding
+	 * the ones used by sel or the manager.
+	 * Example:
+	 * ---
+	 * // from command-line
+	 * ./node --name=test -a -b -p=test
+	 * assert(server.args == ["-a", "-b"]);
+	 * 
+	 * // from sel manager
+	 * sel start test --name=test -a --loop -b
+	 * assert(server.args == ["-a", "-b"]);
+	 * ---
+	 * Custom arguments can be used by plugins to load optional settings.
+	 * Example:
+	 * ---
+	 * @start load() {
+	 *    if(!server.args.canFind("--disable-example")) {
+	 *       this.loadImpl();
+	 *    }
+	 * }
+	 * ---
+	 */
+	public pure nothrow @property @safe @nogc const(string[]) args() {
+		return this.n_args;
 	}
 
 	/**
@@ -1109,11 +1140,11 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		log(message);
 	}
 	
-	protected override void sendTranslationImpl(Translation message, string[] args) {
+	protected override void sendTranslationImpl(const Translation message, string[] args) {
 		log(translate(message, this.settings.language, args));
 	}
 	
-	protected override void sendColoredTranslationImpl(Text color, Translation message, string[] args) {
+	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
 		log(color, translate(message, this.settings.language, args));
 	}
 

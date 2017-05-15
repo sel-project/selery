@@ -1,4 +1,4 @@
-﻿module com.config;
+﻿module sel.config;
 
 import std.algorithm : sort, uniq, filter, canFind;
 import std.array : array;

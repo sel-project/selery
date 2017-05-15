@@ -32,10 +32,10 @@ import std.file : read, write, exists, mkdirRecurse;
 import std.path : dirSeparator;
 import std.string : toLower, indexOf, lastIndexOf;
 
-import sel.about : Software;
-import sel.config;
+import sel.config : ConfigType;
 import sel.crash : logCrash;
 import sel.path : Paths;
+import sel.start : startup;
 import sel.utils : UnloggedException;
 import sel.network.hncom : TidAddress;
 import sel.session.hncom : MessagePassingNode;
@@ -72,39 +72,17 @@ void main(string[] args) {
 		immutable type = "lite";
 	}
 
-	Paths.create();
-	
-	@property bool arg(string name) {
-		if(exists(Paths.hidden ~ name)) {
-			return to!bool(cast(string)read(Paths.hidden ~ name));
-		} else {
-			bool ret = args.canFind("-" ~ name);
-			write(Paths.hidden ~ name, to!string(ret));
-			return ret;
-		}
-	}
+	bool edu, realm;
 
-	immutable action = args.length >= 2 ? args[1].toLower : "";
+	if(startup(ConfigType.lite, type, args, edu, realm)) {
 
-	if(action == "about") {
-
-		import std.stdio : writeln;
-
-		writeln(Software.toJSON(type).toString());
-
-	} else if(action == "init") {
-
-		Config(ConfigType.lite, arg("edu"), arg("realm")).load();
-
-	} else {
-
-		new Thread({ new shared sel.hub.server.Server(true, arg("edu"), arg("realm"), pluginloader.hub.loadPlugins()); }).start();
+		new Thread({ new shared sel.hub.server.Server(true, edu, realm, pluginloader.hub.loadPlugins()); }).start();
 
 		while(!MessagePassingNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
 			
-			new sel.node.server.Server(new TidAddress(cast()MessagePassingNode.tid), "", "", true, pluginloader.node.loadPlugins());
+			new sel.node.server.Server(new TidAddress(cast()MessagePassingNode.tid), "", "", true, pluginloader.node.loadPlugins(), args);
 			
 		} catch(LinkTerminated) {
 			

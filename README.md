@@ -23,7 +23,7 @@ SEL uses a manager to create, compile, run and delete servers. The instructions 
 A lite server is composed by an hub and a node automatically connected to each other. The result will look like a single server. This type of the server can be used by small servers that can handle all the players on a single node.
 
 ```
-sel init <server> -version=~master [-path=auto] [-edu] [-realm]
+sel init <server> --version=~master [--path=auto] [-edu] [-realm]
 sel build <server> [-release] [dub-options]
 sel start <server>
 ```
@@ -33,7 +33,7 @@ sel start <server>
 An hub is the network of the server. It handles the new connections, performs checks on the ips, does uncompression, handles queries and external consoles. An hub alone can be seen in the players' server list and can also accept players, but it will kick them because the server is full. To work properly at least one main node should be connected to the hub.
 
 ```
-sel init <server> -type=hub -version=~master [-path=auto] [-edu] [-realm]
+sel init <server> --type=hub --version=~master [--path=auto] [-edu] [-realm]
 sel build <server> [-release] [dub-options]
 sel start <server>
 ```
@@ -41,9 +41,9 @@ sel start <server>
 #### Node
 
 ```
-sel init <server> -type=node -version=~master [-path=auto]
+sel init <server> --type=node --version=~master [--path=auto]
 sel build <server> [-release] [dub-options]
-sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=] [-main=true]
+sel connect <server> [--name=<server>] [--ip=localhost] [--port=28232] [--password=] [--main=true]
 ```
 
 ### Using DUB
@@ -54,7 +54,7 @@ sel connect <server> [-name=<server>] [-ip=localhost] [-port=28232] [-password=]
 cd build
 dub init.d
 dub build --single lite.d
-./lite [-edu] [-realm]
+./lite [-edu] [-realm] [custom-args]
 ```
 
 #### Hub
@@ -74,5 +74,5 @@ dub build --single hub.d
 cd build
 dub init.d
 dub build --single node.d
-./node [name=node] [ip=localhost] [port=28232] [main=true] [password=]
+./node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
 ```

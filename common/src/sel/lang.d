@@ -177,8 +177,12 @@ struct Translation {
 	enum CONNECTION_JOIN = Translation("connection.join", "multiplayer.player.joined", "multiplayer.player.joined");
 	enum CONNECTION_LEFT = Translation("connection.left", "multiplayer.player.left", "multiplayer.player.left");
 
+	public static nothrow @safe @nogc Translation all(const string translation) {
+		return Translation(translation, translation, translation);
+	}
+
 	/// Values.
-	public string sel, minecraft, pocket;
+	public const string sel, minecraft, pocket;
 
 }
 
@@ -223,8 +227,8 @@ interface Messageable {
 	
 	protected void sendMessageImpl(string);
 	
-	protected void sendTranslationImpl(Translation, string[]);
+	protected void sendTranslationImpl(const Translation, string[]);
 	
-	protected void sendColoredTranslationImpl(Text, Translation, string[]);
+	protected void sendColoredTranslationImpl(Text, const Translation, string[]);
 
 }
