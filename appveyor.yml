@@ -32,11 +32,11 @@ artifacts:
 install:
   - ps: function SetUpDCompiler
         {
-            if($env:arch -eq "x86"){
+            if($env:platform -eq "x86"){
               $env:DConf = "m32";
               $env:Dmodel = "32";
             }
-            elseif($env:arch -eq "x64"){
+            elseif($env:platform -eq "x64"){
               $env:DConf = "m64";
               $env:Dmodel = "64";
             }
@@ -67,12 +67,12 @@ install:
   - dub --version
 
 before_build:
-  - ps: if($env:arch -eq "x86"){
+  - ps: if($env:platform -eq "x86"){
             $env:compilersetupargs = "x86";
             $env:Darch = "x86";
             $env:Dmodel = "32";
           }
-        elseif($env:arch -eq "x64"){
+        elseif($env:platform -eq "x64"){
             $env:compilersetupargs = "amd64";
             $env:Darch = "x86_64";
             $env:Dmodel = "64";
