@@ -93,14 +93,14 @@ before_build:
 
 build_script:
  - cd build
- - dub init.d --portable --arch=%Darch% --compiler=%DC%
- - dub build --single lite.d --arch=%Darch% --compiler=%DC%
+ - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=release
+ - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=release
  - rename lite.exe sel-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
- - dub init.d --arch=%Darch% --compiler=%DC%
- - dub build --single hub.d --arch=%Darch% --compiler=%DC%
- - dub build --single node.d --arch=%Darch% --compiler=%DC%
- - dub build --single lite.d --arch=%Darch% --compiler=%DC%
+ - dub init.d --arch=%Darch% --compiler=%DC% --build=release
+ - dub build --single hub.d --arch=%Darch% --compiler=%DC% --build=release
+ - dub build --single node.d --arch=%Darch% --compiler=%DC% --build=release
+ - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=release
 
 test_script:
  - echo %PLATFORM%
