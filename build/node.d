@@ -1,6 +1,8 @@
 /+ dub.sdl:
    name "node"
    authors "sel-project"
+   license "LGPL-3.0"
+   copyright "(c) 2016-2017 SEL"
    targetType "executable"
    dependency "sel-common" path="../common"
    dependency "sel-node" path="../node"
@@ -22,7 +24,6 @@
  */
 module buildnode;
 
-import std.algorithm : max, min;
 import std.concurrency : LinkTerminated;
 import std.conv : to;
 import std.socket;

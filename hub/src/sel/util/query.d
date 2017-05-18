@@ -17,6 +17,7 @@ module sel.util.query;
 import core.thread : Thread;
 
 import std.algorithm : min;
+import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : dur;
 import std.string : split, join;
@@ -31,9 +32,6 @@ class Queries : Thread {
 	private shared Server server;
 
 	private shared string* socialJson;
-
-	public shared ushort pocketPort = 0;
-	public shared ushort minecraftPort = 0;
 
 	public shared string pocketIp = "0.0.0.0";
 	public shared string minecraftIp = "0.0.0.0";
@@ -56,24 +54,24 @@ class Queries : Thread {
 		this.socialJson = socialJson;
 		// set best ip/port
 		with(server.settings) {
-			void parse(string address, ref shared string ip, ref shared ushort port, ushort def) {
-				string[] spl = address.split(":");
-				if(spl.length >= 2) {
-					try {
-						string nip = spl[0..$-1].join(":");
-						if(nip.length > 1) ip = nip;
-						if(port != def) port = to!ushort(spl[$-1]);
-					} catch(Exception) {}
-				}
-			}
-			foreach(string address ; pocket.addresses) {
-				parse(address, this.pocketIp, this.pocketPort, 19132);
-			}
-			foreach(string address ; minecraft.addresses) {
-				parse(address, this.minecraftIp, this.minecraftPort, 25565);
-			}
 			if(serverIp.length) {
 				this.pocketIp = this.minecraftIp = serverIp;
+			} else {
+				void parse(string address, ref shared string ip) {
+					string[] spl = address.split(":");
+					if(spl.length >= 2) {
+						try {
+							string nip = spl[0..$-1].join(":");
+							if(nip.length > 1) ip = nip;
+						} catch(Exception) {}
+					}
+				}
+				foreach(string address ; pocket.addresses) {
+					parse(address, this.pocketIp);
+				}
+				foreach(string address ; minecraft.addresses) {
+					parse(address, this.minecraftIp);
+				}
 			}
 		}
 	}
@@ -166,12 +164,12 @@ class Queries : Thread {
 			add(to!string(this.server.onlinePlayers));
 			add(to!string(this.server.maxPlayers));
 			if(pocket) {
-				pe ~= [this.pocketPort & 255, (this.pocketPort >> 8) & 255];
+				pe ~= nativeToLittleEndian(pocket.port);
 				pe ~= cast(ubyte[])this.pocketIp ~ 0;
 				this.n_pocket_short_query = cast(shared)pe;
 			}
 			if(minecraft) {
-				pc ~= [this.minecraftPort & 255, (this.minecraftPort >> 8) & 255];
+				pc ~= nativeToLittleEndian(minecraft.port);
 				pc ~= cast(ubyte[])this.minecraftIp ~ 0;
 				this.n_minecraft_short_query = cast(shared)pc;
 			}
@@ -212,11 +210,11 @@ class Queries : Thread {
 			add("numplayers", to!string(this.server.onlinePlayers));
 			add("maxplayers", to!string(this.server.maxPlayers));
 			if(pocket) {
-				addTo(pe, "hostport", to!string(this.pocketPort));
+				addTo(pe, "hostport", to!string(pocket.port));
 				addTo(pe, "hostip", this.pocketIp);
 			}
 			if(minecraft) {
-				addTo(pc, "hostport", to!string(this.pocketPort));
+				addTo(pc, "hostport", to!string(minecraft.port));
 				addTo(pc, "hostip", this.minecraftIp);
 			}
 			add("social", *this.socialJson);

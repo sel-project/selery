@@ -50,17 +50,13 @@ class HttpHandler : HandlerThread {
 	
 	private shared string website;
 	
-	private immutable ushort pocketPort, minecraftPort;
-	
 	private shared time_t lastStatusUpdate;
 	
 	private shared size_t sessionsCount;
 	
-	public this(shared Server server, shared string* socialJson, ushort pocketPort, ushort minecraftPort) {
+	public this(shared Server server, shared string* socialJson) {
 		with(server.settings) super(server, createSockets!TcpSocket("http", webAddresses, webPort, WEB_BACKLOG));
 		this.socialJson = socialJson;
-		this.pocketPort = pocketPort;
-		this.minecraftPort = minecraftPort;
 		(cast(shared)this).reload();
 	}
 	
@@ -120,8 +116,8 @@ class HttpHandler : HandlerThread {
 		index = index.replace("{DEFAULT_LANG}", settings.language[0..2]);
 		index = index.replace("{DISPLAY_NAME}", settings.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);
-		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(this.minecraftPort) ~ "</p>") : "");
-		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (settings.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(this.pocketPort) ~ "</p>") : "");
+		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(settings.minecraft.port) ~ "</p>") : "");
+		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (settings.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(settings.pocket.port) ~ "</p>") : "");
 		if(settings.serverIp.length) index = index.replace("{IP}", settings.serverIp);
 		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;

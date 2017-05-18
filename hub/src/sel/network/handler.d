@@ -102,7 +102,7 @@ class Handler {
 			}
 
 			if(web) {
-				this.startThread!HttpHandler(server, &this.socialJson, this.queries.pocketPort, this.queries.minecraftPort);
+				this.startThread!HttpHandler(server, &this.socialJson);
 			}
 
 			if(panel) {

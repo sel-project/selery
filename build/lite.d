@@ -1,6 +1,8 @@
 /+ dub.sdl:
    name "lite"
    authors "sel-project"
+   license "LGPL-3.0"
+   copyright "(c) 2016-2017 SEL"
    targetType "executable"
    dependency "sel-common" path="../common"
    dependency "sel-hub" path="../hub"
@@ -25,12 +27,11 @@ module buildlite;
 
 import core.thread : Thread, dur;
 
-import std.algorithm : canFind;
 import std.concurrency : LinkTerminated;
 import std.conv : to;
-import std.file : read, write, exists, mkdirRecurse;
+import std.file : write, exists, mkdirRecurse;
 import std.path : dirSeparator;
-import std.string : toLower, indexOf, lastIndexOf;
+import std.string : indexOf, lastIndexOf;
 
 import sel.config : ConfigType;
 import sel.crash : logCrash;
@@ -69,7 +70,9 @@ void main(string[] args) {
 		immutable type = "portable";
 
 	} else {
+
 		immutable type = "lite";
+		
 	}
 
 	bool edu, realm;

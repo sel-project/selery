@@ -1,6 +1,8 @@
 /+ dub.sdl:
    name "init"
    authors "sel-project"
+   license "LGPL-3.0"
+   copyright "(c) 2016-2017 SEL"
    targetType "executable"
    dependency "sel-common" path="../common"
 +/
@@ -87,7 +89,7 @@ void main(string[] args) {
 
 	void loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["package.json", "sel.json"]) {
+		foreach(pack ; ["sel.json", "package.json"]) {
 			if(exists(path ~ pack)) {
 				auto json = parseJSON(cast(string)read(path ~ pack));
 				if(json.type == JSON_TYPE.OBJECT) {

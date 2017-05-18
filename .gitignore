@@ -15,5 +15,7 @@
 /plugins
 /resources
 /worlds
-plugins.json
-sel.json
+/plugins.json
+/sel.json
+/hub2
+/build/hub2.d

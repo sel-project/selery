@@ -1,6 +1,8 @@
 /+ dub.sdl:
    name "hub"
    authors "sel-project"
+   license "LGPL-3.0"
+   copyright "(c) 2016-2017 SEL"
    targetType "executable"
    dependency "sel-common" path="../common"
    dependency "sel-hub" path="../hub"
@@ -22,17 +24,9 @@
  */
 module buildhub;
 
-import std.algorithm : canFind;
-import std.conv : to;
-import std.file : exists, read, write, mkdirRecurse;
-import std.string : replace, toLower;
-
-import sel.about : Software;
 import sel.config : ConfigType;
-import sel.path : Paths;
 import sel.start : startup;
 import sel.hub.server;
-import sel.hub.settings;
 
 import pluginloader.hub : loadPlugins;
 
