@@ -2,6 +2,10 @@ platform:
   - x86
   - x64
 
+configuration:
+  - debug
+  - release
+
 environment:
   SEL: "2.0.0"
   matrix:
@@ -12,7 +16,7 @@ environment:
 
 matrix:
   allow_failures:
-    - DC: ldc
+    - platform: x86
 
 skip_tags: true
 branches:
@@ -87,22 +91,22 @@ before_build:
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
   - mkdir plugins
-  - cd plugins
-  - git clone https://github.com/sel-plugins/commands.git commands
-  - cd ..
+  - git clone https://github.com/sel-plugins/commands.git plugins\commands
+  - echo %PLATFORM%
+  - echo %CONFIGURATION%
+  - echo %DC%
+  - echo %Darch%
 
 build_script:
  - cd build
- - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=release
+ - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
  - rename lite.exe sel-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
- - dub init.d --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single hub.d --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single node.d --arch=%Darch% --compiler=%DC% --build=release
- - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=release
+ - dub init.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --single hub.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --single node.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
 
 test_script:
- - echo %PLATFORM%
- - echo %DC%
  - '%DC% --version'
