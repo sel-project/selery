@@ -208,7 +208,7 @@ void main(string[] args) {
 				plugin.mod = m.join(".");
 				plugin.main = main.str;
 			}
-			plugin.api = exists(path ~ "api.d");
+			plugin.api = exists(path ~ "api.d"); //TODO
 			if(plugin.single) {
 				plugin.vers = "~single";
 			}

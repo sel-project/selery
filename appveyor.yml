@@ -100,13 +100,13 @@ before_build:
 build_script:
  - cd build
  - dub init.d --portable --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
  - rename lite.exe sel-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
  - dub init.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --single hub.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --single node.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --single lite.d --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --config=hub --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --config=node --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
 
 test_script:
  - '%DC% --version'

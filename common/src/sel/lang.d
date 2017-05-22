@@ -215,8 +215,10 @@ interface Messageable {
 		} else {
 			Appender!string message;
 			foreach(i, arg; args) {
-				static if(is(typeof(arg) : string)) {
+				static if(is(typeof(arg) == string)) {
 					message.put(arg);
+				} else static if(is(typeof(arg) : string)) {
+					message.put(cast(string)arg);
 				} else {
 					message.put(to!string(arg));
 				}

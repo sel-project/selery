@@ -53,7 +53,7 @@ sel connect <server> [--name=<server>] [--ip=localhost] [--port=28232] [--passwo
 ```
 cd build
 dub init.d
-dub build --single lite.d
+dub build --config=lite
 ./lite [-edu] [-realm] [custom-args]
 ```
 
@@ -62,7 +62,7 @@ dub build --single lite.d
 ```
 cd build
 dub init.d
-dub build --single hub.d
+dub build --config=hub
 ./hub [-edu] [-realm]
 ```
 
@@ -73,6 +73,6 @@ dub build --single hub.d
 ```
 cd build
 dub init.d
-dub build --single node.d
+dub build --config=node
 ./node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
 ```

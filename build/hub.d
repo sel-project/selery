@@ -1,13 +1,3 @@
-/+ dub.sdl:
-   name "hub"
-   authors "sel-project"
-   license "LGPL-3.0"
-   copyright "(c) 2016-2017 SEL"
-   targetType "executable"
-   dependency "sel-common" path="../common"
-   dependency "sel-hub" path="../hub"
-   dependency "plugin-loader:hub" path="../.sel/plugin-loader"
-+/
 /*
  * Copyright (c) 2016-2017 SEL
  * 
@@ -22,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module buildhub;
+module hub;
 
 import sel.config : ConfigType;
 import sel.start : startup;

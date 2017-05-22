@@ -1,14 +1,3 @@
-/+ dub.sdl:
-   name "lite"
-   authors "sel-project"
-   license "LGPL-3.0"
-   copyright "(c) 2016-2017 SEL"
-   targetType "executable"
-   dependency "sel-common" path="../common"
-   dependency "sel-hub" path="../hub"
-   dependency "sel-node" path="../node"
-   dependency "plugin-loader" path="../.sel/plugin-loader"
-+/
 /*
  * Copyright (c) 2016-2017 SEL
  * 
@@ -23,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module buildlite;
+module lite;
 
 import core.thread : Thread, dur;
 

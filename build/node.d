@@ -1,13 +1,3 @@
-/+ dub.sdl:
-   name "node"
-   authors "sel-project"
-   license "LGPL-3.0"
-   copyright "(c) 2016-2017 SEL"
-   targetType "executable"
-   dependency "sel-common" path="../common"
-   dependency "sel-node" path="../node"
-   dependency "plugin-loader:node" path="../.sel/plugin-loader"
-+/
 /*
  * Copyright (c) 2016-2017 SEL
  * 
@@ -22,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module buildnode;
+module node;
 
 import std.concurrency : LinkTerminated;
 import std.conv : to;
