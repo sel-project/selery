@@ -6,3 +6,18 @@ copyright "(c) 2016-2017 SEL"
 dependency "sel-common" path="../common"
 dependency "nbt-d" version="==1.1.1"
 dependency "resusage" version="==0.2.4"
+sourcePaths "."
+importPaths "."
+
+// configuration for testing in release mode
+configuration "default" {
+}
+configuration "noblocks" {
+	versions "NoBlocks"
+}
+configuration "noitems" {
+	versions "NoItems"
+}
+configuration "noblocks+noitems" {
+	versions "NoBlocks" "NoItems"
+}

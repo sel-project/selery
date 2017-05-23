@@ -201,7 +201,23 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 		return event !is null && event.cancelled;
 	}
 
+	public static interface Child(T:O) {
+
+		alias Event = T;
+
+		public final size_t addEventListener(D)(void delegate(D) listener) if(is(D == class)) {
+
+		}
+
+	}
+
 }
+
+// class World : EventListener!(WorldEvent, Entity, Player)
+
+// class Entity : World.Child!EntityEvent
+
+// class Player : Entity, World.Child!PlayerEvent
 
 private bool areValidChildren(T, C...)() {
 	static if(C.length % 2 != 0) return false;
