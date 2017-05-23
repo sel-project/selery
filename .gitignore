@@ -10,6 +10,7 @@
 *.selections.json
 .dub
 .sel
+docs
 /crash
 /portable/views
 /plugins

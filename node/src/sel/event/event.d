@@ -19,7 +19,7 @@ import std.base64 : Base64Impl;
 import std.conv : to;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
-import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple;
+import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple, Parameters;
 
 alias size_t class_t;
 
@@ -186,7 +186,7 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	 * the plugin of it.
 	 * Returns: the instance of the event or null if the event hasn't been called
 	 */
-	public T callEventIfExists(T:O, E...)(E args) if(is(T == class) && !isAbstractClass!T && __traits(compiles, new T(args))) {
+	public T callEventIfExists(T:O)(Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T) {
 		T event = new T(args);
 		this.callEvent(event);
 		return event;
@@ -196,7 +196,7 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	 * Calls a cancellable event using `callEventIfExists`.
 	 * Returns: true if the event has been cancelled, false otherwise
 	 */
-	public bool callCancellableIfExists(T:O, E...)(E args) if(is(T == class) && !isAbstractClass!T && __traits(compiles, new T(args)) && is(T : Cancellable)) {
+	public bool callCancellableIfExists(T:O)(Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T && is(T : Cancellable)) {
 		T event = this.callEventIfExists!T(args);
 		return event !is null && event.cancelled;
 	}

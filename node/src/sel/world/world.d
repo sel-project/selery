@@ -24,7 +24,7 @@ import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
 
 import sel.about;
-import sel.command : Command;
+import sel.command.command : Command;
 import sel.format : Text;
 import sel.lang : Messageable, Translation, translate;
 import sel.utils : call;

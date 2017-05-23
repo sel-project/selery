@@ -16,7 +16,7 @@
  * Various inventories and related utilities.
  * License: <a href="http://www.gnu.org/licenses/lgpl-3.0.html" target="_blank">GNU General Lesser Public License v3</a>
  */
-module sel.inventory;
+module sel.inventory.inventory;
 
 import std.conv : to;
 import std.exception : enforce;
@@ -45,6 +45,42 @@ class InventoryRangeError : Error {
 		this("Index " ~ to!string(index) ~ " exceeds the inventory range of 0.." ~ to!string(inventory.length), file, line);
 	}
 	
+}
+
+struct InventorySlot {
+
+	private Slot n_slot;
+
+	public this(Slot slot) {
+		this.n_slot = slot;
+	}
+
+	public this(Item item) {
+		this(Slot(item));
+	}
+
+	public this(Item item, ubyte count) {
+		this(Slot(item, count));
+	}
+
+	public @property ubyte count() {
+		return this.n_slot.count;
+	}
+
+	public @property ubyte count(ubyte count) {
+		return count;
+	}
+
+	public void fill() {
+		//TODO
+	}
+
+	public pure nothrow @property @safe @nogc Slot slot() {
+		return this.n_slot;
+	}
+
+	alias slot this;
+
 }
 
 /**

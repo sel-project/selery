@@ -31,7 +31,7 @@ import std.typetuple : TypeTuple;
 import std.uuid : UUID, randomUUID;
 
 import sel.about;
-import sel.command : Command, WorldCommandSender;
+import sel.command.command : Command, WorldCommandSender;
 import sel.format : Text;
 import sel.lang : Translation;
 import sel.utils : milliseconds, call;
@@ -44,9 +44,9 @@ import sel.entity.human : Human, Skin, Exhaustion;
 import sel.entity.interfaces : Collectable;
 import sel.entity.metadata;
 import sel.entity.noai : ItemEntity, Painting, Lightning;
-import sel.event.server : PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
+import sel.event.server : PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent, InvalidParametersEvent, UnknownCommandEvent;
 import sel.event.world;
-import sel.inventory;
+import sel.inventory.inventory;
 import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
@@ -74,7 +74,6 @@ abstract class Player : Human, WorldCommandSender {
 	
 	private string n_name;
 	private string n_iname;
-	private string n_cname;
 	
 	private string n_display_name;
 	public string chatName;
@@ -139,7 +138,6 @@ abstract class Player : Human, WorldCommandSender {
 		super(world, position, skin);
 		this.n_name = name;
 		this.n_iname = this.n_name.toLower();
-		this.n_cname = this.n_cname.replace(" ", "-");
 		this.n_display_name = this.chatName = displayName;
 		this.n_uuid = uuid;
 		this.n_address = address;
@@ -221,18 +219,15 @@ abstract class Player : Human, WorldCommandSender {
 		return this.n_name;
 	}
 	
-	/// Gets the player's lowercase username.
+	/**
+	 * Gets the player's username converted to lower-case.
+	 */
 	public final pure nothrow @property @safe @nogc string iname() {
 		return this.n_iname;
 	}
 	
 	/// ditto
 	alias lname = this.iname;
-
-	/// Gets the lowercase username with minuses instead of spaces.
-	public final pure nothrow @property @safe @nogc string cname() {
-		return this.n_cname;
-	}
 
 	/**
 	 * Edits the player's displayed name, as it appears in the
@@ -835,44 +830,28 @@ abstract class Player : Human, WorldCommandSender {
 	 * Calls a command if the player has it.
 	 * Returns: true if the command has been called, false otherwise
 	 */
-	public bool callCommand(string cmd, immutable(string)[] args) {
+	public bool callCommand(string cmd, string args) {
 		auto ptr = cmd.toLower in this.commands;
-		bool called = false;
-		if(ptr && (!(*ptr).op || this.op)) {
-			called = (*ptr).callArgs(this, args);
-		}
-		if(!called) {
-			ptr = "*" in this.commands;
-			if(ptr) {
-				called = (*ptr).callArgs(this, cmd ~ args);
-			}
-		}
-		return called;
+		return ptr && (!(*ptr).op || this.op) && (*ptr).call(this, args);
 	}
 
 	/**
 	 * Calls a command specifying which overload.
 	 * Returns: true if the command has been called, false otherwise
 	 */
-	public bool callCommandOverload(string cmd, size_t overload, immutable(string)[] args) {
+	public bool callCommandOverload(string cmd, size_t overload, Command.Arg[] args) {
 		auto ptr = cmd.toLower in this.commands;
-		bool called = false;
-		if(ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op)) {
-			called = (*ptr).overloads[overload].callArgs(this, args);
-		}
-		if(!called) {
-			ptr = "*" in this.commands;
-			if(ptr) {
-				called = (*ptr).callArgs(this, cmd ~ args);
-			}
-		}
-		return called;
+		return ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op) && (*ptr).overloads[overload].callArgs(this, args);
 	}
 	
 	/**
 	 * Adds a new command using a command-container class.
 	 */
-	public @safe Command registerCommand(Command command) {
+	public Command registerCommand(Command _command) {
+		auto command = new Command(_command.command, _command.description, _command.aliases.dup, _command.op, _command.hidden);
+		foreach(overload ; _command.overloads) {
+			if(overload.callableByPlayer) command.overloads ~= overload;
+		}
 		foreach(string cc ; command.aliases ~ command.command) {
 			this.commands[cc.toLower] = command;
 		}
@@ -918,8 +897,8 @@ abstract class Player : Human, WorldCommandSender {
 		}
 	}
 
-	public override BlockPosition startingPosition() {
-		return cast(BlockPosition)this.position;
+	public override EntityPosition position() {
+		return super.position();
 	}
 
 	public override Entity[] visibleEntities() {
@@ -1121,14 +1100,18 @@ abstract class Player : Human, WorldCommandSender {
 		message = message.replaceAll(ctRegex!"§[a-fA-F0-9k-or]", "");
 		if(message.length == 0) return;
 		if(message[0] == '/') {
-			string[] cmds = message[1..$].split(" ");
-			if(cmds.length > 0) {
-				string cmd = cmds[0].toLower();
-				string[] args;
-				foreach(string arg ; cmds[1..$]) {
-					if(arg != "") args ~= arg;
+			message = message[1..$].strip;
+			string found;
+			foreach(string commandName, command; this.commands) {
+				if(message.startsWith(commandName) && (message.length == commandName.length || message[commandName.length] == ' ') && (!command.op || this.op)) {
+					if(command.call(this, message[commandName.length..$])) return;
+					else found = commandName;
 				}
-				this.callCommand(cmd, args.idup);
+			}
+			if(found.length) {
+				this.server.callEventIfExists!InvalidParametersEvent(this, found);
+			} else {
+				this.server.callEventIfExists!UnknownCommandEvent(this);
 			}
 		} else {
 			PlayerChatEvent event = this.world.callEventIfExists!PlayerChatEvent(this, message);

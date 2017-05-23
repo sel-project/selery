@@ -66,7 +66,7 @@ struct Slot {
 	/**
 	 * Gets the slot's item.
 	 */
-	public @property @safe @nogc Item item() {
+	public pure nothrow @property @safe @nogc Item item() {
 		return this.n_item;
 	}
 
@@ -86,7 +86,7 @@ struct Slot {
 	 * assert(slot.empty);
 	 * ---
 	 */
-	public @property @safe @nogc bool empty() {
+	public pure nothrow @property @safe @nogc bool empty() {
 		return this.count == 0 || this.item is null;
 	}
 
@@ -106,7 +106,7 @@ struct Slot {
 	 * if(!slot.empty && slot.full) { ... }
 	 * ---
 	 */
-	public @property @safe @nogc bool full() {
+	public pure nothrow @property @safe @nogc bool full() {
 		return this.count >= this.item.max;
 	}
 
@@ -129,7 +129,7 @@ struct Slot {
 	 * }
 	 * ---
 	 */
-	public @safe @nogc void fill() {
+	public pure nothrow @safe @nogc void fill() {
 		this.count = this.item.max;
 	}
 

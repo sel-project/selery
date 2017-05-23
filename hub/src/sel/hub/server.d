@@ -407,89 +407,6 @@ class Server {
 			if(!cmd.length) return;
 			string[] args = spl[1..$];
 			switch(cmd) {
-				case "about":
-					//TODO print informations about a player
-					break;
-				case "disconnect":
-					switch(args.length ? args[0].toLower : "") {
-						case "node":
-							//TODO disconnect a node
-							// disconnect node <name>
-							break;
-						case "ec":
-						case "externalconsole":
-							//TODO disconnect external console
-							// disconnect ec *
-							// disconnect ec 192.168.2.5
-							// disconnect ec ::1
-							break;
-						case "rcon":
-							//TODO disconnect rcon
-							break;
-						default:
-							log("Usage: 'disconnect <node|externalconsole|rcon> <id>'");
-							break;
-					}
-					break;
-				case "help":
-					this.command(join([
-							"about <player>",
-							"disconnect <node|externalconsole|rcon> <id>",
-							"kick <player> [reason]",
-							"latency",
-							"nodes",
-							"players",
-							"reload",
-							"say <message>",
-							"stop",
-							"threads",
-							"transfer <player> <node>",
-							"usage [node]",
-							"<node> <command> [args]"
-						], "\n"), commandId);
-					break;
-				case "kick":
-					//TODO kicks a player
-					// Player::onKicked(args.join(" "));
-					break;
-				case "latency":
-					string[] list;
-					foreach(node ; this.nodes) {
-						list ~= node.name ~ ": " ~ to!string(node.latency) ~ " ms";
-					}
-					this.command(list.join(", "), commandId);
-					break;
-				case "nodes":
-					string[] nodes;
-					foreach(shared Node node ; this.nodes) {
-						nodes ~= node.toString();
-					}
-					this.command("Nodes: " ~ nodes.join(", "), commandId);
-					break;
-				case "players":
-					string[] list;
-					foreach(shared PlayerSession player ; this.n_players) {
-						list ~= player.username ~ " (" ~ player.game ~ ")";
-					}
-					this.command("Players (" ~ to!string(list.length) ~ "): " ~ list.join(", "), commandId);
-					break;
-				case "reload":
-					this.n_max = 0;
-					this.unlimited_nodes = 0;
-					(cast()this.n_settings).load();
-					this.handler.reload();
-					foreach(node ; this.nodes) node.reload();
-					this.command(Text.green ~ "Server's configurations have been reloaded", commandId);
-					break;
-				case "say":
-					string command = "say " ~ args.join(" ");
-					foreach(shared Node node ; this.nodes) {
-						node.remoteCommand(command, origin, source, commandId);
-					}
-					break;
-				case "stop":
-					this.shutdown();
-					break;
 				case "threads":
 					string[] names;
 					foreach(thread ; Thread.getAll()) {
@@ -497,9 +414,6 @@ class Server {
 					}
 					sort(names);
 					this.command("Threads (" ~ to!string(names.length) ~ "): " ~ names.join(", "), commandId);
-					break;
-				case "transfer":
-					//TODO transfer the player to args[0]
 					break;
 				case "usage":
 					if(args.length) {

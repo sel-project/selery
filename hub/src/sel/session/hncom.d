@@ -227,7 +227,7 @@ class Node : Session {
 					else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
 					else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 					else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-					else if(["about", "disconnect", "help", "kick", "latency", "nodes", "players", "reload", "say", "stop", "threads", "transfer", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+					else if(["threads", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
 					this.send(response.encode());
 					if(response.status == Login.ConnectionResponse.OK) {
 						// send info packets
@@ -237,7 +237,7 @@ class Node : Session {
 							if(pocket) games ~= Types.GameInfo(Types.Game(Types.Game.POCKET, pocket.protocols), pocket.motd, pocket.onlineMode, pocket.port);
 							this.send(new Login.HubInfo(microseconds, server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, additionalJson).encode());
 						}
-						socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generates worlds
+						socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generate worlds
 						while(true) {
 							if(receiver.has) {
 								payload = receiver.next;

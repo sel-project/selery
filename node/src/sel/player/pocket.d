@@ -35,7 +35,9 @@ import nbt.stream;
 import nbt.tags;
 
 import sel.about;
-import sel.command : Command;
+import sel.command.args : CommandArg;
+import sel.command.command : Command, Position, Target;
+import sel.command.util : PocketType;
 import sel.format : Text;
 import sel.lang : Translation, translate;
 import sel.path : Paths;
@@ -47,7 +49,7 @@ import sel.entity.human : Skin;
 import sel.entity.living : Living;
 import sel.entity.metadata : SelMetadata = Metadata;
 import sel.entity.noai : Lightning, ItemEntity;
-import sel.inventory;
+import sel.inventory.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
@@ -324,7 +326,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	private bool has_creative_inventory = false;
 	
-	private Tuple!(string, string)[][][string] sent_commands; // [command][overload] = [(name, type), (name, type), ...]
+	private Tuple!(string, PocketType)[][][string] sent_commands; // [command][overload] = [(name, type), (name, type), ...]
 
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
@@ -819,10 +821,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				}
 				JSONValue[string] overloads;
 				foreach(i, overload; command.overloads) {
-					Tuple!(string, string)[] sent_params;
+					Tuple!(string, PocketType)[] sent_params;
 					JSONValue[] params;
 					foreach(j, name; overload.params) {
-						auto name_type = Tuple!(string, string)(name, overload.pocketTypeOf(j));
+						auto name_type = Tuple!(string, PocketType)(name, overload.pocketTypeOf(j));
 						sent_params ~= name_type;
 						JSONValue[string] p;
 						p["name"] = name_type[0];
@@ -1040,43 +1042,27 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	//protected void handleShowCreditsPacket(ubyte[] payload) {}
 
 	protected void handleCommandStepPacket(string command, string overload_str, uint u1, uint u2, bool isOutput, ulong u3, string input, string output) {
+		static if(__protocol >= 112) {
+			// see https://bugs.mojang.com/browse/MCPE-21968
+			if(command == "help" || command == "?") {
+				if(overload_str == "byPage") overload_str = "0";
+				else if(overload_str == "byName") overload_str = "1";
+			}
+		}
 		auto cmd = command in this.sent_commands;
 		if(cmd) {
 			try {
-				// BROKEN IN 1.1.0.5-1.1.0.9 for commands with the same args of the singleplayer ones
 				auto overload = to!size_t(overload_str);
 				if(overload < (*cmd).length) {
 					auto data = parseJSON(input);
-					string[] args;
+					CommandArg[] args;
 					if(data.type == JSON_TYPE.OBJECT) {
 						auto obj = data.object;
 						foreach(param ; (*cmd)[overload]) {
 							auto search = param[0] in obj;
 							if(search) {
-								switch(param[1]) {
-									case "int":
-										args ~= (*search).integer.to!string;
-										break;
-									case "float":
-										if((*search).type == JSON_TYPE.INTEGER) args ~= (*search).integer.to!string;
-										else args ~= (*search).floating.to!string;
-										break;
-									case "bool":
-										args ~= (*search).type == JSON_TYPE.TRUE ? "true" : "false";
-										break;
-									case "blockpos":
-										auto bp = (*search).object;
-										foreach(immutable c ; ["x", "y", "z"]) {
-											auto coord = c in bp;
-											auto rel = c ~ "relative" in bp;
-											if(coord && (*coord).type == JSON_TYPE.INTEGER) {
-												args ~= ((rel && (*rel).type == JSON_TYPE.TRUE ? "~" : "") ~ to!string((*coord).integer));
-											} else {
-												args ~= "~";
-											}
-										}
-										break;
-									case "target":
+								final switch(param[1]) {
+									case PocketType.target:
 										auto rules = "rules" in *search;
 										auto selector = "selector" in *search;
 										string target = "";
@@ -1112,10 +1098,35 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 												target ~= "[" ~ r.join(",") ~ "]";
 											}
 										}
-										args ~= target;
+										args ~= CommandArg(Target.fromString(this, target)); //TODO optimise creation
 										break;
-									default:
-										args ~= (*search).str;
+									case PocketType.blockpos:
+										Position.Point parsePoint(string coord) {
+											auto c = coord in *search;
+											auto rel = coord ~ "relative" in *search;
+											bool relative = rel && (*rel).type == JSON_TYPE.TRUE;
+											if(c) {
+												if((*c).type == JSON_TYPE.INTEGER) return Position.Point(relative, (*c).integer);
+												else if((*c).type == JSON_TYPE.FLOAT) return Position.Point(relative, (*c).floating);
+											}
+											return Position.Point(relative, 0);
+										}
+										args ~= CommandArg(Position(parsePoint("x"), parsePoint("y"), parsePoint("z")));
+										break;
+									case PocketType.boolean:
+										args ~= CommandArg((*search).type == JSON_TYPE.TRUE);
+										break;
+									case PocketType.integer:
+										args ~= CommandArg((*search).integer);
+										break;
+									case PocketType.floating:
+										if((*search).type == JSON_TYPE.INTEGER) CommandArg(cast(double)(*search).integer);
+										else args ~= CommandArg((*search).floating);
+										break;
+									case PocketType.rawtext:
+									case PocketType.stringenum:
+									case PocketType.string:
+										args ~= CommandArg((*search).str);
 										break;
 								}
 							} else {
@@ -1123,9 +1134,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 							}
 						}
 					}
-					this.callCommandOverload(command, overload, args.idup);
+					this.callCommandOverload(command, overload, args);
 				}
-			} catch(Exception) {}
+			} catch(Exception) {
+				//TODO call *
+			}
 		}
 	}
 	

@@ -18,7 +18,7 @@ import std.conv : to;
 import std.math : round, isNaN;
 
 import sel.about;
-import sel.command : Position;
+import sel.command.command : Position;
 import sel.utils : safe, call;
 import sel.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
@@ -211,7 +211,7 @@ public class Living : Entity {
 	}
 	
 	public void teleport(Position position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.teleport(position.from(cast(BlockPosition)this.position), yaw, bodyYaw, pitch);
+		this.teleport(position.from(this.position), yaw, bodyYaw, pitch);
 	}
 
 	/**

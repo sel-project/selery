@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -13,8 +13,7 @@
  * 
  */
 /// DDOC_EXCLUDE
-module sel.event.server;
+module sel.command;
 
-public import sel.event.server.node : NodeAddedEvent, NodeRemovedEvent, NodeMessageEvent;
-public import sel.event.server.player : PlayerJoinEvent, PlayerLeftEvent, PlayerLanguageUpdatedEvent, PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
-public import sel.event.server.server : ServerEvent, InvalidParametersEvent, UnknownCommandEvent;
+public import sel.command.command : Command;
+public import sel.command.util : CommandSender, WorldCommandSender, SingleEnum, SnakeCaseEnum, Position, Target;

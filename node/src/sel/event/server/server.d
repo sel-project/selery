@@ -19,6 +19,43 @@
  */
 module sel.event.server.server;
 
+import sel.command.util : CommandSender;
 import sel.event.event : Event;
 
 interface ServerEvent : Event {}
+
+interface CommandEvent : ServerEvent {}
+
+class InvalidParametersEvent : CommandEvent {
+
+	private CommandSender n_sender;
+	private string n_command;
+
+	public this(CommandSender sender, string command) {
+		this.n_sender = sender;
+		this.n_command = command;
+	}
+
+	public pure nothrow @property @safe @nogc CommandSender sender() {
+		return this.n_sender;
+	}
+
+	public pure nothrow @property @safe @nogc string command() {
+		return this.n_command;
+	}
+
+}
+
+class UnknownCommandEvent : CommandEvent {
+
+	private CommandSender n_sender;
+	
+	public this(CommandSender sender) {
+		this.n_sender = sender;
+	}
+	
+	public pure nothrow @property @safe @nogc CommandSender sender() {
+		return this.n_sender;
+	}
+
+}

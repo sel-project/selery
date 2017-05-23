@@ -86,7 +86,7 @@ public @property @safe ulong bytes(string value) {
  * Formats the given memory with the best unity of measurement.
  * Params:
  * 		mem = the memory to be formatted
- * 		bon = boolean value indicating whether or not to use powers of 2s instead of power of 10s
+ * 		bin = boolean value indicating whether or not to use powers of 2s instead of power of 10s
  * Returns: the formatted string
  * Example:
  * ---

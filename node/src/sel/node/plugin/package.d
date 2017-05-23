@@ -22,7 +22,7 @@ public import sel.lang : Translation;
 public import sel.utils;
 
 // server
-public import sel.node.server : Server, server;
+public import sel.node.server : server, Server, ServerCommandSender;
 
 // plugin
 public import sel.node.plugin.config : Config, _, Value, value;
@@ -31,11 +31,11 @@ public import sel.node.plugin.plugin : PluginOf, start, reload, stop, event, glo
 
 // command sender
 public import sel.player.player : Player;
-public import sel.command : CommandSender, WorldCommandSender;
+public import sel.command.command : CommandSender, WorldCommandSender;
 public import sel.world.world : World;
 
 // command utils
-public import sel.command : arguments, SingleEnum, SnakeCaseEnum, Position, Target;
+public import sel.command.util : SingleEnum, SnakeCaseEnum, Position, Target;
 
 // logging
 public import sel.util.log : log, debug_log, warning_log, error_log;

@@ -23,7 +23,7 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 
 import sel.about;
-import sel.command : Position;
+import sel.command.command : Position;
 import sel.utils : safe, call;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
@@ -583,7 +583,7 @@ abstract class Entity : EventListener!WorldEvent {
 
 	/// ditto
 	public void teleport(Position position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.teleport(position.from(cast(BlockPosition)this.position), yaw, pitch);
+		this.teleport(position.from(this.position), yaw, pitch);
 	}
 
 	/**

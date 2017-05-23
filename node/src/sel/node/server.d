@@ -39,10 +39,10 @@ import resusage.cpu;
 import sel.network.hncom; // do not move this import down
 
 import sel.about;
-import sel.command : Command, CommandSender;
+import sel.command.command : Command, CommandSender;
 import sel.config : Config, ConfigType;
 import sel.format : Text;
-import sel.lang : Lang, translate, Translation;
+import sel.lang : Lang, translate, Translation, Messageable;
 import sel.memory : Memory;
 import sel.path : Paths;
 import sel.plugin : Plugin;
@@ -53,7 +53,7 @@ import sel.event.event : Event, EventListener;
 import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
-import sel.math.vector : BlockPosition;
+import sel.math.vector : EntityPosition;
 import sel.network.http : serveResourcePacks;
 import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
 import sel.player.player : Player;
@@ -125,7 +125,7 @@ version(Windows) {
 /**
  * Singleton for the server instance.
  */
-final class Server : EventListener!ServerEvent, CommandSender {
+final class Server : EventListener!ServerEvent, Messageable {
 
 	private ulong start_time;
 
@@ -400,14 +400,14 @@ final class Server : EventListener!ServerEvent, CommandSender {
 			}
 		}
 
-		log(translate(Translation("startup.resourcePacks"), this.n_settings.language));
-
 		// create resource pack files
 		string[] textures = [Paths.textures]; // ordered from least prioritised to most prioritised
 		foreach_reverse(plugin ; this.n_plugins) {
 			if(plugin.textures !is null) textures ~= plugin.textures;
 		}
 		if(textures.length > 1) {
+			
+			log(translate(Translation("startup.resourcePacks"), this.n_settings.language));
 
 			auto rp_uuid = this.nextUUID;
 			auto rp = createResourcePacks(this, rp_uuid, textures);
@@ -1070,14 +1070,17 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	}
 
 	/**
-	 * Gets a player by name.
-	 * The search is done case-insensitive and the minus sign (-) is
-	 * replaced with the space character (so commands can use it to
-	 * indicate a player which name has spaces).
+	 * Gets a player by a case-insensitive name.
 	 * Returns: An array of online players with the given name.
+	 * Example:
+	 * ---
+	 * foreach(player ; server.playersWithName("steve")) {
+	 *   player.kick("Bad name!");
+	 * }
+	 * ---
 	 */
 	public pure @trusted Player[] playersWithName(string name) {
-		name = name.toLower.replace("-", " ");
+		name = name.toLower;
 		Player[] ret;
 		foreach(player ; this.players_hubid) {
 			if(player.lname == name) ret ~= player;
@@ -1120,20 +1123,8 @@ final class Server : EventListener!ServerEvent, CommandSender {
 		(*ptr).add!func(del, params);
 	}
 
-	public override BlockPosition startingPosition() {
-		return BlockPosition(0);
-	}
-
-	public override Entity[] visibleEntities() {
-		Entity[] ret;
-		foreach(world ; this.worlds) {
-			ret ~= world.entities;
-		}
-		return ret;
-	}
-
-	public override Player[] visiblePlayers() {
-		return this.players;
+	public @property Command[] registeredCommands() {
+		return this.commands.values;
 	}
 	
 	protected override void sendMessageImpl(string message) {
@@ -1356,7 +1347,7 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 		// register the server's commands
 		foreach(Command command ; this.commands) {
-			player.registerCommand(command);
+			player.registerCommand(command); //TODO only register overloads that accept CommandSender, WorldCommandSender and Player
 		}
 
 		// add to the lists
@@ -1498,12 +1489,20 @@ final class Server : EventListener!ServerEvent, CommandSender {
 
 	// handles a command from various sources.
 	private void handleCommand(ubyte origin, Address address, string command, int id=-1) {
-		auto spl = command.strip.split(" ");
-		if(spl.length) {
-			auto c = spl[0] in this.commands; //TODO aliases
-			if(c) {
-				(*c).callArgs(this, spl[1..$].idup);
+		auto sender = new ServerCommandSender(this, origin, address, id);
+		string found;
+		foreach(c ; this.commands) {
+			foreach(cname ; c.command ~ c.aliases) {
+				if(command.startsWith(cname)) {
+					if(c.call(sender, command[cname.length..$])) return;
+					else found = cname;
+				}
 			}
+		}
+		if(found) {
+			this.callEventIfExists!InvalidParametersEvent(sender, found);
+		} else {
+			this.callEventIfExists!UnknownCommandEvent(sender);
 		}
 	}
 
@@ -1549,5 +1548,51 @@ final class Server : EventListener!ServerEvent, CommandSender {
 	public @safe void removeTask(size_t tid) {
 		this.tasks.remove(tid);
 	}
+
+}
+
+class ServerCommandSender : CommandSender {
+
+	public Server server;
+	public immutable ubyte origin;
+	public const Address address;
+	private int id;
+
+	public this(Server server, ubyte origin, Address address, int id) {
+		this.server = server;
+		this.origin = origin;
+		this.address = address;
+		this.id = id;
+	}
+	
+	public override EntityPosition position() {
+		return EntityPosition(0);
+	}
+	
+	public override Entity[] visibleEntities() {
+		Entity[] ret;
+		foreach(world ; this.server.worlds) {
+			ret ~= world.entities;
+		}
+		return ret;
+	}
+
+	public override Player[] visiblePlayers() {
+		return this.server.players;
+	}
+
+	protected override void sendMessageImpl(string message) {
+		command_log(this.id, message);
+	}
+
+	protected override void sendTranslationImpl(const Translation translation, string[] args) {
+		command_log(this.id, translate(translation, this.server.settings.language, args));
+	}
+
+	protected override void sendColoredTranslationImpl(Text color, const Translation translation, string[] args) {
+		command_log(this.id, color, translate(translation, this.server.settings.language, args));
+	}
+
+	alias server this;
 
 }

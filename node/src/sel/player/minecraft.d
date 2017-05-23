@@ -42,7 +42,7 @@ import sel.entity.metadata : SelMetadata = Metadata;
 import sel.entity.noai : ItemEntity, Lightning;
 import sel.entity.human : Skin;
 import sel.event.world.player : PlayerMoveEvent;
-import sel.inventory;
+import sel.inventory.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.player.player;
@@ -134,7 +134,7 @@ abstract class MinecraftPlayer : Player {
 			this.viewDistance = min(this.world.rules.viewDistance, viewDistance);
 			this.world.playerUpdateRadius(this);
 		}
-		lang = this.server.settings.acceptedLanguages.canFind(language) ? language : /*(language.split("_")[0] in __DEFAULT_LANGUAGES__ ? __DEFAULT_LANGUAGES__[language.split("_")[0]] :*/ this.server.settings.language/*)*/;
+		lang = this.server.settings.acceptedLanguages.canFind(language) ? language : this.server.settings.language;
 		if(lang != this.lang) {
 			this.lang = lang;
 		}

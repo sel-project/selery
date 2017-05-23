@@ -166,30 +166,30 @@ struct Config {
 
 		string file;
 
-		with(Software) file ~= "//" ~ newline ~ "//  " ~ name ~ " " ~ displayVersion ~ (stable ? " " : "-dev ") ~ codename ~ " " ~ codenameEmoji ~ newline;
-		with(Clock.currTime()) file ~= "//  " ~ toSimpleString().split(".")[0] ~ " " ~ timezone.dstName ~ newline ~ "//" ~ newline;
-		
+		enum C = "#";
+
+		with(Software) file ~= C ~ newline ~ C ~ "  " ~ name ~ " " ~ displayVersion ~ (stable ? " " : "-dev ") ~ codename ~ " " ~ codenameEmoji ~ newline;
+		with(Clock.currTime()) file ~= C ~ "  " ~ toSimpleString().split(".")[0] ~ " " ~ timezone.dstName ~ newline ~ C ~ newline;
+
 		void protocols(string[][uint] s) {
 			uint[] keys = s.keys;
 			sort(keys);
 			foreach(uint p ; keys) {
-				file ~= "//  \t" ~ to!string(p) ~ ": " ~ s[p].to!string.replace("[", "").replace("]", "").replace("\"", "") ~ newline;
+				file ~= C ~ "  \t" ~ to!string(p) ~ ": " ~ s[p].to!string.replace("[", "").replace("]", "").replace("\"", "") ~ newline;
 			}
 		}
 		if(edu) {
-			file ~= "//  Minecraft: Education Edition supported protocols/versions:" ~ newline;
+			file ~= C ~ "  Minecraft: Education Edition supported protocols/versions:" ~ newline;
 			protocols(supportedPocketProtocols);
-			file ~= "//" ~ newline;
+			file ~= C ~ newline;
 		} else {
-			file ~= "//  Minecraft supported protocols/versions:" ~ newline;
+			file ~= C ~ "  Minecraft supported protocols/versions:" ~ newline;
 			protocols(supportedMinecraftProtocols);
-			file ~= "//" ~ newline;
-			file ~= "//  Minecraft: Pocket Edition supported protocols/versions:" ~ newline;
+			file ~= C ~ newline;
+			file ~= C ~ "  Minecraft: Pocket Edition supported protocols/versions:" ~ newline;
 			protocols(supportedPocketProtocols);
-			file ~= "//" ~ newline;
+			file ~= C ~ newline;
 		}
-		
-		file ~= "//  Documentation can be found at https://github.com/sel-project/sel-server/blob/master/README.md" ~ newline ~ "//" ~ newline;
 
 		return file;
 

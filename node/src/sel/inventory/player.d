@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,9 +12,6 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/// DDOC_EXCLUDE
-module sel.event.server;
+module sel.inventory.player;
 
-public import sel.event.server.node : NodeAddedEvent, NodeRemovedEvent, NodeMessageEvent;
-public import sel.event.server.player : PlayerJoinEvent, PlayerLeftEvent, PlayerLanguageUpdatedEvent, PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
-public import sel.event.server.server : ServerEvent, InvalidParametersEvent, UnknownCommandEvent;
+import sel.inventory.inventory;
