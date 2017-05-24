@@ -19,7 +19,7 @@ import std.array : Appender;
 import std.conv : to, ConvException;
 import std.file : exists, read;
 import std.string;
-import std.traits : isArray;
+import std.traits : isArray, staticIndexOf;
 
 import sel.format : Text;
 
@@ -174,6 +174,12 @@ public string translate(Translation translation, string lang, string[] args=[]) 
  */
 struct Translation {
 
+	enum DISCONNECT_CLOSED = all("disconnect.closed");
+	enum DISCONNECT_TIMEOUT = all("disconnect.timeout");
+	enum DISCONNECT_END_OF_STREAM = all("disconnect.endOfStream");
+	enum DISCONNECT_LOST = all("disconnect.lost");
+	enum DISCONNECT_SPAM = all("disconnect.spam");
+
 	enum CONNECTION_JOIN = Translation("connection.join", "multiplayer.player.joined", "multiplayer.player.joined");
 	enum CONNECTION_LEFT = Translation("connection.left", "multiplayer.player.left", "multiplayer.player.left");
 
@@ -193,25 +199,20 @@ struct Translation {
 interface Messageable {
 
 	public void sendMessage(E...)(E args) {
-		static if(E.length && (is(E[0] == Text) && E.length > 1 && is(E[1] : Translation) || is(E[0] : Translation))) {
+		static if(isTranslation!E) {
 			string[] message_args;
-			static if(is(E[0] == Text)) {
-				alias _args = args[2..$];
-			} else {
-				alias _args = args[1..$];
-			}
-			foreach(arg ; _args) {
+			Text[] formats;
+			foreach(arg ; args[staticIndexOf!(Translation, E)+1..$]) {
 				static if(is(typeof(arg) : string) || (isArray!(typeof(arg)) && is(typeof(arg[0]) : string))) {
 					message_args ~= arg;
 				} else {
 					message_args ~= to!string(arg);
 				}
 			}
-			static if(is(E[0] == Text)) {
-				this.sendColoredTranslationImpl(args[0], args[1], message_args);
-			} else {
-				this.sendTranslationImpl(args[0], message_args);
+			foreach(arg ; args[0..staticIndexOf!(Translation, E)]) {
+				formats ~= arg;
 			}
+			this.sendTranslationImpl(args[staticIndexOf!(Translation, E)], message_args, formats);
 		} else {
 			Appender!string message;
 			foreach(i, arg; args) {
@@ -229,8 +230,22 @@ interface Messageable {
 	
 	protected void sendMessageImpl(string);
 	
-	protected void sendTranslationImpl(const Translation, string[]);
-	
-	protected void sendColoredTranslationImpl(Text, const Translation, string[]);
+	protected void sendTranslationImpl(const Translation, string[], Text[]);
 
+}
+
+private bool isTranslation(E...)() {
+	static if(staticIndexOf!(Translation, E) >= 0) {
+		return isText!(E[0..staticIndexOf!(Translation, E)]);
+	} else {
+		return false;
+	}
+}
+
+private bool isText(E...)() {
+	static if(E.length == 0) {
+		return true;
+	} else {
+		return is(E[0] == Text) && (E.length == 1 || isText!(E[1..$]));
+	}
 }

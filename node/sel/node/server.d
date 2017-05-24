@@ -1131,12 +1131,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 		log(message);
 	}
 	
-	protected override void sendTranslationImpl(const Translation message, string[] args) {
-		log(translate(message, this.settings.language, args));
-	}
-	
-	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
-		log(color, translate(message, this.settings.language, args));
+	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
+		log(join(cast(string[])formats, ""), translate(message, this.settings.language, args));
 	}
 
 	// hub-node communication and related methods
@@ -1161,6 +1157,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 	/**
 	 * Disconnects a player from the server.
+	 * When using a translatable message player's should be disconnected
+	 * using their own disconnect method (Player.disconnect);
 	 * Params:
 	 * 		player = the player to disconnect
 	 * 		reason = disconnection reason
@@ -1172,9 +1170,16 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * }
 	 * ---
 	 */
-	public void disconnect(Player player, string reason, bool translation=false) {
+	public void disconnect(Player player, string reason) {
 		if(this.removePlayer(player, PlayerLeftEvent.Reason.kicked)) {
-			this.sendPacket(new HncomPlayer.Kick(player.hubId, reason, translation).encode());
+			this.sendPacket(new HncomPlayer.Kick(player.hubId, reason, false).encode());
+		}
+	}
+
+	/// ditto
+	public void disconnect(Player player, string reason, string[] args) {
+		if(this.removePlayer(player, PlayerLeftEvent.Reason.kicked)) {
+			this.sendPacket(new HncomPlayer.Kick(player.hubId, reason, true, args).encode());
 		}
 	}
 
@@ -1585,12 +1590,8 @@ class ServerCommandSender : CommandSender {
 		command_log(this.id, message);
 	}
 
-	protected override void sendTranslationImpl(const Translation translation, string[] args) {
-		command_log(this.id, translate(translation, this.server.settings.language, args));
-	}
-
-	protected override void sendColoredTranslationImpl(Text color, const Translation translation, string[] args) {
-		command_log(this.id, color, translate(translation, this.server.settings.language, args));
+	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
+		command_log(this.id, join(cast(string[])formats, ""), translate(translation, this.server.settings.language, args));
 	}
 
 	alias server this;

@@ -128,6 +128,14 @@ abstract class MinecraftPlayer : Player {
 		this.loaded_maps.length = 0;
 		return super.world(world);
 	}
+	
+	public final override void disconnectImpl(const Translation translation, string[] args) {
+		if(translation.minecraft.length) {
+			this.server.disconnect(this, translation.minecraft, args);
+		} else {
+			this.disconnect(translate(translation, this.lang, args));
+		}
+	}
 
 	protected void handleClientSettings(ubyte viewDistance, string language) {
 		if(viewDistance != this.viewDistance) {
@@ -254,16 +262,8 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	protected override void sendMessageImpl(string message) {
 		this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.CHAT));
 	}
-	
-	protected override void sendTranslationImpl(const Translation message, string[] args) {
-		this.sendGenericTranslation!false(Text.black, message, args);
-	}
 
-	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
-		this.sendGenericTranslation!true(color, message, args);
-	}
-
-	private void sendGenericTranslation(bool colored)(Text color, Translation message, string[] args) {
+	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
 		if(message.minecraft.length) {
 			JSONValue[string] json;
 			json["translate"] = message.minecraft;
@@ -274,18 +274,33 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 				}
 				json["with"] = a;
 			}
-			static if(colored) {
-				//TODO convert color to camel case
-				json["color"] = color.to!string;
+			foreach(format ; formats) {
+				switch(format) with(Text) {
+					case darkBlue: json["color"] = "dark_blue"; break;
+					case darkGreen: json["color"] = "dark_green"; break;
+					case darkAqua: json["color"] = "dark_aqua"; break;
+					case darkRed: json["color"] = "dark_red"; break;
+					case darkPurple: json["color"] = "dark_purple"; break;
+					case darkGray: json["color"] = "dark_gray"; break;
+					case lightPurple: json["color"] = "light_purple"; break;
+					case obfuscated:
+					case bold:
+					case strikethrough:
+					case underlined:
+					case italic:
+						json[format.to!string] = true;
+						break;
+					case reset: break;
+					default:
+						json["color"] = format.to!string;
+						break;
+				}
 			}
 			this.sendPacket(new Clientbound.ChatMessage(JSONValue(json).toString(), Clientbound.ChatMessage.CHAT));
 		} else {
-			static if(colored) {
-				string m = color;
-			} else {
-				string m;
-			}
-			this.sendMessageImpl(m ~ translate(message, this.lang, args));
+			string pre;
+			foreach(format ; formats) pre ~= format;
+			this.sendMessageImpl(pre ~ translate(message, this.lang, args));
 		}
 	}
 	

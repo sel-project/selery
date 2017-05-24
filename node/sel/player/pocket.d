@@ -160,6 +160,14 @@ abstract class PocketPlayer : Player {
 		return this.n_device_model;
 	}
 
+	public final override void disconnectImpl(const Translation translation, string[] args) {
+		if(translation.pocket.length) {
+			this.server.disconnect(this, translation.pocket, args);
+		} else {
+			this.disconnect(translate(translation, this.lang, args));
+		}
+	}
+
 	alias operator = super.operator;
 
 	public override @property bool operator(bool op) {
@@ -398,19 +406,15 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		this.sendPacket(new Play.Text().new Raw(message));
 	}
 	
-	protected override void sendTranslationImpl(const Translation message, string[] args) {
-		if(message.pocket.length) {
-			this.sendPacket(new Play.Text().new Translation(message.pocket, args));
-		} else {
-			this.sendMessageImpl(translate(message, this.lang, args));
+	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
+		string pre;
+		foreach(format ; formats) {
+			pre ~= format;
 		}
-	}
-
-	protected override void sendColoredTranslationImpl(Text color, const Translation message, string[] args) {
 		if(message.pocket.length) {
-			this.sendPacket(new Play.Text().new Translation(color ~ "%" ~ message.pocket, args));
+			this.sendPacket(new Play.Text().new Translation(pre ~ "%" ~ message.pocket, args));
 		} else {
-			this.sendMessageImpl(color ~ "%" ~ translate(message, this.lang, args));
+			this.sendMessageImpl(pre ~ translate(message, this.lang, args));
 		}
 	}
 

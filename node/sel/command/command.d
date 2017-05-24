@@ -99,6 +99,7 @@ class Command {
 						else static if(is(T == Entity[])) return "entities";
 						else static if(is(T == Player[])) return "players";
 						else static if(is(T == Player)) return "player";
+						else static if(is(T == Entity)) return "entity";
 						else static if(is(T == Position)) return "position";
 						else static if(is(T == bool)) return "bool";
 						else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return "int";
@@ -114,7 +115,7 @@ class Command {
 			switch(i) {
 				foreach(immutable j, T; Args) {
 					case j:
-						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return PocketType.target;
+						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) return PocketType.target;
 						else static if(is(T == Position)) return PocketType.blockpos;
 						else static if(is(T == bool)) return PocketType.boolean;
 						else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) return PocketType.integer;
@@ -150,10 +151,12 @@ class Command {
 				Args cargs;
 				foreach(immutable i, T; Args) {
 					if(!reader.eof()) {
-						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) {
+						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) {
 							auto target = Target.fromString(sender, reader.readQuotedString());
 							static if(is(T == Player)) {
 								if(target.players.length) cargs[i] = target.players[0];
+							} else static if(is(T == Entity)) {
+								if(target.entities.length) cargs[i] = target.entities[0];
 							} else static if(is(T == Player[])) {
 								cargs[i] = target.players;
 							} else static if(is(T == Entity[])) {
@@ -214,10 +217,12 @@ class Command {
 			foreach(immutable i, T; Args) {
 				if(i < args.length) {
 					CommandArg arg = args[i];
-					static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) {
+					static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) {
 						if(arg.type != CommandArg.Type.target) return false;
 						static if(is(T == Player)) {
 							if(arg.store.target.players.length) cargs[i] = arg.store.target.players[0];
+						} else static if(is(T == Entity)) {
+							if(arg.store.target.entities.length) cargs[i] = arg.store.target.entities[0];
 						} else static if(is(T == Player[])) {
 							cargs[i] = arg.store.target.players;
 						} else static if(is(T == Entity[])) {
@@ -319,7 +324,7 @@ public bool areValidArgs(E...)() {
 	} else {
 		alias T = E[0];
 		return (
-			is(T == Target) || is(T == Player) || is(T == Player[]) || is(T == Entity[]) ||
+			is(T == Target) || is(T == Player) || is(T == Entity) || is(T == Player[]) || is(T == Entity[]) ||
 			is(T == Position) ||
 			is(T == bool) ||
 			is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong) ||

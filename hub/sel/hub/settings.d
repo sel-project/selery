@@ -23,6 +23,7 @@ import std.file : write, read, exists, mkdir, tempDir, isFile;
 import std.path : dirSeparator;
 import std.process : environment;
 import std.random : uniform;
+import std.regex : replaceAll, ctRegex;
 import std.socket;
 import std.string;
 import std.traits : isArray;
@@ -36,32 +37,9 @@ version(D_Ddoc) {
 	
 } else {
 	
-	enum bool __doc = false;
+	deprecated enum bool __doc = false;
 	
 }
-
-static if(__doc) {
-	
-	/**
-	 * Indicates whether or not it's compiling using only
-	 * one node.
-	 * 
-	 * A server compiled as one node is used a single server
-	 * and not as an hub-node one.
-	 */
-	enum bool __oneNode = false;
-	
-} else version(OneNode) {
-	
-	enum bool __oneNode = true;
-	
-} else {
-	
-	deprecated enum bool __oneNode = false;
-	
-}
-
-deprecated enum bool __onlineMode = false;
 
 /**
  * Runtime settings.
@@ -95,8 +73,8 @@ struct Settings {
 		this.config = Config(this.lite ? ConfigType.lite : ConfigType.hub, this.edu, this.realm);
 		this.config.load();
 
-		this.config.minecraft.motd = unpad(this.config.minecraft.motd);
-		this.config.pocket.motd = unpad(this.config.pocket.motd.replace(";", ""));
+		this.config.minecraft.motd = motdfy(this.config.minecraft.motd.replace("\\n", "\n"));
+		this.config.pocket.motd = motdfy(this.config.pocket.motd.replace(";", ""));
 
 		// icon
 		//TODO check file header to match PNG and size (64x64)
@@ -131,9 +109,8 @@ struct Settings {
 
 }
 
-private string unpad(string str) {
-	if(str.length >= 2 && str.startsWith("\"") && str.endsWith("\"")) return str[1..$-1];
-	else return str;
+private string motdfy(string str) {
+	return str.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 }
 
 /**

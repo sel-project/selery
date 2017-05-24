@@ -49,12 +49,14 @@ private alias Callable = Tuple!(void delegate(), "call", size_t, "count");
  */
 private size_t count = 0;
 
+private alias Implementations(T) = TypeTuple!(T, BaseClassesTuple!T[0..$-1], InterfacesTuple!T);
+
 /**
  * Generic event listener.
  */
 class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
-	private Delegate[][class_t] delegates;
+	protected Delegate[][class_t] delegates;
 
 	/**
 	 * Adds an event through a delegate.
@@ -96,8 +98,13 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 		if(ptr) {
 			foreach(i, del; *ptr) {
 				if(cast(void delegate(T))del.del == listener) {
-					*ptr = (*ptr)[0..i] ~ (*ptr)[i+1..$];
 					removed = true;
+					if((*ptr).length == 1) {
+						this.delegates.remove(hash!T);
+						break;
+					} else {
+						*ptr = (*ptr)[0..i] ~ (*ptr)[i+1..$];
+					}
 				}
 			}
 		}
@@ -125,7 +132,11 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 		foreach(i, delegates; this.delegates) {
 			foreach(j, del; delegates) {
 				if(del.count == count) {
-					this.delegates[i] = delegates[0..j] ~ delegates[j+1..$];
+					if(delegates.length == 1) {
+						this.delegates.remove(i);
+					} else {
+						this.delegates[i] = delegates[0..j] ~ delegates[j+1..$];
+					}
 					return true;
 				}
 			}
@@ -158,20 +169,16 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
 	protected Callable[] callablesOf(T:O)(ref T event) if(is(T == class) && !isAbstractClass!T) {
 		Callable[] callables;
-		foreach_reverse(E ; TypeTuple!(T, BaseClassesTuple!T[0..$-1], InterfacesTuple!T)) {
+		foreach_reverse(E ; Implementations!T) {
 			auto ptr = hash!E in this.delegates;
 			if(ptr) {
-				foreach(i,del ; *ptr) {
+				foreach(i, del; *ptr) {
 					callables ~= this.createCallable!E(event, del.del, del.count);
 				}
 			}
 		}
-		static if(Children.length) {
-			foreach(immutable i, C; Children) {
-				static if(i % 2 == 0 && is(T : C)) {
-					mixin("callables ~= event." ~ Children[i+1] ~ ".callablesOf(event);");
-				}
-			}
+		static if(staticDerivateIndexOf!(T, Children) >= 0) {
+			callables ~= mixin("event." ~ Children[staticDerivateIndexOf!(T, Children)+1] ~ ".callablesOf(event)");
 		}
 		return callables;
 	}
@@ -186,49 +193,58 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	 * the plugin of it.
 	 * Returns: the instance of the event or null if the event hasn't been called
 	 */
-	public T callEventIfExists(T:O)(Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T) {
-		T event = new T(args);
-		this.callEvent(event);
-		return event;
+	public T callEventIfExists(T:O)(lazy Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T) {
+		T callImpl() {
+			T event = new T(args);
+			this.callEvent(event);
+			return event;
+		}
+		foreach_reverse(E ; Implementations!T) {
+			if(hash!E in this.delegates) return callImpl();
+		}
+		static if(staticDerivateIndexOf!(T, Children) >= 0) {
+			alias C = Children[staticDerivateIndexOf!(T, Children)];
+			static assert(is(typeof(args[0]) : EventListener!O), T.stringof ~ ".__ctor[0] must extend " ~ (EventListener!O).stringof);
+			foreach_reverse(E ; Implementations!T) {
+				if(hash!E in args[0].delegates) return callImpl();
+			}
+		}
+		return null;
 	}
 
 	/**
-	 * Calls a cancellable event using `callEventIfExists`.
-	 * Returns: true if the event has been cancelled, false otherwise
+	 * Calls a cancellable event using callEventIfExists.
+	 * Returns: true if the event has been called and cancelled, false otherwise
 	 */
-	public bool callCancellableIfExists(T:O)(Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T && is(T : Cancellable)) {
+	public bool callCancellableIfExists(T:O)(lazy Parameters!(T.__ctor) args) if(is(T == class) && !isAbstractClass!T && is(T : Cancellable)) {
 		T event = this.callEventIfExists!T(args);
 		return event !is null && event.cancelled;
 	}
 
-	public static interface Child(T:O) {
-
-		alias Event = T;
-
-		public final size_t addEventListener(D)(void delegate(D) listener) if(is(D == class)) {
-
-		}
-
-	}
-
 }
-
-// class World : EventListener!(WorldEvent, Entity, Player)
-
-// class Entity : World.Child!EntityEvent
-
-// class Player : Entity, World.Child!PlayerEvent
 
 private bool areValidChildren(T, C...)() {
 	static if(C.length % 2 != 0) return false;
 	foreach(immutable i, E; C) {
 		static if(i % 2 == 0) {
-			static if(!is(E : T)) return false;
+			static if(!is(E : T) || !is(E == interface)) return false;
 		} else {
 			static if(!__traits(hasMember, C[i-1], E)) return false;
 		}
 	}
 	return true;
+}
+
+alias staticDerivateIndexOf(T, E...) = staticDerivateIndexOfImpl!(0, T, E);
+
+private template staticDerivateIndexOfImpl(size_t index, T, E...) {
+	static if(E.length == 0) {
+		enum ptrdiff_t staticDerivateIndexOfImpl = -1;
+	} else static if(is(E[0] == interface) && is(T : E[0])) {
+		enum ptrdiff_t staticDerivateIndexOfImpl = index;
+	} else {
+		alias staticDerivateIndexOfImpl = staticDerivateIndexOfImpl!(index+1, T, E[1..$]);
+	}
 }
 
 /**

@@ -133,14 +133,14 @@ final class PlayerRespawnEvent : PlayerEvent, Cancellable {
  * ---
  * public @event void chat(PlayerChatEvent event) {
  * 
- *    //<playername> message
- *    event.format = "<{0}> {1}";
+ *    // <player> message
+ *    event.format = (string name, string message){ return "<" ~ name ~ "> " ~ message; };
  * 
- *    //playername: message
- *    event.format = "{0}: {1}";
+ *    // player: message
+ *    event.format = (string name, string message){ return name ~ ": " ~ message; };
  * 
  *    // replace bad words
- *    event.message = event.message.replace("fuck", "f**k");
+ *    event.message = event.message.replaceAll(ctRegex!("fuck", "i"), "f**k");
  *    
  * }
  * ---
@@ -150,13 +150,11 @@ final class PlayerChatEvent : PlayerEvent, Cancellable {
 	mixin Cancellable.Implementation;
 
 	mixin PlayerEvent.Implementation;
-
-	public static immutable string DEFAULT_FORMAT = "<{0}> {1}";
 	
 	public string message;
-	public string format = DEFAULT_FORMAT;
+	public string delegate(string, string) format;
 	
-	public @safe @nogc this(Player player, string message) {
+	public pure nothrow @safe @nogc this(Player player, string message) {
 		this.n_player = player;
 		this.message = message;
 	}

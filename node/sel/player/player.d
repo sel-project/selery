@@ -32,7 +32,7 @@ import std.uuid : UUID, randomUUID;
 
 import sel.about;
 import sel.command.command : Command, WorldCommandSender;
-import sel.format : Text;
+import sel.format : Text, unformat;
 import sel.lang : Translation;
 import sel.utils : milliseconds, call;
 import sel.block.block : Block, PlacedBlock;
@@ -488,9 +488,7 @@ abstract class Player : Human, WorldCommandSender {
 	
 	protected override abstract void sendMessageImpl(string);
 	
-	protected override abstract void sendTranslationImpl(const Translation, string[]);
-	
-	protected override abstract void sendColoredTranslationImpl(Text, const Translation, string[]);
+	protected override abstract void sendTranslationImpl(const Translation, string[], Text[]);
 
 	/**
 	 * Sends a tip message that will be displayed above the hotbar for two
@@ -659,9 +657,8 @@ abstract class Player : Human, WorldCommandSender {
 	 * 		reason = reason of the disconnection
 	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
-	public void disconnect(Translation translation=Translation("", "disconnect.closed", "disconnect.closed"), string[] args=[]) {
-		//TODO
-		//this.server.disconnect(this, reason.translate(this.lang, args), translation);
+	public void disconnect(const Translation translation=Translation.DISCONNECT_CLOSED, string[] args=[]) {
+		this.disconnectImpl(translation, args);
 	}
 
 	/// ditto
@@ -671,6 +668,8 @@ abstract class Player : Human, WorldCommandSender {
 
 	/// ditto
 	alias kick = this.disconnect;
+
+	protected abstract void disconnectImpl(const Translation, string[]);
 
 	/**
 	 * Transfers the player in another node.
@@ -1096,9 +1095,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * If the player is not alive nothing is done.
 	 */
 	public void handleTextMessage(string message) {
-		if(!this.alive) return;
-		message = message.replaceAll(ctRegex!"§[a-fA-F0-9k-or]", "");
-		if(message.length == 0) return;
+		if(!this.alive || message.length == 0) return;
 		if(message[0] == '/') {
 			message = message[1..$].strip;
 			string found;
@@ -1114,11 +1111,12 @@ abstract class Player : Human, WorldCommandSender {
 				this.server.callEventIfExists!UnknownCommandEvent(this);
 			}
 		} else {
+			message = unformat(message); // pocket and custom clients can send formatted messages
 			PlayerChatEvent event = this.world.callEventIfExists!PlayerChatEvent(this, message);
-			if(event is null) {
-				this.world.broadcast(PlayerChatEvent.DEFAULT_FORMAT, [this.chatName, message]);
+			if(event is null || (event.format is null && !event.cancelled)) {
+				this.world.broadcast("<" ~ this.chatName ~ "> " ~ message);
 			} else if(!event.cancelled) {
-				this.world.broadcast(event.format, [this.chatName, event.message]);
+				this.world.broadcast(event.format(this.chatName, event.message));
 			}
 		}
 	}

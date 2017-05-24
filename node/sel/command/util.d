@@ -233,12 +233,16 @@ struct PositionImpl(V) if(isVector!V) {
 		return V(ret);
 	}
 	
-	public string toString() {
+	public string toCoordsString(string glue=", ") {
 		string[] ret;
 		foreach(c ; V.coords) {
 			ret ~= mixin("this." ~ c ~ ".toString()");
 		}
-		return "Position(" ~ ret.join(", ") ~ ")";
+		return ret.join(glue);
+	}
+
+	public string toString() {
+		return "Position(" ~ this.toCoordsString() ~ ")";
 	}
 	
 }

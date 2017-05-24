@@ -31,10 +31,10 @@ enum Gamemode : ubyte {
 
 enum Difficulty : ubyte {
 
-	peaceful = 0,
-	easy = 1,
-	normal = 2,
-	hard = 3,
+	peaceful = 0, p = 0,
+	easy = 1, e = 0,
+	normal = 2, n = 0,
+	hard = 3, h = 0,
 
 }
 

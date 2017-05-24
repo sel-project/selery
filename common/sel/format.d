@@ -14,6 +14,8 @@
  */
 module sel.format;
 
+import std.regex : replaceAll, ctRegex;
+
 enum Text : string {
 
 	black = "§0",
@@ -23,8 +25,8 @@ enum Text : string {
 	darkRed = "§4",
 	darkPurple = "§5",
 	gold = "§6",
-	grey = "§7",
-	darkGrey = "§8",
+	gray = "§7",
+	darkGray = "§8",
 	blue = "§9",
 	green = "§a",
 	aqua = "§b",
@@ -40,6 +42,22 @@ enum Text : string {
 	italic = "§o",
 	reset = "§r"
 	
+}
+
+/**
+ * Removes valid formatting codes from a message.
+ * Note that this function also removes uppercase formatting codes
+ * because they're supported by Minecraft (but not by Minecraft Pocket
+ * Edition).
+ * Example:
+ * ---
+ * assert(unformat("§agreen") == "green");
+ * assert(unformat("res§Ret") == "reset");
+ * assert(unformat("§xunsupported") == "§xunsupported");
+ * ---
+ */
+string unformat(string message) {
+	return message.replaceAll(ctRegex!"§[0-9A-FK-ORa-fk-or]", "");
 }
 
 version(Windows) {
@@ -66,8 +84,8 @@ version(Windows) {
 			map[darkRed[$-1]] = 4;
 			map[darkPurple[$-1]] = 5;
 			map[gold[$-1]] = 6;
-			map[grey[$-1]] = 7;
-			map[darkGrey[$-1]] = 8;
+			map[gray[$-1]] = 7;
+			map[darkGray[$-1]] = 8;
 			map[blue[$-1]] = 9;
 			map[green[$-1]] = 10;
 			map[aqua[$-1]] = 11;
@@ -127,9 +145,9 @@ version(Windows) {
 		BLUE = "\u001B[34m",
 		MAGENTA = "\u001B[35m",
 		CYAN = "\u001B[36m",
-		GREY = "\u001B[37m",
+		GRAY = "\u001B[37m",
 		
-		DARK_GREY = "\u001B[90m",
+		DARK_GRAY = "\u001B[90m",
 		LIGHT_RED = "\u001B[91m",
 		LIGHT_GREEN = "\u001B[92m",
 		LIGHT_YELLOW = "\u001B[93m",
@@ -149,8 +167,8 @@ version(Windows) {
 			.replace(Text.darkRed.str, Console.RED.str)
 			.replace(Text.darkPurple.str, Console.MAGENTA.str)
 			.replace(Text.gold.str, Console.YELLOW.str)
-			.replace(Text.grey.str, Console.GREY.str)
-			.replace(Text.darkGrey.str, Console.GREY.str)
+			.replace(Text.gray.str, Console.GRAY.str)
+			.replace(Text.darkGray.str, Console.DARK_GRAY.str)
 			.replace(Text.blue.str, Console.LIGHT_BLUE.str)
 			.replace(Text.green.str, Console.LIGHT_GREEN.str)
 			.replace(Text.aqua.str, Console.LIGHT_CYAN.str)
