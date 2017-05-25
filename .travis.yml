@@ -2,6 +2,7 @@ language: d
 
 env:
   - ARCH="x86_64"
+  - CONFIG="release"
 
 d:
   - dmd-2.074.0
@@ -12,19 +13,13 @@ os:
   - linux
   - osx
 
-config:
-  - debug
-  - release
-  - ddoc
-
 matrix:
   include:
     - {os: linux, d: dmd-2.073.2, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
+    - {os: linux, d: dmd-2.073.2, env: CONFIG="docs"}
   exclude:
     - d: dmd-2.074.0
       os: osx
-    - config: debug
-      d: ldc
     - config: ddoc
       os: osx
     - config: ddoc
@@ -38,8 +33,8 @@ matrix:
 
 script:
   - cd .ci
-  - if ["$CONFIG" = "ddoc"]; then
-  -   ./ddoc.sh
+  - if ["$CONFIG" = "docs"]; then
+  -   ./docs.sh
   - else
   -   ./build.sh
   - fi
