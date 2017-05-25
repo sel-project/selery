@@ -14,8 +14,6 @@
  */
 module sel.format;
 
-import std.regex : replaceAll, ctRegex;
-
 enum Text : string {
 
 	black = "§0",
@@ -57,7 +55,20 @@ enum Text : string {
  * ---
  */
 string unformat(string message) {
-	return message.replaceAll(ctRegex!"§[0-9A-FK-ORa-fk-or]", "");
+	// regex should be ctRegex!("§[0-9a-fk-or]", "") but obviously doesn't work on DMD's release mode
+	for(size_t i=0; i<message.length-2; i++) {
+		if(message[i] == 194 && message[i+1] == 167) {
+			char next = message[i+2];
+			if(next >= '0' && next <= '9' ||
+				next >= 'A' && next <= 'F' || next >= 'K' && next <= 'O' || next == 'R' ||
+				next >= 'a' && next <= 'f' || next >= 'k' && next <= 'o' || next == 'r')
+			{
+				message = message[0..i] ~ message[i+3..$];
+				i--;
+			}
+		}
+	}
+	return message;
 }
 
 version(Windows) {
