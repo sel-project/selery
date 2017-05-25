@@ -24,15 +24,11 @@ matrix:
       d: dmd-2.073.2
     - d: dmd-2.074.0
 
-before_install:
-  - chmod +x .ci/build.sh
-  - chmod +x .ci/docs.sh
-
 script:
   - cd .ci
-  - chmod +x .ci/travis.sh
-  - chmod +x .ci/build.sh
-  - chmod +x .ci/docs.sh
+  - chmod +x travis.sh
+  - chmod +x build.sh
+  - chmod +x docs.sh
   - ./travis.sh
 
 notifications:

@@ -1,5 +1,7 @@
 #!/bin/sh
 cd ..
+git config --global user.email "sel-utils@mail.com"
+git config --global user.name "sel-bot"
 git clone https://github.com/sel-project/sel-project.github.io.git website
 rm -r -f website/server/docs
 mkdir -p website/server/docs
