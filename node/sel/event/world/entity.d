@@ -19,6 +19,7 @@ import sel.entity.living : Living;
 import sel.event.event : Cancellable;
 import sel.event.world.damage : EntityDamageEvent;
 import sel.event.world.world;
+import sel.lang : Translation;
 import sel.world.world : World;
 
 interface EntityEvent : WorldEvent {
@@ -67,7 +68,7 @@ class EntityDeathEvent : EntityEvent {
 
 	private EntityDamageEvent n_damage;
 
-	private string m_message;
+	private Translation m_message;
 	private string[] m_args;
 
 	public pure nothrow @safe @nogc this(Living entity, EntityDamageEvent damage) {
@@ -79,20 +80,20 @@ class EntityDeathEvent : EntityEvent {
 		return this.n_damage;
 	}
 
-	public pure nothrow @property @safe @nogc string message() {
+	public pure nothrow @property @safe @nogc const(Translation) message() {
 		return this.m_message;
 	}
 
-	public pure nothrow @property @safe @nogc string message(string message) {
+	public pure nothrow @property @safe @nogc const(Translation) message(Translation message) {
 		return this.m_message = message;
 	}
 
-	public pure nothrow @property @safe @nogc string message(bool display) {
+	public pure nothrow @property @safe @nogc const(Translation) message(bool display) {
 		if(display) {
 			this.m_message = this.damageEvent.message;
 			this.m_args = this.damageEvent.args;
 		} else {
-			this.m_message = "";
+			this.m_message = Translation.init;
 			this.m_args = [];
 		}
 		return this.message;

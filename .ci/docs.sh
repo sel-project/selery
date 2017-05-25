@@ -9,7 +9,7 @@ cd common && dub build --build=docs && cd ..
 cd hub && dub build --build=docs && cd ..
 cd node && dub build --build=docs && cd ..
 
-if [[ "$TRAVIS_TAG" -ne "" ]]
+if [ -n "$TRAVIS_TAG" ]
 then
 
 	# copy files
@@ -24,5 +24,5 @@ then
 	git add --all .
 	git commit -m "Generated documentation for sel-server ${TRAVIS_TAG}"
 	git push "https://${TOKEN}@github.com/sel-project/sel-project.github.io" master
-	
+
 fi

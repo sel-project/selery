@@ -157,8 +157,9 @@ public class Living : Entity {
 		//update the viewers if dead
 		if(this.dead) {
 			auto death = this.callDeathEvent(event);
-			if(death.message != "") {
-				this.world.broadcast(death.message, death.args);
+			if(death.message.sel.length) {
+				import sel.format : Text;
+				this.world.broadcast(Text.yellow, death.message, death.args);
 			}
 			this.die();
 		} else if(cast(EntityAttackedByEntityEvent)event) {

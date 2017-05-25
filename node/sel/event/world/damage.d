@@ -30,6 +30,7 @@ import sel.event.world.player : PlayerEvent;
 import sel.item.item : Item;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
+import sel.lang : Translation;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.world.world : World;
@@ -62,7 +63,7 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 
 	public pure nothrow @property @safe @nogc bool imminent();
 	
-	public pure nothrow @property @safe @nogc string message();
+	public pure nothrow @property @safe @nogc const Translation message();
 	
 	public pure nothrow @property @safe @nogc string[] args();
 	
@@ -75,10 +76,10 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 		private float n_original_damage;
 		private float m_damage;
 		
-		protected string n_message;
+		protected Translation n_message;
 		protected string[] n_args;
 		
-		protected @safe entityDamage(Entity entity, float damage, string message) {
+		protected @safe entityDamage(Entity entity, float damage, const Translation message) {
 			this.n_entity = entity;
 			this.n_original_damage = damage;
 			this.calculateDamage();
@@ -189,7 +190,7 @@ interface EntityDamageEvent : EntityEvent, Cancellable {
 			return false;
 		}
 		
-		public final override pure nothrow @property @safe @nogc string message() {
+		public final override pure nothrow @property @safe @nogc const Translation message() {
 			return this.n_message;
 		}
 		
@@ -223,7 +224,7 @@ interface EntityDamageByEntityEvent : EntityDamageEvent {
 		protected float knockback_modifier = .32;
 		protected bool n_critical;
 		
-		protected @safe entityDamageByEntity(Entity victim, Entity damager, float damage, string message) {
+		protected @safe entityDamageByEntity(Entity victim, Entity damager, float damage, const Translation message) {
 			this.entityDamage(victim, this.isCritical ? damage * 1.5 : damage, message);
 			this.n_damager = damager;
 			this.n_args ~= damager.displayName;
@@ -258,7 +259,7 @@ class EntityDamageByVoidEvent : EntityDamageEvent {
 	protected @safe this() {}
 
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 4, "{death.attack.outOfWorld}");
+		this.entityDamage(entity, 4, Translation.all("death.attack.outOfWorld"));
 	}
 
 	public final override pure nothrow @property @safe @nogc bool imminent() {
@@ -273,7 +274,7 @@ final class EntityPushedIntoVoidEvent : EntityDamageByVoidEvent, EntityDamageByE
 	
 	public @safe this(Entity victim, Entity damager) {
 		super();
-		this.entityDamageByEntity(victim, damager, 4, "{death.attack.outOfWorld.player}");
+		this.entityDamageByEntity(victim, damager, 4, Translation.all("death.attack.outOfWorld")); // no message for "{0} was pushed out of the world"
 	}
 
 	mixin Cancellable.FinalImplementation;
@@ -287,7 +288,7 @@ class EntityDamageByCommandEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 0xDEAD, "{death.attack.generic}");
+		this.entityDamage(entity, 0xDEAD, Translation.all("death.attack.generic"));
 	}
 
 	public final override pure nothrow @property @safe @nogc bool imminent() {
@@ -303,7 +304,7 @@ class EntityDamageByEntityAttackEvent : EntityDamageByEntityEvent {
 	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
-		this.entityDamageByEntity(victim, damager, damage, "{death.attack.player}");
+		this.entityDamageByEntity(victim, damager, damage, Translation.all("death.attack.player"));
 		this.n_knockback = damager.direction;
 	}
 	
@@ -349,7 +350,7 @@ class EntityDamageByPlayerAttackEvent : EntityDamageByEntityAttackEvent, PlayerE
 		}
 		// add weapon's name to args
 		if(this.item !is null && this.item.customName != "") {
-			this.n_message = "{death.attack.player.item}";
+			this.n_message = Translation.all("death.attack.player.item");
 			this.n_args ~= this.item.customName;
 		}
 	}
@@ -402,7 +403,7 @@ final class EntitySuffocationEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.inWall}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.inWall"));
 	}
 
 }
@@ -416,7 +417,7 @@ class EntityDrowningEvent : EntityDamageEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.drown}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.drown"));
 	}
 
 }
@@ -426,7 +427,7 @@ final class EntityDrowningEscapingEntityEvent : EntityDrowningEvent {
 	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.none);
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 1, "{death.attack.drown.player}");
+		this.entityDamageByEntity(victim, damager, 1, Translation.all("death.attack.drown.player"));
 	}
 
 }
@@ -440,7 +441,7 @@ class EntityDamageByExplosionEvent : EntityDamageEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity, float damage) {
-		this.entityDamage(entity, damage, "{death.attack.explosion}");
+		this.entityDamage(entity, damage, Translation.all("death.attack.explosion"));
 	}
 
 }
@@ -450,7 +451,7 @@ class EntityDamageByEntityExplosionEvent : EntityDamageByExplosionEvent, EntityD
 	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.resistance | Modifiers.armor | Modifiers.blast);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
-		this.entityDamageByEntity(victim, damager, damage, "{death.attack.explosion.player}");
+		this.entityDamageByEntity(victim, damager, damage, Translation.all("death.attack.explosion.player"));
 	}
 
 	mixin Cancellable.FinalImplementation;
@@ -492,7 +493,7 @@ class EntityBurningEvent : EntityDamageByHeatEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.onFire}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.onFire"));
 	}
 
 }
@@ -502,7 +503,7 @@ final class EntityBurningEscapingEntityEvent : EntityBurningEvent, EntityDamageB
 	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 1, "{death.attack.onFire.player}");
+		this.entityDamageByEntity(victim, damager, 1, Translation.all("death.attack.onFire.player"));
 	}
 
 }
@@ -514,7 +515,7 @@ class EntityDamageByFireEvent : EntityDamageByHeatEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.inFire}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.inFire"));
 	}
 
 }
@@ -524,7 +525,7 @@ final class EntityDamageByFireEscapingEntityEvent : EntityDamageByFireEvent, Ent
 	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 1, "{death.attack.inFire.player}");
+		this.entityDamageByEntity(victim, damager, 1, Translation.all("death.attack.inFire.player"));
 	}
 
 }
@@ -536,7 +537,7 @@ class EntityDamageByLavaEvent : EntityDamageByHeatEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 4, "{death.attack.lava}");
+		this.entityDamage(entity, 4, Translation.all("death.attack.lava"));
 	}
 	
 }
@@ -546,7 +547,7 @@ final class EntityDamageByLavaEscapingEntityEvent : EntityDamageByLavaEvent, Ent
 	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 4, "{death.attack.lava.player}");
+		this.entityDamageByEntity(victim, damager, 4, Translation.all("death.attack.lava.player"));
 	}
 	
 }
@@ -558,7 +559,7 @@ class EntityDamageByMagmaBlockEvent : EntityDamageByHeatEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 4, "{death.attack.magmaBlock}");
+		this.entityDamage(entity, 4, Translation.all("death.attack.magmaBlock"));
 	}
 	
 }
@@ -568,7 +569,7 @@ final class EntityDamageByMagmaBlockEscapingEntityEvent : EntityDamageByMagmaBlo
 	mixin EntityDamageByHeatEscapingEntityEvent.Implementation;
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 4, "{death.attack.magmaBlock.player}");
+		this.entityDamageByEntity(victim, damager, 4, Translation.all("death.attack.magmaBlock.player"));
 	}
 	
 }
@@ -582,7 +583,7 @@ class EntityDamageByMagicEvent : EntityDamageEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity, float damage) {
-		this.entityDamage(entity, damage, "{death.attack.magic}");
+		this.entityDamage(entity, damage, Translation.all("death.attack.magic"));
 	}
 
 }
@@ -592,7 +593,7 @@ final class EntityDamageWithMagicEvent : EntityDamageByMagicEvent, EntityDamageB
 	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.none);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
-		this.entityDamageByEntity(victim, damager, damage, "{death.attack.indirectMagic}");
+		this.entityDamageByEntity(victim, damager, damage, Translation.all("death.attack.indirectMagic"));
 	}
 
 	mixin Cancellable.FinalImplementation;
@@ -606,7 +607,7 @@ final class EntityDamageByPoisonEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, ""); // no message (can't die poisoned)
+		this.entityDamage(entity, 1, Translation.init); // no message (can't die poisoned)
 	}
 
 }
@@ -618,7 +619,7 @@ final class EntityDamageByWitherEffectEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.wither}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.wither"));
 	}
 
 }
@@ -632,7 +633,7 @@ final class EntityStruckByLightningEvent : EntityDamageEvent {
 	private Lightning n_lightning;
 	
 	public @safe this(Entity entity, Lightning lightning) {
-		this.entityDamage(entity, 5, "{death.attack.lightning}");
+		this.entityDamage(entity, 5, Translation.all("death.attack.lightning"));
 		this.n_lightning = lightning;
 	}
 	
@@ -653,7 +654,7 @@ final class EntityDamageByThornsEvent : EntityDamageByEntityEvent {
 	mixin EntityDamageByEntityEvent.Implementation!(true, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
-		this.entityDamageByEntity(victim, damager, damage, "{death.attack.thorns}");
+		this.entityDamageByEntity(victim, damager, damage, Translation.all("death.attack.thorns"));
 	}
 
 }
@@ -665,7 +666,7 @@ final class EntityStarveEvent : EntityDamageEvent {
 	mixin EntityDamageEvent.Implementation!(Modifiers.none);
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.starve}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.starve"));
 	}
 
 }
@@ -678,7 +679,7 @@ class EntitySquashedByFallingBlockEvent : EntityDamageEvent {
 	
 	private Block n_block;
 	
-	public @safe this(Entity entity, Block block, float damage, string message="{death.attack.fallingBlock}") {
+	public @safe this(Entity entity, Block block, float damage, const Translation message=Translation.all("death.attack.fallingBlock")) {
 		this.entityDamage(entity, damage, message);
 	}
 
@@ -687,7 +688,7 @@ class EntitySquashedByFallingBlockEvent : EntityDamageEvent {
 /*final class EntitySquashedByAnvilEvent : EntitySquashedByFallingBlockEvent {
 
 	public @safe this(Entity entity, Blocks.Anvil anvil, float damage) {
-		super(entity, anvil, damage, "{death.attack.anvil}");
+		super(entity, anvil, damage, Translation.all("death.attack.anvil"));
 	}
 
 }*/
@@ -701,7 +702,7 @@ class EntityDamageByCactusEvent : EntityDamageEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity) {
-		this.entityDamage(entity, 1, "{death.attack.cactus}");
+		this.entityDamage(entity, 1, Translation.all("death.attack.cactus"));
 	}
 	
 }
@@ -711,7 +712,7 @@ final class EntityDamageByCactusEscapingEntityEvent : EntityDamageByCactusEvent,
 	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.resistance | Modifiers.armor);
 	
 	public @safe this(Entity victim, Entity damager) {
-		this.entityDamageByEntity(victim, damager, 1, "{death.attack.cactus.player}");
+		this.entityDamageByEntity(victim, damager, 1, Translation.all("death.attack.cactus.player"));
 	}
 
 	mixin Cancellable.FinalImplementation;
@@ -727,7 +728,7 @@ class EntityFallDamageEvent : EntityDamageEvent {
 	protected @safe @nogc this() {}
 	
 	public @safe this(Entity entity, float damage) {
-		this.entityDamage(entity, damage, "{death.attack.fall}");
+		this.entityDamage(entity, damage, Translation.all("death.attack.fall"));
 	}
 	
 }
@@ -737,29 +738,9 @@ final class EntityDoomedToFallEvent : EntityFallDamageEvent, EntityDamageByEntit
 	mixin EntityDamageByEntityEvent.Implementation!(false, Modifiers.falling);
 	
 	public @safe this(Entity victim, Entity damager, float damage) {
-		this.entityDamageByEntity(victim, damager, damage, "{death.fell.assist}");
+		this.entityDamageByEntity(victim, damager, damage, Translation.all("death.fell.assist"));
 	}
 
 	mixin Cancellable.FinalImplementation;
 
 }
-
-/+
-/**
- * Example:
- * ---
- * assert(is(GetDamageEvent!("void", Entity) == EntityDamageByVoidEvent));
- * ---
- */
-template GetDamageEvent(string type, V:Entity=Entity, A=Object) {
-	static if(type == "void") {
-		static if(is(A : Entity)) {
-			alias GetDamageEvent = EntityPushedIntoVoidEvent;
-		} else {
-			alias GetDamageEvent = EntityDamageByVoidEvent;
-		}
-	} else {
-		static assert(0, "Cannot get a damage event");
-	}
-}
-+/

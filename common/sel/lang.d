@@ -188,7 +188,7 @@ struct Translation {
 	}
 
 	/// Values.
-	public const string sel, minecraft, pocket;
+	public string sel, minecraft, pocket;
 
 }
 
