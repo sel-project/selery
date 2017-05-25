@@ -1,8 +1,7 @@
 language: d
 
 env:
-  - ARCH="x86_64"
-  - CONFIG="release"
+  - CONFIG="x86_64"
 
 d:
   - dmd-2.074.0
@@ -15,21 +14,19 @@ os:
 
 matrix:
   include:
-    - {os: linux, d: dmd-2.073.2, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
+    - {os: linux, d: dmd-2.073.2, env: CONFIG="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
     - {os: linux, d: dmd-2.073.2, env: CONFIG="docs"}
   exclude:
     - d: dmd-2.074.0
       os: osx
-    - config: ddoc
-      os: osx
-    - config: ddoc
-      d: ldc
-    - config: ddoc
-      d: dmd-2.074.0
   allow_failures:
     - os: osx
       d: dmd-2.073.2
     - d: dmd-2.074.0
+
+before_install:
+  - chmod +x .ci/build.sh
+  - chmod +x .ci/docs.sh
 
 script:
   - cd .ci

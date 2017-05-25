@@ -19,6 +19,7 @@ cd build
 dub build --single init.d
 mv init ../
 cd ..
+chmod +x init
 
 # push
 cd website
