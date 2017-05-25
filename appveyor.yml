@@ -15,8 +15,10 @@ environment:
       DVersion: 1.2.0
 
 matrix:
-  allow_failures:
-    - platform: x86
+  exclude:
+    - DC: dmd
+      platform: x86
+      configuration: debug
 
 skip_tags: true
 branches:
