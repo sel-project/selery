@@ -30,11 +30,10 @@ before_install:
 
 script:
   - cd .ci
-  - if ["$CONFIG" = "docs"]; then
-  -   ./docs.sh
-  - else
-  -   ./build.sh
-  - fi
+  - chmod +x .ci/travis.sh
+  - chmod +x .ci/build.sh
+  - chmod +x .ci/docs.sh
+  - ./travis.sh
 
 notifications:
   - email: false
