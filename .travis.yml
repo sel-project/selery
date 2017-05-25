@@ -29,7 +29,7 @@ script:
   - chmod +x travis.sh
   - chmod +x build.sh
   - chmod +x docs.sh
-  - ./travis.sh
+  - travis_wait 30 ./travis.sh
 
 notifications:
   - email: false
