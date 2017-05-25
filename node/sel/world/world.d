@@ -748,6 +748,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		player.sendJoinPacket();
 		player.spawn = this.spawnPoint; // sends spawn position
 		player.move(this.spawnPoint.entityPosition);
+		player.oldposition = this.spawnPoint.entityPosition;
 
 		player.sendResourcePack();
 		
@@ -783,10 +784,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		if(event.announce) {
 			//TODO custom message
 			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
-		}
-		//TODO find a better solution for this
-		if(player.pc) {
-			player.teleport(this.spawnPoint.entityPosition);
 		}
 		if(event.spawn) {
 			//update the players list

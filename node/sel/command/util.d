@@ -292,6 +292,12 @@ struct Target {
 				}
 			}
 			switch(str[1]) {
+				case 's':
+					if(cast(Entity)sender) {
+						return Target(str, [cast(Entity)sender]);
+					} else {
+						return Target(str);
+					}
 				case 'p':
 					auto players = sender.visiblePlayers;
 					if(players.length) {
