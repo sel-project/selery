@@ -27,6 +27,7 @@ import sel.command.util : Target, Position;
  * assert(reader.readString() == "a");
  * assert(reader.readQuotedString() == " quoted ");
  * assert(reader.readText() == "long string");
+ * ---
  */
 struct StringReader {
 

@@ -126,9 +126,6 @@ final class PlayerRespawnEvent : PlayerEvent, Cancellable {
 
 /**
  * Called when a player sends a chat message
- * Params:
- * 		message = the message sent
- * 		format = the message format
  * Example:
  * ---
  * public @event void chat(PlayerChatEvent event) {
@@ -163,10 +160,6 @@ final class PlayerChatEvent : PlayerEvent, Cancellable {
 
 /**
  * Player movement, called when a player sends a movement packet
- * Params:
- * 		position = the new position
- * 		yaw, bodyYaw, pitch = the new rotation
- * 		rotation = true if the player has only moved the head
  */
 final class PlayerMoveEvent : PlayerEvent, Cancellable {
 

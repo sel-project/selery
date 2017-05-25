@@ -1159,10 +1159,6 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Disconnects a player from the server.
 	 * When using a translatable message player's should be disconnected
 	 * using their own disconnect method (Player.disconnect);
-	 * Params:
-	 * 		player = the player to disconnect
-	 * 		reason = disconnection reason
-	 * 		translation = indicates whether or not reason is a client-side translation
 	 * Example:
 	 * ---
 	 * @event jump(PlayerJumpEvent e) {

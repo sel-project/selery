@@ -133,7 +133,7 @@ class Handler {
 	 * Those resources are the social json (always reloaded) and
 	 * the web's pages (index, icon and info) when the http handler
 	 * is running (when the server has been started with "web-enabled"
-	 * equals to true.
+	 * equals to true).
 	 */
 	public shared void reload() {
 		this.regenerateSocialJson();

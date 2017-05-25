@@ -36,12 +36,13 @@ import sel.about;
 import sel.format : Text, writeln;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 52;
+enum size_t __GENERATOR__ = 56;
 
 void main(string[] args) {
 
 	if(args.canFind("--version")) {
-		return writeln("init.d version " ~ to!string(__GENERATOR__));
+		static import std.stdio;
+		return std.stdio.write(Software.displayVersion);
 	}
 
 	if(args.canFind("-p") || args.canFind("--portable")) {
@@ -127,10 +128,10 @@ void main(string[] args) {
 						case "sel.json":
 							auto json = parseJSON(pack);
 							if(json.type == JSON_TYPE.OBJECT) {
-								mkdirRecurse(Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src");
-								writeDiff(Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src" ~ dirSeparator ~ expectedModule ~ ".d", file);
+								mkdirRecurse(Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src");
+								writeDiff(Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src" ~ dirSeparator ~ expectedModule ~ ".d", file);
 								json["single"] = true;
-								plugs[Paths.hidden ~ "single-plugins" ~ dirSeparator ~ expectedModule] = json;
+								plugs[Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule] = json;
 							}
 							break;
 						default:
@@ -255,9 +256,11 @@ void main(string[] args) {
 		write(Paths.hidden ~ "plugin-loader/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
 	}
 
+	JSONValue[] loader;
+
 	foreach(target ; ["hub", "node"]) {
 
-		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader");
+		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader");
 	
 		size_t count = 0;
 			
@@ -303,14 +306,17 @@ void main(string[] args) {
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";";
 				}
+				if(value.single) {
+					//value.dub["sourceFiles"] = [buildNormalizedPath(absolutePath(Paths.plugins ~ value.id ~ ".d"))];
+				}
 				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ "),";
 			}
 		}
 
 		if(paths.length > 2) paths = paths[0..$-2];
 
-		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import sel.plugin:Plugin;import sel." ~ target ~ ".plugin:PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
-		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "sourcePaths": JSONValue(["."]), "importPaths": JSONValue(["."]), "dependencies": JSONValue(dub)]).toString());
+		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import sel.plugin:Plugin;import sel." ~ target ~ ".plugin:PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
+		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toPrettyString());
 
 	}
 
@@ -321,14 +327,11 @@ void main(string[] args) {
 			"plugin-loader:hub": "*",
 			"plugin-loader:node": "*"
 		]),
-		"subPackages": JSONValue([
-			"./hub/",
-			"./node/"
-		])
-	]).toString());
+		"subPackages": JSONValue(["hub", "node"])
+	]).toPrettyString());
 
 	foreach(value ; ordered) {
-		writeDiff(value.path ~ "dub.json", JSONValue(value.dub).toString());
+		writeDiff(value.path ~ "dub.json", JSONValue(value.dub).toPrettyString());
 	}
 
 }

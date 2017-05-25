@@ -342,8 +342,9 @@ class Item {
 	 * should return an instance of the block that will
 	 * be placed.
 	 * Params:
-	 * 		world: the world where the block has been placed
-	 * 		position: where the item should place the block
+	 * 		world = the world where the block has been placed
+	 * 		position = where the item should place the block
+	 * 		face = side of the block touched when placed
 	 */
 	public ushort place(World world, BlockPosition position, uint face) {
 		return Blocks.air;

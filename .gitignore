@@ -7,16 +7,14 @@
 *.lib
 *.a
 *.dll
+*.userprefs
 *.selections.json
 .dub
 .sel
 docs
 /crash
-/portable/views
 /plugins
 /resources
 /worlds
 /plugins.json
 /sel.json
-/hub2
-/build/hub2.d

@@ -12,24 +12,37 @@ os:
   - linux
   - osx
 
+config:
+  - debug
+  - release
+  - ddoc
+
 matrix:
   include:
     - {os: linux, d: dmd-2.073.2, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
-#    - {os: osx, d: dmd-2.073.2, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
   exclude:
     - d: dmd-2.074.0
       os: osx
+    - config: debug
+      d: ldc
+    - config: ddoc
+      os: osx
+    - config: ddoc
+      d: ldc
+    - config: ddoc
+      d: dmd-2.074.0
   allow_failures:
     - os: osx
       d: dmd-2.073.2
     - d: dmd-2.074.0
 
 script:
-  - cd build
-  - dub init.d --arch=$ARCH --compiler=$DC --build=release
-  - travis_wait 30 dub build --config=lite --arch=$ARCH --compiler=$DC --build=release
-  - dub build --config=hub --arch=$ARCH --compiler=$DC --build=release
-  - dub build --config=node --arch=$ARCH --compiler=$DC --build=release
+  - cd .ci
+  - if ["$CONFIG" = "ddoc"]; then
+  -   ./ddoc.sh
+  - else
+  -   ./build.sh
+  - fi
 
 notifications:
   - email: false

@@ -655,15 +655,14 @@ abstract class Player : Human, WorldCommandSender {
 	 * The reason can be a Translation.
 	 * Params:
 	 * 		reason = reason of the disconnection
-	 * 		translation = indicates whether or not the reason is a client-side translation
 	 */
-	public void disconnect(const Translation translation=Translation.DISCONNECT_CLOSED, string[] args=[]) {
-		this.disconnectImpl(translation, args);
+	public void disconnect(const Translation reason=Translation.DISCONNECT_CLOSED, string[] args=[]) {
+		this.disconnectImpl(reason, args);
 	}
 
 	/// ditto
-	public void disconnect(string message) {
-		this.server.disconnect(this, message);
+	public void disconnect(string reason) {
+		this.server.disconnect(this, reason);
 	}
 
 	/// ditto
@@ -1573,11 +1572,6 @@ mixin template generateHandlers(E...) {
  * not be found in the array of player obtained with
  * world.online!Player nor in the count obtained with
  * world.count!Player.
- * Params:
- * 		position = first position of the unconnected player
- * 		name = displayed name of the player, use an empty string for hide it
- * 		skin = skin of the player as a Skin struct
- * 		uuid = uuid of the player; if not given, a random one will be chosen
  * Example:
  * ---
  * //spawn a puppet 10 blocks over a player that follows it

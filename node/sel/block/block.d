@@ -251,6 +251,7 @@ class Block {
 	/**
 	 * Get the dropped items as a slot array.
 	 * Params:
+	 * 		world = the world where the block has been broken
 	 * 		player = the player who broke the block, can be null (e.g. explosion, fire...)
 	 * 		item = item used to break the block, is null if player is null or the player broke the block with his hand
 	 * Returns: a slot array with the dropped items
@@ -262,6 +263,7 @@ class Block {
 	/**
 	 * Get the amount of dropped xp when the block is broken
 	 * Params:
+	 * 		world = the world where the block has been broken
 	 * 		player = the player who broke the block, can be null (e.g. explosion, fire...)
 	 * 		item = item used to break the block, is null if player is null or the player broke the block with his hand
 	 * Returns: an integer, indicating the amount of xp that will be spawned
@@ -283,6 +285,7 @@ class Block {
 	 * Params:
 	 * 		player = the player who tapped the block
 	 * 		item = the item used, is the same as player.inventory.held
+	 * 		position = 
 	 * 		face = the face tapped
 	 * Returns: false is a block should be placed, true otherwise
 	 */
@@ -338,6 +341,8 @@ class Block {
 	 * Boolean value indicating whether or not the upper
 	 * block is air or isn't solid.
 	 * Params:
+	 * 		world = the world there the block is placed
+	 * 		position = position in the world where the block is placed
 	 * 		checkFluid = boolean value indicating whether or not the fluid should be considered as a solid block
 	 * Example:
 	 * ---

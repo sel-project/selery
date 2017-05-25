@@ -86,7 +86,7 @@ class Color {
 
 	/**
 	 * Checks if the colour is completely transparent (with
-	 * the alpha channel equals to 0.
+	 * the alpha channel equals to 0).
 	 * Example:
 	 * ---
 	 * assert(!new Color(0, 0, 0, 1).transparent);

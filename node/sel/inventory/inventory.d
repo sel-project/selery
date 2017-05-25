@@ -349,7 +349,7 @@ class Inventory {
 	
 	/**
 	 * Removes slot(s) from the inventory.
-	 * Params:
+	 * Parameter types:
 	 * 		string = tries to remove items with the same name
 	 * 		string[] = tries to remove items with one of the names in the array
 	 * 		Item = tries to remove items with the same name and properties
@@ -392,7 +392,7 @@ class Inventory {
 	
 	/**
 	 * Matches the first occurence and returns the pointer to the slot.
-	 * Params:
+	 * Paramenter types:
 	 * 		string = checks for an item with the same name
 	 * 		string[] = checks for an item with one of the names in the array
 	 * 		Item = checks for an item with the same name and properties (custom name, enchantments, ...)
