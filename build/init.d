@@ -36,7 +36,7 @@ import sel.about;
 import sel.format : Text, writeln;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 56;
+enum size_t __GENERATOR__ = 0;
 
 void main(string[] args) {
 
@@ -142,17 +142,21 @@ void main(string[] args) {
 		}
 	}
 
-	// load plugins in plugins folder
-	if(exists(Paths.plugins)) {
-		foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
-			if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
-				if(ppath.isDir) {
-					loadPlugin(ppath);
-				} else if(ppath.isFile && ppath.endsWith(".d")) {
-					loadSinglePlugin(ppath);
+	if(!args.canFind("--no-plugins")) {
+
+		// load plugins in plugins folder
+		if(exists(Paths.plugins)) {
+			foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
+				if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
+					if(ppath.isDir) {
+						loadPlugin(ppath);
+					} else if(ppath.isFile && ppath.endsWith(".d")) {
+						loadSinglePlugin(ppath);
+					}
 				}
 			}
 		}
+
 	}
 
 	Info[string] info;
@@ -287,7 +291,7 @@ void main(string[] args) {
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {
-						if(name.length > 4 && name.startsWith("dub:")) {
+						if(name.startsWith("dub:")) {
 							value.dub["dependencies"][name[4..$]] = d;
 						}
 					}
@@ -305,9 +309,6 @@ void main(string[] args) {
 				}
 				if(value.main.length) {
 					imports ~= "static import " ~ value.mod ~ ";";
-				}
-				if(value.single) {
-					//value.dub["sourceFiles"] = [buildNormalizedPath(absolutePath(Paths.plugins ~ value.id ~ ".d"))];
 				}
 				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ "),";
 			}

@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte major = 2;
 	
 	/// ditto
-	enum ubyte minor = 0;
+	enum ubyte minor = 1;
 	
 	/// ditto
 	enum ubyte patch = 0;
@@ -131,7 +131,7 @@ const struct Software {
 	 * Version of the api used by the software. It's used to check the
 	 * compatibility with plugins.
 	 */
-	enum ubyte api = 2;
+	enum ubyte api = 3;
 	
 	/**
 	 * Version of the hub-node communication protocol used by

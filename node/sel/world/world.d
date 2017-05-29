@@ -14,14 +14,19 @@
  */
 module sel.world.world;
 
+import core.thread : Thread;
+
 import std.algorithm : sort, min, canFind;
 import std.bitmanip : read, write;
+static import std.concurrency;
 import std.conv : to;
-import std.math : sin, cos, PI, round, pow;
+import std.datetime : StopWatch, dur;
+import std.math : sin, cos, PI, pow;
 import std.random : unpredictableSeed;
-import std.string : replace, toLower, split, join;
-import std.traits : isAbstractClass, hasUDA, getUDAs, Parameters;
+import std.string : replace, toLower, join;
+import std.traits : hasUDA, getUDAs, Parameters;
 import std.typecons : Tuple;
+import std.typetuple : TypeTuple;
 
 import sel.about;
 import sel.command.command : Command;
@@ -35,7 +40,6 @@ import sel.entity.entity : Entity;
 import sel.entity.living : Living;
 import sel.entity.noai : ItemEntity, Lightning;
 import sel.event.event : Event, EventListener;
-import sel.event.server : PlayerJoinEvent;
 import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent, PlayerSpawnEvent, PlayerAfterSpawnEvent, PlayerDespawnEvent, PlayerAfterDespawnEvent;
 import sel.event.world.world : WorldEvent;
@@ -43,10 +47,14 @@ import sel.item.item : Item;
 import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.node.info : PlayerInfo, WorldInfo;
 import sel.node.plugin.plugin;
 import sel.node.server : Server;
+import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player, isPlayer;
+import sel.player.pocket : PocketPlayerImpl;
 import sel.util.color : Color;
+import sel.util.hncom : HncomPlayer;
 import sel.util.log;
 import sel.util.random : Random;
 import sel.util.task;
@@ -54,6 +62,7 @@ import sel.world.chunk;
 import sel.world.generator;
 import sel.world.map : Map;
 import sel.world.rules : Rules, Gamemode, Difficulty;
+import sel.world.thread;
 
 static import sul.blocks;
 
@@ -107,10 +116,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
-	public static void startWorld(T:World)(Server server, T world, World parent) {
+	public static void startWorld(T:World)(shared Server server, shared WorldInfo info, T world, World parent) {
+		world.info = info;
 		world.n_server = server;
-		world.setListener(server.globalListener);
-		if(parent !is null) {
+		world.setListener(cast()server.globalListener);
+		if(parent is null) {
+			world.players_list = new PlayersList();
+		} else {
+			world.players_list = parent.players_list;
 			world.setListener(parent.inheritance);
 			world.inheritance = parent.inheritance;
 		}
@@ -143,11 +156,17 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public immutable uint id;
 	public immutable string n_name;
 
-	protected Server n_server;
+	protected shared WorldInfo info;
+
+	protected shared Server n_server;
 
 	protected Dimension n_dimension = Dimension.overworld;
 	protected uint n_seed;
 	protected string n_type;
+
+	private shared(WorldInfo)[uint] children_info;
+
+	protected Player[uint] all_players; // only used by the main parent
 
 	private World n_parent;
 	private World[] n_children;
@@ -181,7 +200,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	private Entity[size_t] w_entities;
 	private Player[size_t] w_players;
-	private Player[] players_list;
+	private PlayersList players_list;
 	
 	private tick_t m_time;
 
@@ -267,7 +286,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
-	public final pure nothrow @property @safe @nogc Server server() {
+	public final pure nothrow @property @safe @nogc shared(Server) server() {
 		return this.n_server;
 	}
 
@@ -415,13 +434,97 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 		return false;
 	}
+
+	public void startMainWorldLoop(shared Server server, shared WorldInfo info) {
+
+		this.info = info;
+		this.n_server = server;
+
+		StopWatch timer;
+
+		while(true) { //TODO this.running
+
+			timer.start();
+
+			// handle server's message (new players, new packets, ...)
+			this.handleServerPackets();
+
+			// do the world ticking
+			this.tick();
+
+			// flush player's packets
+			foreach(player ; this.all_players) player.flush();
+
+			// sleep until next tick
+			timer.stop();
+			if(timer.peek.usecs < 50_000) {
+				Thread.sleep(dur!"usecs"(50_000 - timer.peek.usecs));
+			} else {
+				//TODO server is less than 20 tps
+			}
+			timer.reset();
+
+		}
+
+	}
+
+	private void handleServerPackets() {
+		while(std.concurrency.receiveTimeout(dur!"msecs"(0), &this.handleAddPlayer, &this.handleRemovePlayer, &this.handleGamePacket, &this.handleBroadcast, &this.handleClose)) {}
+	}
+
+	private void handleAddPlayer(AddPlayer packet) {
+		this.all_players[packet.player.hubId] = this.spawnPlayer(packet.player);
+	}
+
+	private void handleRemovePlayer(RemovePlayer packet) {
+		//TODO
+		// could also be in a child
+		// call player.world.despawn
+		auto player = packet.playerId in this.all_players;
+		if(player) {
+			this.removePlayerList(*player);
+			this.all_players.remove(packet.playerId);
+			this.despawnPlayer(*player);
+			(*player).close();
+		}
+	}
+
+	private void handleGamePacket(GamePacket packet) {
+		auto player = packet.playerId in this.all_players;
+		if(player) {
+			(*player).handle(packet.payload[0], packet.payload[1..$].dup);
+		}
+	}
+
+	private void handleBroadcast(Broadcast packet) {
+		this.broadcast(packet.message);
+		if(packet.children) {
+			//TODO children of children
+			foreach(child ; this.children) {
+				child.broadcast(packet.message);
+			}
+		}
+	}
+
+	private void handleClose(Close packet) {
+		ubyte status;
+		if(this.all_players.length) {
+			// cannot close if there are players online in the world or in the children
+			status = CloseResult.PLAYERS_ONLINE;
+		} else {
+			//TODO stop event loop (with exception?)
+			status = CloseResult.REMOVED;
+		}
+		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, status));
+	}
 	
 	/*
 	 * Ticks the world and its children.
-	 * This function should be called by the server (if parent world
-	 * is null) or by the parent world (if it is not null).
+	 * This function should be called by the startMainWorldLoop function
+	 * (if parent world is null) or by the parent world (if it is not null).
 	 */
-	public void tick() {
+	protected void tick() {
+
 		this.n_ticks++;
 
 		// tasks
@@ -713,8 +816,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * broadcasts the packet to the players in the world.
 	 */
 	public final void addPlayerList(Player player) {
+		this.players_list.players.call!"sendAddList"([player]); // only the new player
 		this.players_list ~= player;
-		this.w_players.call!"sendAddList"([player]);
+		player.sendAddList(this.players_list); // all the players and itself
 	}
 
 	/*
@@ -724,7 +828,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public final void removePlayerList(Player player) {
 		foreach(i, p; this.players_list) {
 			if(player == p) {
-				this.w_players.call!"sendRemoveList"([player]);
+				this.players_list.players.call!"sendRemoveList"([player]);
 				this.players_list = this.players_list[0..i] ~ this.players_list[i+1..$];
 				break;
 			}
@@ -737,18 +841,59 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public final @property @safe @nogc Player[] playersList() {
 		return this.players_list;
 	}
+
+	private Player spawnPlayer(shared PlayerInfo info) {
+
+		info.world = this.info;
+
+		//TODO load saved info from file
+
+		Player player = (){
+			final switch(info.type) {
+				foreach(type ; TypeTuple!("Pocket", "Minecraft")) {
+					case mixin("HncomPlayer.Add." ~ type ~ ".TYPE"): {
+						final switch(info.protocol) {
+							foreach(protocol ; mixin("Supported" ~ type ~ "Protocols")) {
+								case protocol: {
+									mixin("alias ReturnPlayer = " ~ type ~ "PlayerImpl;");
+									return cast(Player)new ReturnPlayer!protocol(info, this, cast(EntityPosition)this.spawnPoint);
+								}
+							}
+						}
+					}
+				}
+			}
+		}();
+
+		//TODO if the player is transferred from another world or from the hub, send the change dimension packet or unload every chunk
+
+		// send generic informations that will not change when changing dimension
+		player.sendJoinPacket();
+
+		// add and send to the list
+		this.addPlayerList(player);
+
+		// register world's commands
+		foreach(command ; this.commands) {
+			player.registerCommand(command);
+		}
+
+		// do normal spawn process
+		this.spawnPlayer(player);
+
+		return player;
+
+	}
 	
 	/*
 	 * Spawns a player using an existing instance.
 	 */
-	public final void spawnPlayer(Player player) {
-		//player.rules = this.rules.dup;
-		
-		player.m_spawn = this.spawnPoint.entityPosition;
-		player.sendJoinPacket();
+	protected final void spawnPlayer(Player player) {
+
+		//TODO send packet to the hub with the new world
+
 		player.spawn = this.spawnPoint; // sends spawn position
-		player.move(this.spawnPoint.entityPosition);
-		player.oldposition = this.spawnPoint.entityPosition;
+		player.move(this.spawnPoint.entityPosition); // send position
 
 		player.sendResourcePack();
 		
@@ -779,57 +924,61 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		player.firstspawn();
 
 		this.w_players[player.id] = player;
-		PlayerSpawnEvent event = new PlayerSpawnEvent(player);
-		this.callEvent(event);
-		if(event.announce) {
+		auto event = this.callEventIfExists!PlayerSpawnEvent(player);
+
+		// player may have been teleported during the event, also fixes #8
+		player.oldposition = this.spawnPoint.entityPosition;
+
+		if(event is null || event.announce) {
 			//TODO custom message
 			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
 		}
-		if(event.spawn) {
-			//update the players list
-			if(this.players_list.length > 0) player.sendAddList(this.players_list);
-			this.addPlayerList(player);
+
+		if(event is null || event.spawn) {
 			//TODO let the event choose if spawn or not
-			foreach(ref Player splayer ; this.w_players) {
+			foreach(splayer ; this.w_players) {
 				splayer.show(player);
 				player.show(splayer);
 			}
 		}
-		foreach(ref Entity entity ; this.w_entities) {
+
+		foreach(entity ; this.w_entities) {
 			if(entity.shouldSee(player)) entity.show(player);
-			/*if(player.shouldSee(entity))*/ player.show(entity); // the player sees EVERYTHING
+			/*if(player.shouldSee(entity))*/ player.show(entity); // the player sees  E V E R Y T H I N G
 		}
 
-		this.callEventIfExists!PlayerAfterSpawnEvent(player);
+		this.callEventIfExists!PlayerAfterSpawnEvent(player); //TODO call event.after()
 	}
 	
 	/*
 	 * Despawns a player (i.e. on disconnection, on world change, ...).
 	 */
-	public final void despawnPlayer(Player player) {
+	protected final void despawnPlayer(Player player) {
+
 		//TODO some packet shouldn't be sent when the player is disconnecting or changing dimension
-		if(player.id in this.w_players) {
-			this.w_players.remove(player.id);
-			PlayerDespawnEvent event = new PlayerDespawnEvent(player);
-			this.callEvent(event);
-			if(event.announce) {
+		if(this.w_players.remove(player.id)) {
+
+			auto event = this.callEventIfExists!PlayerDespawnEvent(player);
+			if(event is null || event.announce) {
 				//TODO custom message
 				this.broadcast(Text.yellow, Translation.CONNECTION_LEFT, player.displayName);
 			}
-			foreach(ref Entity viewer ; player.viewers) {
+			foreach(viewer ; player.viewers) {
 				viewer.hide(player);
 			}
-			foreach(ref Entity watch ; player.watchlist) {
+			foreach(watch ; player.watchlist) {
 				player.hide(watch/*, false*/); //updating the viewer's watchlist
 			}
-			this.removePlayerList(player);
-			player.sendRemoveList(this.players_list);
-			PlayerAfterDespawnEvent ad = new PlayerAfterDespawnEvent(player);
-			this.callEvent(ad);
+
+			this.callEventIfExists!PlayerAfterDespawnEvent(player);
 
 			// remove world's commands
-			foreach(command ; this.commands) player.unregisterCommand(command);
+			foreach(command ; this.commands) {
+				player.unregisterCommand(command);
+			}
+
 		}
+
 	}
 
 	/**
@@ -1501,5 +1650,13 @@ enum Dimension : ubyte {
 	overworld = 0,
 	nether = 1,
 	end = 2
+
+}
+
+class PlayersList {
+
+	Player[] players;
+
+	alias players this;
 
 }

@@ -24,7 +24,7 @@ import sel.player.player : Player;
  */
 class Node {
 
-	private Server server;
+	private shared Server server;
 	
 	/**
 	 * Id of the node, given by the hub.
@@ -55,7 +55,7 @@ class Node {
 	 */
 	uint[][ubyte] acceptedGames;
 
-	public this(Server server, uint hubId, string name, bool main) {
+	public this(shared Server server, uint hubId, string name, bool main) {
 		this.server = server;
 		this.hubId = hubId;
 		this.name = name;
@@ -83,14 +83,6 @@ class Node {
 	public inout @safe bool accepts(Player player) {
 		auto a = player.gameVersion in this.acceptedGames;
 		return a && (*a).canFind(player.protocol);
-	}
-	
-	/**
-	 * Transfers a player to the node.
-	 * This methos does the same as player.transfer(Node).
-	 */
-	public void transfer(Player player) {
-		this.server.transfer(player, this);
 	}
 
 	/**

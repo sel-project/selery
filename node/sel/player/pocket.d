@@ -52,6 +52,7 @@ import sel.entity.noai : Lightning, ItemEntity;
 import sel.inventory.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.node.info : PlayerInfo;
 import sel.player.player;
 import sel.util.log;
 import sel.world.chunk : Chunk;
@@ -88,22 +89,12 @@ abstract class PocketPlayer : Player {
 	private ubyte n_os;
 	private string n_device_model;
 	
-	private uint title_duration;
-	private uint subtitle_duration;
-	
 	private BlockPosition[] broken_by_this;
-
-	private string n_titles;
 
 	protected bool send_commands;
 	
-	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
-		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
-		this.n_packet_loss = packetLoss;
-		this.n_edu = edu;
-		this.n_xuid = xuid;
-		this.n_os = deviceOs;
-		this.n_device_model = deviceModel;
+	public this(shared PlayerInfo info, World world, EntityPosition position) {
+		super(info, world, position);
 		if(resourcePackId.length == 0) {
 			// no resource pack
 			this.hasResourcePack = true;
@@ -118,8 +109,8 @@ abstract class PocketPlayer : Player {
 	 * Indicates whether or not the player is using Minecraft: Education
 	 * Edition.
 	 */
-	public final pure nothrow @property @safe @nogc bool edu() {
-		return this.n_edu;
+	public final pure nothrow @property @trusted @nogc bool edu() {
+		return this.info.additional.pocket.edu;
 	}
 
 	/**
@@ -129,8 +120,8 @@ abstract class PocketPlayer : Player {
 	 * This value can be used to retrieve more informations about the
 	 * player using the XBOX live services.
 	 */
-	public final pure nothrow @property @safe @nogc long xuid() {
-		return this.n_xuid;
+	public final pure nothrow @property @trusted @nogc long xuid() {
+		return this.info.additional.pocket.xuid;
 	}
 
 	/**
@@ -143,8 +134,8 @@ abstract class PocketPlayer : Player {
 	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc ubyte os() {
-		return this.n_os;
+	public final pure nothrow @property @trusted @nogc ubyte deviceOs() {
+		return this.info.additional.pocket.deviceOs;
 	}
 
 	/**
@@ -156,13 +147,13 @@ abstract class PocketPlayer : Player {
 	 *    player.kick("This server is reserved for oneplus users");
 	 * }
 	 */
-	public final pure nothrow @property @safe @nogc string deviceModel() {
-		return this.n_device_model;
+	public final pure nothrow @property @trusted @nogc string deviceModel() {
+		return this.info.additional.pocket.deviceModel;
 	}
 
 	public final override void disconnectImpl(const Translation translation, string[] args) {
 		if(translation.pocket.length) {
-			this.server.disconnect(this, translation.pocket, args);
+			this.server.kick(this.hubId, translation.pocket, args);
 		} else {
 			this.disconnect(translate(translation, this.lang, args));
 		}
@@ -339,14 +330,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	private ubyte[][] queue;
 	private size_t total_queue_length = 0;
 	
-	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency, float packetLoss, long xuid, bool edu, ubyte deviceOs, string deviceModel) {
-		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency, packetLoss, xuid, edu, deviceOs, deviceModel);
+	public this(shared PlayerInfo info, World world, EntityPosition position) {
+		super(info, world, position);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft: " ~ (edu ? "Education" : (deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(hubVersion, supportedPocketProtocols[__protocol]);
-	}
-
-	public final override pure nothrow @property @safe @nogc uint protocol() {
-		return __protocol;
+		this.full_version = "Minecraft: " ~ (this.edu ? "Education" : (this.deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(info.version_, supportedPocketProtocols[__protocol]);
 	}
 
 	public final override pure nothrow @property @safe @nogc string gameFullVersion() {

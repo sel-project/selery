@@ -14,7 +14,7 @@
  */
 module sel.player.player;
 
-mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
+import core.thread : Thread;
 
 import std.algorithm : count, max, min, reverse, sort, canFind, clamp;
 import std.array : join, split;
@@ -52,6 +52,8 @@ import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.network.hncom : Handler;
+import sel.util.hncom : HncomPlayer;
+import sel.node.info : PlayerInfo;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.world.chunk : Chunk;
@@ -67,22 +69,10 @@ abstract class Player : Human, WorldCommandSender {
 	
 	public immutable bool pe;
 	public immutable bool pc;
-	
-	private immutable ulong connection_time;
 
-	public immutable uint hubId;
-	
-	private string n_name;
-	private string n_iname;
-	
-	private string n_display_name;
+	protected shared PlayerInfo info;
+
 	public string chatName;
-	
-	private Address n_address;
-	private string address_ip;
-	private ushort address_port;
-	private string server_address_ip;
-	private ushort server_address_port;
 
 	protected bool connectedSameMachine, connectedSameNetwork;
 	
@@ -133,29 +123,21 @@ abstract class Player : Human, WorldCommandSender {
 	
 	protected bool hasResourcePack = false;
 	
-	public this(uint hubId, World world, EntityPosition position, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
-		this.hubId = hubId;
-		super(world, position, skin);
-		this.n_name = name;
-		this.n_iname = this.n_name.toLower();
-		this.n_display_name = this.chatName = displayName;
-		this.n_uuid = uuid;
-		this.n_address = address;
-		this.address_ip = address.toAddrString();
-		this.address_port = to!ushort(address.toPortString());
-		this.server_address_ip = serverAddress;
-		this.server_address_port = serverPort;
-		this.connectedSameMachine = this.address_ip.startsWith("127.0.");
-		this.connectedSameNetwork = this.address_ip.startsWith("192.168.");
+	public this(shared PlayerInfo info, World world, EntityPosition position) {
+		super(world, position, info.skin);
+		this.info = info;
+		this._id = hubId * 2; // always an even number
+		this.chatName = info.displayName;
+		this.connectedSameMachine = this.usedIp.startsWith("127.0.") || this.usedIp == "::1";
+		this.connectedSameNetwork = this.usedIp.startsWith("192.168.");
 		this.showNametag = true;
 		this.nametag = name;
-		this.m_lang = language;
 		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
 		this.n_latency = latency;
 		this.viewDistance = this.rules.viewDistance;
 		this.pe = this.gameVersion == PE;
 		this.pc = this.gameVersion == PC;
-		this.connection_time = milliseconds;
+		//this.connection_time = milliseconds;
 		this.last_chunk_position = this.chunk;
 	}
 
@@ -165,6 +147,10 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	// *** PLAYER-RELATED PROPERTIES ***
+
+	public final pure nothrow @property @safe @nogc uint hubId() {
+		return this.info.hubId;
+	}
 	
 	/**
 	 * Gets the player's connection informations.
@@ -172,25 +158,20 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 * assert(player.address.toAddrString() == player.ip);
 	 * assert(player.address.toPortString() == player.port.to!string);
-	 * 
-	 * @event login(PlayerLoginEvent event) {
-	 *    d(event.player.name, " joined ", event.world.name, " with address ", event.player.address);
-	 *    // Steve joined world with address 127.0.0.1:19132
-	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc Address address() {
-		return this.n_address;
+	public final pure nothrow @property @trusted @nogc Address address() {
+		return cast()this.info.address;
 	}
 	
 	/// ditto
-	public final pure nothrow @property @safe @nogc const string ip() {
-		return this.address_ip;
+	public final pure nothrow @property @safe @nogc string ip() {
+		return this.info.ip;
 	}
 	
 	/// ditto
-	public final pure nothrow @property @safe @nogc const ushort port() {
-		return this.address_port;
+	public final pure nothrow @property @safe @nogc ushort port() {
+		return this.info.port;
 	}
 
 	/**
@@ -203,12 +184,12 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public final pure nothrow @property @safe @nogc const string usedIp() {
-		return this.server_address_ip;
+		return this.info.usedIp;
 	}
 
 	/// ditto
 	public final pure nothrow @property @safe @nogc const ushort usedPort() {
-		return this.server_address_port;
+		return this.info.usedPort;
 	}
 	
 	/**
@@ -216,18 +197,18 @@ abstract class Player : Human, WorldCommandSender {
 	 * original upper-lowercase format.
 	 */
 	public final override pure nothrow @property @safe @nogc string name() {
-		return this.n_name;
+		return this.info.name;
 	}
 	
 	/**
 	 * Gets the player's username converted to lower-case.
 	 */
-	public final pure nothrow @property @safe @nogc string iname() {
-		return this.n_iname;
+	public final pure nothrow @property @safe @nogc string lname() {
+		return this.info.lname;
 	}
 	
 	/// ditto
-	alias lname = this.iname;
+	deprecated alias iname = this.lname;
 
 	/**
 	 * Edits the player's displayed name, as it appears in the
@@ -235,14 +216,13 @@ abstract class Player : Human, WorldCommandSender {
 	 * It can be edited on PlayerPreLoginEvent.
 	 */
 	public final override pure nothrow @property @safe @nogc string displayName() {
-		return this.n_display_name;
+		return this.info.displayName;
 	}
 	
 	/// ditto
 	public final @property @trusted string displayName(string displayName) {
 		//TODO update MinecraftPlayer's list
-		this.n_display_name = displayName;
-		this.server.updatePlayerDisplayName(this);
+		//TODO update name on the hub
 		return this.displayName;
 	}
 	
@@ -257,7 +237,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public pure nothrow @property @safe @nogc ubyte gameVersion() {
-		return 0;
+		return this.info.type;
 	}
 	
 	public pure nothrow @property @safe @nogc string gameFullVersion() {
@@ -267,27 +247,16 @@ abstract class Player : Human, WorldCommandSender {
 	/**
 	 * Gets the player's game protocol.
 	 */
-	public abstract pure nothrow @property @safe @nogc uint protocol();
+	public final pure nothrow @property @safe @nogc uint protocol() {
+		return this.info.protocol;
+	}
 
 	/**
 	 * Indicates whether or not the player is still connected to
 	 * the node.
 	 */
 	public nothrow @property @safe @nogc bool online() {
-		return this.server.playerWithHubId(this.hubId) !is null;
-	}
-	
-	/**
-	 * Gets the player's connection time as a Duration.
-	 * Example:
-	 * ---
-	 * if("steve".online && "steve".player.uptime.hours >= 3) {
-	 *    server.kick("steve", "your time here has expired!");
-	 * }
-	 * ---
-	 */
-	public final @property @safe Duration uptime() {
-		return dur!"msecs"(milliseconds - this.connection_time);
+		return this.info.online;
 	}
 	
 	/**
@@ -296,20 +265,20 @@ abstract class Player : Human, WorldCommandSender {
 	 * as indicated in the hub's configuration file.
 	 */
 	public pure nothrow @property @safe @nogc string lang() {
-		return this.m_lang;
+		return this.info.language;
 	}
-	
+
 	/**
 	 * Sets the language of the player, call the events and resend
 	 * the translatable content.
 	 */
-	public @property @trusted string lang(string lang) {
+	public @property string lang(string lang) {
 		// check if it's valid (call the event and notify the hub)
-		if(this.server.changePlayerLanguage(this, lang)) {
+		if(this.server.changePlayerLanguage(this.hubId, lang)) {
 			this.m_lang = lang;
 			//TODO update translatable tiles in the loaded chunks
 		}
-		return this.m_lang;
+		return this.lang;
 	}
 
 	/**
@@ -339,26 +308,6 @@ abstract class Player : Human, WorldCommandSender {
 	 */
 	public final pure nothrow @property @safe @nogc float packetLoss() {
 		return this.n_packet_loss;
-	}
-
-	// handlers for hncom stats
-	
-	public void handleUpdateLatency(HncomPlayer.UpdateLatency packet) {
-		immutable old = this.n_latency;
-		this.n_latency = packet.latency + this.server.hubLatency;
-		if(old != this.n_latency) {
-			this.server.callEventIfExists!PlayerLatencyUpdatedEvent(this);
-			this.sendUpdateLatency([this]);
-			foreach(player ; this.world.playersList) player.sendUpdateLatency([this]);
-		}
-	}
-	
-	public void handleUpdatePacketLoss(HncomPlayer.UpdatePacketLoss packet) {
-		immutable old = this.n_packet_loss;
-		this.n_packet_loss = packet.packetLoss;
-		if(old != this.n_packet_loss) {
-			this.server.callEventIfExists!PlayerPacketLossUpdatedEvent(this);
-		}
 	}
 
 	// *** ENTITY-RELATED PROPERTIES/METHODS ***
@@ -411,47 +360,10 @@ abstract class Player : Human, WorldCommandSender {
 	 */
 	public @property World world(World world) {
 
-		if(this.joined) {
-		
-			this.rules = world.rules.dup;
+		//TODO move if the world is a child/parent
+		//TODO notify server if not
 
-			if(this.n_world !is null && !world.hasChild(this.n_world) && !this.n_world.hasChild(world)) {
-
-				// reset titles
-				this.clearTitle();
-
-				this.m_gamemode = world.rules.gamemode;
-
-				//if(this.level != 0) this.level = 0; // reset without packet
-				//if(this.experience != 0) this.experience = 0; // reset without packet
-				this.m_health.reset();
-				this.m_hunger.reset();
-				//TODO remove effects
-
-			}
-
-			if(this.n_world !is null) {
-				this.n_world.despawnPlayer(this);
-				this.sendChangeDimension(this.n_world.dimension, world.dimension);
-			}
-
-			this.last_chunk_update = 0;
-			this.loaded_chunks.length = 0;
-			this.last_chunk_update = 0;
-			this.last_chunk_position = ChunkPosition(int.max, int.max);
-
-			this.n_world = world;
-
-			Handler.sharedInstance.send(new HncomPlayer.UpdateWorld(this.hubId, world.id).encode());
-			world.spawnPlayer(this);
-
-		} else {
-
-			this.n_world = world;
-
-		}
-
-		return world;
+		return null;
 
 	}
 	
@@ -662,7 +574,7 @@ abstract class Player : Human, WorldCommandSender {
 
 	/// ditto
 	public void disconnect(string reason) {
-		this.server.disconnect(this, reason);
+		this.server.kick(this.hubId, reason);
 	}
 
 	/// ditto
@@ -689,7 +601,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * instead, using ip and port as parameters and not a node name.
 	 */
 	public void transfer(inout Node node) {
-		this.server.transfer(this, node);
+		this.server.transfer(this.hubId, node);
 	}
 
 	/**
@@ -1105,9 +1017,9 @@ abstract class Player : Human, WorldCommandSender {
 				}
 			}
 			if(found.length) {
-				this.server.callEventIfExists!InvalidParametersEvent(this, found);
+				(cast()this.server).callEventIfExists!InvalidParametersEvent(this, found);
 			} else {
-				this.server.callEventIfExists!UnknownCommandEvent(this);
+				(cast()this.server).callEventIfExists!UnknownCommandEvent(this);
 			}
 		} else {
 			message = unformat(message); // pocket and custom clients can send formatted messages
@@ -1469,6 +1381,7 @@ abstract class Player : Human, WorldCommandSender {
 }
 
 private void startCompressionImpl(T)(uint hubId) {
+	Thread.getThis().name = "Compression@" ~ to!string(hubId);
 	auto c = new T();
 	c.start(hubId);
 }
@@ -1604,7 +1517,8 @@ mixin template generateHandlers(E...) {
 class Puppet : Player {
 	
 	public this(World world, EntityPosition position, string name, Skin skin, UUID uuid) {
-		super(0, world, position, new InternetAddress(InternetAddress.ADDR_NONE, 0), "", 0, name, name, skin, uuid, "", 0, 0);
+		//TODO create a playerinfo
+		super(null, world, position);
 	}
 	
 	public this(World world, EntityPosition position, string name, Skin skin) {
@@ -1617,10 +1531,6 @@ class Puppet : Player {
 	
 	public this(World world, Player from) {
 		this(world, from.position, from.name, from.skin, from.uuid);
-	}
-
-	public final override pure nothrow @property @safe @nogc uint protocol() {
-		return 0;
 	}
 	
 	protected override @safe @nogc void sendMovementUpdates(Entity[] entities) {}

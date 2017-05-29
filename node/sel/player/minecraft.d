@@ -45,6 +45,7 @@ import sel.event.world.player : PlayerMoveEvent;
 import sel.inventory.inventory;
 import sel.item.slot : Slot;
 import sel.math.vector;
+import sel.node.info : PlayerInfo;
 import sel.player.player;
 import sel.util.log;
 import sel.world.chunk : Chunk;
@@ -98,8 +99,8 @@ abstract class MinecraftPlayer : Player {
 	
 	private ushort[] loaded_maps;
 	
-	public this(uint hubId, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
-		super(hubId, null, EntityPosition(0), address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
+	public this(shared PlayerInfo info, World world, EntityPosition position) {
+		super(info, world, position);
 		if(resourcePack.length == 0) {
 			// no resource pack
 			this.hasResourcePack = true;
@@ -131,7 +132,7 @@ abstract class MinecraftPlayer : Player {
 	
 	public final override void disconnectImpl(const Translation translation, string[] args) {
 		if(translation.minecraft.length) {
-			this.server.disconnect(this, translation.minecraft, args);
+			this.server.kick(this.hubId, translation.minecraft, args);
 		} else {
 			this.disconnect(translate(translation, this.lang, args));
 		}
@@ -226,14 +227,10 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	private bool dragging;
 	private size_t[] dragged_slots;
 
-	public this(uint hubId, string hubVersion, Address address, string serverAddress, ushort serverPort, string name, string displayName, Skin skin, UUID uuid, string language, ubyte inputMode, uint latency) {
-		super(hubId, address, serverAddress, serverPort, name, displayName, skin, uuid, language, inputMode, latency);
+	public this(shared PlayerInfo info, World world, EntityPosition position) {
+		super(info, world, position);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft " ~ verifyVersion(hubVersion, supportedMinecraftProtocols[__protocol]);
-	}
-
-	public final override pure nothrow @property @safe @nogc uint protocol() {
-		return __protocol;
+		this.full_version = "Minecraft " ~ verifyVersion(info.version_, supportedMinecraftProtocols[__protocol]);
 	}
 
 	public final override pure nothrow @property @safe @nogc string gameFullVersion() {

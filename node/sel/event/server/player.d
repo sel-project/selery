@@ -19,6 +19,7 @@ import std.conv : to;
 import sel.about : Software;
 import sel.event.event : Cancellable;
 import sel.event.server.server : ServerEvent;
+import sel.node.info : PlayerInfo, WorldInfo;
 import sel.player.player : Player;
 import sel.world.world : World;
 
@@ -26,13 +27,13 @@ mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : Add, R
 
 class PlayerEvent : ServerEvent {
 
-	private Player n_player;
+	private const(PlayerInfo) n_player;
 
-	public pure nothrow @safe @nogc this(Player player) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
 		this.n_player = player;
 	}
 
-	public final pure nothrow @property @safe @nogc Player player() {
+	public final pure nothrow @property @safe @nogc const(PlayerInfo) player() {
 		return this.n_player;
 	}
 
@@ -45,14 +46,6 @@ class PlayerEvent : ServerEvent {
  * waiting for the chunks that will be sent after PlayerPreSpawnEvent (that is called by
  * the world and every time a player changes world). That also means that this event
  * will be called only once per player-session.
- * Example:
- * ---
- * @event joinevent(PlayerJoinEvent event) {
- *    assert(!event.player.spawned);
- *    assert(event.player.online);
- *    if(event.player.world !is null) assert(!event.player.world.canFind(event.player));
- * }
- * ---
  */
 final class PlayerJoinEvent : PlayerEvent {
 	
@@ -65,12 +58,14 @@ final class PlayerJoinEvent : PlayerEvent {
 	}
 
 	private ubyte n_reason;
+
+	public shared(WorldInfo)* world;
 	
-	public pure nothrow @safe @nogc this(Player player, ubyte reason) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player, ubyte reason) {
 		super(player);
 		this.n_reason = reason;
 	}
-	
+
 	public pure nothrow @property @safe @nogc ubyte reason() {
 		return this.n_reason;
 	}
@@ -101,7 +96,7 @@ final class PlayerLeftEvent : PlayerEvent {
 
 	private ubyte n_reason;
 	
-	public pure nothrow @safe @nogc this(Player player, ubyte reason) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player, ubyte reason) {
 		super(player);
 		this.n_reason = reason;
 	}
@@ -130,9 +125,9 @@ final class PlayerLanguageUpdatedEvent : PlayerEvent, Cancellable {
 	public immutable string oldLanguage;
 	public immutable string newLanguage;
 	
-	public pure nothrow @safe @nogc this(Player player, string lang) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player, string lang) {
 		super(player);
-		this.oldLanguage = player.lang;
+		this.oldLanguage = player.language;
 		this.newLanguage = lang;
 	}
 	
@@ -149,7 +144,7 @@ final class PlayerLanguageUpdatedEvent : PlayerEvent, Cancellable {
  */
 final class PlayerLatencyUpdatedEvent : PlayerEvent {
 
-	public pure nothrow @safe @nogc this(Player player) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
 		super(player);
 	}
 
@@ -180,7 +175,7 @@ final class PlayerLatencyUpdatedEvent : PlayerEvent {
  */
 final class PlayerPacketLossUpdatedEvent : PlayerEvent {
 
-	public pure nothrow @safe @nogc this(Player player) {
+	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
 		super(player);
 	}
 

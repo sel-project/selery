@@ -29,7 +29,7 @@ import sel.lang : Lang;
 import sel.path : Paths;
 import sel.node.server : Server;
 
-auto createResourcePacks(Server server, UUID uuid, string[] textures) {
+auto createResourcePacks(shared Server server, UUID uuid, string[] textures) {
 
 	auto minecraft2 = new ZipArchive();
 	auto minecraft3 = new ZipArchive();

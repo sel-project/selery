@@ -15,7 +15,9 @@
 module sel.network.hncom;
 
 import core.thread : Thread;
+
 import std.bitmanip : read, nativeToLittleEndian;
+static import std.concurrency;
 import std.conv : to;
 import std.datetime : dur, msecs;
 import std.socket;
@@ -31,64 +33,37 @@ abstract class Handler {
 	public static nothrow @property @safe @nogc shared(Handler) sharedInstance() {
 		return n_shared_instance;
 	}
-
-	private ubyte[] buffer;
 	
-	private ubyte[] n_next;
-	private size_t n_next_length = 0;
-	
-	public this() {
-		n_shared_instance = cast(shared)this;
-		this.buffer = new ubyte[8192];
+	public shared this() {
+		n_shared_instance = this;
 	}
-	
-	public abstract void unblock();
 
-	public ubyte[] next(ref bool closed) {
-		if(this.n_next_length == 0) {
-			if(!this.addNext(4, closed)) return new ubyte[0];
-			this.n_next_length = read!(uint, Endian.littleEndian)(this.n_next);
+	/**
+	 * Receives the next packet when there's one available.
+	 * This action is blocking.
+	 */
+	public shared abstract ubyte[] receive();
+
+	/**
+	 * Starts a new thread and send a new message to the server
+	 * when a new packet arrives.
+	 */
+	public shared void receiveLoop(std.concurrency.Tid server) {
+		Thread.getThis().name = "Network";
+		while(true) {
+			std.concurrency.send(server, this.receive.idup);
 		}
-		if(this.n_next_length == 0 || !this.addNext(this.n_next_length, closed)) return new ubyte[0];
-		ubyte[] ret = this.n_next[0..this.n_next_length];
-		this.n_next = this.n_next[this.n_next_length..$];
-		this.n_next_length = 0;
-		return ret;
 	}
-	
-	private bool addNext(size_t amount, ref bool closed) {
-		while(this.n_next.length < amount) {
-			ptrdiff_t recv = this.receiveBuffer(this.buffer);
-			if(recv > 0) {
-				this.n_next ~= this.buffer[0..recv];
-			} else {
-				if(recv == 0) closed = true;
-				return false;
-			}
-		}
-		return true;
-	}
-
-	protected abstract ptrdiff_t receiveBuffer(ref ubyte[] buffer);
 
 	/**
 	 * Returns: the amount of bytes sent
 	 */
-	public shared synchronized ptrdiff_t send(ubyte[] buffer) {
-		return (cast()this).sendImpl(buffer);
-	}
+	public shared synchronized abstract ptrdiff_t send(ubyte[] buffer);
 
-	public size_t sendImpl(ubyte[] buffer) {
-		return this.sendBuffer(nativeToLittleEndian(buffer.length.to!uint) ~ buffer);
-	}
-
-	protected abstract size_t sendBuffer(ubyte[] buffer);
-	
-	public shared @property string lastError() {
-		return lastSocketError();
-	}
-	
-	public abstract void close();
+	/**
+	 * Closes the connection with the hub.
+	 */
+	public shared abstract void close();
 	
 }
 
@@ -96,44 +71,72 @@ class SocketHandler : Handler {
 
 	private Socket socket;
 	
-	public this(Address address) {
+	private ubyte[] n_next;
+	private size_t n_next_length = 0;
+	
+	public shared this(Address address) {
 		super();
 		version(Posix) {
-			this.socket = new Socket(address.addressFamily, SocketType.STREAM, cast(UnixAddress)address ? cast(ProtocolType)0 : ProtocolType.TCP);
+			Socket socket = new Socket(address.addressFamily, SocketType.STREAM, cast(UnixAddress)address ? cast(ProtocolType)0 : ProtocolType.TCP);
 		} else {
-			this.socket = new TcpSocket(address.addressFamily);
+			Socket socket = new TcpSocket(address.addressFamily);
 		}
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(5));
-		this.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(5));
-		this.socket.blocking = true;
-		this.socket.connect(address);
+		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+		//socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(5));
+		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(2));
+		socket.blocking = true;
+		socket.connect(address);
+		this.socket = cast(shared)socket;
 	}
 
-	public override void unblock() {
-		this.socket.blocking = false;
+	public override shared ubyte[] receive() {
+		return this.next();
 	}
 
-	protected override ptrdiff_t receiveBuffer(ref ubyte[] buffer) {
-		return this.socket.receive(buffer);
+	private shared ubyte[] next() {
+		ubyte[] buffer = cast(ubyte[])this.n_next;
+		if(this.n_next_length == 0) {
+			if(!this.addNext(4, buffer)) return new ubyte[0]; // closed
+			this.n_next_length = read!(uint, Endian.littleEndian)(buffer);
+		}
+		if(this.n_next_length == 0 || !this.addNext(this.n_next_length, buffer)) return new ubyte[0]; // closed
+		ubyte[] ret = buffer[0..this.n_next_length];
+		this.n_next = cast(shared)buffer[this.n_next_length..$];
+		this.n_next_length = 0;
+		return ret;
+	}
+	
+	private shared bool addNext(size_t amount, ref ubyte[] next) {
+		ubyte[] buffer = new ubyte[4096];
+		while(next.length < amount) {
+			ptrdiff_t recv = (cast()this.socket).receive(buffer);
+			if(recv > 0) {
+				next ~= buffer[0..recv];
+			} else {
+				return false;
+			}
+		}
+		return true;
 	}
 
-	protected override size_t sendBuffer(ubyte[] buffer) {
+	public shared synchronized override ptrdiff_t send(ubyte[] buffer) {
+		return this.sendBuffer(nativeToLittleEndian(buffer.length.to!uint) ~ buffer);
+	}
+
+	private shared size_t sendBuffer(ubyte[] buffer) {
 		size_t length = 0;
 		ptrdiff_t sent;
 		do {
-			if((sent = this.socket.send(buffer[length..$])) <= 0) break; // connection closed or another error
+			if((sent = (cast()this.socket).send(buffer[length..$])) <= 0) break; // connection closed or another error
 		} while((length += sent) < buffer.length);
 		return length;
 	}
 
-	public override void close() {
-		this.socket.close();
+	public shared override void close() {
+		(cast()this.socket).close();
 	}
 
 }
-
-static import std.concurrency;
 
 class TidAddress : UnknownAddress {
 
@@ -151,46 +154,21 @@ class MessagePassingHandler : Handler {
 
 	private std.concurrency.Tid hub;
 
-	private ptrdiff_t delegate(ref ubyte[]) rec;
-
-	public this(std.concurrency.Tid hub) {
+	public shared this(shared std.concurrency.Tid hub) {
 		super();
 		this.hub = hub;
-		std.concurrency.send(hub, std.concurrency.thisTid);
-		this.rec = &this.receiveBlocking;
+		std.concurrency.send(cast()hub, std.concurrency.thisTid);
 	}
 
-	public override void unblock() {
-		this.rec = &this.receiveNonBlocking;
+	public shared override ubyte[] receive() {
+		return std.concurrency.receiveOnly!(immutable(ubyte)[])().dup;
 	}
 
-	private ptrdiff_t receiveBlocking(ref ubyte[] buffer) {
-		auto recv = std.concurrency.receiveOnly!(immutable(ubyte)[])();
-		buffer = recv.dup;
-		return recv.length; // 0 for close connection
-	}
-
-	private ptrdiff_t receiveNonBlocking(ref ubyte[] buffer) {
-		ptrdiff_t ret = -1; // -1 means nothing was received
-		std.concurrency.receiveTimeout(msecs(0),
-			(immutable(ubyte)[] b) {
-				buffer = b.dup;
-				ret = buffer.length; // 0 for close connection
-			},
-			(Variant v) {} // close
-		);
-		return ret;
-	}
-
-	public override ptrdiff_t receiveBuffer(ref ubyte[] buffer) {
-		return this.rec(buffer);
-	}
-
-	public override size_t sendBuffer(ubyte[] buffer) {
-		std.concurrency.send(this.hub, buffer.idup);
+	public shared synchronized override ptrdiff_t send(ubyte[] buffer) {
+		std.concurrency.send(cast()this.hub, buffer.idup);
 		return buffer.length;
 	}
 
-	public override void close() {}
+	public shared override void close() {}
 
 }

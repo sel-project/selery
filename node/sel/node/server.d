@@ -14,7 +14,9 @@
  */
 module sel.node.server;
 
+import core.atomic : atomicOp;
 import core.thread : getpid, Thread;
+
 import std.algorithm : canFind;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
@@ -55,33 +57,27 @@ import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.math.vector : EntityPosition;
 import sel.network.http : serveResourcePacks;
-import sel.player.minecraft : MinecraftPlayer, MinecraftPlayerImpl;
+import sel.node.info : PlayerInfo, WorldInfo;
+import sel.player.minecraft : MinecraftPlayer;
 import sel.player.player : Player;
 import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
+import sel.util.hncom;
 import sel.util.ip : publicAddresses;
 import sel.util.log;
 import sel.util.node : Node;
 import sel.util.resourcepack : createResourcePacks;
-import sel.util.task;
 import sel.world.rules : Rules;
+import sel.world.thread;
 import sel.world.world : World, Dimension;
 
-mixin((){
-	string imports;
-	foreach(mod ; ["util", "types", "login", "status", "player", "world"]) {
-		imports ~= "import Hncom" ~ capitalize(mod) ~ " = sul.protocol.hncom" ~ to!string(Software.hncom) ~ "." ~ mod ~ ";";
-	}
-	return imports;
-}());
-
 // Server's instance
-private Server n_server;
+private shared Server n_server;
 
 /**
  * Gets the server instance (plugins should use this
  * function to get the server's instance).
  */
-public nothrow @property @safe @nogc Server server() {
+public nothrow @property @safe @nogc shared(Server) server() {
 	return n_server;
 }
 
@@ -127,78 +123,61 @@ version(Windows) {
  */
 final class Server : EventListener!ServerEvent, Messageable {
 
-	private ulong start_time;
+	private shared ulong start_time;
 
 	private Handler handler;
 	private Address n_hub_address;
 	private immutable string node_name;
 	private immutable bool node_main;
 
-	private string[] n_args;
+	private const string[] n_args;
 
-	private ulong n_id;
-	private ulong uuid_count;
+	private shared ulong n_id;
+	private shared ulong uuid_count;
 
-	private uint n_hub_latency;
+	private shared uint n_hub_latency;
 
-	private Tuple!(immutable(uint), ubyte[])[] send_queue;
-	
-	private size_t next_received_length = 0;
-	private ubyte[] next_received;
+	public shared std.concurrency.Tid tid; //TODO make private
 
-	private Config n_settings;
-	private uint n_node_max;
-	private size_t n_online;
-	private size_t n_max;
+	private shared Config n_settings;
+	private shared uint n_node_max;
+	private shared size_t n_online;
+	private shared size_t n_max;
 
-	private Node[uint] nodes_hubid;
-	private Node[string] nodes_names;
+	private shared Node[uint] nodes_hubid;
+	private shared Node[string] nodes_names;
 
-	private Tuple!(string, "website", string, "facebook", string, "twitter", string, "youtube", string, "instagram", string, "googlePlus") n_social;
+	private shared Tuple!(string, "website", string, "facebook", string, "twitter", string, "youtube", string, "instagram", string, "googlePlus") n_social;
 
-	private float avg_tps = 20;
-	private double[] last_tps;
-	private size_t tps_pointer = 0;
-	private ubyte warn = 0;
-	private size_t last_warn = 0;
+	private shared(uint) _world_count = 0;
+	private shared(uint) _default_world_id = 0; // 0 = no default world
+	private shared(WorldInfo)[uint] _worlds;
+	private shared(PlayerInfo)[uint] _players;
 
-	private ProcessMemInfo resuage_ram;
-	private ProcessCPUWatcher resuage_cpu;
+	private shared Plugin[] n_plugins;
 
-	private ulong last_ram;
-	private float last_cpu;
+	public shared EventListener!WorldEvent globalListener;
 
-	private tick_t n_ticks = 0;
+	private shared Command[string] commands;
 
-	private World[] m_worlds;
+	public shared this(Address hub, string name, string password, bool main, Plugin[] plugins, string[] args) {
 
-	private Player[uint] players_hubid;
-
-	private TaskManager tasks;
-
-	private Plugin[] n_plugins;
-
-	public EventListener!WorldEvent globalListener;
-
-	private Command[string] commands;
-
-	public this(Address hub, string name, string password, bool main, Plugin[] plugins, string[] args) {
+		Thread.getThis().name = "Server";
 
 		immutable bool lite = cast(TidAddress)hub !is null;
 
 		this.node_name = name;
 		this.node_main = main;
 
-		this.n_plugins = plugins;
+		this.n_plugins = cast(shared)plugins;
 
-		this.n_args = args;
+		this.n_args = cast(shared)args;
+
+		this.tid = cast(shared)std.concurrency.thisTid;
 		
-		n_server = this;
+		n_server = cast(shared)this;
 		
-		this.n_hub_address = hub;
-		
-		this.last_tps.length = 20;
-		this.last_tps[] = 20;
+		this.n_hub_address = cast(shared)hub;
 		
 		{
 			// load language from the last execution (or default language)
@@ -209,12 +188,12 @@ final class Server : EventListener!ServerEvent, Messageable {
 				this.n_settings.language = "en_GB";
 			}
 			this.n_settings.acceptedLanguages = [this.n_settings.language];
-			Lang.init(this.n_settings.acceptedLanguages, [Paths.langSystem]);
+			Lang.init(cast(string[])this.n_settings.acceptedLanguages, cast(string[])[Paths.langSystem]);
 		}
 
 		if(lite) {
 
-			this.handler = new MessagePassingHandler(cast(TidAddress)hub);
+			this.handler = new shared MessagePassingHandler(cast(shared TidAddress)hub);
 			this.handleInfo();
 
 		} else {
@@ -222,17 +201,16 @@ final class Server : EventListener!ServerEvent, Messageable {
 			log(translate(Translation("startup.connecting"), this.n_settings.language, [to!string(hub), name]));
 
 			try {
-				this.handler = new SocketHandler(hub);
-				this.sendPacket(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
+				this.handler = new shared SocketHandler(hub);
+				this.handler.send(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
 			} catch(SocketException e) {
 				error_log(translate(Translation("warning.connectionError"), this.n_settings.language, [to!string(hub), e.msg]));
 				return;
 			}
 
 			// wait for ConnectionResponse
-			bool error;
-			ubyte[] buffer = this.handler.next(error);
-			if(!error && buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
+			ubyte[] buffer = this.handler.receive();
+			if(buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
 				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
 				if(response.status == HncomLogin.ConnectionResponse.OK) {
 					this.handleInfo();
@@ -265,11 +243,12 @@ final class Server : EventListener!ServerEvent, Messageable {
 		
 	}
 
-	private void handleInfo() {
+	private shared void handleInfo() {
 
-		bool error;
-		ubyte[] buffer = this.handler.next(error);
-		if(!error && buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
+		ubyte[] buffer = this.handler.receive();
+		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
+
+			Config settings;
 
 			auto info = HncomLogin.HubInfo.fromBuffer(buffer);
 
@@ -285,16 +264,16 @@ final class Server : EventListener!ServerEvent, Messageable {
 			if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 				auto edu = "edu" in *minecraft;
 				auto realm = "realm" in *minecraft;
-				this.n_settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
+				settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
 			} else {
-				this.n_settings = Config(type, false, false);
+				settings = Config(type, false, false);
 			}
-			this.n_settings.load();
-			Rules.reload(this.n_settings);
+			settings.load();
+			Rules.reload(settings);
 
-			this.n_settings.displayName = info.displayName;
-			this.n_settings.language = info.language;
-			this.n_settings.acceptedLanguages = info.acceptedLanguages;
+			settings.displayName = info.displayName;
+			settings.language = info.language;
+			settings.acceptedLanguages = info.acceptedLanguages;
 
 			this.n_online = info.online;
 			this.n_max = info.max;
@@ -310,7 +289,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 
 			// save latest language used
-			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
+			std.file.write(Paths.hidden ~ "lang", settings.language);
 
 			version(Windows) {
 				//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
@@ -318,28 +297,31 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 			// reload languages and save cache
 			string[] paths;
-			foreach(plugin ; this.n_plugins) {
+			foreach(_plugin ; this.n_plugins) {
+				auto plugin = cast()_plugin;
 				if(plugin.languages !is null) paths ~= plugin.languages;
 			}
-			Lang.init(this.n_settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
+			Lang.init(settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
 			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
-			std.file.write(Paths.hidden ~ "lang", this.n_settings.language);
+			std.file.write(Paths.hidden ~ "lang", settings.language);
 
 			foreach(game ; info.gamesInfo) {
-				this.handleGameInfo(game);
+				this.handleGameInfo(game, settings);
 			}
 
 			// check protocols and print warnings if necessary
 			void check(ubyte type, string name, uint[] requested, uint[] supported) {
 				foreach(req ; requested) {
 					if(!supported.canFind(req)) {
-						warning_log(translate(Translation("warning.invalidProtocol"), this.n_settings.language, [to!string(req), name]));
+						warning_log(translate(Translation("warning.invalidProtocol"), settings.language, [to!string(req), name]));
 					}
 				}
 			}
 
-			check(PE, "Minecraft: Pocket Edition", this.n_settings.pocket.protocols, supportedPocketProtocols.keys);
-			check(PC, "Minecraft", this.n_settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+			check(PE, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
+			check(PC, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+
+			this.n_settings = cast(shared)settings;
 
 			this.finishConstruction();
 
@@ -349,7 +331,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 	}
 
-	private void handleGameInfo(HncomTypes.GameInfo info) {
+	private shared void handleGameInfo(HncomTypes.GameInfo info, ref Config settings) {
 		void set(ref Config.Game game) {
 			game.enabled = true;
 			game.protocols = info.game.protocols;
@@ -358,18 +340,15 @@ final class Server : EventListener!ServerEvent, Messageable {
 			game.port = info.port;
 		}
 		if(info.game.type == HncomTypes.Game.POCKET) {
-			set(this.n_settings.pocket);
+			set(settings.pocket);
 		} else if(info.game.type == HncomTypes.Game.MINECRAFT) {
-			set(this.n_settings.minecraft);
+			set(settings.minecraft);
 		} else {
-			error_log(translate(Translation("warning.invalidGame"), this.n_settings.language, [to!string(info.game.type), Software.name]));
+			error_log(translate(Translation("warning.invalidGame"), settings.language, [to!string(info.game.type), Software.name]));
 		}
 	}
 
-	private void finishConstruction() {
-
-		this.resuage_ram = processMemInfo(getpid);
-		this.resuage_cpu = new ProcessCPUWatcher(getpid);
+	private shared void finishConstruction() {
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
@@ -384,8 +363,6 @@ final class Server : EventListener!ServerEvent, Messageable {
 		// default skins for players that connect with invalid skins
 		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Steve.bin"));
 		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Alex.bin"));
-		
-		this.tasks = new TaskManager();
 
 		// load creative inventories
 		foreach(immutable protocol ; SupportedPocketProtocols) {
@@ -402,7 +379,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		// create resource pack files
 		string[] textures = [Paths.textures]; // ordered from least prioritised to most prioritised
-		foreach_reverse(plugin ; this.n_plugins) {
+		foreach_reverse(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
 			if(plugin.textures !is null) textures ~= plugin.textures;
 		}
 		if(textures.length > 1) {
@@ -424,28 +402,10 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		this.n_node_max = this.n_settings.maxPlayers;
 
-		// remove plugins from list if deactivated
-		if(std.file.exists(Paths.home ~ "plugins.json")) {
-			Plugin[] plugins;
-			auto json = parseJSON(cast(string)std.file.read(Paths.home ~ "plugins.json"));
-			foreach(plugin ; this.n_plugins) {
-				auto p = plugin.namespace in json;
-				if(!p || p.type != JSON_TYPE.FALSE) plugins ~= plugin;
-			}
-			this.n_plugins = plugins;
-		}
-		// rewite plugins.json
-		{
-			string[] plugins;
-			foreach(plugin ; this.n_plugins) {
-				plugins ~= "\t\"" ~ plugin.namespace ~ "\": true";
-			}
-			//std.file.write(Paths.home ~ "plugins.json", "{" ~ newline ~ plugins.join("," ~ newline) ~ newline ~ "}" ~ newline);
-		}
-
 		this.start_time = milliseconds;
 
-		foreach(plugin ; this.n_plugins) {
+		foreach(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
 			plugin.load();
 			auto args = [
 				Text.green ~ plugin.name ~ (plugin.api ? " + API" : "") ~ Text.reset,
@@ -460,11 +420,12 @@ final class Server : EventListener!ServerEvent, Messageable {
 		static if(supportedPocketProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, supportedPocketProtocols.keys);
 		static if(supportedMinecraftProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, supportedMinecraftProtocols.keys);
 		HncomTypes.Plugin[] plugins;
-		foreach(plugin ; this.n_plugins) {
+		foreach(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
 			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
 		}
-		this.sendPacket(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode());
-		this.handler.unblock();
+		this.handler.send(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode());
+		std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -473,9 +434,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 		}
 		
-		if(!this.m_worlds.length) {
-			//this.addWorld!Overworld();
-			this.addWorld!World();
+		if(this._default_world_id == 0) {
+			this.addWorld("world");
 		}
 		
 		version(Windows) {
@@ -488,81 +448,63 @@ final class Server : EventListener!ServerEvent, Messageable {
 		log(translate(Translation("startup.started"), this.n_settings.language));
 
 		getAndClearLoggedMessages();
+
+		// start calculation of used resources
+		std.concurrency.spawn(&startResourceUsageThread, getpid);
+
+		// start command reader
+		std.concurrency.spawn(&startCommandReaderThread, cast()this.tid);
 		
 		this.start();
 
 	}
 
-	private void start() {
-
-		StopWatch watch = StopWatch();
+	private shared void start() {
 
 		while(running) {
 
-			watch.start();
+			// receive messages
+			std.concurrency.receive(
+				&this.handlePromptCommand,
+				(immutable(ubyte)[] payload){
+					// from the hub
+					if(payload.length) {
+						this.handleHncomPacket(payload[0], payload[1..$].dup);
+					} else {
+						//TODO close
+						warning_log("received empty message from the hub");
+					}
+				},
+				(const KickPlayer packet){
 
-			this.tick();
+				},
+				(const CloseResult packet){
 
-			watch.stop();
-
-			double diff = watch.peek.usecs;
-			if(diff < 50000) {
-				Thread.sleep(dur!"usecs"(to!ulong(50000 - diff)));
-				this.last_tps[this.tps_pointer] = 20;
-				this.warn = 0;
-			} else {
-				this.last_tps[this.tps_pointer] = 20 - diff / 50000;
-				if(++this.warn == 3 && this.ticks - this.last_warn > 100) {
-					warning_log(translate(Translation("warning.overload"), this.n_settings.language, []));
-					this.last_warn = this.ticks;
-					this.warn = 0;
 				}
-			}
-			double sum = 0;
-			foreach(double b ; this.last_tps) {
-				sum += b;
-			}
-			this.avg_tps = sum / this.last_tps.length;
-			++this.tps_pointer %= this.last_tps.length;
+			);
 
-
-			if(this.ticks % 100 == 1) {
-				this.resuage_ram.update();
-				this.sendPacket(new HncomStatus.ResourcesUsage(this.tps, this.resuage_ram.usedRAM, this.resuage_cpu.current()).encode());
-			}
-
-			watch.reset();
+			//TODO send logs to the hub
 
 		}
 
 		this.handler.close();
 
 		// call @stop plugins
-		foreach(Plugin plugin ; this.n_plugins) {
-			foreach(void delegate() del ; plugin.onstop) {
+		foreach(plugin ; this.n_plugins) {
+			foreach(void delegate() del ; (cast()plugin).onstop) {
 				del();
 			}
 		}
 
-		// unload (an save) all worlds
-		foreach(World world ; this.m_worlds) {
-			//TODO save the world if there's a provider
-			this.removeWorld(world);
-		}
-
-		import std.file : exists, remove;
-		if(exists(Paths.hidden ~ "status")) remove(Paths.hidden ~ "status");
-
 		log(translate(Translation("startup.stopped"), this.n_settings.language, []));
 
-		/*version(Windows) {
-			// forcefully kill this process to make sure also children
-			// processes are terminated
+		version(Windows) {
+			// perform suicide
 			executeShell("taskkill /PID " ~ to!string(getpid) ~ " /F");
-		} else {*/
+		} else {
 			import std.c.stdlib : exit;
 			exit(0);
-		//}
+		}
 
 	}
 
@@ -570,47 +512,9 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Stops the server setting the running variable to false and kicks every
 	 * player from the server.
 	 */
-	public void shutdown() {
+	public shared void shutdown() {
 		//foreach(player ; this.players_hubid) player.kick(message);
 		running = false;
-	}
-
-	private void tick() {
-		this.n_ticks++;
-		
-		// try to receive packets
-		if(!this.handleHncomPackets()) {
-			error_log(translate(Translation("warning.closed"), this.n_settings.language, []));
-			running = false;
-			return;
-		}
-
-		// try to receive one command from the console
-		//receiveTimeout(dur!"seconds"(0), (string cmd){ this.handleCommand(ServerCommandEvent.Origin.prompt, null, cmd); });
-		
-		// execute the tasks
-		if(this.tasks.length) this.tasks.tick(this.ticks);
-
-		// tick the worlds
-		/*foreach(World world ; this.worlds) {
-			world.tick(); // <-- this can cause memory leaks when the netowrk is busy!
-		}*/
-		/*foreach(string s ; this.worldsNames) {
-			this.worlds[s].tick();
-		}*/
-		foreach(world ; this.m_worlds) {
-			world.tick();
-		}
-
-		// flush packets
-		foreach(player ; this.players_hubid) {
-			player.flush();
-		}
-
-		// sends the logs to the hub
-		foreach(log ; getAndClearLoggedMessages()) {
-			this.sendPacket(log.encode());
-		}
 	}
 
 	/**
@@ -619,14 +523,15 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * It is generated by SEL's snooping system or randomly if
 	 * the service cannot be reached.
 	 */
-	public pure nothrow @property @safe @nogc immutable(long) id() {
+	public shared pure nothrow @property @safe @nogc immutable(long) id() {
 		return this.n_id;
 	}
 
-	public pure nothrow @property @safe @nogc UUID nextUUID() {
+	public shared pure nothrow @property @safe @nogc UUID nextUUID() {
 		ubyte[16] data;
 		data[0..8] = nativeToBigEndian(this.id);
-		data[8..16] = nativeToBigEndian(this.uuid_count++);
+		data[8..16] = nativeToBigEndian(this.uuid_count);
+		atomicOp!"+="(this.uuid_count, 1);
 		return UUID(data);
 	}
 
@@ -653,7 +558,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * }
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc const(string[]) args() {
+	public shared pure nothrow @property @safe @nogc const args() {
 		return this.n_args;
 	}
 
@@ -669,8 +574,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * static if(__minecraft) log("Port for Minecraft: ", server.settings.minecraft.port); 
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc const(Config) settings() {
-		return this.n_settings;
+	public shared pure nothrow @property @trusted @nogc const(Config) settings() {
+		return cast(const)this.n_settings;
 	}
 
 	/**
@@ -686,7 +591,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * "§aPotato §5Empire" // don't
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc string name() {
+	public shared pure nothrow @property @safe @nogc string name() {
 		return this.n_settings.displayName;
 	}
 	
@@ -694,8 +599,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Gets the number of online players in the current
 	 * node (not in the whole server).
 	 */
-	public pure nothrow @property @safe @nogc size_t online() {
-		return this.players_hubid.length;
+	public shared pure nothrow @property @safe @nogc size_t online() {
+		return this._players.length;
 	}
 
 	/**
@@ -703,7 +608,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * current node (not in the whole server).
 	 * If the value is 0 there's no limit.
 	 */
-	public pure nothrow @property @safe @nogc size_t max() {
+	public shared pure nothrow @property @safe @nogc size_t max() {
 		return this.n_node_max;
 	}
 	
@@ -711,7 +616,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Gets the number of online players in the whole server
 	 * (not just in the current node).
 	 */
-	public pure nothrow @property @safe @nogc size_t hubOnline() {
+	public shared pure nothrow @property @safe @nogc size_t hubOnline() {
 		return this.n_online;
 	}
 	
@@ -721,14 +626,14 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * If the value is 0 it means that no limit has been set and
 	 * players will never be kicked because the server is full.
 	 */
-	public pure nothrow @property @safe @nogc size_t hubMax() {
+	public shared pure nothrow @property @safe @nogc size_t hubMax() {
 		return this.n_max;
 	}
 
 	/**
 	 * Gets the current's node name.
 	 */
-	public pure nothrow @property @safe @nogc string nodeName() {
+	public shared pure nothrow @property @safe @nogc string nodeName() {
 		return this.node_name;
 	}
 
@@ -737,7 +642,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * when connected to hub) or not (player are added only when
 	 * transferred by other nodes).
 	 */
-	public pure nothrow @property @safe @nogc bool isMainNode() {
+	public shared pure nothrow @property @safe @nogc bool isMainNode() {
 		return this.node_main;
 	}
 
@@ -751,7 +656,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * }
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc const social() {
+	public shared pure nothrow @property @safe @nogc const social() {
 		return this.n_social;
 	}
 
@@ -762,7 +667,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * assert(server.website == server.social.website);
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc string website() {
+	public shared pure nothrow @property @safe @nogc string website() {
 		return this.social.website;
 	}
 
@@ -778,45 +683,15 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * }
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc Address hubAddress() {
-		return this.n_hub_address;
+	public shared pure nothrow @property @trusted @nogc Address hubAddress() {
+		return cast()this.n_hub_address;
 	}
 
 	/**
 	 * Gets the latency between the node and the hub.
 	 */
-	public pure nothrow @property @safe @nogc uint hubLatency() {
+	public shared pure nothrow @property @safe @nogc uint hubLatency() {
 		return this.n_hub_latency;
-	}
-
-	/** 
-	 * Gets the number of ticks since the server has connected with hub.
-	 * The number of ticks do not indicate the uptime of the server, because
-	 * there's the probability that the server's resources can't handle 20
-	 * ticks per second.
-	 * Example:
-	 * ---
-	 * if(server.ticks / 20 != server.uptime.seconds) {
-	 *    d("The server was lagging!");
-	 * }
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc tick_t ticks() {
-		return this.n_ticks;
-	}
-
-	/**
-	 * Gets the average TPS (ticks per second).
-	 * Returns: A floating point number between in range 0..20, where 20 is the best
-	 * Example:
-	 * ---
-	 * if(server.tps != 20) {
-	 *    d("Server's is going at less than 20 TPS!");
-	 * }
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc float tps() {
-		return this.avg_tps;
 	}
 
 	/**
@@ -831,10 +706,11 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * d("The server is online from ", m, " minutes and ", s, " seconds");
 	 * ---
 	 */
-	public @property @safe Duration uptime() {
+	public shared @property @safe Duration uptime() {
 		return dur!"msecs"(milliseconds - this.start_time);
 	}
 
+	/+
 	/**
 	 * Gets the current memory (RAM and SWAP) usage.
 	 * Example:
@@ -858,6 +734,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	public pure nothrow @property @safe @nogc float cpu() {
 		return this.last_cpu;
 	}
+	+/
 
 	/**
 	 * Gets a list with the nodes connected to the hub, this excluded.
@@ -868,8 +745,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * }
 	 * ---
 	 */
-	public pure nothrow @property @trusted const(Node)[] nodes() {
-		return this.nodes_hubid.values;
+	public shared pure nothrow @property @trusted const(Node)[] nodes() {
+		return cast(const(Node)[])this.nodes_hubid.values;
 	}
 
 	/**
@@ -881,40 +758,40 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * if(lobby !is null) lobby.transfer(player);
 	 * ---
 	 */
-	public inout pure nothrow @safe const(Node) nodeWithName(string name) {
+	public shared inout pure nothrow @trusted const(Node) nodeWithName(string name) {
 		auto ret = name in this.nodes_names;
-		return ret ? *ret : null;
+		return ret ? cast(const)*ret : null;
 	}
 
 	/**
 	 * Gets a node by its hub id, which is given by the hub and
 	 * unique for every session.
 	 */
-	public inout pure nothrow @safe const(Node) nodeWithHubId(uint hubId) {
+	public shared inout pure nothrow @trusted const(Node) nodeWithHubId(uint hubId) {
 		auto ret = hubId in this.nodes_hubid;
-		return ret ? *ret : null;
+		return ret ? cast(const)*ret : null;
 	}
 
 	/**
 	 * Sends a message to a node.
 	 */
-	public void sendMessage(Node[] nodes, ubyte[] payload) {
+	public shared void sendMessage(Node[] nodes, ubyte[] payload) {
 		uint[] addressees;
 		foreach(node ; nodes) {
 			if(node !is null) addressees ~= node.hubId;
 		}
-		this.sendPacket(new HncomStatus.MessageServerbound(addressees, payload).encode());
+		this.handler.send(new HncomStatus.MessageServerbound(addressees, payload).encode());
 	}
 
 	/// ditto
-	public void sendMessage(Node node, ubyte[] payload) {
+	public shared void sendMessage(Node node, ubyte[] payload) {
 		this.sendMessage([node], payload);
 	}
 
 	/**
 	 * Broadcasts a message to every node connected to the hub.
 	 */
-	public void broadcast(ubyte[] payload) {
+	public shared void broadcast(ubyte[] payload) {
 		this.sendMessage([], payload);
 	}
 
@@ -926,15 +803,15 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * log("There are ", server.plugins.filter!(a => a.api).length, " plugins with APIs");
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc const(Plugin)[] plugins() {
-		return this.n_plugins;
+	public shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
+		return cast(const(Plugin)[])this.n_plugins;
 	}
 
 	/**
 	 * Gets the server's default world.
 	 */
-	public pure nothrow @property @safe @nogc World world() {
-		return this.m_worlds[0];
+	public shared pure nothrow @property const(WorldInfo) world() {
+		return cast(const)this._worlds[this._default_world_id];
 	}
 
 	/**
@@ -948,16 +825,17 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * assert(server.world == test);
 	 * ---
 	 */
-	public pure nothrow @property @safe @nogc World world(World world) {
-		foreach(i, w; m_worlds[1..$]) {
-			if(w.id == world.id) {
-				auto def = this.m_worlds[0];
-				this.m_worlds[0] = w;
-				this.m_worlds[i] = def;
-				break;
-			}
+	public shared pure nothrow @property const(WorldInfo) world(uint id) {
+		assert(id != 0);
+		if(id in this._worlds) {
+			this._default_world_id = id;
 		}
-		return this.m_worlds[0];
+		return this.world;
+	}
+
+	/// ditto
+	public shared pure nothrow @property const(WorldInfo) world(inout WorldInfo world) {
+		return this.world = world.id;
 	}
 
 	/**
@@ -965,53 +843,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * The list is a copy of the one kept by the server and its
 	 * modification has no effect on the server.
 	 */
-	public pure nothrow @property @safe World[] worlds() {
-		return this.m_worlds.dup;
-	}
-
-	/**
-	 * Gets a list of worlds with the same name (case sensitive).
-	 * This method should only be used by commands as saving the
-	 * world instance is faster and safer.
-	 * Example:
-	 * ---
-	 * log("There are ", server.worldsWithName("overworld").length, " named overworld");
-	 * ---
-	 */
-	public pure nothrow @safe World[] worldsWithName(string name) {
-		World[] ret;
-		foreach(world ; this.m_worlds) {
-			if(world.name == name) ret ~= world;
-		}
-		return ret;
-	}
-
-	/**
-	 * Gets a list of worlds with the same name (case insnsitive).
-	 * Example:
-	 * ---
-	 * server.addWorld("Uppercase");
-	 * assert(server.worldsWithName("uppercase").length + 1 == server.worldsWithNameIns("uppercase"));
-	 * ---
-	 */
-	public World[] worldsWithNameIns(string name) {
-		name = name.toLower;
-		World[] ret;
-		foreach(world ; this.m_worlds) {
-			if(world.name.toLower == name) ret ~= world;
-		}
-		return ret;
-	}
-
-	/**
-	 * Gets a world by its id.
-	 * Returns: The World instance or null if the world is not registered.
-	 */
-	public pure nothrow @safe @nogc World worldWithId(uint id) {
-		foreach(world ; this.m_worlds) {
-			if(world.id == id) return world;
-		}
-		return null;
+	public shared pure nothrow @property const(WorldInfo)[] worlds() {
+		return cast(const(WorldInfo)[])this._worlds.values;
 	}
 
 	/**
@@ -1023,19 +856,11 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * server.addWorld!CustomWorld(42); // custom world where 42 is passed to the constructor
 	 * ---
 	 */
-	public T addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
-		T world = new T(args);
-		World.startWorld(this, world, null);
-		this.m_worlds ~= cast(World)world; // default if there are no worlds
-		this.sendPacket(new HncomWorld.Add(
-			world.id, world.name, world.dimension,
-			world.type=="flat" ? HncomWorld.Add.FLAT : HncomWorld.Add.DEFAULT,
-			world.rules.difficulty, world.rules.gamemode, //TODO use world.difficulty and world.gamemode
-			typeof(HncomWorld.Add.spawnPoint)(world.spawnPoint.x, world.spawnPoint.z),
-			cast(short)(world.rules.daylightCycle ? world.time : -world.time),
-			world.seed,
-			world.parent is null ? -1 : world.parent.id
-		).encode());
+	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
+		shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1));
+		this._worlds[world.id] = world;
+		if(this._default_world_id == 0) this._default_world_id = world.id;
+		world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, args);
 		return world;
 	}
 
@@ -1044,87 +869,53 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * When trying to remove the default world a message error will be
 	 * displayed and the world will not be unloaded.
 	 */
-	public bool removeWorld(World world) {
-		if(this.m_worlds.length) {
-			if(world != this.m_worlds[0] || !running) {
-				for(size_t i=1; i<this.m_worlds.length; i++) {
-					if(world == this.m_worlds[i]) {
-						this.m_worlds = this.m_worlds[0..i] ~ this.m_worlds[i+1..$];
-						World.stopWorld(world, running ? this.m_worlds[0] : null);
-						this.sendPacket(new HncomWorld.Remove(world.id).encode());
-						return true;
-					}
-				}
+	public shared synchronized bool removeWorld(uint id) {
+		auto world = id in this._worlds;
+		if(world) {
+			if((*world).id == this._default_world_id) {
+				warning_log(translate(Translation("warning.removingDefaultWorld"), this.n_settings.language));
 			} else {
-				warning_log(translate(Translation("warning.removingDefaultWorld"), this.n_settings.language, [world.name]));
+				std.concurrency.send(cast()world.tid, Close());
+				return true;
 			}
 		}
 		return false;
 	}
 
+	/// ditto
+	public shared bool removeWorld(WorldInfo world) {
+		return this.removeWorld(world.id);
+	}
+
 	/**
 	 * Gets a list with all the players in the server.
 	 */
-	public pure nothrow @property @trusted Player[] players() {
-		return this.players_hubid.values;
-	}
-
-	/**
-	 * Gets a player by a case-insensitive name.
-	 * Returns: An array of online players with the given name.
-	 * Example:
-	 * ---
-	 * foreach(player ; server.playersWithName("steve")) {
-	 *   player.kick("Bad name!");
-	 * }
-	 * ---
-	 */
-	public pure @trusted Player[] playersWithName(string name) {
-		name = name.toLower;
-		Player[] ret;
-		foreach(player ; this.players_hubid) {
-			if(player.lname == name) ret ~= player;
-		}
-		return ret;
-	}
-
-	/**
-	 * Gets a player by its hub id.
-	 * Returns: The player instance or null if there is not player with the given hub id
-	 */
-	public pure nothrow @safe @nogc Player playerWithHubId(uint hubId) {
-		auto player = hubId in this.players_hubid;
-		return player ? *player : null;
+	public shared pure nothrow @property const(PlayerInfo)[] players() {
+		return cast(const(PlayerInfo)[])this._players.values;
 	}
 
 	/**
 	 * Broadcasts a message in every registered world and their children
 	 * calling the world's broadcast method.
 	 */
-	public void broadcast(E...)(E args) {
-		void broadcastImpl(World world) {
-			world.broadcast(args);
-			foreach(child ; world.children) {
-				broadcastImpl(child);
-			}
-		}
-		foreach(world ; this.m_worlds) {
-			broadcastImpl(world);
+	public shared void broadcast(E...)(E args) {
+		foreach(world ; this._worlds) {
+			std.concurrency.send(world.tid, Broadcast(args.to!string, true));
 		}
 	}
 
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
+	public shared void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
 		(*ptr).add!func(del, params);
 	}
 
-	public @property Command[] registeredCommands() {
-		return this.commands.values;
+	public shared @property Command[] registeredCommands() {
+		return cast(Command[])this.commands.values;
 	}
 	
 	protected override void sendMessageImpl(string message) {
@@ -1132,97 +923,69 @@ final class Server : EventListener!ServerEvent, Messageable {
 	}
 	
 	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		log(join(cast(string[])formats, ""), translate(message, this.settings.language, args));
+		log(join(cast(string[])formats, ""), translate(message, this.n_settings.language, args));
 	}
 
 	// hub-node communication and related methods
 
-	private void sendPacket(ubyte[] packet) {
-		if(Handler.sharedInstance.send(packet) != packet.length + 4 && running) {
-			// something Socket.receive doesn't return 0 when the connection is closed
-			error_log(translate(Translation("warning.closed"), this.n_settings.language));
-			running = false;
+	public shared bool changePlayerLanguage(uint hubId, string language) {
+		auto player = hubId in this._players;
+		if(player) {
+			if(language == (*player).language || !this.n_settings.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(cast(const)*player, language)) return false;
+			(*player).language = language;
+			this.handler.send(new HncomPlayer.UpdateLanguage(hubId, language).encode());
+			return true;
+		} else {
+			return false;
 		}
 	}
-
-	public bool changePlayerLanguage(Player player, string language) {
-		if(language == player.lang || !this.n_settings.acceptedLanguages.canFind(language) || this.callCancellableIfExists!PlayerLanguageUpdatedEvent(player, language)) return false;
-		this.sendPacket(new HncomPlayer.UpdateLanguage(player.hubId, language).encode());
-		return true;
-	}
 	
-	public void updatePlayerDisplayName(Player player) {
-		this.sendPacket(new HncomPlayer.UpdateDisplayName(player.hubId, player.displayName).encode());
+	public shared void updatePlayerDisplayName(uint hubId) {
+		auto player = hubId in this._players;
+		if(player) this.handler.send(new HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
 	}
 
-	/**
-	 * Disconnects a player from the server.
-	 * When using a translatable message player's should be disconnected
-	 * using their own disconnect method (Player.disconnect);
-	 * Example:
-	 * ---
-	 * @event jump(PlayerJumpEvent e) {
-	 *   server.disconnect(e.player, "You can't jump on this server");
-	 * }
-	 * ---
+	/*
+	 * Kicks a player from the server using Player.kick.
 	 */
-	public void disconnect(Player player, string reason) {
-		if(this.removePlayer(player, PlayerLeftEvent.Reason.kicked)) {
-			this.sendPacket(new HncomPlayer.Kick(player.hubId, reason, false).encode());
+	public shared void kick(uint hubId, string reason) {
+		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
+			this.handler.send(new HncomPlayer.Kick(hubId, reason, false).encode());
 		}
 	}
 
 	/// ditto
-	public void disconnect(Player player, string reason, string[] args) {
-		if(this.removePlayer(player, PlayerLeftEvent.Reason.kicked)) {
-			this.sendPacket(new HncomPlayer.Kick(player.hubId, reason, true, args).encode());
+	public shared void kick(uint hubId, string reason, string[] args) {
+		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
+			this.handler.send(new HncomPlayer.Kick(hubId, reason, true, args).encode());
 		}
 	}
 
-	/**
-	 * Transfers a player to another node.
-	 * Params:
-	 * 		player = the player to transfer
-	 * 		node = name of the node where the player will be transferred
-	 * Example:
-	 * ---
-	 * if(server.nodes.length) {
-	 *    server.transfer(player, server.nodes[0]);
-	 * }
-	 * ---
+	/*
+	 * Transfers a player to another node using Player.transfer
 	 */
-	public void transfer(Player player, inout Node node) {
-		if(node.hubId in this.nodes_hubid && this.removePlayer(player, PlayerLeftEvent.Reason.transferred)) {
-			this.sendPacket(new HncomPlayer.Transfer(player.hubId, node.hubId).encode());
+	public shared void transfer(uint hubId, inout Node node) {
+		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.transferred)) {
+			this.handler.send(new HncomPlayer.Transfer(hubId, node.hubId).encode());
 		}
 	}
 
 	// removes with a reason a player spawned in the server
-	private bool removePlayer(Player player, ubyte reason) {
-		if(player.hubId in this.players_hubid) {
-			if(player.world !is null) player.world.despawnPlayer(player);
-			this.players_hubid.remove(player.hubId);
-			player.close();
-			this.callEventIfExists!PlayerLeftEvent(player, reason);
+	private shared synchronized bool removePlayer(uint hubId, ubyte reason) {
+		auto player = hubId in this._players;
+		if(player) {
+			if((*player).world !is null) {
+				std.concurrency.send(cast()(*player).world.tid, RemovePlayer(hubId));
+			}
+			this._players.remove(hubId);
+			(cast()this).callEventIfExists!PlayerLeftEvent(cast(const)*player, reason);
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	/*
-	 * Returns: true if the connection is alive, false otherwise
-	 */
-	private bool handleHncomPackets() {
-		ubyte[] buffer;
-		bool closed = false;
-		while((buffer = this.handler.next(closed)).length) {
-			this.handleHncomPacket(buffer[0], buffer[1..$]);
-		}
-		return !closed;
-	}
-
-	private void handleHncomPacket(ubyte id, ubyte[] data) {
+	private shared void handleHncomPacket(ubyte id, ubyte[] data) {
 		switch(id) {
 			foreach(P ; TypeTuple!(HncomUtil.Packets, HncomStatus.Packets, HncomPlayer.Packets, HncomWorld.Packets)) {
 				static if(P.CLIENTBOUND) {
@@ -1233,13 +996,13 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 	}
 
-	private void handleUncompressedPacket(HncomUtil.Uncompressed packet) {
+	private shared void handleUncompressedPacket(HncomUtil.Uncompressed packet) {
 		foreach(p ; packet.packets) {
 			if(p.length) this.handleHncomPacket(p[0], p[1..$]);
 		}
 	}
 
-	private void handleCompressedPacket(HncomUtil.Compressed packet) {
+	private shared void handleCompressedPacket(HncomUtil.Compressed packet) {
 		// not supported
 		auto uc = new UnCompress(packet.size);
 		ubyte[] data = cast(ubyte[])uc.uncompress(packet.payload);
@@ -1250,34 +1013,34 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Adds (or update) a node.
 	 */
-	private void handleAddNodePacket(HncomStatus.AddNode packet) {
+	private shared void handleAddNodePacket(HncomStatus.AddNode packet) {
 		auto node = new Node(this, packet.hubId, packet.name, packet.main);
 		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = accepted.protocols;
-		this.nodes_hubid[node.hubId] = node;
-		this.nodes_names[node.name] = node;
-		this.callEventIfExists!NodeAddedEvent(node);
+		this.nodes_hubid[node.hubId] = cast(shared)node;
+		this.nodes_names[node.name] = cast(shared)node;
+		(cast()this).callEventIfExists!NodeAddedEvent(node);
 	}
 
 	/**
 	 * Removes a node.
 	 */
-	private void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
+	private shared void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
 		auto node = packet.hubId in this.nodes_hubid;
 		if(node) {
 			this.nodes_hubid.remove((*node).hubId);
 			this.nodes_names.remove((*node).name);
-			this.callEventIfExists!NodeRemovedEvent(*node);
+			(cast()this).callEventIfExists!NodeRemovedEvent(cast()*node);
 		}
 	}
 
 	/*
 	 * Handles a message sent or broadcasted from another node.
 	 */
-	private void handleMessageClientboundPacket(HncomStatus.MessageClientbound packet) {
+	private shared void handleMessageClientboundPacket(HncomStatus.MessageClientbound packet) {
 		auto node = this.nodeWithHubId(packet.sender);
 		// only accept message from nodes that didn't disconnect
 		if(node !is null) {
-			this.callEventIfExists!NodeMessageEvent(node, packet.payload);
+			(cast()this).callEventIfExists!NodeMessageEvent(cast()node, packet.payload);
 		}
 	}
 	
@@ -1285,7 +1048,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Updates the number of online and max players in the whole
 	 * server (not the current node).
 	 */
-	private void handlePlayersPacket(HncomStatus.Players packet) {
+	private shared void handlePlayersPacket(HncomStatus.Players packet) {
 		this.n_online = packet.online;
 		this.n_max = packet.max;
 	}
@@ -1293,14 +1056,14 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Handles a command sent by the hub or an external application.
 	 */
-	private void handleRemoteCommandPacket(HncomStatus.RemoteCommand packet) {
-		with(packet) this.handleCommand(origin, this.convertAddress(sender), command, commandId);
+	private shared void handleRemoteCommandPacket(HncomStatus.RemoteCommand packet) {
+		with(packet) this.handleCommand(++origin, convertAddress(sender), command, commandId);
 	}
 
 	/**
 	 * Reloads the configurations.
 	 */
-	private void handleReloadPacket(HncomStatus.Reload packet) {
+	private shared void handleReloadPacket(HncomStatus.Reload packet) {
 		// only reload plugins, not settings
 		foreach(plugin ; this.n_plugins) {
 			foreach(del ; plugin.onreload) del();
@@ -1310,9 +1073,9 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Adds a player to the node.
 	 */
-	private void handleAddPacket(HncomPlayer.Add packet) {
+	private shared void handleAddPacket(HncomPlayer.Add packet) {
 
-		Address address = this.convertAddress(packet.clientAddress);
+		Address address = convertAddress(packet.clientAddress);
 		Skin skin = Skin(packet.skin.name, packet.skin.data);
 
 		if(!skin.valid) {
@@ -1322,62 +1085,42 @@ final class Server : EventListener!ServerEvent, Messageable {
 			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
 		}
 
-		Player player = (){
-			switch(packet.type) {
-				case HncomPlayer.Add.Pocket.TYPE:
-					auto pocket = packet.new Pocket();
-					pocket.decode();
-					final switch(packet.protocol) {
-						foreach(immutable p ; SupportedPocketProtocols) {
-							case p:
-								return cast(Player)new PocketPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency, pocket.packetLoss, pocket.xuid, pocket.edu, pocket.deviceOs, pocket.deviceModel);
-						}
-					}
-				case HncomPlayer.Add.Minecraft.TYPE:
-					auto minecraft = packet.new Minecraft();
-					minecraft.decode();
-					final switch(packet.protocol) {
-						foreach(immutable p ; SupportedMinecraftProtocols) {
-							case p:
-								return cast(Player)new MinecraftPlayerImpl!p(packet.hubId, packet.vers, address, packet.serverAddress, packet.serverPort, packet.username, packet.displayName, skin, packet.uuid, packet.language, packet.inputMode, packet.latency);
-						}
-					}
-				default: assert(0, "Trying to add a player with an unknown type " ~ to!string(packet.type));
+		shared PlayerInfo player = cast(shared)new PlayerInfo(packet.hubId, packet.type, packet.protocol, packet.vers, packet.username, packet.displayName, packet.uuid, address, packet.serverAddress, packet.serverPort, packet.language);
+		player.skin = skin;
+
+		(){
+			final switch(packet.type) {
+				foreach(Variant ; HncomPlayer.Add.Variants) {
+					case Variant.TYPE:
+						mixin("player.additional." ~ toLower(Variant.stringof)) = cast(shared)packet.new Variant();
+						return;
+				}
 			}
 		}();
 
-		// register the server's commands
-		foreach(Command command ; this.commands) {
-			player.registerCommand(command); //TODO only register overloads that accept CommandSender, WorldCommandSender and Player
-		}
+		//TODO register global commands
 
 		// add to the lists
-		this.players_hubid[player.hubId] = player;
+		this._players[player.hubId] = cast(shared)player;
 
-		server.callEventIfExists!PlayerJoinEvent(player, packet.reason);
+		auto event = (cast()this).callEventIfExists!PlayerJoinEvent(cast(const)player, packet.reason);
 
-		// do not spawn if it has been disconnected during the event
-		if(player.hubId in this.players_hubid) {
+		//TODO allow kicking from event
 
-			// use the default world if plugins didn't set one
-			if(player.world is null) player.world = this.world;
-			World world = player.world;
-			if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
-				player.sendChangeDimension(cast(Dimension)packet.dimension, world.dimension);
-			}
-			player.world = null;
-			player.joined = true;
-			player.world = world;
-
+		shared(WorldInfo)* world;
+		if(event is null || event.world is null) {
+			world = this._default_world_id in this._worlds;
+		} else {
+			assert((*event.world).id in this._worlds);
+			world = event.world;
 		}
 
 		// do not spawn if it has been disconnected during the event
-		/*if(player.hubId in this.players_hubid) {
-			if(packet.reason != HncomPlayer.Add.FIRST_JOIN) {
-				player.sendChangeDimension(group!byte(packet.dimension, packet.dimension), world.dimension);
-			}
-			player.world.spawnPlayer(player);
-		}*/
+		if(player.hubId in this._players) {
+
+			std.concurrency.send(cast()(*world).tid, AddPlayer(player));
+
+		}
 
 	}
 
@@ -1386,27 +1129,19 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * This packet is not sent when a player is moved away from this
 	 * node with a Transfer or a Kick packet.
 	 */
-	private void handleRemovePacket(HncomPlayer.Remove packet) {
-		if(auto p = (packet.hubId in this.players_hubid)) {
-			this.removePlayer(*p, packet.reason);
-		}
+	private shared void handleRemovePacket(HncomPlayer.Remove packet) {
+		this.removePlayer(packet.hubId, packet.reason);
 	}
 	
-	private void handleUpdateGamemodePacket(HncomPlayer.UpdateGamemode packet) {
-		auto player = packet.hubId in this.players_hubid;
-		if(player) {
-			(*player).gamemode = packet.gamemode;
-		}
+	private shared void handleUpdateGamemodePacket(HncomPlayer.UpdateGamemode packet) {
+		//TODO
 	}
 	
 	/*
 	 * Updates a player's input mode.
 	 */
-	private void handleUpdateInputModePacket(HncomPlayer.UpdateInputMode packet) {
-		auto player = packet.hubId in this.players_hubid;
-		if(player) {
-			//TODO call event
-		}
+	private shared void handleUpdateInputModePacket(HncomPlayer.UpdateInputMode packet) {
+		//TODO
 	}
 
 	/*
@@ -1415,84 +1150,49 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * and player, so an additional latency is added (the one between the node
 	 * and the hub) is added to obtain a more precise value.
 	 */
-	private void handleUpdateLatencyPacket(HncomPlayer.UpdateLatency packet) {
-		auto player = packet.hubId in this.players_hubid;
-		if(player) {
-			(*player).handleUpdateLatency(packet);
-		}
+	private shared void handleUpdateLatencyPacket(HncomPlayer.UpdateLatency packet) {
+		//TODO
 	}
 
 	/*
 	 * Updates a player's packet loss thanks to hub's calculations.
 	 */
-	private void handleUpdatePacketLossPacket(HncomPlayer.UpdatePacketLoss packet) {
-		auto player = packet.hubId in this.players_hubid;
-		if(player) {
-			(*player).handleUpdatePacketLoss(packet);
-		}
+	private shared void handleUpdatePacketLossPacket(HncomPlayer.UpdatePacketLoss packet) {
+		//TODO
 	}
 	
 	/*
 	 * Elaborates raw game data sent by a client.
 	 */
-	private void handleGamePacketPacket(HncomPlayer.GamePacket packet) {
-		auto player = packet.hubId in this.players_hubid;
+	private shared void handleGamePacketPacket(HncomPlayer.GamePacket packet) {
+		auto player = packet.hubId in this._players;
 		if(player && packet.packet.length) {
-			(*player).handle(packet.packet[0], packet.packet[1..$]);
+			std.concurrency.send(cast()(*player).world.tid, GamePacket(packet.hubId, packet.packet.idup));
 		}
 	}
 
-	private void handleUpdateDifficultyPacket(HncomWorld.UpdateDifficulty packet) {
-		auto world = this.worldWithId(packet.worldId);
-		if(world !is null) {
-			//TODO update difficulty and send packets
-		}
+	private shared void handleUpdateDifficultyPacket(HncomWorld.UpdateDifficulty packet) {
+		//TODO
 	}
 
-	private void handleUpdateGamemodePacket(HncomWorld.UpdateGamemode packet) {
-		auto world = this.worldWithId(packet.worldId);
-		if(world !is null) {
-			//TODO update default gamemode and send packets
-		}
+	private shared void handleUpdateGamemodePacket(HncomWorld.UpdateGamemode packet) {
+		//TODO
 	}
 
-	private void handleRequestCreationPacket(HncomWorld.RequestCreation packet) {
-		//TODO do construction with rules
-		if(packet.parent < 0) {
-			this.addWorld(packet.name);
-		} else {
-			bool search(World[] worlds) {
-				foreach(world ; worlds) {
-					if(world.id == packet.parent) {
-						world.addChild(packet.name);
-						return true;
-					} else if(search(world.children)) {
-						return true;
-					}
-				}
-				return false;
-			}
-			search(this.worlds);
-		}
+	private shared void handleRequestCreationPacket(HncomWorld.RequestCreation packet) {
+		//TODO
 	}
 
-	private Address convertAddress(HncomTypes.Address address) {
-		if(address.bytes.length == 4) {
-			ubyte[4] bytes = address.bytes;
-			return new InternetAddress(bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3], address.port);
-		} else if(address.bytes.length == 16) {
-			ubyte[16] bytes = address.bytes;
-			return new Internet6Address(bytes, address.port);
-		} else {
-			return new InternetAddress(0, 0);
-		}
+	private shared void handlePromptCommand(string command) {
+		this.handleCommand(0, null, command);
 	}
 
 	// handles a command from various sources.
-	private void handleCommand(ubyte origin, Address address, string command, int id=-1) {
+	private shared void handleCommand(ubyte origin, Address address, string command, int id=-1) {
 		auto sender = new ServerCommandSender(this, origin, address, id);
 		string found;
-		foreach(c ; this.commands) {
+		foreach(_c ; this.commands) {
+			auto c = cast()_c;
 			foreach(cname ; c.command ~ c.aliases) {
 				if(command.startsWith(cname)) {
 					if(c.call(sender, command[cname.length..$])) return;
@@ -1501,65 +1201,31 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 		}
 		if(found) {
-			this.callEventIfExists!InvalidParametersEvent(sender, found);
+			(cast()this).callEventIfExists!InvalidParametersEvent(sender, found);
 		} else {
-			this.callEventIfExists!UnknownCommandEvent(sender);
+			(cast()this).callEventIfExists!UnknownCommandEvent(sender);
 		}
-	}
-
-	/**
-	 * Registers a task.
-	 * Params:
-	 *		task = a function or a delegate that will be called every interval
-	 *		interval = number of ticks indicating the repeating interval
-	 *		repeat = number of times to repeat the task
-	 * Returns:
-	 * 		the new task id that can be used to remove the task
-	 */
-	public @safe size_t addTask(E...)(void delegate(E) task, size_t interval, size_t repeat=size_t.max) if(areValidTaskArgs!E) {
-		return this.tasks.add(task, interval, repeat, this.ticks);
-	}
-
-	/// ditto
-	alias addTask schedule;
-
-	/**
-	 * Executes a task one time after the given ticks.
-	 * Example:
-	 * ---
-	 * immutable expected = server.ticks + 100;
-	 * server.delay({
-	 *    assert(server.ticks = expected);
-	 * }, 100);
-	 * ---
-	 */
-	public @safe size_t delay(E...)(void delegate(E) task, size_t timeout) if(areValidTaskArgs!E) {
-		return this.addTask(task, timeout, 1);
-	}
-
-	/**
-	 * Removes a task using the task's delegate or the id returned
-	 * by the addTask function.
-	 */
-	public @safe void removeTask(E...)(void delegate(E) task) if(areValidTaskArgs!E) {
-		this.tasks.remove(task);
-	}
-
-	/// ditto
-	public @safe void removeTask(size_t tid) {
-		this.tasks.remove(tid);
 	}
 
 }
 
 class ServerCommandSender : CommandSender {
 
-	public Server server;
+	enum Origin : ubyte {
+
+		prompt = 0,
+		hub = HncomStatus.RemoteCommand.HUB,
+		externalConsole = HncomStatus.RemoteCommand.EXTERNAL_CONSOLE,
+		rcon = HncomStatus.RemoteCommand.RCON,
+
+	}
+
+	public shared Server server;
 	public immutable ubyte origin;
 	public const Address address;
 	private int id;
 
-	public this(Server server, ubyte origin, Address address, int id) {
+	public this(shared Server server, ubyte origin, Address address, int id) {
 		this.server = server;
 		this.origin = origin;
 		this.address = address;
@@ -1571,15 +1237,11 @@ class ServerCommandSender : CommandSender {
 	}
 	
 	public override Entity[] visibleEntities() {
-		Entity[] ret;
-		foreach(world ; this.server.worlds) {
-			ret ~= world.entities;
-		}
-		return ret;
+		return [];
 	}
 
 	public override Player[] visiblePlayers() {
-		return this.server.players;
+		return [];
 	}
 
 	protected override void sendMessageImpl(string message) {
@@ -1587,9 +1249,48 @@ class ServerCommandSender : CommandSender {
 	}
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		command_log(this.id, join(cast(string[])formats, ""), translate(translation, this.server.settings.language, args));
+		command_log(this.id, join(cast(string[])formats, ""), translate(translation, cast()this.server.settings.language, args));
 	}
 
 	alias server this;
 
+}
+
+private void startResourceUsageThread(int pid) {
+
+	Thread.getThis().name = "ResourcesUsage";
+	
+	ProcessMemInfo ram = processMemInfo(pid);
+	ProcessCPUWatcher cpu = new ProcessCPUWatcher(pid);
+	
+	while(true) {
+		ram.update();
+		//TODO send packet directly to the socket
+		//this.sendPacket(new HncomStatus.ResourcesUsage(20, ram.usedRAM, cpu.current()).encode());
+		Thread.sleep(dur!"seconds"(5));
+	}
+	
+}
+
+private void startCommandReaderThread(std.concurrency.Tid tid) {
+
+	Thread.getThis().name = "CommandReader";
+
+	import std.stdio : readln;
+	while(true) {
+		std.concurrency.send(tid, readln());
+	}
+
+}
+
+private Address convertAddress(HncomTypes.Address address) {
+	if(address.bytes.length == 4) {
+		ubyte[4] bytes = address.bytes;
+		return new InternetAddress(bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3], address.port);
+	} else if(address.bytes.length == 16) {
+		ubyte[16] bytes = address.bytes;
+		return new Internet6Address(bytes, address.port);
+	} else {
+		return new InternetAddress(0, 0);
+	}
 }

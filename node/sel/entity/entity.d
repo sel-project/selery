@@ -14,8 +14,12 @@
  */
 module sel.entity.entity;
 
+import core.atomic : atomicOp;
+
 import std.algorithm : clamp;
+import std.bitmanip : bigEndianToNative, nativeToBigEndian;
 import std.conv : to;
+import std.file : exists, read, write;
 import std.math;
 import std.string : split, replace;
 import std.traits : isArray, isAbstractClass;
@@ -33,6 +37,7 @@ import sel.event.world.world : WorldEvent;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.node.server : Server;
+import sel.path : Paths;
 import sel.player.player : Player;
 import sel.world.world : World, Rules;
 
@@ -44,14 +49,34 @@ public import sul.entities : Entities;
  */
 abstract class Entity : EventListener!WorldEvent {
 
-	private static uint count = 0;
+	private static shared uint globalCount = 1;
+	private static shared uint savedGlobalCount = 1;
 
-	public static @safe @nogc uint reserve() {
-		return ++count;
+	public static void loadGlobalCount() {
+		if(exists(Paths.hidden ~ "unique_id")) {
+			ubyte[4] data = cast(ubyte[])read(Paths.hidden ~ "unique_id");
+			globalCount = savedGlobalCount = bigEndianToNative!uint(data);
+		}
 	}
 
-	public immutable uint id;
+	public static void saveGlobalCount() {
+		if(savedGlobalCount != globalCount) {
+			write(Paths.hidden ~ "unique_id", nativeToBigEndian(globalCount));
+			savedGlobalCount = globalCount;
+		}
+	}
 
+	public static synchronized uint reserveGlobalId() {
+		return atomicOp!"+="(globalCount, 1);
+	}
+
+	private static uint count = -1;
+
+	public static @safe @nogc uint reserveLocalId() {
+		return count += 2; // always an odd number
+	}
+
+	protected uint _unique_id, _id;
 	protected UUID n_uuid;
 
 	protected World n_world;
@@ -96,17 +121,17 @@ abstract class Entity : EventListener!WorldEvent {
 
 	public this() {
 		// unusable entity
-		this.id = 0;
+		this._unique_id = 0;
+		this._id = 0;
 	}
 
 	public this(World world, EntityPosition position) {
 		//assert(world !is null, "World can't be null");
-		this.id = reserve();
+		this._unique_id = reserveGlobalId();
+		this._id = reserveLocalId();
 		this.n_world = world;
-		if(world !is null) {
-			this.rules = this.world.rules.dup;
-			this.n_uuid = world.server.nextUUID;
-		}
+		this.rules = this.world.rules.dup;
+		this.n_uuid = cast()this.server.nextUUID;
 		this.m_position = this.m_last = this.oldposition = position;
 		this.m_motion = EntityPosition(0, 0, 0);
 		this.highestPoint = this.position.y;
@@ -114,6 +139,14 @@ abstract class Entity : EventListener!WorldEvent {
 		this.n_eye_height = 0;
 		this.n_box = new EntityAxis(0, 0, this.position);
 		this.metadata = new Metadata(); //TODO custom
+	}
+	
+	public final pure nothrow @property @safe @nogc uint uniqueId() {
+		return this._unique_id;
+	}
+
+	public final pure nothrow @property @safe @nogc uint id() {
+		return this._id;
 	}
 
 	public pure nothrow @property @safe @nogc sul.entities.Entity data() {
@@ -204,7 +237,7 @@ abstract class Entity : EventListener!WorldEvent {
 		return this.n_world;
 	}
 
-	public final pure nothrow @property @safe @nogc Server server() {
+	public final pure nothrow @property @safe @nogc shared(Server) server() {
 		return this.world.server;
 	}
 
@@ -842,7 +875,7 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 
 	public override @safe string toString() {
-		return typeid(this).to!string ~ "(" ~ to!string(this.id) ~ ")";
+		return typeid(this).to!string ~ "(" ~ to!string(this.uniqueId) ~ "," ~ to!string(this.id) ~ ")";
 	}
 
 }

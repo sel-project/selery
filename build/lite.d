@@ -74,7 +74,7 @@ void main(string[] args) {
 		
 		try {
 			
-			new sel.node.server.Server(new TidAddress(cast()MessagePassingNode.tid), "", "", true, pluginloader.node.loadPlugins(), args);
+			new shared sel.node.server.Server(new TidAddress(cast()MessagePassingNode.tid), "", "", true, pluginloader.node.loadPlugins(), args);
 			
 		} catch(LinkTerminated) {
 			

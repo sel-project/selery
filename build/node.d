@@ -65,7 +65,7 @@ void main(string[] args) {
 
 		try {
 			
-			new Server(address, name, password, main, loadPlugins(), args);
+			new shared Server(address, name, password, main, loadPlugins(), args);
 			
 		} catch(LinkTerminated) {
 			

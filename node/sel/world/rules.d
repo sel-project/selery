@@ -40,7 +40,7 @@ enum Difficulty : ubyte {
 
 struct Rules {
 
-	private static Rules def;
+	private static shared Rules def;
 
 	public static nothrow @property @safe @nogc const(Rules) defaultRules() {
 		return def;
