@@ -14,6 +14,8 @@
  */
 module sel.plugin;
 
+import sel.about;
+
 /**
  * Informations about a plugin and registration-related
  * utilities.
@@ -100,6 +102,7 @@ class Plugin {
 	
 }
 
+// attributes for main classes
 enum start;
 enum reload;
 enum stop;
@@ -109,3 +112,76 @@ enum event;
 enum global;
 enum inherit;
 enum cancel;
+
+// attributes for commands
+struct command { string command; }
+struct aliases { string[] aliases; }
+struct description { string description; }
+struct params { string[] params; }
+enum op;
+enum hidden;
+
+// attributes for tasks
+struct task { tick_t interval; }
+
+void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritance, CommandBase, bool tasks, T, S)(T class_, Plugin plugin, S storage) {
+
+	enum bool events = !is(typeof(EventBase) == bool);
+	enum bool globals = !is(typeof(GlobalEventBase) == bool);
+	enum bool commands = !is(typeof(CommandBase) == bool);
+
+	import std.traits : getSymbolsByUDA, hasUDA, getUDAs, Parameters;
+
+	foreach(member ; __traits(allMembers, T)) {
+		static if(is(typeof(__traits(getMember, T, member)) == function)) { //TODO must be public and not a template
+			mixin("alias F = T." ~ member ~ ";");
+			enum del = "&class_." ~ member;
+			// start/stop
+			static if(main) {
+				static if(hasUDA!(F, start) && Parameters!F.length == 0) {
+					plugin.onstart ~= mixin(del);
+				}
+				static if(hasUDA!(F, reload) && Parameters!F.length == 0) {
+					plugin.onreload ~= mixin(del);
+				}
+				static if(hasUDA!(F, stop) && Parameters!F.length == 0) {
+					plugin.onstop ~= mixin(del);
+				}
+			}
+			// events
+			enum isValid(E) = is(Parameters!F[0] == interface) || is(Parameters!F[0] : E);
+			static if(events && Parameters!F.length == 1 && ((events && hasUDA!(F, event) && isValid!EventBase) || (globals && hasUDA!(F, global) && isValid!GlobalEventBase))) {
+				static if(hasUDA!(F, cancel)) {
+					//TODO event must be cancellable
+					auto ev = delegate(Parameters!F[0] e){ e.cancel(); };
+				} else {
+					auto ev = mixin(del);
+				}
+				static if(events && hasUDA!(F, event)) {
+					storage.addEventListener(ev);
+				}
+				static if(globals && hasUDA!(F, global)) {
+					(cast()storage.globalListener).addEventListener(ev);
+				}
+			}
+			// commands
+			static if(commands && hasUDA!(F, command) && Parameters!F.length >= 1 && is(Parameters!F[0] : CommandBase)) {
+				static if(hasUDA!(F, description)) {
+					enum d = getUDAs!(F, description)[0].description;
+				} else {
+					enum d = "";
+				}
+				string[] a;
+				foreach(alias_ ; getUDAs!(F, aliases)) {
+					a ~= alias_.aliases;
+				}
+				storage.registerCommand!F(mixin(del), getUDAs!(F, command)[0].command, d, a, hasUDA!(F, op), hasUDA!(F, hidden));
+			}
+			// tasks
+			static if(tasks && hasUDA!(F, task) && (Parameters!F.length == 0 || Parameters!F.length == 1 && is(Parameters!F[0] : tick_t))) {
+				storage.addTask(mixin(del), getUDAs!(F, task)[0].interval);
+			}
+		}
+	}
+
+}

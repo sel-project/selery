@@ -30,13 +30,13 @@ import std.file;
 import std.json;
 import std.path : dirSeparator, buildNormalizedPath, absolutePath;
 import std.process : executeShell;
+import std.stdio : writeln;
 import std.string;
 
 import sel.about;
-import sel.format : Text, writeln;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 0;
+enum size_t __GENERATOR__ = 4;
 
 void main(string[] args) {
 
@@ -44,6 +44,8 @@ void main(string[] args) {
 		static import std.stdio;
 		return std.stdio.write(Software.displayVersion);
 	}
+
+	writeln("Loading plugins for " ~ Software.name ~ " " ~ Software.displayVersion);
 
 	if(args.canFind("-p") || args.canFind("--portable")) {
 
@@ -248,8 +250,10 @@ void main(string[] args) {
 					}
 				}
 			}
-			if(!api.canFind(Software.api)) {
-				writeln(Text.white ~ "Cannot load plugin " ~ Text.red ~ inf.name ~ Text.white ~ " because it has a different target API than the one required by this version of " ~ Software.name);
+			if(api.length == 0 || api.canFind(Software.api)) {
+				writeln(inf.name, " ", inf.vers, ": loaded");
+			} else {
+				writeln(inf.name, " ", inf.vers, ": cannot load due to wrong api ", api);
 				inf.active = false;
 			}
 		}
@@ -288,6 +292,7 @@ void main(string[] args) {
 				if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
 				value.dub["name"] = value.id;
 				value.dub["targetType"] = "library";
+				value.dub["configurations"] = [JSONValue(["name": "plugin"])];
 				auto dptr = "dependencies" in value.json;
 				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
 					foreach(name, d; dptr.object) {

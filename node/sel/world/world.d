@@ -30,6 +30,7 @@ import std.typetuple : TypeTuple;
 
 import sel.about;
 import sel.command.command : Command;
+import sel.command.util : WorldCommandSender;
 import sel.format : Text;
 import sel.lang : Messageable, Translation, translate;
 import sel.utils : call;
@@ -48,11 +49,11 @@ import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.node.info : PlayerInfo, WorldInfo;
-import sel.node.plugin.plugin;
 import sel.node.server : Server;
 import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player, isPlayer;
 import sel.player.pocket : PocketPlayerImpl;
+import sel.plugin : Plugin, loadPluginAttributes;
 import sel.util.color : Color;
 import sel.util.hncom : HncomPlayer;
 import sel.util.log;
@@ -70,51 +71,6 @@ static import sul.blocks;
  * Basic world.
  */
 class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player"), Messageable {
-	
-	public static void registerAttributes(T:World)(T world) {
-		foreach(immutable fname ; __traits(allMembers, T)) {
-			static if(is(typeof(__traits(getMember, T, fname)) == function)) {
-				mixin("alias func = T." ~ fname ~ ";");
-				static if(hasUDA!(func, event)) {
-					mixin("auto del = &world." ~ fname ~ ";");
-					registerEvent!(hasUDA!(func, cancel), hasUDA!(func, inherit))(world, del);
-				}
-				static if(hasUDA!(func, command)) {
-					mixin("auto del = &world." ~ fname ~ ";");
-					static if(hasUDA!(func, description)) {
-						enum d = getUDAs!(func, description)[0];
-					} else {
-						enum d = "";
-					}
-					static if(hasUDA!(func, aliases)) {
-						enum a = getUDAs!(func, aliases)[0];
-					} else {
-						enum a = new string[0];
-					}
-					static if(hasUDA!(func, params)) {
-						enum p = getUDAs!(func, params);
-					} else {
-						enum p = new string[0];
-					}
-					world.registerCommand!(func)(del, getUDAs!(func, command)[0], d, a, p, hasUDA!(func, op), hasUDA!(func, hidden));
-				}
-				static if(hasUDA!(func, task)) {
-					mixin("auto del = &world." ~ fname ~ ";");
-					world.addTask(del, getUDAs!(func, task)[0]);
-				}
-			}
-		}
-	}
-	
-	private static void registerEvent(bool cancelled, bool inher, T)(World world, void delegate(T) event) {
-		static if(cancelled) {
-			event = (T e){ e.cancel(); };
-		}
-		world.addEventListener(event);
-		static if(inher) {
-			world.inheritance.addEventListener(event);
-		}
-	}
 
 	public static void startWorld(T:World)(shared Server server, shared WorldInfo info, T world, World parent) {
 		world.info = info;
@@ -127,7 +83,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			world.setListener(parent.inheritance);
 			world.inheritance = parent.inheritance;
 		}
-		registerAttributes(world);
+		loadPluginAttributes!(false, WorldEvent, Object, true, WorldCommandSender, true)(world, Plugin.init, world);
 		world.start();
 	}
 
@@ -136,8 +92,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			void transfer(World from) {
 				auto c = from.w_players.length;
 				if(c) {
-					static import sel.node.server;
-					warning_log(translate(Translation("warning.removingWithPlayers"), sel.node.server.server.settings.language, [from.name, to!string(c)]));
+					warning_log(translate(Translation("warning.removingWithPlayers"), world.server.settings.language, [from.name, to!string(c)]));
 					foreach(player ; from.w_players) {
 						player.world = transferTo;
 					}
@@ -200,7 +155,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	private Entity[size_t] w_entities;
 	private Player[size_t] w_players;
-	private PlayersList players_list;
+	protected PlayersList players_list;
 	
 	private tick_t m_time;
 
@@ -1522,11 +1477,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, bool op, bool hidden) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
-		(*ptr).add!func(del, params);
+		(*ptr).add!func(del);
 	}
 
 	/**

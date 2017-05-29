@@ -293,7 +293,7 @@ class Command {
 		this.hidden = hidden;
 	}
 
-	void add(alias func)(void delegate(Parameters!func) del, string[] params) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
+	void add(alias func)(void delegate(Parameters!func) del, string[] params=[]) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
 		if(params.length < Parameters!func.length - 1) params ~= [ParameterIdentifierTuple!func][params.length+1..$];
 		this.overloads ~= new OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
@@ -302,14 +302,6 @@ class Command {
 	 * Returns: true if the command has been executed, false otherwise.
 	 */
 	bool call(C:CommandSender, T)(C sender, T args) if(is(T == string) || is(T == CommandArg[])) {
-		foreach(cmd ; this.overloads) {
-			if(cmd.callArgs(sender, args)) return true;
-		}
-		return false;
-	}
-	
-	/// ditto
-	deprecated("Use call instead") bool callArgs(C:CommandSender, T)(C sender, T args) if(is(T == string) || is(T == CommandArg[])) {
 		foreach(cmd ; this.overloads) {
 			if(cmd.callArgs(sender, args)) return true;
 		}

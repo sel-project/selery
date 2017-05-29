@@ -72,6 +72,7 @@ import sel.world.world : World, Dimension;
 
 // Server's instance
 private shared Server n_server;
+private shared std.concurrency.Tid server_tid;
 
 /**
  * Gets the server instance (plugins should use this
@@ -101,6 +102,7 @@ version(Windows) {
 		if(sig == CTRL_C_EVENT) {
 			stoppedWithSignal = true;
 			running = false;
+			//TODO send a message to say to stop
 			return true; // this will let the process run in background until it kills himself
 		}
 		return false; // windows will instantly kill the process
@@ -122,6 +124,8 @@ version(Windows) {
  * Singleton for the server instance.
  */
 final class Server : EventListener!ServerEvent, Messageable {
+
+	public immutable bool lite;
 
 	private shared ulong start_time;
 
@@ -164,7 +168,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		Thread.getThis().name = "Server";
 
-		immutable bool lite = cast(TidAddress)hub !is null;
+		this.lite = cast(TidAddress)hub !is null;
 
 		this.node_name = name;
 		this.node_main = main;
@@ -173,7 +177,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		this.n_args = cast(shared)args;
 
-		this.tid = cast(shared)std.concurrency.thisTid;
+		this.tid = server_tid = cast(shared)std.concurrency.thisTid;
 		
 		n_server = cast(shared)this;
 		
@@ -194,7 +198,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		if(lite) {
 
 			this.handler = new shared MessagePassingHandler(cast(shared TidAddress)hub);
-			this.handleInfo();
+			this.handleInfoImpl(cast()std.concurrency.receiveOnly!(HncomLogin.HubInfo)());
 
 		} else {
 
@@ -247,87 +251,89 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		ubyte[] buffer = this.handler.receive();
 		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
-
-			Config settings;
-
-			auto info = HncomLogin.HubInfo.fromBuffer(buffer);
-
-			this.n_hub_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
-
-			this.n_id = info.serverId;
-			this.uuid_count = info.reservedUuids;
-
-			auto type = this.n_hub_address is null ? ConfigType.lite : ConfigType.node;
-
-			auto additional = parseJSON(info.additionalJson);
-			auto minecraft = "minecraft" in additional;
-			if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
-				auto edu = "edu" in *minecraft;
-				auto realm = "realm" in *minecraft;
-				settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
-			} else {
-				settings = Config(type, false, false);
-			}
-			settings.load();
-			Rules.reload(settings);
-
-			settings.displayName = info.displayName;
-			settings.language = info.language;
-			settings.acceptedLanguages = info.acceptedLanguages;
-
-			this.n_online = info.online;
-			this.n_max = info.max;
-
-			auto social = "social" in additional;
-			if(social && social.type == JSON_TYPE.OBJECT) {
-				if("website" in *social) this.n_social.website = (*social)["website"].str;
-				if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
-				if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
-				if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
-				if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
-				if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
-			}
-
-			// save latest language used
-			std.file.write(Paths.hidden ~ "lang", settings.language);
-
-			version(Windows) {
-				//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
-			}
-
-			// reload languages and save cache
-			string[] paths;
-			foreach(_plugin ; this.n_plugins) {
-				auto plugin = cast()_plugin;
-				if(plugin.languages !is null) paths ~= plugin.languages;
-			}
-			Lang.init(settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
-			if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
-			std.file.write(Paths.hidden ~ "lang", settings.language);
-
-			foreach(game ; info.gamesInfo) {
-				this.handleGameInfo(game, settings);
-			}
-
-			// check protocols and print warnings if necessary
-			void check(ubyte type, string name, uint[] requested, uint[] supported) {
-				foreach(req ; requested) {
-					if(!supported.canFind(req)) {
-						warning_log(translate(Translation("warning.invalidProtocol"), settings.language, [to!string(req), name]));
-					}
-				}
-			}
-
-			check(PE, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
-			check(PC, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
-
-			this.n_settings = cast(shared)settings;
-
-			this.finishConstruction();
-
+			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer));
 		} else {
 			error_log(translate(Translation("warning.closed"), this.n_settings.language));
 		}
+
+	}
+
+	private shared void handleInfoImpl(HncomLogin.HubInfo info) {
+
+		Config settings;
+
+		this.n_hub_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
+
+		this.n_id = info.serverId;
+		this.uuid_count = info.reservedUuids;
+
+		auto type = this.n_hub_address is null ? ConfigType.lite : ConfigType.node;
+
+		auto additional = parseJSON(info.additionalJson);
+		auto minecraft = "minecraft" in additional;
+		if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
+			auto edu = "edu" in *minecraft;
+			auto realm = "realm" in *minecraft;
+			settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
+		} else {
+			settings = Config(type, false, false);
+		}
+		settings.load();
+		Rules.reload(settings);
+
+		settings.displayName = info.displayName;
+		settings.language = info.language;
+		settings.acceptedLanguages = info.acceptedLanguages;
+
+		this.n_online = info.online;
+		this.n_max = info.max;
+
+		auto social = "social" in additional;
+		if(social && social.type == JSON_TYPE.OBJECT) {
+			if("website" in *social) this.n_social.website = (*social)["website"].str;
+			if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
+			if("twitter" in *social) this.n_social.twitter = (*social)["twitter"].str;
+			if("youtube" in *social) this.n_social.youtube = (*social)["youtube"].str;
+			if("instagram" in *social) this.n_social.instagram = (*social)["instagram"].str;
+			if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
+		}
+
+		// save latest language used
+		std.file.write(Paths.hidden ~ "lang", settings.language);
+
+		version(Windows) {
+			//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
+		}
+
+		// reload languages and save cache
+		string[] paths;
+		foreach(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
+			if(plugin.languages !is null) paths ~= plugin.languages;
+		}
+		Lang.init(settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
+		if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
+		std.file.write(Paths.hidden ~ "lang", settings.language);
+
+		foreach(game ; info.gamesInfo) {
+			this.handleGameInfo(game, settings);
+		}
+
+		// check protocols and print warnings if necessary
+		void check(ubyte type, string name, uint[] requested, uint[] supported) {
+			foreach(req ; requested) {
+				if(!supported.canFind(req)) {
+					warning_log(translate(Translation("warning.invalidProtocol"), settings.language, [to!string(req), name]));
+				}
+			}
+		}
+
+		check(PE, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
+		check(PC, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+
+		this.n_settings = cast(shared)settings;
+
+		this.finishConstruction();
 
 	}
 
@@ -425,7 +431,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
 		}
 		this.handler.send(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode());
-		std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
+		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -460,6 +466,49 @@ final class Server : EventListener!ServerEvent, Messageable {
 	}
 
 	private shared void start() {
+
+		void delegate() receive;
+		if(!this.lite) {
+			receive = (){
+				std.concurrency.receive(
+					&handlePromptCommand,
+					//TODO kick
+					//TODO close result
+					(immutable(ubyte)[] payload){
+						// from the hub
+						if(payload.length) {
+							this.handleHncomPacket(payload[0], payload[1..$].dup);
+						} else {
+							//TODO close
+							warning_log("received empty message from the hub");
+						}
+					},
+				);
+			};
+		} else {
+			receive = (){
+				std.concurrency.receive(
+					&handlePromptCommand,
+					//TODO kick
+					//TODO close result
+					&handleUncompressedPacket,
+					&handleCompressedPacket,
+					&handleAddNodePacket,
+					&handleRemoveNodePacket,
+					&handleMessageClientboundPacket,
+					&handlePlayersPacket,
+					&handleRemoteCommandPacket,
+					&handleReloadPacket,
+					&handleAddPacket,
+					&handleRemovePacket,
+					&handleUpdateGamemodePacket,
+					&handleUpdateInputModePacket,
+					&handleUpdateLatencyPacket,
+					&handleUpdatePacketLossPacket,
+					&handleGamePacketPacket,
+				);
+			};
+		}
 
 		while(running) {
 
@@ -907,11 +956,11 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/**
 	 * Registers a command.
 	 */
-	public shared void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, string[] params, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, bool op, bool hidden) {
 		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
+		if(command !in this.commands) this.commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
-		(*ptr).add!func(del, params);
+		(cast()*ptr).add!func(del);
 	}
 
 	public shared @property Command[] registeredCommands() {
@@ -996,14 +1045,13 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 	}
 
-	private shared void handleUncompressedPacket(HncomUtil.Uncompressed packet) {
+	private shared void handleUncompressedPacket(inout HncomUtil.Uncompressed packet) {
 		foreach(p ; packet.packets) {
-			if(p.length) this.handleHncomPacket(p[0], p[1..$]);
+			if(p.length) this.handleHncomPacket(p[0], p[1..$].dup);
 		}
 	}
 
-	private shared void handleCompressedPacket(HncomUtil.Compressed packet) {
-		// not supported
+	private shared void handleCompressedPacket(inout HncomUtil.Compressed packet) {
 		auto uc = new UnCompress(packet.size);
 		ubyte[] data = cast(ubyte[])uc.uncompress(packet.payload);
 		data ~= cast(ubyte[])uc.flush();
@@ -1013,9 +1061,9 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Adds (or update) a node.
 	 */
-	private shared void handleAddNodePacket(HncomStatus.AddNode packet) {
+	private shared void handleAddNodePacket(inout HncomStatus.AddNode packet) {
 		auto node = new Node(this, packet.hubId, packet.name, packet.main);
-		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = accepted.protocols;
+		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = cast(uint[])accepted.protocols;
 		this.nodes_hubid[node.hubId] = cast(shared)node;
 		this.nodes_names[node.name] = cast(shared)node;
 		(cast()this).callEventIfExists!NodeAddedEvent(node);
@@ -1024,7 +1072,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/**
 	 * Removes a node.
 	 */
-	private shared void handleRemoveNodePacket(HncomStatus.RemoveNode packet) {
+	private shared void handleRemoveNodePacket(inout HncomStatus.RemoveNode packet) {
 		auto node = packet.hubId in this.nodes_hubid;
 		if(node) {
 			this.nodes_hubid.remove((*node).hubId);
@@ -1036,11 +1084,11 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Handles a message sent or broadcasted from another node.
 	 */
-	private shared void handleMessageClientboundPacket(HncomStatus.MessageClientbound packet) {
+	private shared void handleMessageClientboundPacket(inout HncomStatus.MessageClientbound packet) {
 		auto node = this.nodeWithHubId(packet.sender);
 		// only accept message from nodes that didn't disconnect
 		if(node !is null) {
-			(cast()this).callEventIfExists!NodeMessageEvent(cast()node, packet.payload);
+			(cast()this).callEventIfExists!NodeMessageEvent(cast()node, cast(ubyte[])packet.payload);
 		}
 	}
 	
@@ -1048,7 +1096,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * Updates the number of online and max players in the whole
 	 * server (not the current node).
 	 */
-	private shared void handlePlayersPacket(HncomStatus.Players packet) {
+	private shared void handlePlayersPacket(inout HncomStatus.Players packet) {
 		this.n_online = packet.online;
 		this.n_max = packet.max;
 	}
@@ -1056,14 +1104,14 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Handles a command sent by the hub or an external application.
 	 */
-	private shared void handleRemoteCommandPacket(HncomStatus.RemoteCommand packet) {
-		with(packet) this.handleCommand(++origin, convertAddress(sender), command, commandId);
+	private shared void handleRemoteCommandPacket(inout HncomStatus.RemoteCommand packet) {
+		with(packet) this.handleCommand(cast(ubyte)(origin + 1), convertAddress(cast()sender), command, commandId);
 	}
 
 	/**
 	 * Reloads the configurations.
 	 */
-	private shared void handleReloadPacket(HncomStatus.Reload packet) {
+	private shared void handleReloadPacket(inout HncomStatus.Reload packet) {
 		// only reload plugins, not settings
 		foreach(plugin ; this.n_plugins) {
 			foreach(del ; plugin.onreload) del();
@@ -1073,10 +1121,10 @@ final class Server : EventListener!ServerEvent, Messageable {
 	/*
 	 * Adds a player to the node.
 	 */
-	private shared void handleAddPacket(HncomPlayer.Add packet) {
+	private shared void handleAddPacket(inout HncomPlayer.Add packet) {
 
-		Address address = convertAddress(packet.clientAddress);
-		Skin skin = Skin(packet.skin.name, packet.skin.data);
+		Address address = convertAddress(cast()packet.clientAddress);
+		Skin skin = Skin(packet.skin.name, cast(ubyte[])packet.skin.data);
 
 		if(!skin.valid) {
 			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
@@ -1092,7 +1140,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 			final switch(packet.type) {
 				foreach(Variant ; HncomPlayer.Add.Variants) {
 					case Variant.TYPE:
-						mixin("player.additional." ~ toLower(Variant.stringof)) = cast(shared)packet.new Variant();
+						mixin("player.additional." ~ toLower(Variant.stringof)) = cast(shared)packet.new inout Variant();
 						return;
 				}
 			}
@@ -1129,18 +1177,18 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * This packet is not sent when a player is moved away from this
 	 * node with a Transfer or a Kick packet.
 	 */
-	private shared void handleRemovePacket(HncomPlayer.Remove packet) {
+	private shared void handleRemovePacket(inout HncomPlayer.Remove packet) {
 		this.removePlayer(packet.hubId, packet.reason);
 	}
 	
-	private shared void handleUpdateGamemodePacket(HncomPlayer.UpdateGamemode packet) {
+	private shared void handleUpdateGamemodePacket(inout HncomPlayer.UpdateGamemode packet) {
 		//TODO
 	}
 	
 	/*
 	 * Updates a player's input mode.
 	 */
-	private shared void handleUpdateInputModePacket(HncomPlayer.UpdateInputMode packet) {
+	private shared void handleUpdateInputModePacket(inout HncomPlayer.UpdateInputMode packet) {
 		//TODO
 	}
 
@@ -1150,36 +1198,36 @@ final class Server : EventListener!ServerEvent, Messageable {
 	 * and player, so an additional latency is added (the one between the node
 	 * and the hub) is added to obtain a more precise value.
 	 */
-	private shared void handleUpdateLatencyPacket(HncomPlayer.UpdateLatency packet) {
+	private shared void handleUpdateLatencyPacket(inout HncomPlayer.UpdateLatency packet) {
 		//TODO
 	}
 
 	/*
 	 * Updates a player's packet loss thanks to hub's calculations.
 	 */
-	private shared void handleUpdatePacketLossPacket(HncomPlayer.UpdatePacketLoss packet) {
+	private shared void handleUpdatePacketLossPacket(inout HncomPlayer.UpdatePacketLoss packet) {
 		//TODO
 	}
 	
 	/*
 	 * Elaborates raw game data sent by a client.
 	 */
-	private shared void handleGamePacketPacket(HncomPlayer.GamePacket packet) {
+	private shared void handleGamePacketPacket(inout HncomPlayer.GamePacket packet) {
 		auto player = packet.hubId in this._players;
 		if(player && packet.packet.length) {
 			std.concurrency.send(cast()(*player).world.tid, GamePacket(packet.hubId, packet.packet.idup));
 		}
 	}
 
-	private shared void handleUpdateDifficultyPacket(HncomWorld.UpdateDifficulty packet) {
+	private shared void handleUpdateDifficultyPacket(inout HncomWorld.UpdateDifficulty packet) {
 		//TODO
 	}
 
-	private shared void handleUpdateGamemodePacket(HncomWorld.UpdateGamemode packet) {
+	private shared void handleUpdateGamemodePacket(inout HncomWorld.UpdateGamemode packet) {
 		//TODO
 	}
 
-	private shared void handleRequestCreationPacket(HncomWorld.RequestCreation packet) {
+	private shared void handleRequestCreationPacket(inout HncomWorld.RequestCreation packet) {
 		//TODO
 	}
 

@@ -36,7 +36,17 @@ void spawnWorld(T:World, E...)(shared Server server, shared WorldInfo info, E ar
 
 	World.startWorld(server, info, world, null);
 
-	world.startMainWorldLoop(server, info);
+	try {
+
+		world.startMainWorldLoop(server, info);
+
+	} catch(Throwable t) {
+
+		import sel.util.log;
+		error_log(t);
+		throw t;
+
+	}
 
 }
 
