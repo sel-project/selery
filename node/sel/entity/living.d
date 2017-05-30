@@ -41,8 +41,6 @@ public class Living : Entity {
 	protected tick_t last_received_attack = 0;
 	protected tick_t last_void_damage = 0;
 
-	protected float m_body_yaw = Rotation.WEST;
-
 	private float n_speed = .1;
 	private float n_base_speed = .1;
 
@@ -78,18 +76,6 @@ public class Living : Entity {
 		if(this.moved) {
 			this.updateGroundStatus();
 		}
-	}
-
-	public pure nothrow @property @safe @nogc float bodyYaw() {
-		return this.m_body_yaw;
-	}
-	
-	public pure nothrow @property @safe float bodyYaw(float bodyYaw) {
-		return this.m_body_yaw = bodyYaw;
-	}
-
-	public final @property @safe ubyte angleBodyYaw() {
-		return safe!ubyte(this.bodyYaw / 360 * 256);
 	}
 
 	public final pure nothrow @property @safe @nogc float speed() {
@@ -192,27 +178,6 @@ public class Living : Entity {
 
 	public final override @property @safe bool dead() {
 		return this.m_health.dead;
-	}
-
-	alias move = super.move;
-
-	public void move(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		if(!bodyYaw.isNaN) this.m_body_yaw = bodyYaw;
-		super.move(position, yaw, pitch);
-	}
-
-	alias teleport = super.teleport;
-	
-	public void teleport(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.move(position, yaw, bodyYaw, pitch);
-	}
-
-	public void teleport(BlockPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.teleport(position.entityPosition, yaw, bodyYaw, pitch);
-	}
-	
-	public void teleport(Position position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.teleport(position.from(this.position), yaw, bodyYaw, pitch);
 	}
 
 	/**

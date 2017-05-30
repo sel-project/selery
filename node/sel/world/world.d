@@ -922,7 +922,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				viewer.hide(player);
 			}
 			foreach(watch ; player.watchlist) {
-				player.hide(watch/*, false*/); //updating the viewer's watchlist
+				player.hide(watch/*, false*/); // updating the viewer's watchlist
 			}
 
 			this.callEventIfExists!PlayerAfterDespawnEvent(player);
@@ -953,6 +953,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 		return spawned;
 	}
+
+	/+public final void spawn(Entity entity) {
+		assert(entity.world == this);
+	}+/
 
 	/**
 	 * Despawns an entity.

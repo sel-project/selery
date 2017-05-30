@@ -328,8 +328,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 		}
 
-		check(PE, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
-		check(PC, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+		check(HncomTypes.Game.MINECRAFT, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+		check(HncomTypes.Game.POCKET, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
 
 		this.n_settings = cast(shared)settings;
 

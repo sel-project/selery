@@ -15,6 +15,7 @@
 module sel.plugin;
 
 import sel.about;
+import sel.tuple : Tuple;
 
 /**
  * Informations about a plugin and registration-related
@@ -114,10 +115,9 @@ enum inherit;
 enum cancel;
 
 // attributes for commands
-struct command { string command; }
-struct aliases { string[] aliases; }
-struct description { string description; }
-struct params { string[] params; }
+alias command = Tuple!(string, "command");
+alias aliases = Tuple!(string[], "aliases");
+alias description = Tuple!(string, "description");
 enum op;
 enum hidden;
 

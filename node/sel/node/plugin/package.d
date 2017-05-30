@@ -27,7 +27,8 @@ public import sel.node.server : server, Server, ServerCommandSender;
 // plugin
 public import sel.node.plugin.config : Config, _, Value, value;
 public import sel.node.plugin.file : exists, isDir, isFile, read, write, remove;
-public import sel.node.plugin.plugin : PluginOf, start, reload, stop, event, global, inherit, cancel, command, description, aliases, params, op, hidden, task;
+public import sel.node.plugin.plugin : PluginOf, start, reload, stop, event, global, inherit, cancel, command, description, aliases, op, hidden, task;
+public import sel.command.command : param;
 
 // command sender
 public import sel.player.player : Player;

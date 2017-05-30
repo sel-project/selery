@@ -18,7 +18,6 @@ import std.algorithm : sort, reverse;
 import std.conv : to;
 import std.json : JSONValue;
 import std.string : toLower, split, join, startsWith;
-import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
 
@@ -93,7 +92,7 @@ const struct Software {
 	enum ubyte major = 2;
 	
 	/// ditto
-	enum ubyte minor = 1;
+	enum ubyte minor = 0;
 	
 	/// ditto
 	enum ubyte patch = 0;

@@ -16,19 +16,14 @@ module sel.player.player;
 
 import core.thread : Thread;
 
-import std.algorithm : count, max, min, reverse, sort, canFind, clamp;
+import std.algorithm : count, max, min, clamp;
 import std.array : join, split;
-static import std.bitmanip;
-import std.concurrency : Tid, thisTid, send, receiveOnly;
+import std.concurrency : Tid, send, receiveOnly;
 import std.conv : to;
-import std.datetime : Duration, dur;
-import std.math : abs, ceil, sin, cos, PI, isFinite;
-import std.regex : replaceAll, ctRegex;
-import std.socket : Address, InternetAddress, Internet6Address, AddressFamily;
-import std.string : toLower, toUpper, startsWith, indexOf, split, join, strip, replace;
-import std.system : endian;
-import std.typetuple : TypeTuple;
-import std.uuid : UUID, randomUUID;
+import std.math : abs, isFinite;
+import std.socket : Address;
+import std.string : toLower, toUpper, startsWith, strip, replace;
+import std.uuid : UUID;
 
 import sel.about;
 import sel.command.command : Command, WorldCommandSender;
@@ -66,9 +61,6 @@ import sel.world.world : World, Dimension;
  * It's implemented as another class by every version of Minecraft.
  */
 abstract class Player : Human, WorldCommandSender {
-	
-	public immutable bool pe;
-	public immutable bool pc;
 
 	protected shared PlayerInfo info;
 
@@ -135,8 +127,6 @@ abstract class Player : Human, WorldCommandSender {
 		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
 		this.n_latency = latency;
 		this.viewDistance = this.rules.viewDistance;
-		this.pe = this.gameVersion == PE;
-		this.pc = this.gameVersion == PC;
 		//this.connection_time = milliseconds;
 		this.last_chunk_position = this.chunk;
 	}
@@ -697,8 +687,8 @@ abstract class Player : Human, WorldCommandSender {
 
 	alias teleport = super.teleport;
 
-	public override void teleport(EntityPosition position, float yaw=Rotation.KEEP, float bodyYaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.move(position, yaw, bodyYaw, pitch);
+	public override void teleport(EntityPosition position) {
+		super.teleport(position);
 		this.sendPosition();
 	}
 

@@ -18,7 +18,6 @@ matrix:
   exclude:
     - DC: dmd
       platform: x86
-      configuration: debug
 
 skip_tags: true
 branches:

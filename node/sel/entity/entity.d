@@ -94,8 +94,9 @@ abstract class Entity : EventListener!WorldEvent {
 	protected EntityPosition m_position;
 	protected EntityPosition m_last;
 	protected EntityPosition m_motion;
-	protected float m_yaw = Rotation.WEST;
-	protected float m_pitch = Rotation.FRONT;
+	protected float m_yaw = 0;
+	protected float m_body_yaw = 0;
+	protected float m_pitch = 0;
 	public bool moved = false;
 	public bool motionmoved = false;
 
@@ -551,6 +552,18 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 
 	/**
+	 * Gets the entity's body facing direction. This variable
+	 * may not affect all the entities.
+	 */
+	public pure nothrow @property @safe @nogc float bodyYaw() {
+		return this.m_body_yaw;
+	}
+	
+	public final @property @safe ubyte angleBodyYaw() {
+		return safe!ubyte(this.bodyYaw / 360 * 256);
+	}
+
+	/**
 	 * Gets the entity's looking direction (up-down).
 	 * The value should be in range -90..90 (90 included).
 	 */
@@ -592,31 +605,93 @@ abstract class Entity : EventListener!WorldEvent {
 	/**
 	 * Moves the entity.
 	 */
-	public @safe void move(EntityPosition position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+	public @safe void move(EntityPosition position) {
 		if(this.position != position) {
 			this.n_box.update(position);
 		}
 		this.m_position = position;
-		if(!yaw.isNaN) this.m_yaw = yaw;
-		if(!pitch.isNaN) this.m_pitch = pitch;
 		this.moved = true;
+	}
+
+	public void move(EntityPosition position, float yaw, float pitch) {
+		this.m_yaw = yaw;
+		this.m_pitch = pitch;
+		this.move(position);
+	}
+
+	public void move(EntityPosition position, float yaw, float bodyYaw, float pitch) {
+		this.m_body_yaw = bodyYaw;
+		this.move(position, yaw, pitch);
 	}
 
 	/**
 	 * Teleports the entity.
 	 */
-	public @trusted void teleport(EntityPosition position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.move(position, yaw, pitch);
+	public void teleport(EntityPosition position) {
+		this.n_box.update(position);
+		this.m_position = position;
+		this.moved = true;
 	}
 
 	/// ditto
-	public void teleport(BlockPosition position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
-		this.teleport(position.entityPosition, yaw, pitch);
+	public void teleport(EntityPosition position, float yaw, float pitch) {
+		this.m_yaw = yaw;
+		this.m_pitch = pitch;
+		this.teleport(position);
 	}
 
 	/// ditto
-	public void teleport(Position position, float yaw=Rotation.KEEP, float pitch=Rotation.KEEP) {
+	public void teleport(EntityPosition position, float yaw, float bodyYaw, float pitch) {
+		this.m_body_yaw = bodyYaw;
+		this.teleport(position, yaw, pitch);
+	}
+
+	/// ditto
+	public void teleport(World world, EntityPosition position) {
+		//TODO
+	}
+
+	/// ditto
+	public void teleport(World world, EntityPosition position, float yaw, float pitch) {
+		this.m_yaw = yaw;
+		this.m_pitch = pitch;
+		this.teleport(world, position);
+	}
+
+	/// ditto
+	public void teleport(World world, EntityPosition position, float yaw, float bodyYaw, float pitch) {
+		this.m_body_yaw = bodyYaw;
+		this.teleport(world, position, yaw, pitch);
+	}
+	
+	/// ditto
+	public void teleport(Position position) {
+		this.teleport(position.from(this.position));
+	}
+	
+	/// ditto
+	public void teleport(Position position, float yaw, float pitch) {
 		this.teleport(position.from(this.position), yaw, pitch);
+	}
+	
+	/// ditto
+	public void teleport(Position position, float yaw, float bodyYaw, float pitch) {
+		this.teleport(position.from(this.position), yaw, bodyYaw, pitch);
+	}
+	
+	/// ditto
+	public void teleport(World world, Position position) {
+		this.teleport(world, position.from(this.position));
+	}
+	
+	/// ditto
+	public void teleport(World world, Position position, float yaw, float pitch) {
+		this.teleport(world, position.from(this.position), yaw, pitch);
+	}
+
+	/// ditto
+	public void teleport(World world, Position position, float yaw, float bodyYaw, float pitch) {
+		this.teleport(world, position.from(this.position), yaw, bodyYaw, pitch);
 	}
 
 	/**

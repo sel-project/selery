@@ -17,13 +17,16 @@ module sel.command.command;
 import std.conv : ConvException, to;
 static import std.math;
 import std.string : toLower;
-import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, staticIndexOf, Reverse;
+import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, hasUDA, getUDAs, staticIndexOf, Reverse;
 
 import sel.command.args : StringReader, CommandArg;
 import sel.command.util : PocketType, CommandSender, WorldCommandSender, Target, Position;
 import sel.entity.entity : Entity;
 import sel.node.server : ServerCommandSender;
 import sel.player.player : Player;
+import sel.tuple : Tuple;
+
+alias param = Tuple!(string, "param");
 
 class Command {
 
@@ -293,8 +296,13 @@ class Command {
 		this.hidden = hidden;
 	}
 
-	void add(alias func)(void delegate(Parameters!func) del, string[] params=[]) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
-		if(params.length < Parameters!func.length - 1) params ~= [ParameterIdentifierTuple!func][params.length+1..$];
+	void add(alias func)(void delegate(Parameters!func) del) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
+		string[] params = [ParameterIdentifierTuple!func][1..$];
+		foreach(i, P; Parameters!func) {
+			static if(hasUDA!(P, param) && i != 0) {
+				params[i-1] = getUDAs!(P, param)[0];
+			}
+		}
 		this.overloads ~= new OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
 	
