@@ -19,8 +19,8 @@ import std.conv : to, ConvException;
 import std.string : split, join, strip, indexOf;
 import std.traits : isArray;
 
-import sel.path : Paths;
 import sel.node.plugin.file;
+import sel.path : Paths;
 
 enum _;
 

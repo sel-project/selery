@@ -27,9 +27,8 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 
 import sel.about;
-import sel.command.command : Position;
-import sel.util.util : safe, call;
 import sel.block.block : Block, blockInto;
+import sel.command.command : Position;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;
 import sel.event.world.damage;
@@ -39,6 +38,7 @@ import sel.math.vector;
 import sel.node.server : Server;
 import sel.path : Paths;
 import sel.player.player : Player;
+import sel.util.util : safe, call;
 import sel.world.world : World, Rules;
 
 static import sul.entities;

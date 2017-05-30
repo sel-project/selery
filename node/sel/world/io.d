@@ -26,10 +26,10 @@ import nbt.stream : ClassicStream;
 import nbt.tags;
 
 import sel.about : Software;
-import sel.util.util : seconds;
 import sel.block.block : Block;
 import sel.math.vector;
 import sel.util.buffers;
+import sel.util.util : seconds;
 import sel.world.chunk : Chunk, Section;
 import sel.world.world : World;
 

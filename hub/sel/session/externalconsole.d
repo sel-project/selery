@@ -30,12 +30,12 @@ import std.socket;
 import std.system : Endian, endian;
 
 import sel.about;
-import sel.path : Paths;
 import sel.constants;
 import sel.hub.server : Server;
 import sel.network.handler : HandlerThread;
 import sel.network.session : Session;
 import sel.network.socket : BlockingSocket;
+import sel.path : Paths;
 import sel.session.http : Request, Response;
 import sel.util.thread : SafeThread;
 

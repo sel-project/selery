@@ -25,8 +25,8 @@ import std.zip;
 
 import sel.about : Software;
 import sel.lang : Lang;
-import sel.path : Paths;
 import sel.node.server : Server;
+import sel.path : Paths;
 import sel.tuple : Tuple;
 
 auto createResourcePacks(shared Server server, UUID uuid, string[] textures) {

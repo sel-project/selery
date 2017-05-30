@@ -22,9 +22,9 @@ import std.datetime : dur;
 import std.file : exists, write, mkdirRecurse;
 
 import sel.crash : logCrash;
+import sel.hub.settings : Settings;
 import sel.path : Paths;
 import sel.util.util : seconds;
-import sel.hub.settings : Settings;
 
 /**
  * Safe thread that handles errors and exceptions

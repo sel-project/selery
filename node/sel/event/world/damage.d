@@ -17,8 +17,8 @@ module sel.event.world.damage;
 import std.algorithm : max;
 
 import sel.block.block : Block;
-import sel.enchantment;
 import sel.effect;
+import sel.enchantment;
 import sel.entity.entity : Entity;
 import sel.entity.human : Human;
 import sel.entity.interfaces;

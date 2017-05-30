@@ -19,7 +19,6 @@ import std.math : round, isNaN;
 
 import sel.about;
 import sel.command.command : Position;
-import sel.util.util : safe, call;
 import sel.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
 import sel.entity.metadata;
@@ -27,6 +26,7 @@ import sel.event.world;
 import sel.math.vector;
 import sel.player.player : Player;
 import sel.util.color : Color;
+import sel.util.util : safe, call;
 import sel.world.world : World;
 
 static import sul.effects;

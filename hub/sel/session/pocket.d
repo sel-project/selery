@@ -38,8 +38,8 @@ import std.zlib;
 
 import sel.about;
 import sel.constants;
-import sel.lang : Lang;
 import sel.hub.server : Server;
+import sel.lang : Lang;
 import sel.network.handler : UnconnectedHandler;
 import sel.network.session;
 import sel.session.player : PlayerSession, Skin;

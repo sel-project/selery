@@ -37,11 +37,12 @@ import std.utf : UTFException;
 
 import sel.about;
 import sel.format : Text;
+import sel.hub.settings;
 import sel.lang : Lang, translate, Translation;
+import sel.log : log;
+import sel.network.handler : Handler;
 import sel.path : Paths;
 import sel.plugin : Plugin;
-import sel.hub.settings;
-import sel.network.handler : Handler;
 import sel.session.externalconsole : ExternalConsoleSession;
 import sel.session.hncom : Node;
 import sel.session.player : PlayerSession;
@@ -49,7 +50,6 @@ import sel.session.rcon : RconSession;
 import sel.util.analytics : GoogleAnalytics;
 import sel.util.block : Blocks;
 import sel.util.ip : localAddresses, publicAddresses;
-import sel.log : log;
 import sel.util.thread;
 import sel.util.util : milliseconds;
 

@@ -17,13 +17,13 @@ module sel.entity.noai;
 import std.conv : to;
 
 import sel.about;
-import sel.util.util : call;
 import sel.block.block;
 import sel.entity.entity;
 import sel.entity.interfaces;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, EntityPosition, entityPosition;
 import sel.player.player : Player;
+import sel.util.util : call;
 import sel.world.world : World;
 
 static import sul.entities;

@@ -14,13 +14,13 @@
  */
 module sel.event.world.player;
 
-import sel.format : Text;
 import sel.block.block : Block;
 import sel.entity.entity : Entity;
 import sel.event.event : Cancellable;
 import sel.event.world.damage : EntityDamageEvent;
 import sel.event.world.entity : EntityDeathEvent;
 import sel.event.world.world;
+import sel.format : Text;
 import sel.item : Slot, Item;
 import sel.math.vector : BlockPosition, EntityPosition, ChunkPosition;
 import sel.player.player : Player;

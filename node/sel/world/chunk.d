@@ -26,11 +26,11 @@ import std.path : dirSeparator;
 import std.string : split, join, endsWith;
 
 import sel.about : block_t;
-import sel.path : Paths;
 import sel.block.block : Block;
 import sel.block.blocks : BlockStorage;
 import sel.block.tile : Tile;
 import sel.math.vector;
+import sel.path : Paths;
 import sel.world.io;
 import sel.world.world : World;
 

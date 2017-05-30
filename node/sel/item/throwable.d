@@ -14,10 +14,10 @@
  */
 module sel.item.throwable;
 /*
-import sel.player : Player;
 import sel.entity.projectile : Projectile, EntitySnowball = Snowball, EntityEgg = Egg, EntityEnderpearl = Enderpearl, EntityPotion = Potion;
 import sel.item.consumeable : Potions;
 import sel.item.item : Item, Items, register;
+import sel.player : Player;
 
 abstract class ThrowableItem(T:Projectile, E...) : Item {
 
