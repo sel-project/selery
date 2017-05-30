@@ -28,7 +28,7 @@ import std.uuid : UUID;
 
 import sel.about;
 import sel.command.command : Position;
-import sel.utils : safe, call;
+import sel.util.util : safe, call;
 import sel.block.block : Block, blockInto;
 import sel.entity.metadata : Metadata;
 import sel.event.event : EventListener;

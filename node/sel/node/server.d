@@ -29,7 +29,6 @@ import std.math : round;
 import std.process : executeShell;
 import std.socket : SocketException, Address, InternetAddress, Internet6Address;
 import std.string;
-import std.typecons : Tuple, tuple;
 import std.typetuple : TypeTuple;
 import std.traits : Parameters;
 import std.uuid : UUID;
@@ -38,17 +37,17 @@ import std.zlib : UnCompress;
 import resusage.memory;
 import resusage.cpu;
 
-import sel.network.hncom; // do not move this import down
+import sel.world.world; // do not move this import down
 
 import sel.about;
 import sel.command.command : Command, CommandSender;
 import sel.config : Config, ConfigType;
 import sel.format : Text;
 import sel.lang : Lang, translate, Translation, Messageable;
-import sel.memory : Memory;
+import sel.util.memory : Memory;
 import sel.path : Paths;
 import sel.plugin : Plugin;
-import sel.utils : milliseconds, microseconds;
+import sel.util.util : milliseconds, microseconds;
 import sel.entity.entity : Entity;
 import sel.entity.human : Skin;
 import sel.event.event : Event, EventListener;
@@ -56,14 +55,16 @@ import sel.event.server;
 import sel.event.server.server : ServerEvent;
 import sel.event.world.world : WorldEvent;
 import sel.math.vector : EntityPosition;
+import sel.network.hncom;
 import sel.network.http : serveResourcePacks;
 import sel.node.info : PlayerInfo, WorldInfo;
 import sel.player.minecraft : MinecraftPlayer;
 import sel.player.player : Player;
 import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
+import sel.tuple : Tuple;
 import sel.util.hncom;
 import sel.util.ip : publicAddresses;
-import sel.util.log;
+import sel.log;
 import sel.util.node : Node;
 import sel.util.resourcepack : createResourcePacks;
 import sel.world.rules : Rules;
@@ -320,7 +321,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 
 		// check protocols and print warnings if necessary
-		void check(ubyte type, string name, uint[] requested, uint[] supported) {
+		void check(string name, uint[] requested, uint[] supported) {
 			foreach(req ; requested) {
 				if(!supported.canFind(req)) {
 					warning_log(translate(Translation("warning.invalidProtocol"), settings.language, [to!string(req), name]));
@@ -328,8 +329,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 		}
 
-		check(HncomTypes.Game.MINECRAFT, "Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
-		check(HncomTypes.Game.POCKET, "Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
+		check("Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
+		check("Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
 
 		this.n_settings = cast(shared)settings;
 
@@ -453,13 +454,24 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		log(translate(Translation("startup.started"), this.n_settings.language));
 
-		getAndClearLoggedMessages();
+		if(this.lite) {
+			// only send the message to the hub that will also send it to the connected
+			// external consoles and rcon clients
+			setLogger((string logger, string message, int worldId, int outputId){
+				Handler.sharedInstance.send(new HncomStatus.Log(milliseconds, worldId, logger, message, outputId).encode());
+			});
+		} else {
+			setLogger((string logger, string message, int worldId, int outputId){
+				Handler.sharedInstance.send(new HncomStatus.Log(milliseconds, worldId, logger, message, outputId).encode());
+				synchronized writeln("[" ~ logger ~ "] " ~ message);
+			});
+		}
 
 		// start calculation of used resources
 		std.concurrency.spawn(&startResourceUsageThread, getpid);
 
 		// start command reader
-		std.concurrency.spawn(&startCommandReaderThread, cast()this.tid);
+		if(!this.lite) std.concurrency.spawn(&startCommandReaderThread, cast()this.tid);
 		
 		this.start();
 
@@ -1293,11 +1305,11 @@ class ServerCommandSender : CommandSender {
 	}
 
 	protected override void sendMessageImpl(string message) {
-		command_log(this.id, message);
+		logImpl("command", -1, this.id, message);
 	}
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		command_log(this.id, join(cast(string[])formats, ""), translate(translation, cast()this.server.settings.language, args));
+		logImpl("command", -1, this.id, join(cast(string[])formats, ""), translate(translation, cast()this.server.settings.language, args));
 	}
 
 	alias server this;
@@ -1313,8 +1325,10 @@ private void startResourceUsageThread(int pid) {
 	
 	while(true) {
 		ram.update();
+		log("ram: ", ram.usedRAM);
+		log("cpu: ", cpu.current());
 		//TODO send packet directly to the socket
-		//this.sendPacket(new HncomStatus.ResourcesUsage(20, ram.usedRAM, cpu.current()).encode());
+		Handler.sharedInstance.send(new HncomStatus.ResourcesUsage(20, ram.usedRAM, cpu.current()).encode());
 		Thread.sleep(dur!"seconds"(5));
 	}
 	

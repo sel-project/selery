@@ -41,7 +41,6 @@ import sel.constants;
 import sel.hub.server : Server;
 import sel.network.handler : HandlerThread;
 import sel.network.session : Session;
-import sel.util.logh : log;
 import sel.util.thread : SafeThread;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");

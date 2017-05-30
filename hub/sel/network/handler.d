@@ -37,7 +37,7 @@ import sel.session.pocket : PocketHandler;
 import sel.session.rcon : RconHandler;
 import sel.network.session;
 import sel.network.socket;
-import sel.util.logh : log;
+import sel.log : log;
 import sel.util.query : Queries;
 import sel.util.thread : SafeThread;
 

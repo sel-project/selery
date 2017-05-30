@@ -17,14 +17,13 @@ module sel.world.world;
 import core.thread : Thread;
 
 import std.algorithm : sort, min, canFind;
-import std.bitmanip : read, write;
 static import std.concurrency;
 import std.conv : to;
 import std.datetime : StopWatch, dur;
 import std.math : sin, cos, PI, pow;
 import std.random : unpredictableSeed;
 import std.string : replace, toLower, join;
-import std.traits : hasUDA, getUDAs, Parameters;
+import std.traits : Parameters;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
@@ -33,7 +32,7 @@ import sel.command.command : Command;
 import sel.command.util : WorldCommandSender;
 import sel.format : Text;
 import sel.lang : Messageable, Translation, translate;
-import sel.utils : call;
+import sel.util.util : call;
 import sel.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import sel.block.blocks : BlockStorage, Blocks;
 import sel.block.tile : Tile;
@@ -54,11 +53,11 @@ import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player, isPlayer;
 import sel.player.pocket : PocketPlayerImpl;
 import sel.plugin : Plugin, loadPluginAttributes;
+import sel.task;
 import sel.util.color : Color;
 import sel.util.hncom : HncomPlayer;
-import sel.util.log;
+import sel.log;
 import sel.util.random : Random;
-import sel.util.task;
 import sel.world.chunk;
 import sel.world.generator;
 import sel.world.map : Map;
@@ -655,11 +654,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	protected override void sendMessageImpl(string message) {
-		world_log(this, message);
+		logImpl(this.name, this.id, -1, message);
 	}
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		world_log(this, join(cast(string[])formats, ""), translate(translation, this.server.settings.language, args));
+		logImpl(this.name, this.id, -1, join(cast(string[])formats, "") ~ translate(translation, this.server.settings.language, args));
 	}
 
 	/**

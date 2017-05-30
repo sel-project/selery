@@ -19,7 +19,7 @@ import std.math : round, isNaN;
 
 import sel.about;
 import sel.command.command : Position;
-import sel.utils : safe, call;
+import sel.util.util : safe, call;
 import sel.effect : Effect, Effects;
 import sel.entity.entity : Entity, Rotation;
 import sel.entity.metadata;

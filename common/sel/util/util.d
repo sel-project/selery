@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2016-2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,14 +12,14 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module sel.utils;
+module sel.util.util;
 
 import std.conv : to, ConvException;
 import std.datetime : Clock, UTC;
 import std.string : toUpper;
 import std.traits : isArray, isAssociativeArray, isSafe;
 
- /**
+/**
  * Gets the seconds from January 1st, 1970.
  */
 public @property @safe uint seconds() {
@@ -71,11 +71,11 @@ public @property @trusted bool array_remove(T, E)(T value, ref E[] array) /*if(_
 alias remove = array_remove;
 
 unittest {
-
+	
 	auto array = [1, 2, 3, 4, 5];
 	assert(array_remove(3, array));
 	assert(array == [1, 2, 4, 5]);
-
+	
 }
 
 /**
@@ -99,11 +99,11 @@ public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(_
 }
 
 unittest {
-
+	
 	assert(array_index(8, [0, 8, 8]) == 1);
 	assert(array_index(7, [0, 8, 8]) == -1);
 	assert([8, 9, 10].indexOf(10) == 2);
-
+	
 }
 
 /** 
@@ -142,12 +142,12 @@ private @property @safe uint romanImpl(string str) {
 }
 
 unittest {
-
+	
 	assert("I".roman == 1);
 	assert("V".roman == 5);
 	assert("L".roman == 50);
 	assert("CCIV".roman == 204);
-
+	
 }
 
 /** Check if a value is between 0 and 1 */

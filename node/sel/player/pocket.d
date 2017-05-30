@@ -54,7 +54,7 @@ import sel.item.slot : Slot;
 import sel.math.vector;
 import sel.node.info : PlayerInfo;
 import sel.player.player;
-import sel.util.log;
+import sel.log;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.world : World, Dimension;

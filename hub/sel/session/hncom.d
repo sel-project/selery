@@ -39,15 +39,14 @@ import std.zlib;
 import sel.about;
 import sel.constants;
 import sel.lang : translate;
-import sel.utils : microseconds;
 import sel.hub.server : Server, List;
 import sel.hub.settings;
 import sel.network.handler : HandlerThread;
 import sel.network.session : Session;
 import sel.network.socket;
 import sel.session.player : PlayerSession, Skin;
-import sel.util.logh : log;
 import sel.util.thread : SafeThread;
+import sel.util.util : microseconds;
 import sel.util.world : WorldSession = World;
 
 mixin("import Util = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".util;");
@@ -365,7 +364,6 @@ class Node : Session {
 			while(receiver.has) {
 				if(receiver.length == 0) {
 					// connection is interrupted when the data length is 0!
-					log("receiver length is 0 in ", this.toString());
 					return;
 				}
 				this.handlePacket(receiver.next);
@@ -467,7 +465,6 @@ class Node : Session {
 				this.handleUpdateWorldGamemode(World.UpdateGamemode.fromBuffer(payload));
 				break;
 			default:
-				log("Unknown packet by ", this.toString(), " with id ", payload[0], " (", payload.length, " bytes)");
 				return; // closes connection
 		}
 	}

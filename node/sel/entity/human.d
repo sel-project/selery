@@ -17,7 +17,7 @@ module sel.entity.human;
 import std.math : isNaN, sin, cos, PI;
 
 import sel.about;
-import sel.utils : call;
+import sel.util.util : call;
 import sel.effect : Effect, Effects;
 import sel.enchantment : Enchantments;
 import sel.entity.entity : Entities, Rotation;

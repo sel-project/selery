@@ -20,7 +20,6 @@ import std.file : read, dirEntries, SpanMode, isFile;
 import std.json : JSONValue;
 import std.regex : ctRegex, replaceAll;
 import std.string : replace, join;
-import std.typecons : Tuple;
 import std.uuid : UUID;
 import std.zip;
 
@@ -28,6 +27,7 @@ import sel.about : Software;
 import sel.lang : Lang;
 import sel.path : Paths;
 import sel.node.server : Server;
+import sel.tuple : Tuple;
 
 auto createResourcePacks(shared Server server, UUID uuid, string[] textures) {
 

@@ -42,7 +42,7 @@ void spawnWorld(T:World, E...)(shared Server server, shared WorldInfo info, E ar
 
 	} catch(Throwable t) {
 
-		import sel.util.log;
+		import sel.log;
 		error_log(t);
 		throw t;
 

@@ -25,7 +25,6 @@ import std.system : Endian;
 import sel.hub.server;
 import sel.hub.settings;
 import sel.network.handler;
-import sel.util.logh : log;
 
 alias session_t = immutable(ubyte)[];
 

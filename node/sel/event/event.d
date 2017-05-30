@@ -17,9 +17,10 @@ module sel.event.event;
 import std.algorithm : sort, canFind;
 import std.base64 : Base64Impl;
 import std.conv : to;
-import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple, Parameters;
+
+import sel.tuple : Tuple;
 
 alias size_t class_t;
 

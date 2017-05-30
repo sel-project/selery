@@ -39,13 +39,12 @@ import std.zlib;
 import sel.about;
 import sel.constants;
 import sel.lang : Lang;
-import sel.utils : milliseconds;
 import sel.hub.server : Server;
 import sel.network.handler : UnconnectedHandler;
 import sel.network.session;
 import sel.session.player : PlayerSession, Skin;
-import sel.util.logh : log;
 import sel.util.thread : SafeThread;
+import sel.util.util : milliseconds;
 
 import sul.utils.var : varuint;
 
@@ -161,7 +160,6 @@ class PocketHandler : UnconnectedHandler {
 					break;
 				default:
 					//TODO do something bad to it
-					//log("unknown data from ", address, " of ", payload.length, " bytes");
 					break;
 			}
 		}
@@ -341,7 +339,6 @@ final class PocketSession : PlayerSession {
 				this.handle(Control.Encapsulated.fromBuffer(payload));
 				break;
 			default:
-				log("unknown packet");
 				// disconnect or something (add fail)
 				// this could also happen when two clients are using
 				// the same ip:port combination
@@ -731,7 +728,6 @@ final class PocketSession : PlayerSession {
 	}
 
 	private shared void addFail() {
-		log("fail");
 	}
 
 	public shared override ptrdiff_t send(const(void)[] data) {

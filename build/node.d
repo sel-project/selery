@@ -21,9 +21,9 @@ import std.string : startsWith;
 
 import sel.config : ConfigType;
 import sel.crash : logCrash;
-import sel.start : startup;
-import sel.utils : UnloggedException;
 import sel.node.server : Server, server;
+import sel.start : startup;
+import sel.util.util : UnloggedException;
 
 import pluginloader.node : loadPlugins;
 

@@ -19,7 +19,7 @@ import std.conv : to;
 import std.regex : ctRegex, replaceAll;
 import std.string : toLower, replace;
 
-import sel.utils : roman;
+import sel.util.util : roman;
 
 static import sul.enchantments;
 public import sul.enchantments : Enchantments;

@@ -15,8 +15,8 @@
 module hub;
 
 import sel.config : ConfigType;
-import sel.start : startup;
 import sel.hub.server;
+import sel.start : startup;
 
 import pluginloader.hub : loadPlugins;
 

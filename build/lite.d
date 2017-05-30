@@ -24,11 +24,11 @@ import std.string : indexOf, lastIndexOf;
 
 import sel.config : ConfigType;
 import sel.crash : logCrash;
-import sel.path : Paths;
-import sel.start : startup;
-import sel.utils : UnloggedException;
 import sel.network.hncom : TidAddress;
+import sel.path : Paths;
 import sel.session.hncom : MessagePassingNode;
+import sel.start : startup;
+import sel.util.util : UnloggedException;
 
 static import sel.hub.server;
 static import sel.node.server;

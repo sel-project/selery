@@ -15,7 +15,6 @@
 module sel.util.queue;
 
 import sel.network.session : Session;
-import sel.util.logh;
 
 interface Queueable {
 

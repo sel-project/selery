@@ -23,7 +23,7 @@ import std.file : exists, write, mkdirRecurse;
 
 import sel.crash : logCrash;
 import sel.path : Paths;
-import sel.utils : seconds;
+import sel.util.util : seconds;
 import sel.hub.settings : Settings;
 
 /**
@@ -37,10 +37,7 @@ class SafeThread : Thread {
 			try {
 				fn();
 			} catch(Throwable t) {
-					try {logCrash("hub", Settings.defaultLanguage, t);} catch(Throwable t2) {
-						import sel.util.logh;
-						log(t2);
-					}
+				logCrash("hub", Settings.defaultLanguage, t);
 			}
 		});
 	}

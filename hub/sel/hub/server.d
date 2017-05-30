@@ -40,7 +40,6 @@ import sel.format : Text;
 import sel.lang : Lang, translate, Translation;
 import sel.path : Paths;
 import sel.plugin : Plugin;
-import sel.utils : milliseconds;
 import sel.hub.settings;
 import sel.network.handler : Handler;
 import sel.session.externalconsole : ExternalConsoleSession;
@@ -50,8 +49,9 @@ import sel.session.rcon : RconSession;
 import sel.util.analytics : GoogleAnalytics;
 import sel.util.block : Blocks;
 import sel.util.ip : localAddresses, publicAddresses;
-import sel.util.logh : log;
+import sel.log : log;
 import sel.util.thread;
+import sel.util.util : milliseconds;
 
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : HubInfo, NodeInfo;");
 mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");

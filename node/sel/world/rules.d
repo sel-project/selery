@@ -15,7 +15,6 @@
 module sel.world.rules;
 
 import std.conv : to;
-import std.typecons : Tuple, tuple;
 
 import sel.config : Config;
 import sel.path : Paths;

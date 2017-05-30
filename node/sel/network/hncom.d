@@ -24,8 +24,6 @@ import std.socket;
 import std.system : Endian;
 import std.variant : Variant;
 
-import sel.util.log;
-
 abstract class Handler {
 	
 	private static shared(Handler) n_shared_instance;

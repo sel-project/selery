@@ -26,15 +26,12 @@ import nbt.stream : ClassicStream;
 import nbt.tags;
 
 import sel.about : Software;
-import sel.utils : seconds;
+import sel.util.util : seconds;
 import sel.block.block : Block;
 import sel.math.vector;
 import sel.util.buffers;
 import sel.world.chunk : Chunk, Section;
 import sel.world.world : World;
-
-// debug
-import sel.util.log;
 
 /**
  * The SEL (Section Level) world format

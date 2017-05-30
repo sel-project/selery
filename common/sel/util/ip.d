@@ -19,10 +19,10 @@ import std.file : exists, write, read, mkdirRecurse;
 import std.net.curl : CurlException;
 import std.path : dirSeparator;
 import std.string : split;
-import std.typecons : Tuple;
 
 import sel.path : Paths;
-import sel.utils : seconds;
+import sel.tuple : Tuple;
+import sel.util.util : seconds;
 
 alias Addresses = Tuple!(uint, "cached", string, "v4", string, "v6");
 

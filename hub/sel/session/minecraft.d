@@ -33,14 +33,13 @@ import std.uuid;
 
 import sel.about;
 import sel.constants;
-import sel.utils : milliseconds;
 import sel.hub.server : Server;
 import sel.network.handler : HandlerThread, UnconnectedHandler;
 import sel.network.session;
 import sel.session.player : PlayerSession, Skin;
-import sel.util.logh : log;
 import sel.util.queue : Queueable, Queue;
 import sel.util.thread : SafeThread;
+import sel.util.util : milliseconds;
 
 import sul.utils.var : varuint;
 

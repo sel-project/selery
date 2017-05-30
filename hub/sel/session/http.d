@@ -31,13 +31,12 @@ import std.zlib : Compress, HeaderFormat;
 import sel.about;
 import sel.constants;
 import sel.path : Paths;
-import sel.utils : seconds;
 import sel.hub.server : Server;
 import sel.hub.settings : Settings;
 import sel.network.handler : HandlerThread;
 import sel.network.socket;
-import sel.util.logh : log;
 import sel.util.thread : SafeThread;
+import sel.util.util : seconds;
 
 class HttpHandler : HandlerThread {
 	

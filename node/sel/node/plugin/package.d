@@ -19,7 +19,7 @@ module sel.node.plugin;
 public import sel.about : Software, tick_t, block_t, item_t;
 public import sel.format : Text;
 public import sel.lang : Translation;
-public import sel.utils;
+public import sel.util.util;
 
 // server
 public import sel.node.server : server, Server, ServerCommandSender;
@@ -39,4 +39,4 @@ public import sel.world.world : World;
 public import sel.command.util : SingleEnum, SnakeCaseEnum, Position, Target;
 
 // logging
-public import sel.util.log : log, debug_log, warning_log, error_log;
+public import sel.log : log, debug_log, warning_log, error_log;
