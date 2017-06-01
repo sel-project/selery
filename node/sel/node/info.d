@@ -23,6 +23,9 @@ import std.uuid : UUID;
 import sel.entity.human : Skin;
 import sel.util.hncom : HncomPlayer;
 
+/**
+ * Generic informations about a player in the server.
+ */
 class PlayerInfo {
 
 	/**
@@ -87,13 +90,31 @@ class PlayerInfo {
 
 }
 
+/**
+ * Generic information about a world.
+ */
 class WorldInfo {
-	
+
+	/**
+	 * World's id, may be given by the server (for main worlds) or by the
+	 * parent world (children worlds).
+	 */
 	public uint id;
 
+	/**
+	 * Thread where the world exists.
+	 * Children worlds inherit the tid from their parents.
+	 */
 	public Tid tid;
 
-	public size_t entities, players;
+	/**
+	 * Number of entities (players included), players and chunks
+	 * in the world (children's not included) for statistic purposes.
+	 */
+	public size_t entities, players, chunks;
+
+	public shared(WorldInfo) parent = null;
+	public shared(WorldInfo)[uint] children;
 
 	public this(uint id) {
 		this.id = id;

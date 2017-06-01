@@ -14,32 +14,17 @@
  */
 module sel.hub.settings;
 
-import std.algorithm : sort, canFind;
-import std.ascii : newline;
+import std.algorithm : canFind;
 import std.base64 : Base64;
 import std.conv : to, ConvException;
-import std.datetime : Clock;
-import std.file : write, read, exists, mkdir, tempDir, isFile;
-import std.path : dirSeparator;
-import std.process : environment;
-import std.random : uniform;
+import std.file : read, exists, isFile;
 import std.regex : replaceAll, ctRegex;
 import std.socket;
 import std.string;
-import std.traits : isArray;
 
 import sel.config;
+import sel.format : Text;
 import sel.path : Paths;
-
-version(D_Ddoc) {
-	
-	enum bool __doc = true;
-	
-} else {
-	
-	deprecated enum bool __doc = false;
-	
-}
 
 /**
  * Runtime settings.
@@ -74,7 +59,7 @@ struct Settings {
 		this.config.load();
 
 		this.config.minecraft.motd = motdfy(this.config.minecraft.motd.replace("\\n", "\n"));
-		this.config.pocket.motd = motdfy(this.config.pocket.motd.replace(";", ""));
+		this.config.pocket.motd = motdfy(this.config.pocket.motd.replace(";", "")) ~ Text.reset;
 
 		// icon
 		//TODO check file header to match PNG and size (64x64)

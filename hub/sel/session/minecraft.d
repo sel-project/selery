@@ -505,7 +505,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 				with(this.server.whitelist) {
 					bool valid = contains(this.username);
 					static if(__onlineMode) valid = valid || contains(PC, this.uuid);
-					if(!valid) return "You're not invited to player on this server.";
+					if(!valid) return "You're not invited to play on this server.";
 				}
 			}
 			if(this.server.settings.blacklist) {

@@ -14,6 +14,7 @@
  */
 module sel.world.world;
 
+import core.atomic : atomicOp;
 import core.thread : Thread;
 
 import std.algorithm : sort, min, canFind;
@@ -53,7 +54,7 @@ import sel.player.minecraft : MinecraftPlayerImpl;
 import sel.player.player : Player, isPlayer;
 import sel.player.pocket : PocketPlayerImpl;
 import sel.plugin : Plugin, loadPluginAttributes;
-import sel.task;
+import sel.task : TaskManager, areValidTaskArgs;
 import sel.util.color : Color;
 import sel.util.hncom : HncomPlayer;
 import sel.util.random : Random;
@@ -86,7 +87,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.start();
 	}
 
-	public static void stopWorld(World world, World transferTo) {
+	/+public static void stopWorld(World world, World transferTo) {
 		if(transferTo !is null) {
 			void transfer(World from) {
 				auto c = from.w_players.length;
@@ -103,7 +104,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			transfer(world);
 		}
 		world.stop();
-	}
+	}+/
 
 	private static uint wcount = 0;
 
@@ -111,6 +112,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public immutable string n_name;
 
 	protected shared WorldInfo info;
+
+	private bool _started = false;
+	private bool _stopped = false;
 
 	protected shared Server n_server;
 
@@ -154,7 +158,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	private Entity[size_t] w_entities;
 	private Player[size_t] w_players;
-	protected PlayersList players_list;
+	public PlayersList players_list;
 	
 	private tick_t m_time;
 
@@ -181,6 +185,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.n_type = this.generator.type;
 		this.spawnPoint = this.generator.spawn;
 		this.no_rain = this.random.next(0, 180000);
+		this.players_list = new PlayersList();
 		this.tasks = new TaskManager();
 	}
 
@@ -367,22 +372,42 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * auto nether = overworld.addChild!Nether();
 	 * ---
 	 */
-	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
-		T world = new T(args);
-		World.startWorld(this.server, world, this);
+	public final World addChild(World world) {
+		assert(world.parent is null);
+		world.n_parent = this;
+		world.n_server = this.server;
+		world.info = cast(shared)new WorldInfo(world.id);
+		world.info.tid = this.info.tid;
+		world.info.parent = this.info;
+		this.info.children[world.id] = world.info;
+		world.players_list = this.players_list;
+		World.startWorld(this.server, world.info, world, this);
 		this.n_children ~= world;
 		return world;
 	}
 
+	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
+		T world = new T(args);
+		this.addChild(world);
+		return world;
+	}
+
 	/**
-	 * Removes a child.
+	 * Removes a child and its children teleporting their players to
+	 * the current world's spawn point.
 	 * Returns: true if the given world was a child, false otherwise
 	 */
 	public final bool removeChild(World world) {
 		foreach(i, child; this.n_children) {
 			if(world.id == child.id) {
 				this.n_children = this.n_children[0..i] ~ this.n_children[i+1..$];
-				World.stopWorld(world, this);
+				void tp(World w) {
+					foreach(player ; w.players) player.teleport(this, cast(EntityPosition)this.spawnPoint);
+					foreach(child ; w.children) tp(child);
+				}
+				tp(world); // teleport all players in the current world's spawn
+				world.stop();
+				this.info.children.remove(world.id);
 				return true;
 			}
 		}
@@ -394,9 +419,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.info = info;
 		this.n_server = server;
 
+		//TODO do actions in World.startWorld
+
 		StopWatch timer;
 
-		while(true) { //TODO this.running
+		while(!this._stopped) {
 
 			timer.start();
 
@@ -423,7 +450,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	private void handleServerPackets() {
-		while(std.concurrency.receiveTimeout(dur!"msecs"(0), &this.handleAddPlayer, &this.handleRemovePlayer, &this.handleGamePacket, &this.handleBroadcast, &this.handleClose)) {}
+		while(std.concurrency.receiveTimeout(dur!"msecs"(0),
+				&this.handleAddPlayer,
+				&this.handleRemovePlayer,
+				&this.handleGamePacket,
+				&this.handleBroadcast,
+				&this.handleClose,
+			)) {}
 	}
 
 	private void handleAddPlayer(AddPlayer packet) {
@@ -468,6 +501,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		} else {
 			//TODO stop event loop (with exception?)
 			status = CloseResult.REMOVED;
+			this._stopped = true;
 		}
 		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, status));
 	}
@@ -767,7 +801,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/*
 	 * Adds a player to the world's players list and
-	 * broadcasts the packet to the players in the world.
+	 * broadcasts the packet to the players in the world (and related).
 	 */
 	public final void addPlayerList(Player player) {
 		this.players_list.players.call!"sendAddList"([player]); // only the new player
@@ -777,7 +811,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/*
 	 * Removes a player from the world's players list and
-	 * broadcasts the packet to the players in the world.
+	 * broadcasts the packet to the players in the world (and related).
 	 */
 	public final void removePlayerList(Player player) {
 		foreach(i, p; this.players_list) {
@@ -796,9 +830,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		return this.players_list;
 	}
 
+	/*
+	 * Creates and spawn a player when it comes from another world group,
+	 * node or is a new connection.
+	 */
 	private Player spawnPlayer(shared PlayerInfo info) {
 
-		info.world = this.info;
+		info.world = this.info; // set as the main world even when spawned in a child
 
 		//TODO load saved info from file
 
@@ -832,24 +870,34 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			player.registerCommand(command);
 		}
 
-		// do normal spawn process
-		this.spawnPlayer(player);
+		// prepare for spawning (send chunks and rules)
+		this.preSpawnPlayer(player);
+
+		// call the spawn event
+		auto event = this.callEventIfExists!PlayerSpawnEvent(player);
+
+		//TODO custom message
+		if(event is null || event.announce) {
+			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
+		}
+
+		// spawn to entities
+		this.afterSpawnPlayer(player);
+
+		//TODO call event.after
 
 		return player;
 
 	}
-	
-	/*
-	 * Spawns a player using an existing instance.
-	 */
-	protected final void spawnPlayer(Player player) {
+
+	private void preSpawnPlayer(Player player) {
 
 		//TODO send packet to the hub with the new world
 
 		player.spawn = this.spawnPoint; // sends spawn position
 		player.move(this.spawnPoint.entityPosition); // send position
 
-		player.sendResourcePack();
+		player.sendResourcePack(); //TODO world's resource pack
 		
 		//send chunks
 		foreach(ChunkPosition pos ; this.defaultChunks) {
@@ -878,22 +926,18 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		player.firstspawn();
 
 		this.w_players[player.id] = player;
-		auto event = this.callEventIfExists!PlayerSpawnEvent(player);
-
+		
 		// player may have been teleported during the event, also fixes #8
 		player.oldposition = this.spawnPoint.entityPosition;
 
-		if(event is null || event.announce) {
-			//TODO custom message
-			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
-		}
+	}
 
-		if(event is null || event.spawn) {
-			//TODO let the event choose if spawn or not
-			foreach(splayer ; this.w_players) {
-				splayer.show(player);
-				player.show(splayer);
-			}
+	private void afterSpawnPlayer(Player player) {
+
+		//TODO let the event choose if spawn or not
+		foreach(splayer ; this.w_players) {
+			splayer.show(player);
+			player.show(splayer);
 		}
 
 		foreach(entity ; this.w_entities) {
@@ -901,7 +945,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			/*if(player.shouldSee(entity))*/ player.show(entity); // the player sees  E V E R Y T H I N G
 		}
 
-		this.callEventIfExists!PlayerAfterSpawnEvent(player); //TODO call event.after()
+		atomicOp!"+="(this.info.entities, 1);
+		atomicOp!"+="(this.info.players, 1);
+
 	}
 	
 	/*
@@ -923,6 +969,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			foreach(watch ; player.watchlist) {
 				player.hide(watch/*, false*/); // updating the viewer's watchlist
 			}
+
+			atomicOp!"-="(this.info.entities, 1);
+			atomicOp!"-="(this.info.players, 1);
 
 			this.callEventIfExists!PlayerAfterDespawnEvent(player);
 
@@ -950,6 +999,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			player.show(spawned); // player sees everything!
 			if(spawned.shouldSee(player)) spawned.show(player);
 		}
+		atomicOp!"+="(this.info.entities, 1);
 		return spawned;
 	}
 
@@ -971,6 +1021,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			foreach(ref Entity e ; entity.watchlist) {
 				entity.hide(e);
 			}
+			atomicOp!"-="(this.info.entities, 1);
 		}
 	}
 
@@ -1172,6 +1223,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * ---
 	 */
 	public final @safe Chunk opIndexAssign(Chunk chunk) {
+		atomicOp!"+="(this.info.chunks, 1);
 		chunk.saveChangedBlocks = true;
 		return this.n_chunks[chunk.x][chunk.z] = chunk;
 	}

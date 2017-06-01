@@ -59,7 +59,7 @@ final class PlayerJoinEvent : PlayerEvent {
 
 	private ubyte n_reason;
 
-	public shared(WorldInfo)* world;
+	public shared(WorldInfo) world;
 	
 	public pure nothrow @safe @nogc this(inout PlayerInfo player, ubyte reason) {
 		super(player);

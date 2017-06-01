@@ -29,14 +29,14 @@ void spawnWorld(T:World, E...)(shared Server server, shared WorldInfo info, E ar
 
 	Thread.getThis().name = "World#" ~ to!string(info.id);
 
-	auto world = new T(args);
-
-	//TODO register default events
-	//TODO register specific events
-
-	World.startWorld(server, info, world, null);
-
 	try {
+
+		World world = new T(args);
+
+		//TODO register default events
+		//TODO register specific events
+
+		World.startWorld(server, info, world, null);
 
 		world.startMainWorldLoop(server, info);
 

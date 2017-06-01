@@ -17,8 +17,6 @@ module sel.item.tool;
 import std.conv : ConvException;
 import std.json : JSONValue, JSON_TYPE;
 
-import nbt.tags;
-
 import sel.about;
 import sel.block.block : Block, Faces;
 import sel.block.blocks : Blocks;
@@ -26,6 +24,7 @@ import sel.entity.entity : Entity;
 import sel.entity.living : Living;
 import sel.item.item : Item;
 import sel.math.vector : BlockPosition;
+import sel.nbt.tags;
 import sel.player.player : Player;
 import sel.util.color : Color, Colorable;
 

@@ -37,7 +37,7 @@ import std.zlib : UnCompress;
 import resusage.memory;
 import resusage.cpu;
 
-import sel.world.world; // do not move this import down
+import sel.world.world : World; // do not move this import down
 
 import sel.about;
 import sel.command.command : Command, CommandSender;
@@ -48,7 +48,7 @@ import sel.event.event : Event, EventListener;
 import sel.event.server.server : ServerEvent;
 import sel.event.server;
 import sel.event.world.world : WorldEvent;
-import sel.format : Text;
+import sel.format : Text, writeln;
 import sel.lang : Lang, translate, Translation, Messageable;
 import sel.log;
 import sel.math.vector : EntityPosition;
@@ -69,7 +69,6 @@ import sel.util.resourcepack : createResourcePacks;
 import sel.util.util : milliseconds, microseconds;
 import sel.world.rules : Rules;
 import sel.world.thread;
-import sel.world.world : World, Dimension;
 
 // Server's instance
 private shared Server n_server;
@@ -101,9 +100,7 @@ version(Windows) {
 
 	extern (Windows) int sigHandler(uint sig) {
 		if(sig == CTRL_C_EVENT) {
-			stoppedWithSignal = true;
-			running = false;
-			//TODO send a message to say to stop
+			std.concurrency.send(cast()server_tid, Stop());
 			return true; // this will let the process run in background until it kills himself
 		}
 		return false; // windows will instantly kill the process
@@ -114,12 +111,12 @@ version(Windows) {
 	import core.sys.posix.signal;
 
 	extern (C) void extsig(int sig) {
-		stoppedWithSignal = true;
-		running = false;
-		//server.stop();
+		std.concurrency.send(cast()server_tid, Stop());
 	}
 
 }
+
+private struct Stop {}
 
 /**
  * Singleton for the server instance.
@@ -491,10 +488,11 @@ final class Server : EventListener!ServerEvent, Messageable {
 						if(payload.length) {
 							this.handleHncomPacket(payload[0], payload[1..$].dup);
 						} else {
-							//TODO close
-							warning_log("received empty message from the hub");
+							// close
+							running = false;
 						}
 					},
+					&handleShutdown,
 				);
 			};
 		} else {
@@ -518,6 +516,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 					&handleUpdateLatencyPacket,
 					&handleUpdatePacketLossPacket,
 					&handleGamePacketPacket,
+					&handleShutdown,
 				);
 			};
 		}
@@ -525,26 +524,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		while(running) {
 
 			// receive messages
-			std.concurrency.receive(
-				&this.handlePromptCommand,
-				(immutable(ubyte)[] payload){
-					// from the hub
-					if(payload.length) {
-						this.handleHncomPacket(payload[0], payload[1..$].dup);
-					} else {
-						//TODO close
-						warning_log("received empty message from the hub");
-					}
-				},
-				(const KickPlayer packet){
-
-				},
-				(const CloseResult packet){
-
-				}
-			);
-
-			//TODO send logs to the hub
+			receive();
 
 		}
 
@@ -567,6 +547,10 @@ final class Server : EventListener!ServerEvent, Messageable {
 			exit(0);
 		}
 
+	}
+
+	private shared void handleShutdown(Stop stop) {
+		this.shutdown();
 	}
 
 	/**
@@ -1153,6 +1137,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 				foreach(Variant ; HncomPlayer.Add.Variants) {
 					case Variant.TYPE:
 						mixin("player.additional." ~ toLower(Variant.stringof)) = cast(shared)packet.new inout Variant();
+						log(cast()player.additional.pocket);
 						return;
 				}
 			}
@@ -1167,18 +1152,17 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		//TODO allow kicking from event
 
-		shared(WorldInfo)* world;
-		if(event is null || event.world is null) {
-			world = this._default_world_id in this._worlds;
+		shared(WorldInfo) world;
+		if(event is null || event.world is null || event.world.id !in this._worlds) {
+			world = this._worlds[this._default_world_id];
 		} else {
-			assert((*event.world).id in this._worlds);
-			world = event.world;
+			world = this._worlds[event.world.id];
 		}
 
 		// do not spawn if it has been disconnected during the event
 		if(player.hubId in this._players) {
 
-			std.concurrency.send(cast()(*world).tid, AddPlayer(player));
+			std.concurrency.send(cast()world.tid, AddPlayer(player));
 
 		}
 
@@ -1325,8 +1309,6 @@ private void startResourceUsageThread(int pid) {
 	
 	while(true) {
 		ram.update();
-		log("ram: ", ram.usedRAM);
-		log("cpu: ", cpu.current());
 		//TODO send packet directly to the socket
 		Handler.sharedInstance.send(new HncomStatus.ResourcesUsage(20, ram.usedRAM, cpu.current()).encode());
 		Thread.sleep(dur!"seconds"(5));

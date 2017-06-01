@@ -25,8 +25,6 @@ import std.traits : isAbstractClass;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
-import nbt.tags;
-
 import sel.about;
 import sel.block.block;
 import sel.block.blocks : Blocks;
@@ -36,6 +34,7 @@ import sel.item.item : Item;
 import sel.item.items : Items;
 import sel.item.slot : Slot;
 import sel.math.vector : BlockPosition, entityPosition;
+import sel.nbt.tags;
 import sel.player.player : Player;
 import sel.world.world : World;
 

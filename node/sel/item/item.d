@@ -18,8 +18,6 @@ import std.conv : to;
 static import std.json;
 import std.string : split, join;
 
-import nbt.tags;
-
 import sel.about;
 import sel.block.block : Block;
 import sel.block.blocks : Blocks;
@@ -28,6 +26,7 @@ import sel.entity.entity : Entity;
 import sel.item.slot : Slot;
 import sel.item.tool : Tools;
 import sel.math.vector : BlockPosition, face;
+import sel.nbt.tags;
 import sel.player.player : Player;
 import sel.world.world : World;
 

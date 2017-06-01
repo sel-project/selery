@@ -678,9 +678,7 @@ abstract class Player : Human, WorldCommandSender {
 	
 	// executes the respawn sequence after a respawn packet is handled.
 	public override @trusted void respawn() {
-		PlayerRespawnEvent event = new PlayerRespawnEvent(this);
-		this.world.callEvent(event);
-		if(!event.cancelled) {
+		if(!this.world.callCancellableIfExists!PlayerRespawnEvent(this)) {
 			super.respawn();
 		}
 	}
@@ -690,6 +688,10 @@ abstract class Player : Human, WorldCommandSender {
 	public override void teleport(EntityPosition position) {
 		super.teleport(position);
 		this.sendPosition();
+	}
+
+	public override void teleport(World world, EntityPosition position) {
+		//TODO move to another world (parent/child)
 	}
 
 	alias motion = super.motion;
@@ -1104,14 +1106,13 @@ abstract class Player : Human, WorldCommandSender {
 		bool cancelblock = false;
 		//log(!this.world.rules.immutableWorld, " ", this.alive, " ", this.is_breaking, " ", this.world[breaking] != Blocks.AIR);
 		if(!this.world.rules.immutableWorld && this.alive && this.is_breaking && !this.world[this.breaking].indestructible) {
-			PlayerBreakBlockEvent event = new PlayerBreakBlockEvent(this, this.world[this.breaking], this.breaking);
-			this.world.callEvent(event);
-			if(event.cancelled) {
+			auto event = this.world.callEventIfExists!PlayerBreakBlockEvent(this, this.world[this.breaking], this.breaking);
+			if(event !is null && event.cancelled) {
 				cancelitem = true;
 				cancelblock = true;
 			} else {
 				//consume the item
-				if(event.consumeItem && !this.inventory.held.empty && this.inventory.held.item.tool) {
+				if((event is null || event.consumeItem) && !this.inventory.held.empty && this.inventory.held.item.tool) {
 					this.inventory.held.item.destroyOn(this, this.world[this.breaking], this.breaking);
 					if(this.inventory.held.item.finished) {
 						this.inventory.held = Slot(null);
@@ -1119,13 +1120,13 @@ abstract class Player : Human, WorldCommandSender {
 				} else {
 					cancelitem = true;
 				}
-				if(event.drop) {
+				if(event is null || event.drop) {
 					foreach(Slot slot ; this.world[this.breaking].drops(this.world, this, this.inventory.held.item)) {
 						this.world.drop(slot, this.breaking.entityPosition + .5);
 					}
 				}
 				//if(event.particles) this.world.addParticle(new Particles.Destroy(this.breaking.entityPosition, this.world[this.breaking]));
-				if(event.removeBlock) {
+				if(event is null || event.removeBlock) {
 					this.world[this.breaking] = Blocks.air;
 				} else {
 					cancelblock = true;
@@ -1173,9 +1174,7 @@ abstract class Player : Human, WorldCommandSender {
 
 	private void handleArmSwingImpl() {
 		if(this.alive) {
-			PlayerAnimationEvent event = new PlayerAnimationEvent(this);
-			this.world.callEvent(event);
-			if(!event.cancelled) {
+			if(!this.world.callCancellableIfExists!PlayerAnimationEvent(this)) {
 				if(!this.inventory.held.empty && this.inventory.held.item.onThrowed(this)) {
 					this.actionFlag = true;
 					this.broadcastMetadata();

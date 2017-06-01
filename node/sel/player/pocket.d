@@ -31,9 +31,6 @@ import std.typecons : Tuple;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import nbt.stream;
-import nbt.tags;
-
 import sel.about;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
@@ -52,6 +49,8 @@ import sel.item.slot : Slot;
 import sel.lang : Translation, translate;
 import sel.log;
 import sel.math.vector;
+import sel.nbt.stream;
+import sel.nbt.tags;
 import sel.node.info : PlayerInfo;
 import sel.path : Paths;
 import sel.player.player;
@@ -237,7 +236,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 					}
 					packet.slots ~= slot;
 				}
-				return true;
 			} catch(CurlException) {}
 			if(packet.slots.length) {
 				ubyte[] encoded = packet.encode();

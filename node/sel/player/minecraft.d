@@ -26,9 +26,6 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
-import nbt.stream;
-import nbt.tags;
-
 import sel.about;
 import sel.block.block : Block, PlacedBlock;
 import sel.block.tile : Tile;
@@ -45,6 +42,8 @@ import sel.item.slot : Slot;
 import sel.lang : Translation, translate;
 import sel.log;
 import sel.math.vector;
+import sel.nbt.stream;
+import sel.nbt.tags;
 import sel.node.info : PlayerInfo;
 import sel.player.player;
 import sel.util.util : array_index;
