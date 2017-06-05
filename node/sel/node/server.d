@@ -572,7 +572,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		return this.n_id;
 	}
 
-	public shared pure nothrow @property @safe @nogc UUID nextUUID() {
+	public shared pure nothrow @property @nogc UUID nextUUID() {
 		ubyte[16] data;
 		data[0..8] = nativeToBigEndian(this.id);
 		data[8..16] = nativeToBigEndian(this.uuid_count);

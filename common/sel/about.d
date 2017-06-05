@@ -145,13 +145,13 @@ const struct Software {
 	
 	enum ubyte panel = 1;
 
-	public static JSONValue toJSON(string type) {
+	public static JSONValue toJSON() {
 		JSONValue[string] ret;
 		foreach(member ; TypeTuple!("name", "website", "stable", "codename", "display", "api", "hncom", "externalConsole")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];
-		return JSONValue(["type": JSONValue(type), "software": JSONValue(ret)]);
+		return JSONValue(ret);
 	}
 	
 }
@@ -163,12 +163,12 @@ enum supportedMinecraftProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
-	//333: ["1.12"], // pre-release
+	//334: ["1.12"], // pre-7
 ];
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	112: ["1.1.0"], // beta
+	113: ["1.1.0"],
 ];
 
 /**

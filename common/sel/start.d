@@ -17,6 +17,7 @@ module sel.start;
 import std.algorithm : canFind;
 import std.conv : to;
 import std.file : exists, write, read;
+import std.json : JSONValue;
 import std.stdio : writeln;
 
 import sel.about : Software;
@@ -32,7 +33,13 @@ bool startup(ConfigType type, const string type_str, ref string[] args, ref bool
 
 	if(args.canFind("--about") || args.canFind("-a")) {
 
-		writeln(Software.toJSON(type_str));
+		import std.system : endian;
+
+		JSONValue[string] json;
+		json["type"] = type_str;
+		json["software"] = Software.toJSON();
+		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
+		writeln(JSONValue(json));
 		return false;
 
 	}

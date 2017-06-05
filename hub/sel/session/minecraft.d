@@ -91,7 +91,7 @@ class MinecraftHandler : HandlerThread {
 			foreach(shared IMinecraftSession session ; this.sessions.sessions) {
 				Socket socket = cast()session.socket;
 				do {
-					recv = socket.receive(buffer);
+					recv = socket.receive(buffer); //TODO may be null (from crash file)
 					if(recv > 0) {
 						this.server.traffic.receive(recv);
 						session.handle(buffer[0..recv]);

@@ -1222,7 +1222,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * assert(world[1, 2] == chunk);
 	 * ---
 	 */
-	public final @safe Chunk opIndexAssign(Chunk chunk) {
+	public final Chunk opIndexAssign(Chunk chunk) {
 		atomicOp!"+="(this.info.chunks, 1);
 		chunk.saveChangedBlocks = true;
 		return this.n_chunks[chunk.x][chunk.z] = chunk;

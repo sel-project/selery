@@ -9,3 +9,7 @@ dependency "resusage" version="==0.2.4"
 sourcePaths "."
 importPaths "."
 dflags "-op"
+
+// for testing in release mode
+//versions "NoBlocks"
+versions "NoItems"

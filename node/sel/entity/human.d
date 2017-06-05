@@ -60,6 +60,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		//this.m_exp = Experience();
 		this.m_experience = 0;
 		this.m_level = 0;
+		this.m_spawn = position;
 		this.skin = skin;
 		this.n_eye_height = 1.62;
 		this.m_body_yaw = Rotation.FRONT;

@@ -209,10 +209,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	mixin("import sul.attributes.pocket" ~ __protocol.to!string ~ " : Attributes;");
 	mixin("import sul.metadata.pocket" ~ __protocol.to!string ~ " : Metadata;");
 
-	private static ubyte[] creative_inventory;
+	private static __gshared ubyte[] creative_inventory;
 
 	public static bool loadCreativeInventory() {
-		immutable cached = Paths.hidden ~ "creative" ~ __protocol.to!string;
+		immutable cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
 		if(!exists(cached)) {
 			auto packet = new Play.ContainerSetContent(121, 0);
 			try {
