@@ -1,0 +1,13 @@
+name "sel-server"
+description "Server for Minecraft and Minecraft: Pocket Edition"
+authors "sel-project"
+license "LGPL-3.0"
+targetType "none"
+
+dependency ":common" version="*"
+dependency ":hub" version="*"
+dependency ":node" version="*"
+
+subPackage "common"
+subPackage "hub"
+subPackage "node"
