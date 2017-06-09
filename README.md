@@ -48,11 +48,16 @@ sel connect <server> [--name=<server>] [--ip=localhost] [--port=28232] [--passwo
 
 ### Using DUB
 
+Before building any configuration the plugins should be initialized:
+```
+cd init
+dub run
+```
+
 #### Lite
 
 ```
 cd build
-dub init.d
 dub build --config=lite
 ./lite [-edu] [-realm] [custom-args]
 ```
@@ -61,7 +66,6 @@ dub build --config=lite
 
 ```
 cd build
-dub init.d
 dub build --config=hub
 ./hub [-edu] [-realm]
 ```
@@ -72,7 +76,6 @@ dub build --config=hub
 
 ```
 cd build
-dub init.d
 dub build --config=node
 ./node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
 ```
