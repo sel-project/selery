@@ -31,14 +31,15 @@ void spawnWorld(T:World, E...)(shared Server server, shared WorldInfo info, E ar
 
 	try {
 
-		World world = new T(args);
+		T world = new T(args);
 
 		//TODO register default events
 		//TODO register specific events
 
-		World.startWorld(server, info, world, null);
+		//World.startWorld(server, info, world, null);
 
-		world.startMainWorldLoop(server, info);
+		World.startWorld(server, info, world, null);
+		world.startMainWorldLoop();
 
 	} catch(Throwable t) {
 

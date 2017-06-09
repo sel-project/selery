@@ -380,9 +380,10 @@ abstract class Player : Human, WorldCommandSender {
 	public override void firstspawn() {
 		super.firstspawn();
 		//this.sendInventory();
-		this.healthUpdated();
-		this.hungerUpdated();
-		this.experienceUpdated();
+		//TODO send these only when the player comes from another thread or node
+		//this.healthUpdated();
+		//this.hungerUpdated();
+		//this.experienceUpdated();
 	}
 
 

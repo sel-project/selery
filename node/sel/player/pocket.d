@@ -800,6 +800,55 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	protected override void sendCommands() {
 		this.sent_commands.clear();
+		/+{
+			import fast.json;
+			auto json = encodeJSONObject();
+			foreach(command ; this.commands_not_aliases) {
+				if(!command.op || this.op) {
+					json.openObject(command.command);
+					json.openArray("versions");
+					json.openObject();
+					json.put("permission", "any");
+					json.put("aliases", command.aliases);
+					if(command.hidden) json.put("hidden", true);
+					json.openObject("overloads");
+					foreach(i, overload; command.overloads) {
+						json.openObject(to!string(i));
+						json.openObject("input");
+						Tuple!(string, PocketType)[] sent_params;
+						json.openArray("parameters");
+						foreach(j, name; overload.params) {
+							json.openObject();
+							auto name_type = Tuple!(string, PocketType)(name, overload.pocketTypeOf(j));
+							sent_params ~= name_type;
+							JSONValue[string] p;
+							json.put("name", name_type[0]);
+							json.put("type", name_type[1]);
+							/*if(name_type[1] == PocketType.target) {
+								if(overload.typeOf(j).startsWith("player")) {
+									json.put("target_data", ["players_only": true]);
+								}
+							}*/
+							if(j >= overload.requiredArgs) json.put("optional", true);
+							if(name_type[1] == PocketType.stringenum) json.put("enum_values", overload.enumMembers(j));
+							json.close();
+						}
+						json.close(); // parameters
+						json.close(); // input
+						json.close(); // overload
+					}
+					json.close(); // overloads
+					json.close(); // versions
+					json.close(); // unique version
+					json.close();
+				}
+			}
+			log(json.data);
+			timer.stop();
+			warning_log(timer.peek.usecs);
+			this.sendPacket(new Play.AvailableCommands(json.data));
+		}+/
+		// normal json
 		JSONValue[string] json;
 		foreach(command ; this.commands_not_aliases) {
 			if(command.command != "*" && (!command.op || this.op)) {
@@ -818,12 +867,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 						JSONValue[string] p;
 						p["name"] = name_type[0];
 						p["type"] = name_type[1];
-						/*if(name_type[1] == "target") {
+						/*if(name_type[1] == PocketType.target) {
 							immutable target = overload.typeOf(j);
 							if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
 						}*/
 						if(j >= overload.requiredArgs) p["optional"] = true;
-						if(name_type[1] == "stringenum") p["enum_values"] = overload.enumMembers(j);
+						if(name_type[1] == PocketType.stringenum) p["enum_values"] = overload.enumMembers(j);
 						params ~= JSONValue(p);
 					}
 					foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;

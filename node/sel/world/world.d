@@ -76,9 +76,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.info = info;
 		world.n_server = server;
 		world.setListener(cast()server.globalListener);
-		if(parent is null) {
-			world.players_list = new PlayersList();
-		} else {
+		if(parent !is null) {
 			world.players_list = parent.players_list;
 			world.setListener(parent.inheritance);
 			world.inheritance = parent.inheritance;
@@ -414,12 +412,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		return false;
 	}
 
-	public void startMainWorldLoop(shared Server server, shared WorldInfo info) {
-
-		this.info = info;
-		this.n_server = server;
-
-		//TODO do actions in World.startWorld
+	public void startMainWorldLoop() {
 
 		StopWatch timer;
 

@@ -298,11 +298,11 @@ class Command {
 
 	void add(alias func)(void delegate(Parameters!func) del) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
 		string[] params = [ParameterIdentifierTuple!func][1..$];
-		foreach(i, P; Parameters!func) {
+		/*foreach(i, P; Parameters!func) {
 			static if(hasUDA!(P, param) && i != 0) {
 				params[i-1] = getUDAs!(P, param)[0];
 			}
-		}
+		}*/
 		this.overloads ~= new OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
 	

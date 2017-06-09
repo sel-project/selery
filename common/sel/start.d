@@ -39,6 +39,12 @@ bool startup(ConfigType type, const string type_str, ref string[] args, ref bool
 		json["type"] = type_str;
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
+		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
+		debug {
+			json["debug"] = true;
+		} else {
+			json["debug"] = false;
+		}
 		writeln(JSONValue(json));
 		return false;
 
