@@ -6,7 +6,7 @@ import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
 import std.file : read, write, exists, tempDir;
-import std.json;
+import std.json : JSONValue, JSON_TYPE;
 import std.path : dirSeparator;
 import std.process : environment;
 import std.random : uniform;
@@ -16,6 +16,9 @@ import std.traits : isArray, isAssociativeArray;
 
 import sel.about;
 import sel.path : Paths;
+
+import toml;
+import toml.json : toJSON;
 
 enum ConfigType {
 
@@ -197,124 +200,104 @@ struct Config {
 
 	public void save() {
 
-		string file = header ~ "{" ~ newline;
+		string file = header() ~ newline;
 
-		if(type != ConfigType.node) file ~= "\t\"display-name\": \"A Minecraft Server\"," ~ newline;
+		if(type != ConfigType.node) file ~= "display-name = \"A Minecraft Server\"" ~ newline;
+		if(type != ConfigType.hub) file ~= "max-players = " ~ to!string(size_t.sizeof * 8) ~ newline;
+		if(type != ConfigType.node) file ~= "whitelist = " ~ to!string(edu || realm) ~ newline;
+		if(type != ConfigType.node) file ~= "blacklist = " ~ to!string(!edu && !realm) ~ newline;
+		if(type != ConfigType.node && !realm) file ~= "query = " ~ to!string(!edu && !realm) ~ newline;
+		if(type != ConfigType.node) file ~= "language = " ~ JSONValue(this.language).toString() ~ newline;
+		if(type != ConfigType.node) file ~= "accepted-languages = " ~ to!string(this.acceptedLanguages) ~ newline;
+		if(type != ConfigType.node) file ~= "server-ip = \"\"" ~ newline;
+		if(type != ConfigType.node && !edu) file ~= "icon = \"favicon.png\"" ~ newline;
+		if(type != ConfigType.node) file ~= "google-analytics = \"\"" ~ newline;
+		if(type != ConfigType.node && !realm) file ~= "social = {}" ~ newline;
 		if(type != ConfigType.node && !edu) {
-			file ~= "\t\"minecraft\": {" ~ newline;
-			file ~= "\t\t\"enabled\": true," ~ newline;
-			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
-			file ~= "\t\t\"online-mode\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
-			file ~= "\t\t\"port\": 25565," ~ newline;
-			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestMinecraftProtocols) ~ newline;
-			file ~= "\t}," ~ newline;
+			file ~= newline ~ "[minecraft]" ~ newline;
+			file ~= "enabled = true" ~ newline;
+			file ~= "motd = \"A Minecraft Server\"" ~ newline;
+			file ~= "online-mode = false" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\"]" ~ newline;
+			file ~= "port = 25565" ~ newline;
+			file ~= "accepted-protocols = " ~ to!string(latestMinecraftProtocols) ~ newline;
 		}
 		if(type != ConfigType.node) {
-			file ~= "\t\"pocket\": {" ~ newline;
-			file ~= "\t\t\"enabled\": true," ~ newline;
-			file ~= "\t\t\"motd\": \"A Minecraft Server\"," ~ newline;
-			file ~= "\t\t\"online-mode\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
-			file ~= "\t\t\"port\": 19132," ~ newline;
-			file ~= "\t\t\"accepted-protocols\": " ~ to!string(latestPocketProtocols);
-			if(edu) file ~= "," ~ newline ~ "\t\t\"allow-vanilla-players\": false";
-			file ~= newline ~ "\t}," ~ newline;
+			file ~= newline ~ "[pocket]" ~ newline;
+			file ~= "enabled = true" ~ newline;
+			file ~= "motd = \"A Minecraft Server\"" ~ newline;
+			file ~= "online-mode = false" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\"]" ~ newline;
+			file ~= "port = 19132" ~ newline;
+			file ~= "accepted-protocols = " ~ to!string(latestPocketProtocols);
+			if(edu) file ~= newline ~ "allow-vanilla-players = false";
+			file ~= newline;
 		}
-		if(type != ConfigType.hub) file ~= "\t\"max-players\": " ~ to!string(size_t.sizeof * 8) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"whitelist\": " ~ to!string(edu || realm) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"blacklist\": " ~ to!string(!edu && !realm) ~ "," ~ newline;
-		if(type != ConfigType.node && !realm) file ~= "\t\"query\": " ~ to!string(!edu && !realm) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"language\": " ~ JSONValue(this.language).toString() ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"accepted-languages\": " ~ to!string(this.acceptedLanguages) ~ "," ~ newline;
-		if(type != ConfigType.node) file ~= "\t\"server-ip\": \"\"," ~ newline;
-		if(type != ConfigType.node && !edu) file ~= "\t\"icon\": \"favicon.png\"," ~ newline;
 		if(type != ConfigType.hub) {
-			file ~= "\t\"world\": {" ~ newline;
-			file ~= "\t\t\"gamemode\": \"survival\"," ~ newline;
-			file ~= "\t\t\"difficulty\": \"normal\"," ~ newline;
-			file ~= "\t\t\"pvp\": true," ~ newline;
-			file ~= "\t\t\"pvm\": true," ~ newline;
-			file ~= "\t\t\"do-daylight-cycle\": true," ~ newline;
-			file ~= "\t\t\"do-weather-cycle\": true," ~ newline;
-			file ~= "\t\t\"random-tick-speed\": 3," ~ newline;
-			file ~= "\t\t\"do-scheduled-ticks\": true" ~ newline;
-			file ~= "\t}," ~ newline;
-		}
-		if(type != ConfigType.hub && !realm) file ~= "\t\"plugins\": []," ~ newline;
-		/*if(type != ConfigType.node) {
-			file ~= "\t\"panel\": {" ~ newline;
-			file ~= "\t\t\"enabled\": false," ~ newline;
-			file ~= "\t\t\"users\": " ~ JSONValue(this.panelUsers).toString() ~ "," ~ newline;
-			file ~= "\t\t\"addresses\": " ~ replace(to!string(this.panelAddresses), ",", ", ") ~ newline;
-			file ~= "\t},\n";
-		}*/
-		if(type != ConfigType.node) {
-			file ~= "\t\"external-console\": {" ~ newline;
-			file ~= "\t\t\"enabled\": false," ~ newline;
-			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
-			file ~= "\t\t\"port\": 19134," ~ newline;
-			file ~= "\t\t\"remote-commands\": true," ~ newline;
-			file ~= "\t\t\"accept-websockets\": true," ~ newline;
-			file ~= "\t\t\"hash-algorithm\": \"sha256\"" ~ newline;
-			file ~= "\t}," ~ newline;
+			file ~= newline ~ "[world]" ~ newline;
+			file ~= "gamemode = \"survival\"" ~ newline;
+			file ~= "difficulty = \"normal\"" ~ newline;
+			file ~= "pvp = true" ~ newline;
+			file ~= "pvm = true" ~ newline;
+			file ~= "do-daylight-cycle = true" ~ newline;
+			file ~= "do-weather-cycle = true" ~ newline;
+			file ~= "random-tick-speed = 3" ~ newline;
+			file ~= "do-scheduled-ticks = true" ~ newline;
 		}
 		if(type != ConfigType.node) {
-			file ~= "\t\"rcon\": {" ~ newline;
-			file ~= "\t\t\"enabled\": false," ~ newline;
-			file ~= "\t\t\"password\": \"" ~ randomPassword() ~ "\"," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0\"]," ~ newline;
-			file ~= "\t\t\"port\": 25575" ~ newline;
-			file ~= "\t}," ~ newline;
+			file ~= newline ~ "[panel]" ~ newline;
+			file ~= "enabled = false" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\"]" ~ newline;
+			file ~= "[[panel.users]]" ~ newline ~ "name = \"Admin\"" ~ newline ~ "password = \"" ~ randomPassword() ~ "\"" ~ newline;
+		}
+		if(type != ConfigType.node) {
+			file ~= newline ~ "[external-console]" ~ newline;
+			file ~= "enabled = false" ~ newline;
+			file ~= "password = \"" ~ randomPassword() ~ "\"" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\"]" ~ newline;
+			file ~= "port = 19134" ~ newline;
+			file ~= "remote-commands = true" ~ newline;
+			file ~= "accept-websockets = true" ~ newline;
+			file ~= "hash-algorithm = \"sha256\"" ~ newline;
+		}
+		if(type != ConfigType.node) {
+			file ~= newline ~ "[rcon]" ~ newline;
+			file ~= "enabled = false" ~ newline;
+			file ~= "password = \"" ~ randomPassword() ~ "\"" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\"]" ~ newline;
+			file ~= "port = 25575" ~ newline;
 		}
 		if(type != ConfigType.node && !realm) {
-			file ~= "\t\"web\": {" ~ newline;
-			file ~= "\t\t\"enabled\": false," ~ newline;
-			file ~= "\t\t\"addresses\": [\"0.0.0.0\", \"::\"]," ~ newline;
-			file ~= "\t\t\"port\": 80" ~ newline;
-			file ~= "\t}," ~ newline;
+			file ~= newline ~ "[web]" ~ newline;
+			file ~= "enabled = false" ~ newline;
+			file ~= "addresses = [\"0.0.0.0\", \"::\"]" ~ newline;
+			file ~= "port = 80" ~ newline;
 		}
 		if(type == ConfigType.hub) {
-			file ~= "\t\"hncom\": {" ~ newline;
-			file ~= "\t\t\"accepted-addresses\": " ~ to!string(this.acceptedNodes) ~ "," ~ newline;
-			file ~= "\t\t\"password\": \"\"," ~ newline;
-			file ~= "\t\t\"max\": \"unlimited\"," ~ newline;
-			file ~= "\t\t\"port\": 28232";
+			file ~= newline ~ "[hncom]" ~ newline;
+			file ~= "accepted-addresses = " ~ to!string(this.acceptedNodes) ~ newline;
+			file ~= "password = \"\"" ~ newline;
+			file ~= "max = \"unlimited\"" ~ newline;
+			file ~= "port = 28232";
 			version(Posix) {
-				file ~= "," ~ newline ~ "\t\t\"use-unix-sockets\": false," ~ newline;
-				file ~= "\t\t\"unix-socket-address\": \"" ~ this.hncomUnixSocketAddress ~ "\"";
+				file ~= newline ~ "use-unix-sockets = false" ~ newline;
+				file ~= "unix-socket-address = \"" ~ this.hncomUnixSocketAddress ~ "\"";
 			}
-			file ~= newline ~ "\t}," ~ newline;
+			file ~= newline;
 		}
-		if(type != ConfigType.node) file ~= "\t\"google-analytics\": \"\"," ~ newline;
-		if(type != ConfigType.node && !realm) file ~= "\t\"social\": {}," ~ newline;
+		file ~= newline;
 
-		file = file[0..$-1-newline.length] ~ newline ~ "}" ~ newline;
-
-		write(Paths.home ~ "sel.json", file);
+		write(Paths.home ~ "server.toml", file);
 
 	}
 
 	public void load() {
 
-		if(!exists(Paths.home ~ "sel.json")) this.save();
+		if(!exists(Paths.home ~ "server.toml")) this.save();
 
-		bool add = false;
-		string[] lines;
-
-		foreach(line ; split(cast(string)read(Paths.home ~ "sel.json"), "\n")) {
-			if(!add && line.strip.startsWith("{")) add = true;
-			if(add) lines ~= line;
-		}
-
-		string file = lines.join("\n");
-
-		write(Paths.home ~ "sel.json", header ~ file);
-
-		auto json = parseJSON(file);
-
-		T get(T)(JSONValue target) {
+		TOMLDocument toml = parseTOML(cast(string)read(Paths.home ~ "server.toml"));
+		
+		T get(T)(TOMLValue target) {
 			static if(is(T == string)) {
 				return target.str;
 			} else static if(isArray!T) {
@@ -325,27 +308,27 @@ struct Config {
 				return ret;
 			} else static if(isAssociativeArray!T) {
 				T ret;
-				foreach(key, value; target.object) {
+				foreach(key, value; target.table) {
 					ret[key] = get!(typeof(ret[""]))(value);
 				}
 				return ret;
-			} else static if(is(T == JSONValue)) {
-				return target;
 			} else static if(is(T == bool)) {
-				return target.type == JSON_TYPE.TRUE;
+				return target.boolean;
 			} else static if(is(T == float) || is(T == double) || is(T == real)) {
 				return cast(T)target.floating;
 			} else static if(is(T == byte) || is(T == ubyte) || is(T == short) || is(T == ushort) || is(T == int) || is(T == uint) || is(T == long) || is(T == ulong)) {
 				return cast(T)target.integer;
+			} else static if(is(T == JSONValue)) {
+				return toJSON(target);
 			} else {
 				static assert(0);
 			}
 		}
-
+		
 		void set(string jv, T)(ref T value) {
 			try {
-				mixin("value = get!T(json" ~ replace(to!string(jv.split(".")), ",", "][") ~ ");");
-			} catch(JSONException) {}
+				mixin("value = get!T(toml" ~ replace(to!string(jv.split(".")), ",", "][") ~ ");");
+			} catch(Throwable) {}
 		}
 
 		set!"display-name"(this.displayName);
@@ -378,7 +361,7 @@ struct Config {
 		set!"world.do-weather-cycle"(this.doWeatherCycle);
 		set!"world.random-tick-speed"(this.randomTickSpeed);
 		set!"world.do-scheduled-ticks"(this.doScheduledTicks);
-		set!"plugins"(this.plugins);
+		//set!"plugins"(this.plugins);
 		set!"panel.enabled"(this.panel);
 		set!"panel.users"(this.panelUsers);
 		set!"panel.addresses"(this.panelAddresses);
@@ -417,12 +400,12 @@ struct Config {
 		checkProtocols(this.pocket.protocols, supportedPocketProtocols.keys);
 		if(this.pocket.protocols.length == 0) this.pocket.enabled = false;
 
-		if("max-players" in json && json["max-players"].type == JSON_TYPE.STRING && json["max-players"].str.toLower == "unlimited") this.maxPlayers = 0;
+		if("max-players" in toml && toml["max-players"].type == TOML_TYPE.STRING && toml["max-players"].str.toLower == "unlimited") this.maxPlayers = 0;
 		
-		if("max-nodes" in json && json["max-nodes"].type == JSON_TYPE.STRING && json["max-nodes"].str.toLower == "unlimited") this.maxNodes = 0;
+		if("max-nodes" in toml && toml["max-nodes"].type == TOML_TYPE.STRING && toml["max-nodes"].str.toLower == "unlimited") this.maxNodes = 0;
 
-		if(social.type != JSON_TYPE.OBJECT) {
-			social = parseJSON("{}");
+		if(this.social.type != JSON_TYPE.OBJECT) {
+			this.social = JSONValue((JSONValue[string]).init);
 		}
 
 	}

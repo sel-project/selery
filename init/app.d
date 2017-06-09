@@ -1,11 +1,3 @@
-/+ dub.sdl:
-   name "init"
-   authors "sel-project"
-   license "LGPL-3.0"
-   copyright "(c) 2016-2017 SEL"
-   targetType "executable"
-   dependency "sel-common" path="../common"
-+/
 /*
  * Copyright (c) 2016-2017 SEL
  * 
@@ -20,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module init;
+module app;
 
 import std.algorithm : sort, canFind, clamp;
 import std.array : join, split;
@@ -36,7 +28,10 @@ import std.string;
 import sel.about;
 import sel.path : Paths;
 
-enum size_t __GENERATOR__ = 4;
+import toml;
+import toml.json;
+
+enum size_t __GENERATOR__ = 5;
 
 void main(string[] args) {
 
@@ -51,7 +46,7 @@ void main(string[] args) {
 
 		// init for portable (it'll be used only for lite.d)
 
-		if(!exists("views")) mkdir("views");
+		if(!exists("../build/views")) mkdir("../build/views");
 
 		import std.zip;
 
@@ -67,12 +62,12 @@ void main(string[] args) {
 				zip.addMember(member);
 			}
 		}
-		write("views/portable.zip", zip.build());
+		write("../build/views/portable.zip", zip.build());
 
-	} else if(exists("views/portable.zip")) {
+	} else if(exists("../build/views/portable.zip")) {
 
-		remove("views/portable.zip");
-		rmdir("views");
+		remove("v../build/views/portable.zip");
+		rmdir("../build/views");
 
 	}
 
@@ -88,20 +83,34 @@ void main(string[] args) {
 	}
 	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 
-	JSONValue[string] plugs; // plugs[location] = settingsfile
+	TOMLDocument[string] plugs; // plugs[location] = settingsfile
 
 	void loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["sel.json", "package.json"]) {
+		foreach(pack ; ["sel.toml", "sel.json", "package.json"]) {
 			if(exists(path ~ pack)) {
-				auto json = parseJSON(cast(string)read(path ~ pack));
-				if(json.type == JSON_TYPE.OBJECT) {
-					json["single"] = false;
-					plugs[path] = json;
+				if(pack.endsWith(".toml")) {
+					auto toml = parseTOML(cast(string)read(path ~ pack));
+					toml["single"] = false;
+					plugs[path] = toml;
 					return;
+				} else {
+					auto json = parseJSON(cast(string)read(path ~ pack));
+					if(json.type == JSON_TYPE.OBJECT) {
+						json["single"] = false;
+						plugs[path] = TOMLDocument(toTOML(json).table);
+						return;
+					}
 				}
 			}
 		}
+	}
+
+	void addSinglePlugin(string file, string mod, TOMLDocument toml) {
+		mkdirRecurse(Paths.hidden ~ "single" ~ dirSeparator ~ mod ~ dirSeparator ~ "src");
+		writeDiff(Paths.hidden ~ "single" ~ dirSeparator ~ mod ~ dirSeparator ~ "src" ~ dirSeparator ~ mod ~ ".d", file);
+		toml["single"] = true;
+		plugs[Paths.hidden ~ "single" ~ dirSeparator ~ mod] = toml;
 	}
 
 	void loadSinglePlugin(string location) {
@@ -111,7 +120,7 @@ void main(string[] args) {
 		if(s.length) {
 			auto fl = s[0].strip;
 			if(fl.startsWith("/+") && fl.endsWith(":")) {
-				string pack;
+				string[] pack;
 				bool closed = false;
 				s = s[1..$];
 				while(s.length) {
@@ -126,14 +135,14 @@ void main(string[] args) {
 				}
 				if(closed && s.length && s[0].strip == "module " ~ expectedModule ~ ";") {
 					switch(fl[2..$-1].strip) {
-						case "package.json":
+						case "sel.toml":
+							addSinglePlugin(file, expectedModule, parseTOML(pack.join("\n")));
+							break;
 						case "sel.json":
-							auto json = parseJSON(pack);
+						case "package.json":
+							auto json = parseJSON(pack.join(""));
 							if(json.type == JSON_TYPE.OBJECT) {
-								mkdirRecurse(Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src");
-								writeDiff(Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule ~ dirSeparator ~ "src" ~ dirSeparator ~ expectedModule ~ ".d", file);
-								json["single"] = true;
-								plugs[Paths.hidden ~ "single" ~ dirSeparator ~ expectedModule] = json;
+								addSinglePlugin(file, expectedModule, TOMLDocument(toTOML(json).table));
 							}
 							break;
 						default:
@@ -168,41 +177,41 @@ void main(string[] args) {
 		string index = path.split(dirSeparator)[$-2];
 		if(index !in info) {
 			auto plugin = Info();
-			plugin.json = value;
+			plugin.toml = value;
 			plugin.id = index;
 			plugin.path = buildNormalizedPath(absolutePath(path));
 			if(!plugin.path.endsWith(dirSeparator)) plugin.path ~= dirSeparator;
-			plugin.single = "single" in value && value["single"].type == JSON_TYPE.TRUE;
+			plugin.single = "single" in value && value["single"].boolean;
 			auto target = "target" in value;
-			if(target && target.type == JSON_TYPE.STRING) {
+			if(target && target.type == TOML_TYPE.STRING) {
 				plugin.target = target.str.toLower;
 			}
 			auto priority = "priority" in value;
 			if(priority) {
-				if(priority.type == JSON_TYPE.STRING) {
+				if(priority.type == TOML_TYPE.STRING) {
 					immutable p = priority.str.toLower;
-					plugin.priority = p == "high" ? 10 : (p == "medium" || p == "normal" ? 5 : 1);
-				} else if(priority.type == JSON_TYPE.INTEGER) {
+					plugin.priority = (p == "high" || p == "🔥") ? 10 : (p == "medium" || p == "normal" ? 5 : 1);
+				} else if(priority.type == TOML_TYPE.INTEGER) {
 					plugin.priority = clamp(priority.integer.to!size_t, 1, 10);
 				}
 			}
 			auto name = "name" in value;
-			if(name && name.type == JSON_TYPE.STRING) {
+			if(name && name.type == TOML_TYPE.STRING) {
 				plugin.name = name.str;
 			}
 			auto authors = "authors" in value;
 			auto author = "author" in value;
-			if(authors && authors.type == JSON_TYPE.ARRAY) {
+			if(authors && authors.type == TOML_TYPE.ARRAY) {
 				foreach(a ; authors.array) {
-					if(a.type == JSON_TYPE.STRING) {
+					if(a.type == TOML_TYPE.STRING) {
 						plugin.authors ~= a.str;
 					}
 				}
-			} else if(author && author.type == JSON_TYPE.STRING) {
+			} else if(author && author.type == TOML_TYPE.STRING) {
 				plugin.authors = [author.str];
 			}
 			auto main = "main" in value;
-			if(main && main.type == JSON_TYPE.STRING) {
+			if(main && main.type == TOML_TYPE.STRING) {
 				string[] spl = main.str.split(".");
 				string[] m;
 				foreach(string s ; spl) {
@@ -232,18 +241,18 @@ void main(string[] args) {
 	foreach(ref inf ; ordered) {
 		if(inf.active) {
 			long[] api;
-			auto ptr = "api" in inf.json;
+			auto ptr = "api" in inf.toml;
 			if(ptr) {
-				if((*ptr).type == JSON_TYPE.INTEGER) {
+				if((*ptr).type == TOML_TYPE.INTEGER) {
 					api ~= (*ptr).integer;
-				} else if((*ptr).type == JSON_TYPE.ARRAY) {
+				} else if((*ptr).type == TOML_TYPE.ARRAY) {
 					foreach(v ; (*ptr).array) {
-						if(v.type == JSON_TYPE.INTEGER) api ~= v.integer;
+						if(v.type == TOML_TYPE.INTEGER) api ~= v.integer;
 					}
-				} else if((*ptr).type == JSON_TYPE.OBJECT) {
+				} else if((*ptr).type == TOML_TYPE.TABLE) {
 					auto from = "from" in *ptr;
 					auto to = "to" in *ptr;
-					if(from && (*from).type == JSON_TYPE.INTEGER && to && (*to).type == JSON_TYPE.INTEGER) {
+					if(from && (*from).type == TOML_TYPE.INTEGER && to && (*to).type == TOML_TYPE.INTEGER) {
 						foreach(a ; (*from).integer..(*to).integer+1) {
 							api ~= a;
 						}
@@ -293,11 +302,11 @@ void main(string[] args) {
 				value.dub["name"] = value.id;
 				value.dub["targetType"] = "library";
 				value.dub["configurations"] = [JSONValue(["name": "plugin"])];
-				auto dptr = "dependencies" in value.json;
-				if(dptr && dptr.type == JSON_TYPE.OBJECT) {
-					foreach(name, d; dptr.object) {
+				auto dptr = "dependencies" in value.toml;
+				if(dptr && dptr.type == TOML_TYPE.TABLE) {
+					foreach(name, d; dptr.table) {
 						if(name.startsWith("dub:")) {
-							value.dub["dependencies"][name[4..$]] = d;
+							value.dub["dependencies"][name[4..$]] = toJSON(d);
 						}
 					}
 				}
@@ -350,7 +359,7 @@ struct Info {
 
 	public string target = "node";
 
-	public JSONValue json;
+	public TOMLDocument toml;
 
 	public bool single = false;
 
