@@ -66,7 +66,7 @@ void main(string[] args) {
 
 	} else if(exists("../build/views/portable.zip")) {
 
-		remove("v../build/views/portable.zip");
+		remove("../build/views/portable.zip");
 		rmdir("../build/views");
 
 	}
@@ -288,7 +288,7 @@ void main(string[] args) {
 		string[] fimports;
 
 		JSONValue[string] dub;
-		dub["sel-" ~ target] = JSONValue(["path": libraries ~ target]);
+		dub["sel-server:" ~ target] = JSONValue(["path": libraries]);
 
 		foreach(ref value ; ordered) {
 			if(value.target == target && value.active) {
@@ -310,7 +310,7 @@ void main(string[] args) {
 						}
 					}
 				}
-				value.dub["dependencies"]["sel-" ~ target] = ["path": libraries ~ target];
+				value.dub["dependencies"]["sel-server:" ~ target] = ["path": libraries];
 				string extra(string path) {
 					auto ret = value.path ~ path;
 					if((value.main.length || value.api) && exists(ret) && ret.isDir) {

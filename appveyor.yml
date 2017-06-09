@@ -100,13 +100,14 @@ before_build:
 
 build_script:
  - cd init
- - dub run --portable --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - init --portable
  - cd ../build
  - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
  - rename lite.exe sel-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
  - cd ../init
- - dub run --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - init
  - cd ../build
  - dub build --config=hub --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
  - dub build --config=node --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
