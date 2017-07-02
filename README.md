@@ -14,52 +14,21 @@ SEL is based on the [hub-node communication protocol](https://sel-utils.github.i
 
 ## Create a server
 
-### Using SEL Manager
-
-SEL uses a manager to create, compile, run and delete servers. The instructions for the installation can be found at [sel-manager](https://github.com/sel-project/sel-manager/tree/sel-server-2)'s [README](https://github.com/sel-project/sel-manager/blob/sel-server-2/README.md) file.
-
-#### Lite
-
-A lite server is composed by an hub and a node automatically connected to each other. The result will look like a single server. This type of the server can be used by small servers that can handle all the players on a single node.
-
-```
-sel init <server> --version=~master [--path=auto] [-edu] [-realm]
-sel build <server> [-release] [dub-options]
-sel start <server>
-```
-
-#### Hub
-
-An hub is the network of the server. It handles the new connections, performs checks on the ips, does uncompression, handles queries and external consoles. An hub alone can be seen in the players' server list and can also accept players, but it will kick them because the server is full. To work properly at least one main node should be connected to the hub.
-
-```
-sel init <server> --type=hub --version=~master [--path=auto] [-edu] [-realm]
-sel build <server> [-release] [dub-options]
-sel start <server>
-```
-
-#### Node
-
-```
-sel init <server> --type=node --version=~master [--path=auto]
-sel build <server> [-release] [dub-options]
-sel connect <server> [--name=<server>] [--ip=localhost] [--port=28232] [--password=] [--main=true]
-```
-
-### Using DUB
-
 Before building any configuration the plugins should be initialized:
 ```
 cd init
 dub run
 ```
 
-#### Lite
+#### Lite (hub + 1 node)
+
+:warning: doesn't compile using 32-bit DMD
+:warning: doesn't work using DMD in release mode
 
 ```
 cd build
 dub build --config=lite
-./lite [-edu] [-realm] [custom-args]
+./selery [-edu] [-realm] [custom-args]
 ```
 
 #### Hub
@@ -67,15 +36,15 @@ dub build --config=lite
 ```
 cd build
 dub build --config=hub
-./hub [-edu] [-realm]
+./selery-hub [-edu] [-realm]
 ```
 
 #### Node
 
-:warning: does not work with DMD 2.074
+:warning: does not work with DMD >2.074
 
 ```
 cd build
 dub build --config=node
-./node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
+./selery-node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
 ```

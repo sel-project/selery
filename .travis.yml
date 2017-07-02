@@ -15,7 +15,6 @@ os:
 matrix:
   include:
     - {os: linux, d: dmd-2.073.2, env: CONFIG="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
-    - {os: linux, d: dmd-2.073.2, env: CONFIG="docs"}
   exclude:
     - d: dmd-2.074.0
       os: osx
@@ -25,9 +24,12 @@ matrix:
     - d: dmd-2.074.0
 
 script:
-  - cd .ci
-  - chmod +x travis.sh
-  - travis_wait 30 ./travis.sh
+  - cd init
+  - dub run --arch=$CONFIG --compiler=$DC --build=release
+  - cd ../build
+  - travis_wait 30 dub build --config=lite --arch=$CONFIG --compiler=$DC --build=release
+  - dub build --config=hub --arch=$CONFIG --compiler=$DC --build=release
+  - dub build --config=node --arch=$CONFIG --compiler=$DC --build=release
 
 notifications:
   - email: false

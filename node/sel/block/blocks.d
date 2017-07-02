@@ -303,14 +303,6 @@ public class BlockStorage {
 			this.register(new MineableBlock(_.redSandstone, woodPickaxe, Drop(Items.redSandstone, 1)));
 			this.register(new MineableBlock(_.chiseledRedSandstone, woodPickaxe, Drop(Items.chiseledRedSandstone, 1)));
 			this.register(new MineableBlock(_.smoothRedSandstone, woodPickaxe, Drop(Items.smoothRedSandstone, 1)));
-			this.register(new MineableBlock(_.pistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
-			this.register(new MineableBlock(_.pistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
-			this.register(new MineableBlock(_.extendedPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
-			this.register(new MineableBlock(_.extendedPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
-			this.register(new MineableBlock(_.stickyPistonFacingEverywhere, MiningTool.init, Drop(Items.stickyPiston, 1)));
-			this.register(new MineableBlock(_.stickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.stickyPiston, 1)));
-			this.register(new MineableBlock(_.extendedStickyPistonFacingEverywhere, MiningTool.init, Drop(Items.piston, 1)));
-			this.register(new MineableBlock(_.extendedStickyPistonFacingEverywhere1, MiningTool.init, Drop(Items.piston, 1)));
 			this.register(new MineableBlock(_.whiteWool, MiningTool(false, Tools.shears), Drop(Items.whiteWool, 1)));
 			this.register(new MineableBlock(_.orangeWool, MiningTool(false, Tools.shears), Drop(Items.orangeWool, 1)));
 			this.register(new MineableBlock(_.magentaWool, MiningTool(false, Tools.shears), Drop(Items.magentaWool, 1)));

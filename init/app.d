@@ -31,7 +31,7 @@ import sel.path : Paths;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 5;
+enum size_t __GENERATOR__ = 6;
 
 void main(string[] args) {
 
@@ -87,7 +87,7 @@ void main(string[] args) {
 
 	void loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["sel.toml", "sel.json", "package.json"]) {
+		foreach(pack ; ["selery.toml", "selery.json", "package.json"]) {
 			if(exists(path ~ pack)) {
 				if(pack.endsWith(".toml")) {
 					auto toml = parseTOML(cast(string)read(path ~ pack));
@@ -135,10 +135,10 @@ void main(string[] args) {
 				}
 				if(closed && s.length && s[0].strip == "module " ~ expectedModule ~ ";") {
 					switch(fl[2..$-1].strip) {
-						case "sel.toml":
+						case "selery.toml":
 							addSinglePlugin(file, expectedModule, parseTOML(pack.join("\n")));
 							break;
-						case "sel.json":
+						case "selery.json":
 						case "package.json":
 							auto json = parseJSON(pack.join(""));
 							if(json.type == JSON_TYPE.OBJECT) {
@@ -288,7 +288,7 @@ void main(string[] args) {
 		string[] fimports;
 
 		JSONValue[string] dub;
-		dub["sel-server:" ~ target] = JSONValue(["path": libraries]);
+		dub["selery:" ~ target] = JSONValue(["path": libraries]);
 
 		foreach(ref value ; ordered) {
 			if(value.target == target && value.active) {
@@ -310,7 +310,7 @@ void main(string[] args) {
 						}
 					}
 				}
-				value.dub["dependencies"]["sel-server:" ~ target] = ["path": libraries];
+				value.dub["dependencies"]["selery:" ~ target] = ["path": libraries];
 				string extra(string path) {
 					auto ret = value.path ~ path;
 					if((value.main.length || value.api) && exists(ret) && ret.isDir) {
