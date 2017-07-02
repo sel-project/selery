@@ -25,14 +25,14 @@ branches:
     - master
 
 artifacts:
-  - path: build\hub.exe
-    name: sel-hub
-  - path: build\node.exe
-    name: sel-node
-  - path: build\lite.exe
-    name: sel-lite
-  - path: build\sel-portable-%SEL%.exe
-    name: sel-portable
+  - path: build\selery-hub.exe
+    name: selery-hub
+  - path: build\selery-node.exe
+    name: selery-node
+  - path: build\selery.exe
+    name: selery
+  - path: build\selery-portable-%SEL%.exe
+    name: selery-portable
 
 install:
   - ps: function SetUpDCompiler
@@ -101,10 +101,10 @@ before_build:
 build_script:
  - cd init
  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - init --portable
+ - selery-init --portable
  - cd ../build
  - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - rename lite.exe sel-portable-%SEL%.exe
+ - rename selery.exe selery-portable-%SEL%.exe
  - rmdir ..\plugins /s /q
  - cd ../init
  - init
