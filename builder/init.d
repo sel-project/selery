@@ -281,6 +281,8 @@ void main(string[] args) {
 
 	JSONValue[string] dub;
 	dub["selery"] = JSONValue(["path": libraries]);
+	
+	if(!exists(".selery")) mkdir(".selery");
 
 	foreach(ref value ; ordered) {
 		if(value.active) {

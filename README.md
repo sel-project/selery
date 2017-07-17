@@ -26,7 +26,7 @@ SEL is based on the [hub-node communication protocol](https://sel-utils.github.i
 
 ```
 git clone git://github.com/sel-project/selery
-cd builder
+cd selery/builder
 dub --single init.d
 dub build
 cd ..
