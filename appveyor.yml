@@ -7,7 +7,7 @@ configuration:
   - release
 
 environment:
-  SEL: "2.0.0"
+  SEL: "0.0.1"
   matrix:
     - DC: dmd
       DVersion: 2.073.2
@@ -25,13 +25,13 @@ branches:
     - master
 
 artifacts:
-  - path: build\selery-hub.exe
+  - path: selery-hub.exe
     name: selery-hub
-  - path: build\selery-node.exe
+  - path: selery-node.exe
     name: selery-node
-  - path: build\selery.exe
-    name: selery
-  - path: build\selery-portable-%SEL%.exe
+  - path: selery-default.exe
+    name: selery-default
+  - path: selery-portable-%SEL%.exe
     name: selery-portable
 
 install:
@@ -99,19 +99,21 @@ before_build:
   - echo %Darch%
 
 build_script:
- - cd init
  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - selery-init --portable
- - cd ../build
- - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - rename selery.exe selery-portable-%SEL%.exe
- - rmdir ..\plugins /s /q
- - cd ../init
- - init
- - cd ../build
- - dub build --config=hub --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --config=node --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - dub build --config=lite --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - cd builder
+ - dub build --single -arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
+ - selery-init portable
+ - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - rename ..\selery-default.exe ..\selery-portable-%SEL%.exe
+ - selery-init hub
+ - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - selery-init node
+ - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - selery-init default
+ - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+ - cd ..
 
 test_script:
- - '%DC% --version'
+ - selery-hub --about
+ - selery-node --about
+ - selery-default --about
