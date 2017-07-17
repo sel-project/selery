@@ -106,10 +106,6 @@ abstract class MinecraftPlayer : Player {
 		}
 	}
 	
-	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
-		return PC;
-	}
-	
 	public override void tick() {
 		super.tick();
 		if(this.consuming) {
@@ -219,8 +215,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		mixin("return metadata.minecraft" ~ __protocol.to!string ~ ";");
 	}
 
-	private immutable string full_version;
-
 	private Slot picked_up_item;
 	
 	private bool dragging;
@@ -229,11 +223,6 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	public this(shared PlayerInfo info, World world, EntityPosition position) {
 		super(info, world, position);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft " ~ verifyVersion(info.version_, supportedMinecraftProtocols[__protocol]);
-	}
-
-	public final override pure nothrow @property @safe @nogc string gameFullVersion() {
-		return this.full_version;
 	}
 
 	protected void sendPacket(T)(T packet) if(is(typeof(T.encode))) {

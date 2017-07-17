@@ -30,9 +30,9 @@ alias block_t = ushort;
 alias item_t = size_t;
 
 
-enum ubyte PE = 1;
+deprecated enum ubyte PE = 1;
 
-enum ubyte PC = 2;
+deprecated enum ubyte PC = 2;
 
 
 /**
@@ -89,13 +89,13 @@ const struct Software {
 	/**
 	 * Version of the software.
 	 */
-	enum ubyte major = 2;
+	enum ubyte major = 0;
 	
 	/// ditto
 	enum ubyte minor = 0;
 	
 	/// ditto
-	enum ubyte patch = 0;
+	enum ubyte patch = 1;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -130,13 +130,13 @@ const struct Software {
 	 * Version of the api used by the software. It's used to check the
 	 * compatibility with plugins.
 	 */
-	enum ubyte api = 3;
+	enum ubyte api = 4;
 	
 	/**
 	 * Version of the hub-node communication protocol used by
 	 * the software.
 	 */
-	enum ubyte hncom = 2;
+	deprecated enum ubyte hncom = 2;
 	
 	/**
 	 * Version of the external console protocol used by the software.
@@ -147,7 +147,7 @@ const struct Software {
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
-		foreach(member ; TypeTuple!("name", "website", "stable", "codename", "display", "api", "hncom", "externalConsole")) {
+		foreach(member ; TypeTuple!("name", "website", "stable", "codename", "display", "api", "externalConsole")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];

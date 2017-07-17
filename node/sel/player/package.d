@@ -15,6 +15,6 @@
 /// DDOC_EXCLUDE
 module sel.player;
 
-public import sel.player.player : Player, isPlayer, isPlayerInstance, Gamemode, InputMode, PlayerOS, Puppet, Title;
+public import sel.player.player : Player, isPlayer, isPlayerInstance, Gamemode, InputMode, DeviceOS, Puppet, Title;
 public import sel.player.pocket : PocketPlayer;
 public import sel.player.minecraft : MinecraftPlayer;

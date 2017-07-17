@@ -29,6 +29,9 @@ import std.random : uniform;
 import std.socket;
 import std.system : Endian, endian;
 
+import sel.hncom.about;
+import sel.hncom.status : RemoteCommand;
+
 import sel.about;
 import sel.constants;
 import sel.hub.server : Server;
@@ -43,11 +46,6 @@ mixin("import Types = sul.protocol.externalconsole" ~ Software.externalConsole.t
 mixin("import Login = sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".login;");
 mixin("import Status = sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".status;");
 mixin("import Connected = sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".connected;");
-
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
-
-static assert(Types.Game.POCKET == PE);
-static assert(Types.Game.MINECRAFT == PC);
 
 class ExternalConsoleHandler : HandlerThread {
 

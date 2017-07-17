@@ -23,7 +23,7 @@ import std.conv : to;
 import std.datetime : StopWatch, dur;
 import std.math : sin, cos, PI, pow;
 import std.random : unpredictableSeed;
-import std.string : replace, toLower, join;
+import std.string : replace, toLower, toUpper, join;
 import std.traits : Parameters;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
@@ -42,6 +42,7 @@ import sel.event.world.entity : EntityEvent;
 import sel.event.world.player : PlayerEvent, PlayerSpawnEvent, PlayerAfterSpawnEvent, PlayerDespawnEvent, PlayerAfterDespawnEvent;
 import sel.event.world.world : WorldEvent;
 import sel.format : Text;
+import sel.hncom.about;
 import sel.item.item : Item;
 import sel.item.items : ItemStorage, Items;
 import sel.item.slot : Slot;
@@ -56,7 +57,6 @@ import sel.player.pocket : PocketPlayerImpl;
 import sel.plugin : Plugin, loadPluginAttributes;
 import sel.task : TaskManager, areValidTaskArgs;
 import sel.util.color : Color;
-import sel.util.hncom : HncomPlayer;
 import sel.util.random : Random;
 import sel.util.util : call;
 import sel.world.chunk;
@@ -66,6 +66,8 @@ import sel.world.rules : Rules, Gamemode, Difficulty;
 import sel.world.thread;
 
 static import sul.blocks;
+
+private shared uint world_count = 0;
 
 /**
  * Basic world.
@@ -103,8 +105,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 		world.stop();
 	}+/
-
-	private static uint wcount = 0;
 
 	public immutable uint id;
 	public immutable string n_name;
@@ -170,7 +170,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private Command[string] commands;
 	
 	public this(string name="world", Rules rules=Rules.defaultRules.dup, Generator generator=null, uint seed=unpredictableSeed) {
-		this.id = wcount++;
+		this.id = atomicOp!"+="(world_count, 1);
 		this.n_name = name;
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
@@ -833,10 +833,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		//TODO load saved info from file
 
+		alias __MINECRAFT__ = __JAVA__; // remove when Minecraft will be ufficially called Java Edition
+
 		Player player = (){
 			final switch(info.type) {
 				foreach(type ; TypeTuple!("Pocket", "Minecraft")) {
-					case mixin("HncomPlayer.Add." ~ type ~ ".TYPE"): {
+					case mixin("__" ~ toUpper(type) ~ "__"): {
 						final switch(info.protocol) {
 							foreach(protocol ; mixin("Supported" ~ type ~ "Protocols")) {
 								case protocol: {

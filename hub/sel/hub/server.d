@@ -44,7 +44,7 @@ import sel.network.handler : Handler;
 import sel.path : Paths;
 import sel.plugin : Plugin;
 import sel.session.externalconsole : ExternalConsoleSession;
-import sel.session.hncom : Node;
+import sel.session.hncom : AbstractNode;
 import sel.session.player : PlayerSession;
 import sel.session.rcon : RconSession;
 import sel.util.analytics : GoogleAnalytics;
@@ -53,8 +53,8 @@ import sel.util.ip : localAddresses, publicAddresses;
 import sel.util.thread;
 import sel.util.util : milliseconds;
 
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".login : HubInfo, NodeInfo;");
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
+import sel.hncom.login : HubInfo, NodeInfo;
+import sel.hncom.status : RemoteCommand;
 
 mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".types : NodeStats;");
 
@@ -113,9 +113,9 @@ class Server {
 	private shared Handler handler;
 	private shared Blocks blocks;
 
-	private shared Node[immutable(uint)] nodes;
-	private shared Node[] main_nodes;
-	private shared Node[string] nodesNames;
+	private shared AbstractNode[immutable(uint)] nodes;
+	private shared AbstractNode[] main_nodes;
+	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
 	private shared ExternalConsoleSession[immutable(uint)] externalConsoles;
@@ -428,7 +428,7 @@ class Server {
 					}
 					break;
 				default:
-					shared Node node;
+					shared AbstractNode node;
 					if(this.nodes.length == 1) {
 						node = this.nodes.values[0];
 						if(node.name != cmd) args = cmd ~ args;
@@ -506,27 +506,27 @@ class Server {
 	/**
 	 * Returns: the first main node which is not full
 	 */
-	public shared nothrow @property @safe @nogc shared(Node) mainNode() {
+	public shared nothrow @property @safe @nogc shared(AbstractNode) mainNode() {
 		foreach(node ; this.main_nodes) {
 			if(node.main && (node.max == NodeInfo.UNLIMITED || node.online < node.max)) return node;
 		}
 		return null;
 	}
 
-	public shared nothrow @property @safe shared(Node)[] mainNodes() {
-		shared Node[] nodes;
+	public shared nothrow @property @safe shared(AbstractNode)[] mainNodes() {
+		shared AbstractNode[] nodes;
 		foreach(node ; this.main_nodes) {
 			if(node.main && (node.max == NodeInfo.UNLIMITED || node.online < node.max)) nodes ~= node;
 		}
 		return nodes;
 	}
-	
-	public shared nothrow shared(Node) nodeByName(string name) {
+
+	public shared nothrow shared(AbstractNode) nodeByName(string name) {
 		auto ptr = name in this.nodesNames;
 		return ptr ? *ptr : null;
 	}
 	
-	public shared nothrow shared(Node) nodeById(uint id) {
+	public shared nothrow shared(AbstractNode) nodeById(uint id) {
 		auto ptr = id in this.nodes;
 		return ptr ? *ptr : null;
 	}
@@ -535,11 +535,11 @@ class Server {
 		return this.nodesNames.keys;
 	}
 
-	public shared @property shared(Node[]) nodesList() {
+	public shared @property shared(AbstractNode[]) nodesList() {
 		return this.nodes.values;
 	}
 
-	public synchronized shared void add(shared Node node) {
+	public synchronized shared void add(shared AbstractNode node) {
 		log(Text.green, "+ ", Text.white, node.toString());
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
@@ -550,7 +550,7 @@ class Server {
 		if(node.main) this.main_nodes ~= node;
 		// add plugins
 		foreach(plugin ; node.plugins) {
-			string str = plugin.name ~ " " ~ plugin.vers;
+			string str = plugin.name ~ " " ~ plugin.version_;
 			if(str in this.n_plugins) {
 				atomicOp!"+="(this.n_plugins[str], 1);
 			} else {
@@ -558,7 +558,7 @@ class Server {
 			}
 		}
 		// notify other nodes
-		foreach(shared Node on ; this.nodes) {
+		foreach(shared AbstractNode on ; this.nodes) {
 			on.addNode(node);
 		}
 		// notify external consoles
@@ -567,7 +567,7 @@ class Server {
 		}
 	}
 
-	public synchronized shared void remove(shared Node node) {
+	public synchronized shared void remove(shared AbstractNode node) {
 		log(Text.red, "- ", Text.white, node.toString());
 		this.nodes.remove(node.id);
 		this.nodesNames.remove(node.name);
@@ -585,7 +585,7 @@ class Server {
 		}
 		// remove plugins
 		foreach(plugin ; node.plugins) {
-			string str = plugin.name ~ " " ~ plugin.vers;
+			string str = plugin.name ~ " " ~ plugin.version_;
 			auto ptr = str in this.n_plugins;
 			if(ptr) {
 				atomicOp!"-="(*ptr, 1);
@@ -595,7 +595,7 @@ class Server {
 			}
 		}
 		// notify other nodes
-		foreach(shared Node on ; this.nodes) {
+		foreach(shared AbstractNode on ; this.nodes) {
 			on.removeNode(node);
 		}
 		// notify external consoles

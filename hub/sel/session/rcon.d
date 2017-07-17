@@ -36,14 +36,14 @@ import std.datetime : dur;
 import std.socket;
 import std.system : Endian;
 
+import sel.hncom.status : RemoteCommand;
+
 import sel.about;
 import sel.constants;
 import sel.hub.server : Server;
 import sel.network.handler : HandlerThread;
 import sel.network.session : Session;
 import sel.util.thread : SafeThread;
-
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".status : RemoteCommand;");
 
 /**
  * The handler thread only accepts connections on a blocking

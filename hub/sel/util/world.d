@@ -14,61 +14,20 @@
  */
 module sel.util.world;
 
-import std.conv : to;
-import std.typecons : Tuple;
-
 import sel.about;
-
-mixin("import sul.protocol.hncom" ~ to!string(Software.hncom) ~ ".world : Add;");
-
-enum Gamemode : ubyte {
-
-	survival = Add.SURVIVAL,
-	creative = Add.CREATIVE,
-	adventure = Add.ADVENTURE,
-	spectator = Add.SPECTATOR,
-
-}
-
-enum Difficulty : ubyte {
-
-	peaceful = Add.PEACEFUL,
-	easy = Add.EASY,
-	normal = Add.NORMAL,
-	hard = Add.HARD,
-	hardcore = Add.HARDCORE,
-
-}
-
-alias Position(T) = Tuple!(T, "x", T, "y", T, "z");
-
-alias Point = Tuple!(int, "x", int, "z");
 
 class World {
 
 	public immutable uint id;
 	public immutable string name;
 	public immutable ubyte dimension;
-	public immutable ubyte generator;
-	public const Point spawnPoint;
-	public immutable int seed;
-
-	public ubyte difficulty;
-	public ubyte gamemode;
-	public ushort time;
 
 	public World parent;
 
-	public shared this(uint id, string name, ubyte dimension, ubyte generator, ubyte difficulty, ubyte gamemode, Point spawnPoint, ushort time, int seed) {
+	public shared this(uint id, string name, ubyte dimension) {
 		this.id = id;
 		this.name = name;
 		this.dimension = dimension;
-		this.generator = generator;
-		this.difficulty = difficulty;
-		this.gamemode = gamemode;
-		this.spawnPoint = spawnPoint;
-		this.time = time;
-		this.seed = seed;
 	}
 
 }

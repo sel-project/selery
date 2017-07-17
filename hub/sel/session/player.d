@@ -19,6 +19,7 @@ import core.atomic : atomicOp;
 import std.algorithm : sort;
 import std.base64 : Base64;
 import std.conv : to;
+import std.json : JSONValue;
 import std.socket : Address;
 import std.string : toLower;
 import std.uuid : UUID;
@@ -27,17 +28,17 @@ import sel.about;
 import sel.hub.server : Server;
 import sel.hub.settings : Settings;
 import sel.network.session : Session;
-import sel.session.hncom : Node;
+import sel.session.hncom : AbstractNode;
 import sel.util.world : World;
 
-mixin("import HncomPlayer = sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player;");
+import HncomPlayer = sel.hncom.player;
 
 /**
  * Session for players.
  */
 abstract class PlayerSession : Session {
 	
-	protected shared Node n_node;
+	protected shared AbstractNode n_node;
 	protected shared uint last_node;
 	
 	private shared uint expected;
@@ -64,7 +65,6 @@ abstract class PlayerSession : Session {
 	protected shared ushort n_server_port;
 	protected shared string n_language;
 	protected shared Skin n_skin = null;
-	protected shared ubyte n_input_mode;
 	
 	public shared this(shared Server server) {
 		super(server);
@@ -290,15 +290,7 @@ abstract class PlayerSession : Session {
 		return cast()this.n_skin;
 	}
 
-	/**
-	 * Gets the player's input mode, ore whether it is using keyboard
-	 * and mouse, a controller or touchscreen.
-	 */
-	public final shared nothrow @property @safe @nogc ubyte inputMode() {
-		return this.n_input_mode;
-	}
-
-	public abstract shared nothrow @safe ubyte[] encodeHncomAddPacket(HncomPlayer.Add packet);
+	public abstract shared JSONValue hncomAddData();
 	
 	/**
 	 * Tries to connect the player to a node.
@@ -306,7 +298,7 @@ abstract class PlayerSession : Session {
 	 * as the old node should have called the function.
 	 */
 	public shared bool connect(ubyte reason, int nodeId=-1, ubyte onFail=HncomPlayer.Transfer.DISCONNECT) {
-		shared Node[] nodes;
+		shared AbstractNode[] nodes;
 		if(nodeId < 0) {
 			nodes = this.server.mainNodes;
 		} else {

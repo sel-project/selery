@@ -48,13 +48,14 @@ import sel.log;
 import sel.math.vector;
 import sel.network.hncom : Handler;
 import sel.node.info : PlayerInfo;
-import sel.util.hncom : HncomPlayer;
 import sel.util.node : Node;
 import sel.util.util : milliseconds, call;
 import sel.world.chunk : Chunk;
 import sel.world.map : Map;
 import sel.world.rules : Rules, Gamemode;
 import sel.world.world : World, Dimension;
+
+import HncomPlayer = sel.hncom.player;
 
 /**
  * Abstract class with abstract packet-related functions.
@@ -63,6 +64,8 @@ import sel.world.world : World, Dimension;
 abstract class Player : Human, WorldCommandSender {
 
 	protected shared PlayerInfo info;
+
+	public immutable ubyte gameId;
 
 	public string chatName;
 
@@ -76,10 +79,6 @@ abstract class Player : Human, WorldCommandSender {
 	protected float n_packet_loss = 0;
 	
 	public Rules rules;
-	
-	private string m_title;
-	private string m_subtitle;
-	private string m_actionbar;
 	
 	public size_t viewDistance;
 	public ChunkPosition[] loaded_chunks;
@@ -118,10 +117,11 @@ abstract class Player : Human, WorldCommandSender {
 	public this(shared PlayerInfo info, World world, EntityPosition position) {
 		super(world, position, info.skin);
 		this.info = info;
+		this.gameId = info.type;
 		this._id = hubId * 2; // always an even number
 		this.chatName = info.displayName;
-		this.connectedSameMachine = this.usedIp.startsWith("127.0.") || this.usedIp == "::1";
-		this.connectedSameNetwork = this.usedIp.startsWith("192.168.");
+		this.connectedSameMachine = this.info.ip.startsWith("127.0.") || this.info.ip == "::1";
+		this.connectedSameNetwork = this.info.ip.startsWith("192.168.");
 		this.showNametag = true;
 		this.nametag = name;
 		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
@@ -138,6 +138,11 @@ abstract class Player : Human, WorldCommandSender {
 
 	// *** PLAYER-RELATED PROPERTIES ***
 
+	/**
+	 * Gets the player's hub id. It will always be the same for the same player
+	 * even when it is transferred to another world or another node without leaving
+	 * the server.
+	 */
 	public final pure nothrow @property @safe @nogc uint hubId() {
 		return this.info.hubId;
 	}
@@ -174,31 +179,27 @@ abstract class Player : Human, WorldCommandSender {
 	 * ---
 	 */
 	public final pure nothrow @property @safe @nogc const string usedIp() {
-		return this.info.usedIp;
+		return this.info.usedAddress.ip;
 	}
 
 	/// ditto
 	public final pure nothrow @property @safe @nogc const ushort usedPort() {
-		return this.info.usedPort;
+		return this.info.usedAddress.port;
 	}
 	
 	/**
-	 * Gets the player's raw name conserving the
-	 * original upper-lowercase format.
+	 * Gets the player's raw name conserving the original upper-lowercase format.
 	 */
 	public final override pure nothrow @property @safe @nogc string name() {
 		return this.info.name;
 	}
 	
 	/**
-	 * Gets the player's username converted to lower-case.
+	 * Gets the player's username converted to lowercase.
 	 */
 	public final pure nothrow @property @safe @nogc string lname() {
 		return this.info.lname;
 	}
-	
-	/// ditto
-	deprecated alias iname = this.lname;
 
 	/**
 	 * Edits the player's displayed name, as it appears in the
@@ -217,28 +218,50 @@ abstract class Player : Human, WorldCommandSender {
 	}
 	
 	/**
-	 * Gets informations about the player's platform.
-	 * See_Also: sel.settings.Version
-	 * Example:
-	 * ---
-	 * if(player.gameVersion == PE) { ... }
-	 * // same as
-	 * if(player.pe) { ... }
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc ubyte gameVersion() {
-		return this.info.type;
-	}
-	
-	public pure nothrow @property @safe @nogc string gameFullVersion() {
-		return "Unknwon";
-	}
-
-	/**
 	 * Gets the player's game protocol.
 	 */
 	public final pure nothrow @property @safe @nogc uint protocol() {
 		return this.info.protocol;
+	}
+
+	/**
+	 * Gets the player's game.
+	 * Example:
+	 * ---
+	 * "Minecraft 1.12"
+	 * "Minecraft: Pocket Edition 1.1.3"
+	 * "Minecraft: Education Edition 1.2.0"
+	 * "Minecraft 17w31a"
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc string game() {
+		return this.info.game;
+	}
+
+	/**
+	 * Gets the player's game edition.
+	 * Example:
+	 * ---
+	 * "Minecraft"
+	 * "Minecraft: Pocket Edition"
+	 * "Minecraft: Windows 10 Edition"
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc string gameEdition() {
+		return this.info.gameEdition;
+	}
+
+	/**
+	 * Gets the player's game version.
+	 * Example:
+	 * ---
+	 * "1.12"
+	 * "1.1.0"
+	 * "15w50b"
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc string gameVersion() {
+		return this.info.gameVersion;
 	}
 
 	/**
@@ -269,6 +292,14 @@ abstract class Player : Human, WorldCommandSender {
 			//TODO update translatable tiles in the loaded chunks
 		}
 		return this.lang;
+	}
+	
+	/**
+	 * Indicates whether or not the player is using Minecraft: Education
+	 * Edition.
+	 */
+	public final pure nothrow @property @safe @nogc bool edu() {
+		return this.info.edu;
 	}
 
 	/**
@@ -527,7 +558,6 @@ abstract class Player : Human, WorldCommandSender {
 		if(gamemode != this.m_gamemode && gamemode < 4) {
 			this.m_gamemode = gamemode;
 			this.sendGamemode();
-			Handler.sharedInstance.send(new HncomPlayer.UpdateGamemode(this.hubId, gamemode).encode());
 		}
 		return this.m_gamemode;
 	}
@@ -1378,24 +1408,26 @@ private void startCompressionImpl(T)(uint hubId) {
 
 enum InputMode : ubyte {
 
-	keyboard = HncomPlayer.UpdateInputMode.KEYBOARD,
-	controller = HncomPlayer.UpdateInputMode.CONTROLLER,
-	touch = HncomPlayer.UpdateInputMode.TOUCH,
+	keyboard = 1,
+	controller = 0,
+	touch = 2,
 
 }
 
-enum PlayerOS : ubyte {
+enum DeviceOS : ubyte {
 
-	unknown = HncomPlayer.Add.Pocket.UNKNOWN,
-	android = HncomPlayer.Add.Pocket.ANDROID,
-	ios = HncomPlayer.Add.Pocket.IOS,
-	osx = HncomPlayer.Add.Pocket.OSX,
-	fireOs = HncomPlayer.Add.Pocket.FIRE_OS,
-	gearVr = HncomPlayer.Add.Pocket.GEAR_VR,
-	hololens = HncomPlayer.Add.Pocket.HOLOLENS,
-	windows10 = HncomPlayer.Add.Pocket.WINDOWS10,
-	windows32 = HncomPlayer.Add.Pocket.WINDOWS32,
-	dedicated = HncomPlayer.Add.Pocket.DEDICATED,
+	unknown = 0,
+	android = 1,
+	ios = 2,
+	osx = 3,
+	fireos = 4,
+	gearvr = 5,
+	hololens = 6,
+	win10 = 7,
+	win32 = 8,
+	dedicated = 9,
+	orbis = 10,
+	nx = 11
 
 }
 
@@ -1634,11 +1666,4 @@ struct Title {
 		this(title, "", stay);
 	}
 
-}
-
-string verifyVersion(string given, string[] accepted) {
-	foreach(acc ; accepted) {
-		if(acc.startsWith(given) || given.startsWith(acc)) return given;
-	}
-	return accepted[0];
 }

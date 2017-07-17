@@ -49,6 +49,8 @@ import sel.event.server.server : ServerEvent;
 import sel.event.server;
 import sel.event.world.world : WorldEvent;
 import sel.format : Text, writeln;
+import sel.hncom.about;
+import sel.hncom.handler : HncomHandler;
 import sel.lang : Lang, translate, Translation, Messageable;
 import sel.log;
 import sel.math.vector : EntityPosition;
@@ -61,7 +63,6 @@ import sel.player.player : Player;
 import sel.player.pocket : PocketPlayer, PocketPlayerImpl;
 import sel.plugin : Plugin;
 import sel.tuple : Tuple;
-import sel.util.hncom;
 import sel.util.ip : publicAddresses;
 import sel.util.memory : Memory;
 import sel.util.node : Node;
@@ -69,6 +70,11 @@ import sel.util.resourcepack : createResourcePacks;
 import sel.util.util : milliseconds, microseconds;
 import sel.world.rules : Rules;
 import sel.world.thread;
+
+import HncomLogin = sel.hncom.login;
+import HncomUtil = sel.hncom.util;
+import HncomStatus = sel.hncom.status;
+import HncomPlayer = sel.hncom.player;
 
 // Server's instance
 private shared Server n_server;
@@ -121,7 +127,7 @@ private struct Stop {}
 /**
  * Singleton for the server instance.
  */
-final class Server : EventListener!ServerEvent, Messageable {
+final class Server : EventListener!ServerEvent, Messageable, HncomHandler!clientbound {
 
 	public immutable bool lite;
 
@@ -196,7 +202,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		if(lite) {
 
 			this.handler = new shared MessagePassingHandler(cast(shared TidAddress)hub);
-			this.handleInfoImpl(cast()std.concurrency.receiveOnly!(HncomLogin.HubInfo)());
+			this.handleInfoImpl(cast()std.concurrency.receiveOnly!(shared HncomLogin.HubInfo)());
 
 		} else {
 
@@ -204,7 +210,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 			try {
 				this.handler = new shared SocketHandler(hub);
-				this.handler.send(new HncomLogin.ConnectionRequest(Software.hncom, password, name, main).encode());
+				this.handler.send(HncomLogin.ConnectionRequest(password, name, main).encode());
 			} catch(SocketException e) {
 				error_log(translate(Translation("warning.connectionError"), this.n_settings.language, [to!string(hub), e.msg]));
 				return;
@@ -218,21 +224,21 @@ final class Server : EventListener!ServerEvent, Messageable {
 					this.handleInfo();
 				} else {
 					immutable reason = (){
-						switch(response.status) {
-							case HncomLogin.ConnectionResponse.OUTDATED_HUB: return "outdatedHub";
-							case HncomLogin.ConnectionResponse.OUTDATED_NODE: return "outdatedNode";
-							case HncomLogin.ConnectionResponse.PASSWORD_REQUIRED: return "passwordRequired";
-							case HncomLogin.ConnectionResponse.WRONG_PASSWORD: return "wrongPassword";
-							case HncomLogin.ConnectionResponse.INVALID_NAME_LENGTH: return "invalidNameLength";
-							case HncomLogin.ConnectionResponse.INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
-							case HncomLogin.ConnectionResponse.NAME_ALREADY_USED: return "nameAlreadyUsed";
-							case HncomLogin.ConnectionResponse.NAME_RESERVED: return "nameReserved";
+						switch(response.status) with(HncomLogin.ConnectionResponse) {
+							case OUTDATED_HUB: return "outdatedHub";
+							case OUTDATED_NODE: return "outdatedNode";
+							case PASSWORD_REQUIRED: return "passwordRequired";
+							case WRONG_PASSWORD: return "wrongPassword";
+							case INVALID_NAME_LENGTH: return "invalidNameLength";
+							case INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
+							case NAME_ALREADY_USED: return "nameAlreadyUsed";
+							case NAME_RESERVED: return "nameReserved";
 							default: return "unknown";
 						}
 					}();
 					error_log(translate(Translation("status." ~ reason), this.n_settings.language));
 					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-						error_log(translate(Translation("warning.protocolRequired"), this.n_settings.language, [to!string(Software.hncom), to!string(response.protocol)]));
+						error_log(translate(Translation("warning.protocolRequired"), this.n_settings.language, [to!string(__PROTOCOL__), to!string(response.protocol)]));
 					}
 				}
 			} else {
@@ -260,15 +266,14 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 		Config settings;
 
-		this.n_hub_latency = cast(uint)round(to!float(microseconds - info.time) / 1000f);
-
 		this.n_id = info.serverId;
-		this.uuid_count = info.reservedUuids;
+		this.uuid_count = info.reservedUUIDs;
 
 		auto type = this.n_hub_address is null ? ConfigType.lite : ConfigType.node;
 
-		auto additional = parseJSON(info.additionalJson);
-		auto minecraft = "minecraft" in additional;
+		if(info.additionalJSON.type != JSON_TYPE.OBJECT) info.additionalJSON = parseJSON("{}");
+
+		auto minecraft = "minecraft" in info.additionalJSON;
 		if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 			auto edu = "edu" in *minecraft;
 			auto realm = "realm" in *minecraft;
@@ -286,7 +291,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		this.n_online = info.online;
 		this.n_max = info.max;
 
-		auto social = "social" in additional;
+		auto social = "social" in info.additionalJSON;
 		if(social && social.type == JSON_TYPE.OBJECT) {
 			if("website" in *social) this.n_social.website = (*social)["website"].str;
 			if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
@@ -313,8 +318,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 		if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
 		std.file.write(Paths.hidden ~ "lang", settings.language);
 
-		foreach(game ; info.gamesInfo) {
-			this.handleGameInfo(game, settings);
+		foreach(game, info ; info.gamesInfo) {
+			this.handleGameInfo(game, info, settings);
 		}
 
 		// check protocols and print warnings if necessary
@@ -335,20 +340,20 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 	}
 
-	private shared void handleGameInfo(HncomTypes.GameInfo info, ref Config settings) {
+	private shared void handleGameInfo(ubyte type, typeof(HncomLogin.HubInfo.gamesInfo.init[0]) info, ref Config settings) {
 		void set(ref Config.Game game) {
 			game.enabled = true;
-			game.protocols = info.game.protocols;
+			game.protocols = info.protocols;
 			game.motd = info.motd;
 			game.onlineMode = info.onlineMode;
 			game.port = info.port;
 		}
-		if(info.game.type == HncomTypes.Game.POCKET) {
-			set(settings.pocket);
-		} else if(info.game.type == HncomTypes.Game.MINECRAFT) {
+		if(type == __JAVA__) {
 			set(settings.minecraft);
+		} else if(type == __POCKET__) {
+			set(settings.pocket);
 		} else {
-			error_log(translate(Translation("warning.invalidGame"), settings.language, [to!string(info.game.type), Software.name]));
+			error_log(translate(Translation("warning.invalidGame"), settings.language, [to!string(type), Software.name]));
 		}
 	}
 
@@ -420,15 +425,20 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
-		HncomTypes.Game[] games;
-		static if(supportedPocketProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.POCKET, supportedPocketProtocols.keys);
-		static if(supportedMinecraftProtocols.length) games ~= HncomTypes.Game(HncomTypes.Game.MINECRAFT, supportedMinecraftProtocols.keys);
-		HncomTypes.Plugin[] plugins;
+		HncomLogin.NodeInfo nodeInfo;
+		uint[][ubyte] games;
+		static if(supportedMinecraftProtocols.length) nodeInfo.acceptedGames[__JAVA__] = supportedMinecraftProtocols.keys;
+		static if(supportedPocketProtocols.length) nodeInfo.acceptedGames[__POCKET__] = supportedPocketProtocols.keys;
+		nodeInfo.max = this.n_node_max;
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			plugins ~= HncomTypes.Plugin(plugin.name, plugin.vers);
+			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.name, plugin.vers);
 		}
-		this.handler.send(new HncomLogin.NodeInfo(microseconds, this.n_node_max, games, plugins).encode());
+		if(this.lite) {
+			std.concurrency.send(cast()(cast(shared MessagePassingHandler)this.handler).hub, cast(shared)nodeInfo);
+		} else {
+			this.handler.send(nodeInfo.encode());
+		}
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 
 		// call @start functions
@@ -439,6 +449,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 		
 		if(this._default_world_id == 0) {
+			//TODO load world in worlds/world
 			this.addWorld("world");
 		}
 		
@@ -486,7 +497,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 					(immutable(ubyte)[] payload){
 						// from the hub
 						if(payload.length) {
-							this.handleHncomPacket(payload[0], payload[1..$].dup);
+							(cast()this).handleHncom(payload.dup);
 						} else {
 							// close
 							running = false;
@@ -496,30 +507,33 @@ final class Server : EventListener!ServerEvent, Messageable {
 				);
 			};
 		} else {
+			auto hncom = cast()this;
 			receive = (){
 				std.concurrency.receive(
 					&handlePromptCommand,
 					//TODO kick
 					//TODO close result
-					&handleUncompressedPacket,
-					&handleCompressedPacket,
-					&handleAddNodePacket,
-					&handleRemoveNodePacket,
-					&handleMessageClientboundPacket,
-					&handlePlayersPacket,
-					&handleRemoteCommandPacket,
-					&handleReloadPacket,
-					&handleAddPacket,
-					&handleRemovePacket,
-					&handleUpdateGamemodePacket,
-					&handleUpdateInputModePacket,
-					&handleUpdateLatencyPacket,
-					&handleUpdatePacketLossPacket,
-					&handleGamePacketPacket,
+					&hncom.handleUtilUncompressed,
+					&hncom.handleUtilCompressed,
+					&hncom.handleStatusLatency,
+					&hncom.handleStatusReload,
+					&hncom.handleStatusAddNode,
+					&hncom.handleStatusRemoveNode,
+					&hncom.handleStatusReceiveMessage,
+					&hncom.handleStatusUpdatePlayers,
+					&hncom.handleStatusRemoteCommand,
+					&hncom.handlePlayerAdd,
+					&hncom.handlePlayerRemove,
+					&hncom.handlePlayerUpdateLatency,
+					&hncom.handlePlayerUpdatePacketLoss,
+					&hncom.handlePlayerGamePacket,
+					&hncom.handlePlayerPackets,
 					&handleShutdown,
 				);
 			};
 		}
+		
+		//TODO request first latency calculation
 
 		while(running) {
 
@@ -825,7 +839,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		foreach(node ; nodes) {
 			if(node !is null) addressees ~= node.hubId;
 		}
-		this.handler.send(new HncomStatus.MessageServerbound(addressees, payload).encode());
+		this.handler.send(HncomStatus.SendMessage(addressees, payload).encode());
 	}
 
 	/// ditto
@@ -1030,7 +1044,7 @@ final class Server : EventListener!ServerEvent, Messageable {
 		}
 	}
 
-	private shared void handleHncomPacket(ubyte id, ubyte[] data) {
+	/*private shared void handleHncomPacket(ubyte id, ubyte[] data) {
 		switch(id) {
 			foreach(P ; TypeTuple!(HncomUtil.Packets, HncomStatus.Packets, HncomPlayer.Packets, HncomWorld.Packets)) {
 				static if(P.CLIENTBOUND) {
@@ -1039,88 +1053,75 @@ final class Server : EventListener!ServerEvent, Messageable {
 			}
 			default: error_log("Unknown packet received from the hub with id ", id, " and ", data.length, " bytes of data");
 		}
-	}
+	}*/
 
-	private shared void handleUncompressedPacket(inout HncomUtil.Uncompressed packet) {
+	protected override void handleUtilUncompressed(HncomUtil.Uncompressed packet) {
+		assert(packet.id == 0); //TODO
 		foreach(p ; packet.packets) {
-			if(p.length) this.handleHncomPacket(p[0], p[1..$].dup);
+			if(p.length) this.handleHncom(p.dup);
 		}
 	}
 
-	private shared void handleCompressedPacket(inout HncomUtil.Compressed packet) {
-		auto uc = new UnCompress(packet.size);
-		ubyte[] data = cast(ubyte[])uc.uncompress(packet.payload);
-		data ~= cast(ubyte[])uc.flush();
-		this.handleUncompressedPacket(HncomUtil.Uncompressed.fromBuffer!false(data));
+	protected override void handleUtilCompressed(HncomUtil.Compressed packet) {
+		this.handleUtilUncompressed(packet.uncompress());
 	}
 
-	/*
-	 * Adds (or update) a node.
-	 */
-	private shared void handleAddNodePacket(inout HncomStatus.AddNode packet) {
-		auto node = new Node(this, packet.hubId, packet.name, packet.main);
-		foreach(accepted ; packet.acceptedGames) node.acceptedGames[accepted.type] = cast(uint[])accepted.protocols;
-		this.nodes_hubid[node.hubId] = cast(shared)node;
-		this.nodes_names[node.name] = cast(shared)node;
-		(cast()this).callEventIfExists!NodeAddedEvent(node);
+	protected override void handleStatusLatency(HncomStatus.Latency packet) {
+		//TODO send packet back
 	}
 
-	/**
-	 * Removes a node.
-	 */
-	private shared void handleRemoveNodePacket(inout HncomStatus.RemoveNode packet) {
-		auto node = packet.hubId in this.nodes_hubid;
-		if(node) {
-			this.nodes_hubid.remove((*node).hubId);
-			this.nodes_names.remove((*node).name);
-			(cast()this).callEventIfExists!NodeRemovedEvent(cast()*node);
-		}
-	}
-
-	/*
-	 * Handles a message sent or broadcasted from another node.
-	 */
-	private shared void handleMessageClientboundPacket(inout HncomStatus.MessageClientbound packet) {
-		auto node = this.nodeWithHubId(packet.sender);
-		// only accept message from nodes that didn't disconnect
-		if(node !is null) {
-			(cast()this).callEventIfExists!NodeMessageEvent(cast()node, cast(ubyte[])packet.payload);
-		}
-	}
-	
-	/*
-	 * Updates the number of online and max players in the whole
-	 * server (not the current node).
-	 */
-	private shared void handlePlayersPacket(inout HncomStatus.Players packet) {
-		this.n_online = packet.online;
-		this.n_max = packet.max;
-	}
-
-	/*
-	 * Handles a command sent by the hub or an external application.
-	 */
-	private shared void handleRemoteCommandPacket(inout HncomStatus.RemoteCommand packet) {
-		with(packet) this.handleCommand(cast(ubyte)(origin + 1), convertAddress(cast()sender), command, commandId);
-	}
-
-	/**
-	 * Reloads the configurations.
-	 */
-	private shared void handleReloadPacket(inout HncomStatus.Reload packet) {
+	protected override void handleStatusReload(HncomStatus.Reload packet) {
+		//TODO update settings
 		// only reload plugins, not settings
 		foreach(plugin ; this.n_plugins) {
 			foreach(del ; plugin.onreload) del();
 		}
 	}
 
-	/*
-	 * Adds a player to the node.
-	 */
-	private shared void handleAddPacket(inout HncomPlayer.Add packet) {
+	protected override void handleStatusAddNode(HncomStatus.AddNode packet) {
+		auto node = new Node(cast(shared)this, packet.hubId, packet.name, packet.main, packet.acceptedGames);
+		this.nodes_hubid[node.hubId] = cast(shared)node;
+		this.nodes_names[node.name] = cast(shared)node;
+		this.callEventIfExists!NodeAddedEvent(node);
+	}
 
-		Address address = convertAddress(cast()packet.clientAddress);
-		Skin skin = Skin(packet.skin.name, cast(ubyte[])packet.skin.data);
+	protected override void handleStatusRemoveNode(HncomStatus.RemoveNode packet) {
+		auto node = packet.hubId in this.nodes_hubid;
+		if(node) {
+			this.nodes_hubid.remove((*node).hubId);
+			this.nodes_names.remove((*node).name);
+			this.callEventIfExists!NodeRemovedEvent(cast()*node);
+		}
+	}
+
+	protected override void handleStatusReceiveMessage(HncomStatus.ReceiveMessage packet) {
+		auto node = (cast(shared)this).nodeWithHubId(packet.sender);
+		// only accept message from nodes that didn't disconnect
+		if(node !is null) {
+			this.callEventIfExists!NodeMessageEvent(cast()node, cast(ubyte[])packet.payload);
+		}
+	}
+
+	protected override void handleStatusUpdatePlayers(HncomStatus.UpdatePlayers packet) {
+		this.n_online = packet.online;
+		this.n_max = packet.max;
+	}
+
+	protected override void handleStatusRemoteCommand(HncomStatus.RemoteCommand packet) {
+		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender, command, commandId);
+	}
+
+	protected override void handleStatusListInfo(HncomStatus.ListInfo packet) {}
+
+	protected override void handleStatusUpdateList(HncomStatus.UpdateList packet) {}
+
+	protected override void handleStatusPanelCredentials(HncomStatus.PanelCredentials packet) {
+		//TODO start http server for panel
+	}
+
+	protected override void handlePlayerAdd(HncomPlayer.Add packet) {
+
+		Skin skin = Skin(packet.skin.expand);
 
 		if(!skin.valid) {
 			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
@@ -1129,19 +1130,8 @@ final class Server : EventListener!ServerEvent, Messageable {
 			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
 		}
 
-		shared PlayerInfo player = cast(shared)new PlayerInfo(packet.hubId, packet.type, packet.protocol, packet.vers, packet.username, packet.displayName, packet.uuid, address, packet.serverAddress, packet.serverPort, packet.language);
+		shared PlayerInfo player = cast(shared)new PlayerInfo(packet.hubId, packet.type, packet.protocol, packet.username, packet.displayName, packet.uuid, packet.clientAddress, packet.serverAddress, packet.language, packet.gameData);
 		player.skin = skin;
-
-		(){
-			final switch(packet.type) {
-				foreach(Variant ; HncomPlayer.Add.Variants) {
-					case Variant.TYPE:
-						mixin("player.additional." ~ toLower(Variant.stringof)) = cast(shared)packet.new inout Variant();
-						log(cast()player.additional.pocket);
-						return;
-				}
-			}
-		}();
 
 		//TODO register global commands
 
@@ -1168,63 +1158,23 @@ final class Server : EventListener!ServerEvent, Messageable {
 
 	}
 
-	/*
-	 * Removes a player from a node.
-	 * This packet is not sent when a player is moved away from this
-	 * node with a Transfer or a Kick packet.
-	 */
-	private shared void handleRemovePacket(inout HncomPlayer.Remove packet) {
-		this.removePlayer(packet.hubId, packet.reason);
+	protected override void handlePlayerRemove(HncomPlayer.Remove packet) {
+		(cast(shared)this).removePlayer(packet.hubId, packet.reason);
 	}
-	
-	private shared void handleUpdateGamemodePacket(inout HncomPlayer.UpdateGamemode packet) {
-		//TODO
-	}
-	
-	/*
-	 * Updates a player's input mode.
-	 */
-	private shared void handleUpdateInputModePacket(inout HncomPlayer.UpdateInputMode packet) {
+
+	protected override void handlePlayerUpdateLatency(HncomPlayer.UpdateLatency packet) {
 		//TODO
 	}
 
-	/*
-	 * Updates a player's latency.
-	 * The value given in the packet represents the latency between the hub
-	 * and player, so an additional latency is added (the one between the node
-	 * and the hub) is added to obtain a more precise value.
-	 */
-	private shared void handleUpdateLatencyPacket(inout HncomPlayer.UpdateLatency packet) {
+	protected override void handlePlayerUpdatePacketLoss(HncomPlayer.UpdatePacketLoss packet) {
 		//TODO
 	}
 
-	/*
-	 * Updates a player's packet loss thanks to hub's calculations.
-	 */
-	private shared void handleUpdatePacketLossPacket(inout HncomPlayer.UpdatePacketLoss packet) {
-		//TODO
-	}
-	
-	/*
-	 * Elaborates raw game data sent by a client.
-	 */
-	private shared void handleGamePacketPacket(inout HncomPlayer.GamePacket packet) {
+	protected override void handlePlayerGamePacket(HncomPlayer.GamePacket packet) {
 		auto player = packet.hubId in this._players;
-		if(player && packet.packet.length) {
-			std.concurrency.send(cast()(*player).world.tid, GamePacket(packet.hubId, packet.packet.idup));
+		if(player && packet.payload.length) {
+			std.concurrency.send(cast()(*player).world.tid, GamePacket(packet.hubId, packet.payload.idup));
 		}
-	}
-
-	private shared void handleUpdateDifficultyPacket(inout HncomWorld.UpdateDifficulty packet) {
-		//TODO
-	}
-
-	private shared void handleUpdateGamemodePacket(inout HncomWorld.UpdateGamemode packet) {
-		//TODO
-	}
-
-	private shared void handleRequestCreationPacket(inout HncomWorld.RequestCreation packet) {
-		//TODO
 	}
 
 	private shared void handlePromptCommand(string command) {
@@ -1260,6 +1210,7 @@ class ServerCommandSender : CommandSender {
 		prompt = 0,
 		hub = HncomStatus.RemoteCommand.HUB,
 		externalConsole = HncomStatus.RemoteCommand.EXTERNAL_CONSOLE,
+		remotePanel = HncomStatus.RemoteCommand.REMOTE_PANEL,
 		rcon = HncomStatus.RemoteCommand.RCON,
 
 	}
@@ -1302,7 +1253,7 @@ class ServerCommandSender : CommandSender {
 
 private void startResourceUsageThread(int pid) {
 
-	Thread.getThis().name = "ResourcesUsage";
+	debug Thread.getThis().name = "ResourcesUsage";
 	
 	ProcessMemInfo ram = processMemInfo(pid);
 	ProcessCPUWatcher cpu = new ProcessCPUWatcher(pid);
@@ -1310,7 +1261,7 @@ private void startResourceUsageThread(int pid) {
 	while(true) {
 		ram.update();
 		//TODO send packet directly to the socket
-		Handler.sharedInstance.send(new HncomStatus.ResourcesUsage(20, ram.usedRAM, cpu.current()).encode());
+		Handler.sharedInstance.send(HncomStatus.UpdateUsage(cast(uint)(ram.usedRAM / 1024u), cpu.current()).encode());
 		Thread.sleep(dur!"seconds"(5));
 	}
 	
@@ -1318,23 +1269,11 @@ private void startResourceUsageThread(int pid) {
 
 private void startCommandReaderThread(std.concurrency.Tid tid) {
 
-	Thread.getThis().name = "CommandReader";
+	debug Thread.getThis().name = "CommandReader";
 
 	import std.stdio : readln;
 	while(true) {
 		std.concurrency.send(tid, readln());
 	}
 
-}
-
-private Address convertAddress(HncomTypes.Address address) {
-	if(address.bytes.length == 4) {
-		ubyte[4] bytes = address.bytes;
-		return new InternetAddress(bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3], address.port);
-	} else if(address.bytes.length == 16) {
-		ubyte[16] bytes = address.bytes;
-		return new Internet6Address(bytes, address.port);
-	} else {
-		return new InternetAddress(0, 0);
-	}
 }

@@ -8,8 +8,8 @@
 
 The server is still in development and some features are not supported yet.
 
-[Minecraft versions](https://img.shields.io/badge/Minecraft-1.10%20--%201.12-brightgreen.svg)
-[Minecraft: Pocket Edition versions](https://img.shields.io/badge/Minecraft%3A%20Pocket%20Edition-1.1-brightgreen.svg)
+![Minecraft versions](https://img.shields.io/badge/Minecraft-1.10%20--%201.12-brightgreen.svg)
+![Minecraft: Pocket Edition versions](https://img.shields.io/badge/Minecraft%3A%20Pocket%20Edition-1.1-brightgreen.svg)
 
 ### Structure
 

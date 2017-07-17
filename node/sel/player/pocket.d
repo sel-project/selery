@@ -99,18 +99,6 @@ abstract class PocketPlayer : Player {
 			this.hasResourcePack = true;
 		}
 	}
-	
-	public final override pure nothrow @property @safe @nogc ubyte gameVersion() {
-		return PE;
-	}
-
-	/**
-	 * Indicates whether or not the player is using Minecraft: Education
-	 * Edition.
-	 */
-	public final pure nothrow @property @trusted @nogc bool edu() {
-		return this.info.additional.pocket.edu;
-	}
 
 	/**
 	 * Gets the player's XBOX user id.
@@ -120,7 +108,7 @@ abstract class PocketPlayer : Player {
 	 * player using the XBOX live services.
 	 */
 	public final pure nothrow @property @trusted @nogc long xuid() {
-		return this.info.additional.pocket.xuid;
+		return this.info.xuid;
 	}
 
 	/**
@@ -133,8 +121,8 @@ abstract class PocketPlayer : Player {
 	 * }
 	 * ---
 	 */
-	public final pure nothrow @property @trusted @nogc ubyte deviceOs() {
-		return this.info.additional.pocket.deviceOs;
+	public final pure nothrow @property @trusted @nogc DeviceOS deviceOs() {
+		return this.info.deviceOs;
 	}
 
 	/**
@@ -147,7 +135,7 @@ abstract class PocketPlayer : Player {
 	 * }
 	 */
 	public final pure nothrow @property @trusted @nogc string deviceModel() {
-		return this.info.additional.pocket.deviceModel;
+		return this.info.deviceModel;
 	}
 
 	public final override void disconnectImpl(const Translation translation, string[] args) {
@@ -319,8 +307,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		mixin("return metadata.pocket" ~ __protocol.to!string ~ ";");
 	}
 
-	private immutable string full_version;
-
 	private bool has_creative_inventory = false;
 	
 	private Tuple!(string, PocketType)[][][string] sent_commands; // [command][overload] = [(name, type), (name, type), ...]
@@ -331,11 +317,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public this(shared PlayerInfo info, World world, EntityPosition position) {
 		super(info, world, position);
 		this.startCompression!Compression(hubId);
-		this.full_version = "Minecraft: " ~ (this.edu ? "Education" : (this.deviceOs == PlayerOS.windows10 ? "Windows 10" : "Pocket")) ~ " Edition " ~ verifyVersion(info.version_, supportedPocketProtocols[__protocol]);
-	}
-
-	public final override pure nothrow @property @safe @nogc string gameFullVersion() {
-		return this.full_version;
 	}
 
 	protected void sendPacket(T)(T packet) if(is(T == ubyte[]) || is(typeof(T.encode))) {

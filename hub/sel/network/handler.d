@@ -32,7 +32,7 @@ import sel.log : log;
 import sel.network.session;
 import sel.network.socket;
 import sel.session.externalconsole : ExternalConsoleHandler;
-import sel.session.hncom : HncomHandler, MessagePassingNode;
+import sel.session.hncom : HncomHandler, LiteNode;
 import sel.session.http : HttpHandler;
 import sel.session.minecraft : MinecraftHandler, MinecraftQueryHandler;
 import sel.session.panel : PanelHandler;
@@ -51,8 +51,8 @@ class Handler {
 
 	private shared Queries queries;
 
-	private shared string additionalJson;
-	private shared string socialJson;
+	private shared JSONValue additionalJson;
+	private shared string socialJson; // already encoded
 
 	private shared HandlerThread[] handlers;
 
@@ -77,9 +77,9 @@ class Handler {
 		with(server.settings) {
 
 			if(config.type == ConfigType.hub) {
-				this.startThread!HncomHandler(server, &this.additionalJson, &this.socialJson);
+				this.startThread!HncomHandler(server, &this.additionalJson);
 			} else {
-				new SafeThread({ new shared MessagePassingNode(server, &this.additionalJson, &this.socialJson); }).start();
+				new SafeThread({ new shared LiteNode(server, &this.additionalJson); }).start();
 			}
 
 			if(pocket) {
@@ -153,7 +153,7 @@ class Handler {
 		additional["social"] = this.server.settings.social;
 		additional["minecraft"] = ["edu": settings.edu, "realm": settings.realm];
 		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
-		this.additionalJson = cast(shared)JSONValue(additional).toString();
+		this.additionalJson = cast(shared)JSONValue(additional);
 	}
 
 	/**

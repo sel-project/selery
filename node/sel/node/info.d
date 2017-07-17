@@ -16,17 +16,21 @@ module sel.node.info;
 
 import std.concurrency : Tid;
 import std.conv : to;
+import std.json : JSONValue, JSON_TYPE;
 import std.socket : Address;
-import std.string : toLower;
+import std.string : toLower, startsWith;
 import std.uuid : UUID;
 
+import sel.about;
 import sel.entity.human : Skin;
-import sel.util.hncom : HncomPlayer;
+import sel.hncom.about : __JAVA__, __POCKET__;
+import sel.hncom.player : Add;
+import sel.player.player : InputMode, DeviceOS;
 
 /**
  * Generic informations about a player in the server.
  */
-class PlayerInfo {
+final class PlayerInfo {
 
 	/**
 	 * Player's id assigned by the hub and unique for the player's session.
@@ -50,8 +54,7 @@ class PlayerInfo {
 	public string ip;
 	public ushort port;
 
-	public string usedIp;
-	public ushort usedPort;
+	public Add.ServerAddress usedAddress;
 
 	public string language;
 
@@ -60,22 +63,23 @@ class PlayerInfo {
 	public uint latency;
 	public float packetLoss;
 
-	public ubyte inputMode;
+	public string gameEdition;
+	public string gameVersion;
+	public string game;
 
-	union Additional {
-		HncomPlayer.Add.Pocket pocket;
-		HncomPlayer.Add.Minecraft minecraft;
-		HncomPlayer.Add.Console console;
-	}
-	public Additional additional;
+	public bool edu = false;
+
+	public InputMode inputMode = InputMode.keyboard;
+	public DeviceOS deviceOs = DeviceOS.unknown;
+	public string deviceModel;
+	public long xuid;
 
 	public shared WorldInfo world;
 
-	public this(uint hubId, ubyte type, uint protocol, string version_, string name, string displayName, UUID uuid, Address address, string usedIp, ushort usedPort, string language) {
+	public this(uint hubId, ubyte type, uint protocol, string name, string displayName, UUID uuid, Address address, Add.ServerAddress usedAddress, string language, JSONValue data) {
 		this.hubId = hubId;
 		this.type = type;
 		this.protocol = protocol;
-		this.version_ = version_;
 		this.name = name;
 		this.lname = name.toLower();
 		this.displayName = displayName;
@@ -83,9 +87,39 @@ class PlayerInfo {
 		this.address = address;
 		this.ip = address.toAddrString();
 		this.port = to!ushort(address.toPortString());
-		this.usedIp = usedIp;
-		this.usedPort = usedPort;
+		this.usedAddress = usedAddress;
 		this.language = language;
+		if(data.type == JSON_TYPE.OBJECT) {
+			if(type == __POCKET__) {
+				this.edu = "edu" in data && data["edu"].type == JSON_TYPE.TRUE;
+				auto gameVersion = "GameVersion" in data;
+				if(gameVersion && gameVersion.type == JSON_TYPE.STRING) this.gameVersion = gameVersion.str;
+				auto deviceOs = "DeviceOS" in data;
+				if(deviceOs && deviceOs.type == JSON_TYPE.INTEGER && deviceOs.integer <= 9) this.deviceOs = cast(DeviceOS)deviceOs.integer;
+				auto deviceModel = "DeviceModel" in data;
+				if(deviceModel && deviceModel.type == JSON_TYPE.STRING) this.deviceModel = deviceModel.str;
+			}
+		}
+		if(type == __JAVA__) {
+			this.gameEdition = "Minecraft";
+			this.gameVersion = supportedMinecraftProtocols[this.protocol][0];
+		} else {
+			this.gameEdition = "Minecraft: " ~ (this.edu ? "Education" : [
+				DeviceOS.fireos: "Fire TV",
+				DeviceOS.gearvr: "Gear VR",
+				DeviceOS.win10: "Windows 10",
+				DeviceOS.nx: "Switch",
+			].get(this.deviceOs, "Pocket")) ~ " Edition";
+			this.gameVersion = verifyVersion(this.gameVersion, supportedPocketProtocols[this.protocol]);
+		}
+		this.game = this.gameEdition ~ " " ~ this.gameVersion;
+	}
+	
+	private static string verifyVersion(string given, string[] accepted) {
+		foreach(acc ; accepted) {
+			if(acc.startsWith(given) || given.startsWith(acc)) return given;
+		}
+		return accepted[0];
 	}
 
 }
@@ -93,7 +127,7 @@ class PlayerInfo {
 /**
  * Generic information about a world.
  */
-class WorldInfo {
+final class WorldInfo {
 
 	/**
 	 * World's id, may be given by the server (for main worlds) or by the

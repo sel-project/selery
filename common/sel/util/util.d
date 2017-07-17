@@ -98,14 +98,6 @@ public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(_
 	return -1;
 }
 
-unittest {
-	
-	assert(array_index(8, [0, 8, 8]) == 1);
-	assert(array_index(7, [0, 8, 8]) == -1);
-	assert([8, 9, 10].indexOf(10) == 2);
-	
-}
-
 /** 
  * Convert from roman to an integer.
  * Example:

@@ -31,6 +31,9 @@ import std.socket;
 import std.string : toLower;
 import std.uuid;
 
+import sel.hncom.about;
+import sel.hncom.player : HncomAdd = Add;
+
 import sel.about;
 import sel.constants;
 import sel.hub.server : Server;
@@ -47,8 +50,6 @@ mixin("import Status = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!stri
 mixin("import Login = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".login;");
 mixin("import Clientbound = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".clientbound;");
 mixin("import Serverbound = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".serverbound;");
-
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : HncomAdd = Add;");
 
 private enum __onlineMode = false;
 
@@ -414,11 +415,10 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		auto p = handshake.protocol in supportedMinecraftProtocols;
 		if(p) this.n_version = (*p)[0];
 		this.n_game_name = "Minecraft";
-		this.n_input_mode = HncomAdd.KEYBOARD; // default
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {
-		return PC;
+		return __JAVA__;
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {
@@ -437,8 +437,9 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		return this.sharedSocket;
 	}
 
-	public override shared nothrow @safe ubyte[] encodeHncomAddPacket(HncomAdd packet) {
-		return packet.new Minecraft().encode(); // skin blobs will be added in the future
+	public override shared JSONValue hncomAddData() {
+		//TODO skin data
+		return JSONValue.init;
 	}
 
 	public override shared void checkTimeout() {

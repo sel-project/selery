@@ -55,11 +55,12 @@ class Node {
 	 */
 	uint[][ubyte] acceptedGames;
 
-	public this(shared Server server, uint hubId, string name, bool main) {
+	public this(shared Server server, uint hubId, string name, bool main, uint[][ubyte] acceptedGames) {
 		this.server = server;
 		this.hubId = hubId;
 		this.name = name;
 		this.main = main;
+		this.acceptedGames = acceptedGames;
 	}
 	
 	/**
@@ -81,7 +82,7 @@ class Node {
 	 * it is kicked with the "End of Stream" message by the hub.
 	 */
 	public inout @safe bool accepts(Player player) {
-		auto a = player.gameVersion in this.acceptedGames;
+		auto a = player.gameId in this.acceptedGames;
 		return a && (*a).canFind(player.protocol);
 	}
 

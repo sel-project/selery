@@ -57,7 +57,7 @@ class GoogleAnalytics {
 				"&an=" ~ encodeComponent(player.gameName) ~
 				"&av=" ~ player.gameVersion ~
 				"&uip=" ~ player.address.toAddrString() ~
-				"&ua=" ~ encodeComponent(Software.display ~ " (" ~ (player.type == PE ? "Android" : "Windows") ~ ")") ~
+				"&ua=" ~ encodeComponent(Software.display ~ " (" ~ (player.type == 0 ? "Android" : "Windows") ~ ")") ~
 				"&dr=" ~ player.serverAddress ~
 				(player.language.length ? "ul=" ~ player.language : "") ~
 				"&" ~ data.join("&");

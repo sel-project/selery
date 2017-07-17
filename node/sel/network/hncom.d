@@ -14,7 +14,7 @@
  */
 module sel.network.hncom;
 
-import core.thread : Thread;
+debug import core.thread : Thread;
 
 import std.bitmanip : read, nativeToLittleEndian;
 static import std.concurrency;
@@ -47,7 +47,7 @@ abstract class Handler {
 	 * when a new packet arrives.
 	 */
 	public shared void receiveLoop(std.concurrency.Tid server) {
-		Thread.getThis().name = "Network";
+		debug Thread.getThis().name = "Network";
 		while(true) {
 			std.concurrency.send(server, this.receive.idup);
 		}
@@ -150,7 +150,7 @@ class TidAddress : UnknownAddress {
 
 class MessagePassingHandler : Handler {
 
-	private std.concurrency.Tid hub;
+	public std.concurrency.Tid hub;
 
 	public shared this(shared std.concurrency.Tid hub) {
 		super();

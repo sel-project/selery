@@ -36,6 +36,9 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib;
 
+import sel.hncom.about;
+import sel.hncom.player : HncomAdd = Add;
+
 import sel.about;
 import sel.constants;
 import sel.hub.server : Server;
@@ -54,8 +57,6 @@ import Unconnected = sul.protocol.raknet8.unconnected;
 import Encapsulated = sul.protocol.raknet8.encapsulated;
 
 mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;");
-
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : HncomAdd = Add;");
 
 enum ubyte[16] magic = [0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78];
 
@@ -241,7 +242,8 @@ final class PocketSession : PlayerSession {
 	private void delegate(ubyte[]) shared functionHandler;
 
 	private bool edu = false;
-	private ubyte device = HncomAdd.Pocket.UNKNOWN;
+	private long inputMode;
+	private long device = 0;
 	private string model = "";
 
 	private shared ubyte nextUpdate;
@@ -282,7 +284,7 @@ final class PocketSession : PlayerSession {
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {
-		return PE;
+		return __POCKET__;
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {
@@ -300,8 +302,12 @@ final class PocketSession : PlayerSession {
 		return this.n_packet_loss;
 	}
 
-	public override shared nothrow @safe ubyte[] encodeHncomAddPacket(HncomAdd packet) {
-		return packet.new Pocket(0, edu, this.packetLoss, this.device, this.model).encode(); //TODO xuid from verified jwt
+	public override shared JSONValue hncomAddData() {
+		//TODO device os
+		//TODO device type
+		//TODO input mode
+		//TODO xuid
+		return JSONValue(["edu": this.edu]);
 	}
 
 	public shared void checkTimeout() {
@@ -650,23 +656,10 @@ final class PocketSession : PlayerSession {
 							} catch(ConvException) {}
 						}
 					}
-					if(os && os.type == JSON_TYPE.INTEGER) this.device = cast(ubyte)os.integer;
-					if(this.device > HncomAdd.Pocket.DEDICATED) this.device = HncomAdd.Pocket.UNKNOWN;
+					if(os && os.type == JSON_TYPE.INTEGER) this.device = os.integer;
 					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
-					if(input && input.type == JSON_TYPE.INTEGER) {
-						this.n_input_mode = (){
-							switch(input.integer) {
-								case 0: return HncomAdd.CONTROLLER;
-								case 1: return HncomAdd.KEYBOARD;
-								default: return HncomAdd.TOUCH;
-							}
-						}();
-					} else {
-						this.n_input_mode = HncomAdd.TOUCH;
-					}
-					if(lang && lang.type == JSON_TYPE.STRING) {
-						this.language = Lang.getBestLanguage(lang.str);
-					}
+					if(input && input.type == JSON_TYPE.INTEGER) this.inputMode = input.integer;
+					this.language = Lang.getBestLanguage(lang.str);
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.settings.whitelist) {
@@ -702,15 +695,7 @@ final class PocketSession : PlayerSession {
 					this.n_username = this.m_display_name = username.idup;
 					cast()this.n_uuid = uuid;
 
-					this.n_game_name = "Minecraft: " ~ (){
-						if(this.edu) {
-							return "Education";
-						} else if(this.device == HncomAdd.Pocket.WINDOWS10) {
-							return "Windows 10";
-						} else {
-							return "Pocket";
-						}
-					}() ~ " Edition";
+					this.n_game_name = "Minecraft: " ~ (this.edu ? "Education" : ([7: "Windows 10"].get(this.device, "Pocket"))) ~ " Edition";
 
 					// try to connect a node
 					valid = true;

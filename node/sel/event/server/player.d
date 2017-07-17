@@ -16,14 +16,14 @@ module sel.event.server.player;
 
 import std.conv : to;
 
+import sel.hncom.player : Add, Remove;
+
 import sel.about : Software;
 import sel.event.event : Cancellable;
 import sel.event.server.server : ServerEvent;
 import sel.node.info : PlayerInfo, WorldInfo;
 import sel.player.player : Player;
 import sel.world.world : World;
-
-mixin("import sul.protocol.hncom" ~ Software.hncom.to!string ~ ".player : Add, Remove;");
 
 class PlayerEvent : ServerEvent {
 
