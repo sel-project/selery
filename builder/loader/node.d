@@ -28,7 +28,7 @@ import selery.util.util : UnloggedException;
 
 import pluginloader;
 
-void load(string[] args) {
+void main(string[] args) {
 
 	if(startup(ConfigType.node, "node", args)) {
 

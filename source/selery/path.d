@@ -21,14 +21,16 @@ class Paths {
 
 	@disable this();
 
-	public shared static string home, res, langSystem, langMessages, music, skin, textures, plugins, resources, logs, crash, worlds, hidden;
+	public shared static string home, res, langSystem, langMessages, music, skin, textures, plugins, resources, logs, crash, worlds;
+
+	public deprecated shared static string hidden;
 
 	public shared static this() {
-		load(".." ~ dirSeparator);
+		load("." ~ dirSeparator);
 	}
 
 	public static void load(string h) {
-		immutable libs = h ~ ".sel" ~ dirSeparator ~ "libraries";
+		immutable libs = h ~ "builder" ~ dirSeparator ~ ".selery" ~ dirSeparator ~ "libraries";
 		load(h, (exists(libs) ? cast(string)read(libs) : h) ~ "assets" ~ dirSeparator);
 	}
 
@@ -49,7 +51,7 @@ class Paths {
 		crash = home ~ "crash" ~ dirSeparator;
 		worlds = home ~ "worlds" ~ dirSeparator;
 
-		hidden = home ~ ".sel" ~ dirSeparator;
+		hidden = home ~ ".selery" ~ dirSeparator;
 
 	}
 

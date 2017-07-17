@@ -21,7 +21,7 @@ import selery.start : startup;
 
 import pluginloader;
 
-void load(string[] args) {
+void main(string[] args) {
 
 	bool edu, realm;
 

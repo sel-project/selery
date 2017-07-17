@@ -36,7 +36,7 @@ import selery.util.util : UnloggedException;
 
 import pluginloader;
 
-void load(string[] args) {
+void main(string[] args) {
 
 	static if(__traits(compiles, import("portable.zip"))) {
 
