@@ -10,11 +10,13 @@
 *.userprefs
 *.selections.json
 .dub
-.sel
+.selery
 docs
+/builder/dub.json
 /crash
 /plugins
 /resources
 /worlds
 /plugins.json
 /server.toml
+/favicon.png

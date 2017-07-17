@@ -493,7 +493,9 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	/**
 	 * Executes a remote command.
 	 */
-	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId);
+	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
+		this.send(Status.RemoteCommand(origin, address, command, commandId).encode());
+	}
 	
 	/**
 	 * Tells the node to reload its configurations.

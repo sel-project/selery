@@ -14,42 +14,23 @@ The server is still in development and some features are not supported yet.
 
 ### Structure
 
-SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/protocol/hncom), which means that it must always run as two separate instances (hub and node), which are connected through a socket.
+SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/protocol/hncom), which means that it can run as two separate instances (hub and node), which are connected through a socket.
 
 ## Create a server
 
-Before building any configuration the plugins should be initialized:
-```
-cd init
-dub run
-```
-
-#### Lite (hub + 1 node)
+:warning: does not work with DMD >2.074
 
 :warning: doesn't compile using 32-bit DMD
 
 :warning: doesn't work using DMD in release mode
 
 ```
-cd build
-dub build --config=lite
-./selery [-edu] [-realm] [custom-args]
+git clone git://github.com/sel-project/selery
+cd builder
+dub --single init.d
+dub build
+cd ..
+./selery-default [-edu] [-realm]
 ```
 
-#### Hub
-
-```
-cd build
-dub build --config=hub
-./selery-hub [-edu] [-realm]
-```
-
-#### Node
-
-:warning: does not work with DMD >2.074
-
-```
-cd build
-dub build --config=node
-./selery-node [--name=node] [--ip=localhost] [--port=28232] [--main=true] [--password=] [custom-args]
-```
+If you're on Windows you must compile using a 64-bit architecture (for example `dub build -a x86_64`)

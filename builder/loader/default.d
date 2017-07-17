@@ -24,8 +24,10 @@ import std.string : indexOf, lastIndexOf;
 
 import selery.config : ConfigType;
 import selery.crash : logCrash;
+import selery.hub.plugin : HubPlugin, HubPluginOf = PluginOf;
 import selery.hub.server : HubServer;
 import selery.network.hncom : TidAddress;
+import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
 import selery.path : Paths;
 import selery.session.hncom : LiteNode;
@@ -68,13 +70,13 @@ void load(string[] args) {
 	
 		shared NodeServer node;
 
-		new Thread({ new shared HubServer(true, edu, realm, loadPlugins()); }).start();
+		new Thread({ new shared HubServer(true, edu, realm, loadPlugins!(HubPluginOf, HubPlugin)()); }).start();
 
 		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
 			
-			node = new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, loadPlugins(), args);
+			node = new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, loadPlugins!(NodePluginOf, NodePlugin)(), args);
 			
 		} catch(LinkTerminated) {
 			

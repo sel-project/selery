@@ -2,7 +2,9 @@
 
 public import selery.plugin;
 
-class PluginOf(T) : Plugin if(!isAbstractClass!T || is(T == struct)) {
+interface HubPlugin {}
+
+class PluginOf(T) : Plugin if(is(T == Object) || is(T : HubPlugin)) {
 	
 	public this(string namespace, string name, string[] authors, string vers, bool api, string languages, string textures) {
 		this.n_namespace = namespace;

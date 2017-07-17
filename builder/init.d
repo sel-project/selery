@@ -1,6 +1,5 @@
 /++ dub.sdl:
 name "selery-init"
-dependency "selery" path=".."
 dependency "toml" version="~>0.4.0-rc.3"
 dependency "toml:json" version="~>0.4.0-rc.3"
 +/
@@ -31,13 +30,10 @@ import std.process : executeShell;
 import std.stdio : writeln;
 import std.string;
 
-import selery.about;
-import selery.path : Paths;
-
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 6;
+enum size_t __GENERATOR__ = 10;
 
 void main(string[] args) {
 
@@ -50,9 +46,19 @@ void main(string[] args) {
 		return;
 	}
 
-	writeln("Loading plugins for " ~ Software.name ~ " " ~ Software.displayVersion ~ " type " ~ type);
+	string libraries;
+	if(exists(".selery/libraries")) {
+		// should be an absolute normalised path
+		libraries = cast(string)read(".selery/libraries");
+	} else {
+		// assuming this file is executed in ../
+		libraries = buildNormalizedPath(absolutePath(".."));
+	}
+	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 	
-	if(!exists("views")) mkdir("views");
+	auto software = loadAbout(libraries);
+
+	writeln("Loading plugins for " ~ software.name ~ " " ~ software.version_ ~ " configuration \"" ~ type ~ "\"");
 
 	if(type == "portable") {
 
@@ -70,29 +76,15 @@ void main(string[] args) {
 				zip.addMember(member);
 			}
 		}
+		mkdirRecurse("views");
 		write("views/portable.zip", zip.build());
 
 	} else if(exists("views/portable.zip")) {
 
 		remove("views/portable.zip");
+		rmdir("views");
 
 	}
-	
-	if(type == "default" || type == "portable") type = "default_";
-	
-	write("views/build", type);
-
-	Paths.create();
-
-	string libraries;
-	if(exists(Paths.hidden ~ "libraries")) {
-		// should be an absolute normalised path
-		libraries = cast(string)read(Paths.hidden ~ "libraries");
-	} else {
-		// assuming this file is executed in build/ and the libraries are in ../
-		libraries = buildNormalizedPath(absolutePath("../"));
-	}
-	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 
 	TOMLDocument[string] plugs; // plugs[location] = settingsfile
 
@@ -117,15 +109,14 @@ void main(string[] args) {
 		}
 	}
 
-	void addSinglePlugin(string file, string mod, TOMLDocument toml) {
-		mkdirRecurse(Paths.hidden ~ "single" ~ dirSeparator ~ mod ~ dirSeparator ~ "src");
-		writeDiff(Paths.hidden ~ "single" ~ dirSeparator ~ mod ~ dirSeparator ~ "src" ~ dirSeparator ~ mod ~ ".d", file);
-		toml["single"] = true;
-		plugs[Paths.hidden ~ "single" ~ dirSeparator ~ mod] = toml;
+	void addSinglePlugin(string path, string mod, TOMLDocument toml) {
+		//TODO name must not be a field
+		toml["name"] = mod;
+		plugs[path] = toml;
 	}
 
 	void loadSinglePlugin(string location) {
-		immutable expectedModule = location[location.lastIndexOf(dirSeparator)+1..$-2];
+		immutable expectedModule = location[location.lastIndexOf("/")+1..$-2];
 		auto file = cast(string)read(location);
 		auto s = file.split("\n");
 		if(s.length) {
@@ -147,29 +138,26 @@ void main(string[] args) {
 				if(closed && s.length && s[0].strip == "module " ~ expectedModule ~ ";") {
 					switch(fl[2..$-1].strip) {
 						case "selery.toml":
-							addSinglePlugin(file, expectedModule, parseTOML(pack.join("\n")));
-							break;
+							return addSinglePlugin(location, expectedModule, parseTOML(pack.join("\n")));
 						case "selery.json":
 						case "package.json":
 							auto json = parseJSON(pack.join(""));
-							if(json.type == JSON_TYPE.OBJECT) {
-								addSinglePlugin(file, expectedModule, TOMLDocument(toTOML(json).table));
-							}
-							break;
+							return addSinglePlugin(location, expectedModule, TOMLDocument(toTOML(json).table));
 						default:
 							break;
 					}
 				}
 			}
+			addSinglePlugin(location, expectedModule, parseTOML(""));
 		}
 	}
 
 	if(!args.canFind("--no-plugins")) {
 
 		// load plugins in plugins folder
-		if(exists(Paths.plugins)) {
-			foreach(string ppath ; dirEntries(Paths.plugins, SpanMode.breadth)) {
-				if(ppath[Paths.plugins.length+1..$].indexOf(dirSeparator) == -1) {
+		if(exists("../plugins")) {
+			foreach(string ppath ; dirEntries("../plugins/", SpanMode.breadth)) {
+				if(ppath["../plugins/".length+1..$].indexOf(dirSeparator) == -1) {
 					if(ppath.isDir) {
 						loadPlugin(ppath);
 					} else if(ppath.isFile && ppath.endsWith(".d")) {
@@ -184,19 +172,18 @@ void main(string[] args) {
 	Info[string] info;
 	
 	foreach(path, value; plugs) {
-		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		string index = path.split(dirSeparator)[$-2];
-		if(index !in info) {
-			auto plugin = Info();
+		Info plugin;
+		plugin.id = plugin.name = value["name"].str; //TODO must be checked [a-z0-9_]{1,}
+		if(path.isFile) {
+			plugin.single = buildNormalizedPath(absolutePath(path));
+		} else {
+			if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
+			plugin.single = "";
+		}
+		if(plugin.id !in info) {
 			plugin.toml = value;
-			plugin.id = index;
 			plugin.path = buildNormalizedPath(absolutePath(path));
 			if(!plugin.path.endsWith(dirSeparator)) plugin.path ~= dirSeparator;
-			plugin.single = "single" in value && value["single"].boolean;
-			auto target = "target" in value;
-			if(target && target.type == TOML_TYPE.STRING) {
-				plugin.target = target.str.toLower;
-			}
 			auto priority = "priority" in value;
 			if(priority) {
 				if(priority.type == TOML_TYPE.STRING) {
@@ -205,10 +192,6 @@ void main(string[] args) {
 				} else if(priority.type == TOML_TYPE.INTEGER) {
 					plugin.priority = clamp(priority.integer.to!size_t, 1, 10);
 				}
-			}
-			auto name = "name" in value;
-			if(name && name.type == TOML_TYPE.STRING) {
-				plugin.name = name.str;
 			}
 			auto authors = "authors" in value;
 			auto author = "author" in value;
@@ -236,10 +219,10 @@ void main(string[] args) {
 				plugin.main = main.str;
 			}
 			plugin.api = exists(path ~ "api.d"); //TODO
-			if(plugin.single) {
+			if(plugin.single.length) {
 				plugin.vers = "~single";
 			}
-			info[index] = plugin;
+			info[plugin.id] = plugin;
 		}
 	}
 
@@ -270,7 +253,7 @@ void main(string[] args) {
 					}
 				}
 			}
-			if(api.length == 0 || api.canFind(Software.api)) {
+			if(api.length == 0 || api.canFind(software.api)) {
 				writeln(inf.name, " ", inf.vers, ": loaded");
 			} else {
 				writeln(inf.name, " ", inf.vers, ": cannot load due to wrong api ", api);
@@ -278,87 +261,92 @@ void main(string[] args) {
 			}
 		}
 	}
-
-	version(Windows) {
-		mkdirRecurse(Paths.hidden ~ "plugin-loader/.dub");
-		write(Paths.hidden ~ "plugin-loader/.dub/version.json", JSONValue(["version": join([to!string(Software.major), to!string(Software.minor), to!string(__GENERATOR__)], ".")]).toString());
-	}
-
-	JSONValue[] loader;
-
-	foreach(target ; ["hub", "node"]) {
-
-		mkdirRecurse(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader");
 	
-		size_t count = 0;
-			
-		string imports = "";
-		string loads = "";
-		string paths = "";
+	JSONValue[string] builder;
+	builder["name"] = "selery-builder";
+	builder["targetPath"] = "..";
+	builder["targetName"] = "selery-" ~ type;
+	builder["targetType"] = "executable";
+	builder["sourceFiles"] = ["loader/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
+	builder["configurations"] = [["name": type]];
+	builder["dependencies"] = ["selery": ["path": ".."]];
+	
+	size_t count = 0;
+		
+	string imports = "";
+	string loads = "";
+	string paths = "";
 
-		string[] fimports;
+	string[] fimports;
 
-		JSONValue[string] dub;
-		dub["selery:" ~ target] = JSONValue(["path": libraries]);
+	JSONValue[string] dub;
+	dub["selery"] = JSONValue(["path": libraries]);
 
-		foreach(ref value ; ordered) {
-			if(value.target == target && value.active) {
-				count++;
-				version(Windows) {
-					mkdirRecurse(value.path ~ "/.dub");
-					write(value.path ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
+	foreach(ref value ; ordered) {
+		if(value.active) {
+			count++;
+			if(!exists(".selery/plugins/" ~ value.id)) mkdirRecurse(".selery/plugins/" ~ value.id);
+			string[] sourceFiles;
+			if(value.single.length) {
+				sourceFiles = [value.single];
+			} else {
+				/*value.dub["sourcePaths"] = [value.path ~ "src"];
+				value.dub["importPaths"] = [value.path ~ "src"];*/
+				foreach(string file ; dirEntries(value.path ~ "src", SpanMode.breadth)) {
+					if(file.isFile) sourceFiles ~= file;
 				}
-				dub[value.id] = ["path": value.path];
-				if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
-				value.dub["name"] = value.id;
-				value.dub["targetType"] = "library";
-				value.dub["configurations"] = [JSONValue(["name": "plugin"])];
-				auto dptr = "dependencies" in value.toml;
-				if(dptr && dptr.type == TOML_TYPE.TABLE) {
-					foreach(name, d; dptr.table) {
-						if(name.startsWith("dub:")) {
-							value.dub["dependencies"][name[4..$]] = toJSON(d);
-						}
+			}
+			value.dub["sourceFiles"] = sourceFiles;
+			version(Windows) {
+				mkdirRecurse(".selery/plugins/" ~ value.id ~ "/.dub");
+				write(".selery/plugins/" ~ value.id ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
+			}
+			builder["dependencies"][value.id] = ["path": ".selery/plugins/" ~ value.id];
+			if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
+			value.dub["name"] = value.id;
+			value.dub["targetType"] = "library";
+			value.dub["configurations"] = [JSONValue(["name": "plugin"])];
+			auto dptr = "dependencies" in value.toml;
+			if(dptr && dptr.type == TOML_TYPE.TABLE) {
+				foreach(name, d; dptr.table) {
+					if(name.startsWith("dub:")) {
+						value.dub["dependencies"][name[4..$]] = toJSON(d);
 					}
 				}
-				value.dub["dependencies"]["selery:" ~ target] = ["path": libraries];
-				string extra(string path) {
-					auto ret = value.path ~ path;
-					if((value.main.length || value.api) && exists(ret) && ret.isDir) {
-						foreach(f ; dirEntries(ret, SpanMode.breadth)) {
-							// at least one element inside
-							return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
-						}
+			}
+			value.dub["dependencies"]["selery"] = ["path": libraries];
+			string extra(string path) {
+				auto ret = value.path ~ path;
+				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
+					foreach(f ; dirEntries(ret, SpanMode.breadth)) {
+						// at least one element inside
+						return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
 					}
-					return "null";
 				}
-				if(value.main.length) {
-					imports ~= "static import " ~ value.mod ~ ";";
-				}
-				loads ~= "new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ "),";
+				return "null";
+			}
+			if(value.main.length) {
+				imports ~= "static import " ~ value.mod ~ ";";
+			}
+			immutable load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ ");";
+			if(value.main.length) {
+				loads ~= "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
+			} else {
+				loads ~= load;
 			}
 		}
-
-		if(paths.length > 2) paths = paths[0..$-2];
-
-		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/src/pluginloader/" ~ target ~ ".d", "module pluginloader." ~ target ~ ";import sel.plugin:Plugin;import sel." ~ target ~ ".plugin:PluginOf;" ~ imports ~ "Plugin[] loadPlugins(){return [" ~ loads ~ "];}");
-		writeDiff(Paths.hidden ~ "plugin-loader/" ~ target ~ "/dub.json", JSONValue(["name": JSONValue(target), "targetType": JSONValue("library"), "dependencies": JSONValue(dub)]).toPrettyString());
-
+		
 	}
 
-	writeDiff(Paths.hidden ~ "plugin-loader/dub.json", JSONValue([
-		"name": JSONValue("plugin-loader"),
-		"targetType": JSONValue("none"),
-		"dependencies": JSONValue([
-			"plugin-loader:hub": "*",
-			"plugin-loader:node": "*"
-		]),
-		"subPackages": JSONValue(["hub", "node"])
-	]).toPrettyString());
+	if(paths.length > 2) paths = paths[0..$-2];
+
+	writeDiff(".selery/builder.d", "module pluginloader;import selery.plugin:Plugin;" ~ imports ~ "Plugin[] loadPlugins(alias PluginOf, T)(){Plugin[] ret;" ~ loads ~ "return ret;}");
 
 	foreach(value ; ordered) {
-		writeDiff(value.path ~ "dub.json", JSONValue(value.dub).toPrettyString());
+		writeDiff(".selery/plugins/" ~ value.id ~ "/dub.json", JSONValue(value.dub).toPrettyString());
 	}
+	
+	writeDiff("dub.json", JSONValue(builder).toPrettyString());
 
 }
 
@@ -368,11 +356,9 @@ void writeDiff(string location, const void[] data) {
 
 struct Info {
 
-	public string target = "node";
-
 	public TOMLDocument toml;
 
-	public bool single = false;
+	public string single;
 
 	public bool active = true;
 	public size_t priority = 1;
@@ -389,5 +375,36 @@ struct Info {
 	public string main;
 
 	public JSONValue[string] dub;
+
+}
+
+auto loadAbout(string libs) {
+
+	struct About {
+	
+		string name;
+		string version_;
+		long api;
+	
+	}
+	
+	try {
+
+		string file = cast(string)read(libs ~ "source/selery/about.d");
+		
+		T search(T)(string variable) {
+			immutable data = split(file, variable ~ " =")[1].split(";")[0].strip;
+			static if(is(T == string)) {
+				return data[1..$-1];
+			} else {
+				return to!T(data);
+			}
+		}
+		
+		return About(search!string("name"), to!string(search!ubyte("major")) ~ "." ~ to!string(search!ubyte("minor")) ~ "." ~ to!string(search!ubyte("patch")), search!long("api"));
+		
+	} catch(Throwable) {}
+	
+	return About("Selery", "~unknown", 0);
 
 }

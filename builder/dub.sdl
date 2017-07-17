@@ -1,7 +1,0 @@
-name "selery-builder"
-authors "sel-project"
-license "LGPL-3.0"
-copyright "Copyright (c) 2017 SEL"
-targetType "executable"
-targetPath ".."
-dependency "selery" path=".."

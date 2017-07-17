@@ -12,20 +12,23 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module pluginloader;
+module loader.hub;
 
-import selery.plugin;
+import selery.config : ConfigType;
+import selery.hub.plugin : HubPlugin, PluginOf;
+import selery.hub.server : HubServer;
+import selery.start : startup;
 
-Plugin[] loadPlugins() {
+import pluginloader;
 
-	static if(__traits(compiles, { import plugins; })) {
+void load(string[] args) {
 
+	bool edu, realm;
 
+	if(startup(ConfigType.hub, "hub", args, edu, realm)) {
 
-	} else {
-
-		return new Plugin[0];
+		new shared HubServer(false, edu, realm, loadPlugins!(PluginOf, HubPlugin)());
 
 	}
-	
+
 }

@@ -25,7 +25,9 @@ import selery.event.server : ServerEvent;
 import selery.event.world : WorldEvent;
 import selery.node.server : server;
 
-class PluginOf(T) : Plugin if(!isAbstractClass!T || is(T == struct)) {
+interface NodePlugin {}
+
+class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 
 	public this(string namespace, string name, string[] authors, string vers, bool api, string languages, string textures) {
 		this.n_namespace = namespace;

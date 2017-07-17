@@ -1,8 +1,5 @@
 language: d
 
-env:
-  - CONFIG="x86_64"
-
 d:
   - dmd-2.074.1
   - dmd-2.073.2
@@ -13,8 +10,6 @@ os:
   - osx
 
 matrix:
-  include:
-    - {os: linux, d: dmd-2.073.2, env: CONFIG="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
   exclude:
     - d: dmd-2.074.1
       os: osx
@@ -24,15 +19,15 @@ matrix:
     - d: dmd-2.074.1
 
 script:
-  - travis_wait 30 dub build --arch=$CONFIG --compiler=$DC --build=release
+  - travis_wait 60 dub build --compiler=$DC --build=release
   - cd builder
-  - dub build --single --arch=$CONFIG --compiler=$DC --build=release init.d
+  - dub build --single --compiler=$DC --build=release init.d
   - ./selery-init hub
-  - dub build --arch=$CONFIG --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=release
   - ./selery-init node
-  - dub build --arch=$CONFIG --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=release
   - ./selery-init default
-  - dub build --arch=$CONFIG --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=release
 
 notifications:
   - email: false

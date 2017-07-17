@@ -21,6 +21,7 @@ import std.string : startsWith;
 
 import selery.config : ConfigType;
 import selery.crash : logCrash;
+import selery.node.plugin : NodePlugin, PluginOf;
 import selery.node.server : NodeServer;
 import selery.start : startup;
 import selery.util.util : UnloggedException;
@@ -67,7 +68,7 @@ void load(string[] args) {
 
 		try {
 			
-			server = new shared NodeServer(address, name, password, main, loadPlugins(), args);
+			server = new shared NodeServer(address, name, password, main, loadPlugins!(PluginOf, NodePlugin)(), args);
 			
 		} catch(LinkTerminated) {
 			
