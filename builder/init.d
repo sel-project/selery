@@ -274,7 +274,7 @@ void main(string[] args) {
 	builder["targetPath"] = "..";
 	builder["targetName"] = "selery-" ~ type;
 	builder["targetType"] = "executable";
-	builder["sourceFiles"] = ["src/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
+	builder["sourceFiles"] = ["main/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = ["selery": ["path": ".."]];
 	

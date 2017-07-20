@@ -169,9 +169,9 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 	private shared Command[string] commands;
 
-	public shared this(Address hub, string name, string password, bool main, Plugin[] plugins, string[] args) {
+	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins, string[] args) {
 
-		Thread.getThis().name = "Server";
+		debug Thread.getThis().name = "NodeServer";
 
 		this.lite = cast(TidAddress)hub !is null;
 
@@ -189,10 +189,10 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		this.n_hub_address = cast(shared)hub;
 		
 		{
+			//TODO temp folder is not loaded at this point
 			// load language from the last execution (or default language)
-			static import std.file;
-			if(std.file.exists(Paths.hidden ~ "lang")) {
-				this.n_settings.language = cast(string)std.file.read(Paths.hidden ~ "lang");
+			if(std.file.exists(Paths.temp ~ "lang")) {
+				this.n_settings.language = cast(string)std.file.read(Paths.temp ~ "lang");
 			} else {
 				this.n_settings.language = "en_GB";
 			}
@@ -303,7 +303,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		}
 
 		// save latest language used
-		std.file.write(Paths.hidden ~ "lang", settings.language);
+		std.file.write(Paths.temp ~ "lang", settings.language);
 
 		version(Windows) {
 			//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
@@ -316,8 +316,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 			if(plugin.languages !is null) paths ~= plugin.languages;
 		}
 		Lang.init(settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
-		if(!std.file.exists(Paths.hidden)) std.file.mkdirRecurse(Paths.hidden);
-		std.file.write(Paths.hidden ~ "lang", settings.language);
+		std.file.write(Paths.temp ~ "lang", settings.language);
 
 		foreach(game, info ; info.gamesInfo) {
 			this.handleGameInfo(game, info, settings);

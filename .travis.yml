@@ -28,6 +28,12 @@ script:
   - dub build --compiler=$DC --build=release
   - ./selery-init default
   - dub build --compiler=$DC --build=release
+  - cd ..
+  
+after_success:
+  - ./selery-hub --about
+  - ./selery-node --about
+  - ./selery-default --about
 
 notifications:
   - email: false
