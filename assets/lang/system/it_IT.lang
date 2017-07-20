@@ -39,9 +39,9 @@ status.outdatedNode = Impossibile connettersi! Nodo obsoleto
 status.passwordRequired = L'hub richiede una password
 status.wrongPassword = Password errata!
 status.invalidNameLength = Lunghezza del nome invalida
-status.invalidNameCharacters = Il nome scelto contiene caratteri invalidi. Controlla la documentazione dell'hub per controllare quali caratteri puoi usare
-status.nameAlreadyUsed = Un node con lo stesso nome è già connesso
-status.nameReserved = L'hub a riservato il nome scelto e non può essere usato
+status.invalidNameCharacters = Il nome scelto contiene caratteri invalidi. Controlla la documentazione dell'hub per controllare quali caratteri possono essere usati
+status.nameAlreadyUsed = Un nodo con lo stesso nome è già connesso
+status.nameReserved = L'hub ha riservato il nome scelto e non può essere usato
 status.unknown = Impossibile connettersi! Ragione sconosciuta
 
 handler.listening = Handler {0} in ascolto su {1}

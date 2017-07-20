@@ -104,7 +104,7 @@ build_script:
  - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
  - selery-init portable
  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - rename ..\selery-portable.exe ..\selery-portable-%SEL%.exe
+ - rename ..\selery-portable.exe selery-portable-%SEL%.exe
  - selery-init hub
  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
  - selery-init node
