@@ -91,6 +91,9 @@ const struct Software {
 	
 	/// ditto
 	enum ubyte patch = 1;
+
+	/// ditto
+	enum ubyte build = 12;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -100,7 +103,7 @@ const struct Software {
 	 * Unstable versions are not fully tested and may fail to compile
 	 * on some systems.
 	 */
-	enum bool stable = false;
+	enum bool stable = build == 0;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the
@@ -113,11 +116,11 @@ const struct Software {
 	 * Full version of the software prefixed with a `v` and suffixed
 	 * with a `-dev` if stable is false.
 	 */
-	enum string fullVersion = "v" ~ displayVersion ~ (stable ? "" : "-dev");
+	enum string fullVersion = "v" ~ displayVersion ~ (!stable ? "-build." ~ to!string(build) : "");
 	
 	/**
 	 * Display name of the software that contains both the software name
-	 * and the version in the format name/version (for example `SEL/1.1.0`).
+	 * and the version in the format name/version (for example `Selery/1.1.0`).
 	 */
 	enum string display = name ~ "/" ~ displayVersion;
 	
@@ -136,10 +139,11 @@ const struct Software {
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
-		foreach(member ; TypeTuple!("name", "website", "stable", "codename", "display", "api")) {
+		foreach(member ; TypeTuple!("name", "website", "stable", "displayVersion", "fullVersion", "codename", "display", "api")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];
+		if(!stable) ret["version"]["build"] = build;
 		return JSONValue(ret);
 	}
 	
@@ -221,5 +225,17 @@ version(D_Ddoc) {
 	else version(OSX) enum bool __supported = false;
 	else version(Android) enum bool __supported = false;
 	else enum bool __supported = false;
+
+}
+
+version(Main) {
+
+	import std.stdio : write;
+
+	void main(string[] args) {
+
+		write(Software.toJSON().toString());
+
+	}
 
 }

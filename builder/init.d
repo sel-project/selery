@@ -37,15 +37,6 @@ enum size_t __GENERATOR__ = 10;
 
 void main(string[] args) {
 
-	string type = "default";
-	
-	if(args.length > 1) type = args[1].toLower();
-	
-	if(!["default", "hub", "node", "portable"].canFind(type)) {
-		writeln("Invalid type: ", type);
-		return;
-	}
-
 	string libraries;
 	if(exists(".selery/libraries")) {
 		// should be an absolute normalised path
@@ -56,9 +47,25 @@ void main(string[] args) {
 	}
 	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 	
-	auto software = loadAbout(libraries);
+	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output);
+	
+	foreach(arg ; args) {
+		if(arg == "--version") {
+			import std.stdio : write;
+			return write(software["fullVersion"].str);
+		}
+	}
 
-	writeln("Loading plugins for " ~ software.name ~ " " ~ software.version_ ~ " configuration \"" ~ type ~ "\"");
+	string type = "default";
+	
+	if(args.length > 1) type = args[1].toLower();
+	
+	if(!["default", "hub", "node", "portable"].canFind(type)) {
+		writeln("Invalid type: ", type);
+		return;
+	}
+
+	writeln("Loading plugins for " ~ software["name"].str ~ " " ~ software["fullVersion"].str ~ " configuration \"" ~ type ~ "\"");
 
 	if(type == "portable") {
 
@@ -253,7 +260,7 @@ void main(string[] args) {
 					}
 				}
 			}
-			if(api.length == 0 || api.canFind(software.api)) {
+			if(api.length == 0 || api.canFind(software["api"].integer)) {
 				writeln(inf.name, " ", inf.vers, ": loaded");
 			} else {
 				writeln(inf.name, " ", inf.vers, ": cannot load due to wrong api ", api);
@@ -267,7 +274,7 @@ void main(string[] args) {
 	builder["targetPath"] = "..";
 	builder["targetName"] = "selery-" ~ type;
 	builder["targetType"] = "executable";
-	builder["sourceFiles"] = ["loader/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
+	builder["sourceFiles"] = ["src/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = ["selery": ["path": ".."]];
 	
@@ -377,36 +384,5 @@ struct Info {
 	public string main;
 
 	public JSONValue[string] dub;
-
-}
-
-auto loadAbout(string libs) {
-
-	struct About {
-	
-		string name;
-		string version_;
-		long api;
-	
-	}
-	
-	try {
-
-		string file = cast(string)read(libs ~ "source/selery/about.d");
-		
-		T search(T)(string variable) {
-			immutable data = split(file, variable ~ " =")[1].split(";")[0].strip;
-			static if(is(T == string)) {
-				return data[1..$-1];
-			} else {
-				return to!T(data);
-			}
-		}
-		
-		return About(search!string("name"), to!string(search!ubyte("major")) ~ "." ~ to!string(search!ubyte("minor")) ~ "." ~ to!string(search!ubyte("patch")), search!long("api"));
-		
-	} catch(Throwable) {}
-	
-	return About("Selery", "~unknown", 0);
 
 }

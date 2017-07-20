@@ -7,12 +7,11 @@ configuration:
   - release
 
 environment:
-  SEL: "0.0.1"
   matrix:
     - DC: dmd
       DVersion: 2.073.2
     - DC: ldc
-      DVersion: 1.2.0
+      DVersion: 1.3.0
 
 matrix:
   exclude:
@@ -26,13 +25,13 @@ branches:
 
 artifacts:
   - path: selery-hub.exe
-    name: selery-hub
+    name: hub
   - path: selery-node.exe
-    name: selery-node
+    name: node
   - path: selery-default.exe
-    name: selery-default
-  - path: selery-portable-%SEL%.exe
-    name: selery-portable
+    name: default
+  - path: selery-portable-%selery%.exe
+    name: portable
 
 install:
   - ps: function SetUpDCompiler
@@ -66,7 +65,7 @@ install:
             }
         }
   - ps: SetUpDCompiler
-  - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.2.1-windows-x86.zip -OutFile dub.zip
+  - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.3.0-windows-x86.zip -OutFile dub.zip
   - 7z x dub.zip -odub > nul
   - set PATH=%CD%\%binpath%;%CD%\dub;%PATH%
   - dub --version
@@ -93,27 +92,25 @@ before_build:
   - '"%compilersetup%" %compilersetupargs%'
   - mkdir plugins
 #  - git clone https://github.com/sel-plugins/commands.git plugins\commands
-  - echo %PLATFORM%
-  - echo %CONFIGURATION%
-  - echo %DC%
-  - echo %Darch%
 
 build_script:
- - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - cd builder
- - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
- - selery-init portable
- - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - rename ..\selery-portable.exe selery-portable-%SEL%.exe
- - selery-init hub
- - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - selery-init node
- - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - selery-init default
- - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
- - cd ..
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - cd builder
+  - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
+  - selery-init --version > version.txt
+  - set /p selery = <version.txt
+  - selery-init portable
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - rename ..\selery-portable.exe selery-portable-%selery%.exe
+  - selery-init hub
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - selery-init node
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - selery-init default
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - cd ..
 
 test_script:
- - selery-hub --about
- - selery-node --about
- - selery-default --about
+#  - selery-hub --about
+#  - selery-node --about
+#  - selery-default --about

@@ -41,7 +41,6 @@ void main(string[] args) {
 	static if(__traits(compiles, import("portable.zip"))) {
 
 		// should be executed in an empty directory
-		Paths.load("." ~ dirSeparator);
 		mkdirRecurse(Paths.res);
 
 		import std.zip;
