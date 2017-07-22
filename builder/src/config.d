@@ -25,8 +25,8 @@ import std.uuid : UUID, parseUUID;
 
 import selery.about;
 import selery.config : Config;
-import selery.lang : Lang;
 import selery.files : Files;
+import selery.lang : Lang;
 
 import toml;
 import toml.json;

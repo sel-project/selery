@@ -15,8 +15,8 @@
 module selery.plugin;
 
 import selery.about;
-import selery.util.tuple : Tuple;
 import selery.server : Server;
+import selery.util.tuple : Tuple;
 
 /**
  * Informations about a plugin and registration-related
