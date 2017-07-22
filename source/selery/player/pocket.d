@@ -47,13 +47,13 @@ import selery.entity.living : Living;
 import selery.entity.metadata : SelMetadata = Metadata;
 import selery.entity.noai : Lightning, ItemEntity;
 import selery.format : Text;
+import selery.files : Files;
 import selery.inventory.inventory;
 import selery.item.slot : Slot;
 import selery.lang : Translation, translate;
 import selery.log;
 import selery.math.vector;
 import selery.node.info : PlayerInfo;
-import selery.path : Paths;
 import selery.player.player;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
@@ -143,7 +143,7 @@ abstract class PocketPlayer : Player {
 		if(translation.pocket.length) {
 			this.server.kick(this.hubId, translation.pocket, args);
 		} else {
-			this.disconnect(translate(translation, this.lang, args));
+			this.disconnect(this.server.config.lang.translate(translation, this.lang, args));
 		}
 	}
 
@@ -200,9 +200,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	private static __gshared ubyte[] creative_inventory;
 
-	public static bool loadCreativeInventory() {
-		immutable cached = Paths.hidden ~ "creative/" ~ __protocol.to!string;
-		if(!exists(cached)) {
+	public static bool loadCreativeInventory(const Files files) {
+		immutable cached = "creative_" ~ __protocol.to!string;
+		if(!files.hasTemp(cached)) {
 			auto packet = new Play.ContainerSetContent(121, 0);
 			try {
 				auto http = HTTP();
@@ -231,14 +231,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 				Compress c = new Compress(9);
 				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
 				creative_inventory ~= cast(ubyte[])c.flush();
-				mkdirRecurse(Paths.hidden ~ "creative");
-				write(cached, creative_inventory);
+				files.writeTemp(cached, creative_inventory);
 				return true;
 			} else {
 				return false;
 			}
 		} else {
-			creative_inventory = cast(ubyte[])read(cached);
+			creative_inventory = cast(ubyte[])files.readTemp(cached);
 			return true;
 		}
 	}
@@ -381,7 +380,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		if(message.pocket.length) {
 			this.sendPacket(new Play.Text().new Translation(pre ~ "%" ~ message.pocket, args));
 		} else {
-			this.sendMessageImpl(pre ~ translate(message, this.lang, args));
+			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.lang, args));
 		}
 	}
 
@@ -665,7 +664,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendJoinPacket() {
 		//TODO send thunders
-		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.settings.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.settings.realm, false, new Types.Rule[0], Software.display, this.server.name));
+		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.config.hub.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.config.hub.realm, false, new Types.Rule[0], Software.display, this.server.name));
 	}
 
 	public override void sendResourcePack() {}

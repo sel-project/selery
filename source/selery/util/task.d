@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.task;
+module selery.util.task;
 
 import selery.about : tick_t;
 

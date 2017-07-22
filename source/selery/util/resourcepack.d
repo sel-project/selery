@@ -24,10 +24,8 @@ import std.uuid : UUID;
 import std.zip;
 
 import selery.about : Software;
-import selery.lang : Lang;
 import selery.node.server : NodeServer;
-import selery.path : Paths;
-import selery.tuple : Tuple;
+import selery.util.tuple : Tuple;
 
 auto createResourcePacks(shared NodeServer server, UUID uuid, string[] textures) {
 
@@ -53,12 +51,12 @@ auto createResourcePacks(shared NodeServer server, UUID uuid, string[] textures)
 	}
 
 	// add icon
-	auto icon = cast(ubyte[])read(Paths.res ~ "icon.png");
+	auto icon = cast(ubyte[])server.config.files.readAsset("icon.png");
 	add(create("pack.png", icon));
 	pocket.addMember(create("pack_icon.png", icon));
 
 	// create minecraft's manifest
-	auto description = JSONValue("The default look of SEL");
+	auto description = JSONValue("The default look of Selery");
 	minecraft2.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(2), "description": description])]).toString()));
 	minecraft3.addMember(create("pack.mcmeta", cast(ubyte[])JSONValue(["pack": JSONValue(["pack_format": JSONValue(3), "description": description])]).toString()));
 

@@ -22,7 +22,7 @@ import selery.item.item : Item, SimpleItem;
 import selery.item.items : Items;
 import selery.math.vector;
 import selery.player.player : Player;
-import selery.tuple : Tuple;
+import selery.util.tuple : Tuple;
 import selery.util.util : roman;
 import selery.world.world : World;
 

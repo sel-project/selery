@@ -19,8 +19,9 @@ import core.cpuid;
 import core.sys.posix.signal;
 import core.thread;
 
-import std.algorithm : sort;
+import std.algorithm : sort, canFind;
 import std.ascii : newline;
+import std.base64 : Base64;
 import std.bitmanip : nativeToBigEndian;
 import std.conv : to;
 import std.file;
@@ -28,8 +29,9 @@ import std.json;
 import std.math : round;
 import std.net.curl;
 import std.random : uniform;
+import std.regex : replaceAll, ctRegex;
 import std.socket;
-import std.string : join, split, toLower, strip, indexOf;
+import std.string : join, split, toLower, strip, indexOf, replace;
 import std.system : endian;
 import std.typecons;
 import std.uuid : parseUUID, UUID;
@@ -39,14 +41,12 @@ import sel.hncom.login : HubInfo, NodeInfo;
 import sel.hncom.status : RemoteCommand;
 
 import selery.about;
+import selery.config : Config;
 import selery.format : Text;
-import selery.hub.settings;
-import selery.lang : Lang, translate, Translation;
+import selery.lang : Lang, Translation;
 import selery.log : log;
 import selery.network.handler : Handler;
-import selery.path : Paths;
 import selery.plugin : Plugin;
-import selery.session.externalconsole : ExternalConsoleSession;
 import selery.session.hncom : AbstractNode;
 import selery.session.player : PlayerSession;
 import selery.session.rcon : RconSession;
@@ -55,8 +55,6 @@ import selery.util.block : Blocks;
 import selery.util.ip : localAddresses, publicAddresses;
 import selery.util.thread;
 import selery.util.util : milliseconds;
-
-mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string ~ ".types : NodeStats;");
 
 /+version(Windows) {
 	
@@ -87,18 +85,16 @@ mixin("import sul.protocol.externalconsole" ~ Software.externalConsole.to!string
 
 class HubServer {
 
-	private static shared HubServer n_instance;
-
-	public static nothrow @safe @nogc shared(HubServer) instance() {
-		return n_instance;
-	}
+	public immutable bool lite;
 
 	public immutable ulong id;
 	private shared ulong uuid_count;
 
 	private immutable ulong started;
 
-	private shared Settings n_settings;
+	private shared Config _config;
+	private shared const(AddressRange)[] _accepted_nodes;
+	private shared string _favicon;
 
 	private shared uint n_max;
 	private shared size_t unlimited_nodes = 0;
@@ -118,33 +114,45 @@ class HubServer {
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
-	private shared ExternalConsoleSession[immutable(uint)] externalConsoles;
 	private shared RconSession[immutable(uint)] rcons;
 	
 	private shared PlayerSession[immutable(uint)] n_players;
 
 	private shared GoogleAnalytics analytics;
 
-	public shared this(bool lite, bool edu, bool realm, Plugin[] plugins) {
+	public shared this(bool lite, Config config, Plugin[] plugins, string[] args) {
 
-		n_instance = this;
+		assert(config.files !is null);
+		assert(config.lang !is null);
+		assert(config.hub !is null);
+
+		debug Thread.getThis().name = "HubServer";
+
+		this.lite = lite;
 
 		this.n_whitelist = List(this, "whitelist");
 		this.n_blacklist = List(this, "blacklist");
 
-		auto settings = Settings(lite, edu, realm);
-		settings.load();
-		this.n_settings = cast(shared)settings;
+		AddressRange[] acceptedNodes;
+		foreach(node ; config.hub.acceptedNodes) {
+			acceptedNodes ~= AddressRange.parse(node);
+		}
+		this._accepted_nodes = cast(shared const)acceptedNodes;
+
+		this.load(config);
+
+		foreach(plugin ; plugins) {
+			//TODO does this save?
+			if(plugin.languages !is null) config.lang.add(plugin.languages); // absolute path
+		}
 
 		version(Windows) {
 			import std.process : executeShell;
-			executeShell("title " ~ this.n_settings.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.display);
+			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.name ~ " " ~ Software.fullVersion);
 		}
 
-		Lang.init([this.n_settings.language], [Paths.langSystem]); //TODO load plugin's lang files
-
-		log(translate(Translation("startup.starting"), this.n_settings.language, [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
-		log(translate(Translation("startup.started"), this.n_settings.language), "\n");
+		log(config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
+		log(config.lang.translate("startup.started"), "\n");
 
 		static if(!__supported) {
 			log(translate(Translation("startup.unsupported"), this.n_settings.language, [Software.name]));
@@ -156,25 +164,6 @@ class HubServer {
 				//TODO print message
 			}
 		}
-
-		long id;
-		bool snoop_enabled = false;
-		/*try {
-			JSONValue[string] login;
-			with(Software) login["software"] = ["name": JSONValue(name), "version": JSONValue([major, minor, patch]), "stable": JSONValue(stable)];
-			login["online"] = __onlineMode;
-			if(this.n_settings.minecraft) login["minecraft"] = this.n_settings.minecraft.protocols;
-			if(this.n_settings.pocket) login["pocket"] = this.n_settings.pocket.protocols;
-			login["edu"] = edu;
-			login["realm"] = realm;
-			login["lang"] = this.n_settings.language;
-			login["bits"] = size_t.sizeof * 8;
-			login["endianness"] = cast(int)endian;
-			login["processor"] = processor;
-			login["cores"] = coresPerCPU;
-			//log(JSONValue(login).toString(), "\n");
-			id = to!ulong(post("http://snoop." ~ Software.website ~ "/login", JSONValue(login).toString()));
-		} catch(Throwable) {*/
 
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
@@ -189,7 +178,7 @@ class HubServer {
 			this.n_blacklist.save();
 		}*/
 		
-		auto pa = publicAddresses;
+		auto pa = publicAddresses(config.files);
 		if(pa.v4.length || pa.v6.length) {
 			if(pa.v4.length) log("Public ip: ", pa.v4);
 			if(pa.v6.length) log("Public ipv6: ", pa.v6);
@@ -214,21 +203,6 @@ class HubServer {
 		reader.name = "reader";
 		reader.start();
 
-		if(snoop_enabled) {
-			auto snoop = new SafeThread({
-				while(true) {
-					Thread.sleep(dur!"minutes"(1));
-					JSONValue[string] status;
-					status["online"] = this.onlinePlayers;
-					status["max"] = this.maxPlayers;
-					status["nodes"] = this.nodes.length;
-					post("http://snoop." ~ Software.website ~ "/status", JSONValue(status).toString());
-				}
-			});
-			snoop.name = "snoop";
-			snoop.start();
-		}
-
 		/*version(Windows) {
 			SetConsoleCtrlHandler(&sigHandler, true);
 		} else version(linux) {
@@ -236,11 +210,9 @@ class HubServer {
 			sigset(SIGINT, &extsig);
 		}*/
 
-		Thread.getThis().name = "main";
-
-		if(this.n_settings.googleAnalytics.length) {
-			this.analytics = new shared GoogleAnalytics(this.n_settings.googleAnalytics);
-		}
+		/*if(config.googleAnalytics.length) {
+			this.analytics = new shared GoogleAnalytics(this, config.googleAnalytics);
+		}*/
 
 		this.started = milliseconds;
 
@@ -257,13 +229,6 @@ class HubServer {
 			}
 			auto sent = cast(uint)(this.n_traffic.sent.to!float / 5f);
 			auto recv = cast(uint)(this.n_traffic.received.to!float / 5f);
-			if(this.externalConsoles.length) {
-				auto uptime = this.uptime;
-				auto nodeStats = this.externalConsoleNodeStats;
-				foreach(externalConsole ; this.externalConsoles) {
-					externalConsole.updateStats(online, last_max, uptime, sent, recv, nodeStats);
-				}
-			}
 			this.n_upload = sent;
 			this.n_download = recv;
 			this.n_traffic.reset();
@@ -278,6 +243,42 @@ class HubServer {
 			this.blocks.remove(5);
 		}
 
+	}
+
+	/**
+	 * Loads the configuration file.
+	 * - validates the motds
+	 * - validates protocols
+	 * - loads and validate favicon
+	 * - validate accepted language(s)
+	 * - load languages
+	 */
+	private shared void load(ref Config config) {
+		if(config.hub.minecraft) with(config.hub.minecraft) {
+			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
+			motd = motd.replace("\\n", "\n");
+			validateProtocols(protocols, supportedMinecraftProtocols.keys, latestMinecraftProtocols);
+		}
+		if(config.hub.pocket) with(config.hub.pocket) {
+			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
+			motd = motd.replace(";", "");
+			motd ~= Text.reset;
+			validateProtocols(protocols, supportedPocketProtocols.keys, latestPocketProtocols);
+		}
+		if(exists(config.hub.favicon) && isFile(config.hub.favicon)) {
+			ubyte[] data = cast(ubyte[])read(config.hub.favicon);
+			//TODO validate size
+			this._favicon = "data:image/png;base64," ~ Base64.encode(data).idup;
+		}
+		string[] accepted;
+		foreach(lang ; config.hub.acceptedLanguages) {
+			if(Config.LANGUAGES.canFind(lang)) accepted ~= lang;
+		}
+		if(!Config.LANGUAGES.canFind(config.hub.language)) config.hub.language = "en_GB";
+		if(!accepted.canFind(config.hub.language)) accepted ~= config.hub.language;
+		config.hub.acceptedLanguages = accepted;
+		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
+		this._config = cast(shared)config;
 	}
 
 	public shared void shutdown() {
@@ -308,10 +309,14 @@ class HubServer {
 	}
 
 	/**
-	 * Gets the server's settings.
+	 * Gets the server's configuration.
 	 */
-	public shared nothrow @property @safe @nogc ref const(shared(Settings)) settings() {
-		return this.n_settings;
+	public shared nothrow @property @trusted @nogc const(Config) config() {
+		return cast()this._config;
+	}
+
+	public shared nothrow @property @safe @nogc string favicon() {
+		return this._favicon;
 	}
 
 	/**
@@ -388,17 +393,6 @@ class HubServer {
 		return this.n_plugins.keys;
 	}
 
-	/**
-	 * Creates node stats for the external console.
-	 */
-	public shared @property @safe NodeStats[] externalConsoleNodeStats() {
-		NodeStats[] ret;
-		foreach(node ; this.nodes) {
-			ret ~= NodeStats(node.name, node.tps, node.ram, node.cpu);
-		}
-		return ret;
-	}
-
 	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=-1) {
 		// console, external console, rcon
 		string[] spl = str.split(" ");
@@ -451,9 +445,6 @@ class HubServer {
 		} else {
 			log("[", logger, "] ", message);
 		}
-		foreach(externalConsole ; this.externalConsoles) {
-			externalConsole.consoleMessage(node, timestamp, logger, message, commandId);
-		}
 		if(id != -1) {
 			foreach(rcon ; this.rcons) {
 				rcon.consoleMessage(message, commandId);
@@ -471,7 +462,7 @@ class HubServer {
 
 	public shared bool block(Address address, size_t seconds) {
 		if(this.blocks.block(address, seconds)) {
-			log(translate(Translation("warning.blocked"), this.n_settings.language, [to!string(address), to!string(seconds)]));
+			log(this.config.lang.translate("warning.blocked", [to!string(address), to!string(seconds)]));
 			return true;
 		} else {
 			return false;
@@ -482,8 +473,8 @@ class HubServer {
 		version(Posix) {
 			if(cast(UnixAddress)address) return true;
 		}
-		if(this.n_settings.maxNodes != 0) {
-			if(this.nodes.length >= this.n_settings.maxNodes) return false;
+		if(this.config.hub.maxNodes != 0) {
+			if(this.nodes.length >= this.config.hub.maxNodes) return false;
 		}
 		// check if it's an IPv4-mapped in IPv6
 		if(cast(Internet6Address)address) {
@@ -493,7 +484,7 @@ class HubServer {
 				address = new InternetAddress(to!string(bytes[12]) ~ "." ~ to!string(bytes[13]) ~ "." ~ to!string(bytes[14]) ~ "." ~ to!string(bytes[15]), v6.port);
 			}
 		}
-		foreach(ar ; this.settings.acceptedNodes) {
+		foreach(ar ; this._accepted_nodes) {
 			if((cast()ar).contains(address)) return true;
 		}
 		return false;
@@ -561,10 +552,6 @@ class HubServer {
 		foreach(shared AbstractNode on ; this.nodes) {
 			on.addNode(node);
 		}
-		// notify external consoles
-		foreach(externalConsole ; externalConsoles) {
-			externalConsole.updateNodes(true, node.name);
-		}
 	}
 
 	public synchronized shared void remove(shared AbstractNode node) {
@@ -598,24 +585,6 @@ class HubServer {
 		foreach(shared AbstractNode on ; this.nodes) {
 			on.removeNode(node);
 		}
-		// notify external consoles
-		foreach(externalConsole ; externalConsoles) {
-			externalConsole.updateNodes(false, node.name);
-		}
-	}
-
-	public shared nothrow @property @safe @nogc bool hasExternalConsoles() {
-		return this.externalConsoles.length != 0;
-	}
-
-	public synchronized shared void add(shared ExternalConsoleSession externalConsole) {
-		log(Text.green, "+ ", Text.white, externalConsole.toString());
-		this.externalConsoles[externalConsole.id] = externalConsole;
-	}
-
-	public synchronized shared void remove(shared ExternalConsoleSession externalConsole) {
-		log(Text.red, "- ", Text.white, externalConsole.toString());
-		this.externalConsoles.remove(externalConsole.id);
 	}
 
 	public synchronized shared void add(shared RconSession rcon) {
@@ -725,8 +694,8 @@ struct List {
 	}
 
 	public shared void load() {
-		if(!exists(Paths.resources ~ this.name ~ ".txt")) return;
-		foreach(string line ; (cast(string)read(Paths.resources ~ this.name ~ ".txt")).split("\n")) {
+		if(!exists(this.name ~ ".txt")) return;
+		foreach(string line ; (cast(string)read(this.name ~ ".txt")).split("\n")) {
 			line = line.strip;
 			if(line.length) {
 				Player player;
@@ -746,7 +715,7 @@ struct List {
 		foreach(player ; this.players) {
 			lines ~= (cast()player).toString();
 		}
-		write(Paths.resources ~ this.name ~ ".txt", lines.join(newline) ~ newline);
+		write(this.name ~ ".txt", lines.join(newline) ~ newline);
 	}
 
 	static class Player {
@@ -820,4 +789,174 @@ struct List {
 
 	}
 
+}
+
+/**
+ * Stores a range of ip addresses.
+ */
+struct AddressRange {
+	
+	/**
+	 * Parses an ip string into an AddressRange.
+	 * Throws:
+	 * 		ConvException if one of the numbers is not an unsigned byte
+	 */
+	public static AddressRange parse(string address) {
+		AddressRange ret;
+		string[] spl = address.split(".");
+		if(spl.length == 4) {
+			// ipv4
+			ret.addressFamily = AddressFamily.INET;
+			foreach(string s ; spl) {
+				if(s == "*") {
+					ret.ranges ~= Range(ubyte.min, ubyte.max);
+				} else if(s.indexOf("-") > 0) {
+					auto range = Range(to!ubyte(s[0..s.indexOf("-")]), to!ubyte(s[s.indexOf("-")+1..$]));
+					if(range.min > range.max) {
+						auto sw = range.max;
+						range.max = range.min;
+						range.min = sw;
+					}
+					ret.ranges ~= range;
+				} else {
+					ubyte value = to!ubyte(s);
+					ret.ranges ~= Range(value, value);
+				}
+			}
+			return ret;
+		} else {
+			// try ipv6
+			ret.addressFamily = AddressFamily.INET6;
+			spl = address.split("::");
+			if(spl.length) {
+				string[] a = spl[0].split(":");
+				string[] b = (spl.length > 1 ? spl[1] : "").split(":");
+				if(a.length + b.length <= 8) {
+					while(a.length + b.length != 8) {
+						a ~= "0";
+					}
+					foreach(s ; a ~ b) {
+						if(s == "*") {
+							ret.ranges ~= Range(ushort.min, ushort.max);
+						} else if(s.indexOf("-") > 0) {
+							auto range = Range(s[0..s.indexOf("-")].to!ushort(16), s[s.indexOf("-")+1..$].to!ushort(16));
+							if(range.min > range.max) {
+								auto sw = range.max;
+								range.max = range.min;
+								range.min = sw;
+							}
+						} else {
+							ushort num = s.to!ushort(16);
+							ret.ranges ~= Range(num, num);
+						}
+					}
+				}
+			}
+		}
+		return ret;
+	}
+	
+	public AddressFamily addressFamily;
+	
+	private Range[] ranges;
+	
+	/**
+	 * Checks if the given address is in this range.
+	 * Params:
+	 * 		address = an address of ip version 4 or 6
+	 * Returns: true if it's in the range, false otherwise
+	 * Example:
+	 * ---
+	 * auto range = AddressRange.parse("192.168.0-64.*");
+	 * assert(range.contains(new InternetAddress("192.168.0.1"), 0));
+	 * assert(range.contains(new InternetAddress("192.168.64.255"), 0));
+	 * assert(range.contains(new InternetAddress("192.168.255.255"), 0));
+	 * ---
+	 */
+	public bool contains(Address address) {
+		size_t[] bytes;
+		if(cast(InternetAddress)address) {
+			if(this.addressFamily != addressFamily.INET) return false;
+			InternetAddress v4 = cast(InternetAddress)address;
+			bytes = [(v4.addr >> 24) & 255, (v4.addr >> 16) & 255, (v4.addr >> 8) & 255, v4.addr & 255];
+		} else if(cast(Internet6Address)address) {
+			if(this.addressFamily != AddressFamily.INET6) return false;
+			ubyte last;
+			foreach(i, ubyte b; (cast(Internet6Address)address).addr) {
+				if(i % 2 == 0) {
+					last = b;
+				} else {
+					bytes ~= last << 8 | b;
+				}
+			}
+		}
+		if(bytes.length == this.ranges.length) {
+			foreach(size_t i, Range range; this.ranges) {
+				if(bytes[i] < range.min || bytes[i] > range.max) return false;
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Converts this range into a string.
+	 * Returns: the address range formatted into a string
+	 * Example:
+	 * ---
+	 * assert(AddressRange.parse("*.0-255.79-1.4-4").toString() == "*.*.1-79.4");
+	 * ---
+	 */
+	public string toString() {
+		string pre, suf;
+		string[] ret;
+		size_t max = this.addressFamily == AddressFamily.INET ? ubyte.max : ushort.max;
+		bool hex = this.addressFamily == AddressFamily.INET6;
+		Range[] ranges = this.ranges;
+		if(hex) {
+			if(ranges[0].is0) {
+				pre = "::";
+				while(ranges.length && ranges[0].is0) {
+					ranges = ranges[1..$];
+				}
+			} else if(ranges[$-1].is0) {
+				suf = "::";
+				while(ranges.length && ranges[$-1].is0) {
+					ranges = ranges[0..$-1];
+				}
+			} else {
+				//TODO zeroes in the centre
+			}
+		}
+		foreach(Range range ; ranges) {
+			ret ~= range.toString(max, hex);
+		}
+		return pre ~ ret.join(hex ? ":" : ".") ~ suf;
+	}
+	
+	private static struct Range {
+		
+		size_t min, max;
+		
+		public pure nothrow @property @safe @nogc bool is0() {
+			return this.min == 0 && this.max == 0;
+		}
+		
+		public string toString(size_t max, bool hex) {
+			string conv(size_t num) {
+				if(hex) return to!string(num, 16).toLower;
+				else return to!string(num);
+			}
+			if(this.min == 0 && this.max >= max) {
+				return "*";
+			} else if(this.min != this.max) {
+				return conv(this.min) ~ "-" ~ conv(this.max);
+			} else {
+				return conv(this.min);
+			}
+		}
+		
+	}
+	
 }

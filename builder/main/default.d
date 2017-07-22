@@ -22,30 +22,29 @@ import std.file : write, exists, mkdirRecurse;
 import std.path : dirSeparator;
 import std.string : indexOf, lastIndexOf;
 
-import selery.config : ConfigType;
+import selery.config : Config;
 import selery.crash : logCrash;
 import selery.hub.plugin : HubPlugin, HubPluginOf = PluginOf;
 import selery.hub.server : HubServer;
 import selery.network.hncom : TidAddress;
 import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
-import selery.path : Paths;
 import selery.session.hncom : LiteNode;
-import selery.start : startup;
 import selery.util.util : UnloggedException;
 
 import pluginloader;
+import starter;
 
 void main(string[] args) {
 
 	static if(__traits(compiles, import("portable.zip"))) {
 
 		// should be executed in an empty directory
-		mkdirRecurse(Paths.res);
+		//mkdirRecurse(Paths.res);
 
 		import std.zip;
 
-		auto zip = new ZipArchive(cast(void[])import("portable.zip"));
+		/*auto zip = new ZipArchive(cast(void[])import("portable.zip"));
 
 		foreach(name, member; zip.directory) {
 			if(name.indexOf("/") != -1) mkdirRecurse(Paths.res ~ name[0..name.lastIndexOf("/")]);
@@ -53,29 +52,57 @@ void main(string[] args) {
 				zip.expand(member);
 				write(Paths.res ~ name, member.expandedData);
 			}
-		}
+		}*/
 
-		immutable type = "portable";
+		enum type = "portable";
 
 	} else {
 
-		immutable type = "default";
+		enum type = "default";
 		
 	}
 
-	bool edu, realm;
-
-	if(startup(ConfigType.lite, type, args, edu, realm)) {
+	start(ConfigType.server, type, args, (Config config){
 	
-		shared NodeServer node;
+		static if(type == "portable") {
+		
+			//TODO override assets reader
+			
+			auto portable = new ZipArchive(cast(void[])import("portable.zip"));
+			
+			config.files = new class Files {
+			
+				public this() {
+					super("", config.files.temp);
+				}
+				
+				public override inout bool hasAsset(string file) {
+					return convert(file) in portable.directory;
+				}
+				
+				public override inout void[] readAsset(string file) {
+					auto member = portable.directory[convert(file)];
+					if(member.expandedData.length != member.expandedSize) portable.expand(member);
+					return cast(void[])member.expandedData;
+				}
+				
+				private static string convert(string file) {
+					version(Windows) file = file.replace("\\", "/");
+					while(file[$-1] == '/') file = file[0..$-1];
+					return file;
+				}
+			
+			};
+		
+		}
 
-		new Thread({ new shared HubServer(true, edu, realm, loadPlugins!(HubPluginOf, HubPlugin)()); }).start();
+		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, HubPlugin)(), args); }).start();
 
 		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
 			
-			node = new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, loadPlugins!(NodePluginOf, NodePlugin)(), args);
+			new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, config, loadPlugins!(NodePluginOf, NodePlugin)(), args);
 			
 		} catch(LinkTerminated) {
 			
@@ -83,7 +110,7 @@ void main(string[] args) {
 			
 		} catch(Throwable e) {
 
-			logCrash("node", node is null ? "en_GB" : node.settings.language, e);
+			logCrash("node", config.lang, e);
 			
 		} finally {
 			
@@ -91,7 +118,8 @@ void main(string[] args) {
 			exit(1);
 			
 		}
-	}
+		
+	});
 	
 }
 

@@ -22,16 +22,12 @@ import std.socket;
 import std.string;
 
 import selery.about : Software;
-import selery.config : ConfigType;
 import selery.constants;
 import selery.format : Text;
 import selery.hub.server : HubServer;
-import selery.hub.settings;
-import selery.lang : translate, Translation;
 import selery.log : log;
 import selery.network.session;
 import selery.network.socket;
-import selery.session.externalconsole : ExternalConsoleHandler;
 import selery.session.hncom : HncomHandler, LiteNode;
 import selery.session.http : HttpHandler;
 import selery.session.minecraft : MinecraftHandler, MinecraftQueryHandler;
@@ -65,7 +61,7 @@ class Handler {
 		this.queries = this.startThread!Queries(server, &this.socialJson);
 
 		bool delegate(string ip) acceptIp;
-		immutable forcedIp = server.settings.serverIp.toLower;
+		immutable forcedIp = server.config.hub.serverIp.toLower;
 		if(forcedIp.length) {
 			acceptIp = (string ip){ return ip.toLower == forcedIp; };
 		} else {
@@ -74,12 +70,12 @@ class Handler {
 
 		// start handlers
 
-		with(server.settings) {
+		with(server.config.hub) {
 
-			if(config.type == ConfigType.hub) {
+			if(!server.lite) {
 				this.startThread!HncomHandler(server, &this.additionalJson);
 			} else {
-				new SafeThread({ new shared LiteNode(server, &this.additionalJson); }).start();
+				new SafeThread(server.config.lang, { new shared LiteNode(server, &this.additionalJson); }).start();
 			}
 
 			if(pocket) {
@@ -93,9 +89,7 @@ class Handler {
 				}
 			}
 
-			if(externalConsole) {
-				this.startThread!ExternalConsoleHandler(server);
-			}
+			//TODO remote panel
 
 			if(rcon) {
 				this.startThread!RconHandler(server);
@@ -103,10 +97,6 @@ class Handler {
 
 			if(web) {
 				this.startThread!HttpHandler(server, &this.socialJson);
-			}
-
-			if(panel) {
-				this.startThread!PanelHandler(server);
 			}
 
 		}
@@ -147,11 +137,11 @@ class Handler {
 	 * for each social field that is not empty in the settings.
 	 */
 	private shared void regenerateSocialJson() {
-		auto settings = cast()this.server.settings;
-		this.socialJson = settings.social.toString();
+		const config = this.server.config;
+		this.socialJson = config.hub.social.toString();
 		JSONValue[string] additional;
-		additional["social"] = this.server.settings.social;
-		additional["minecraft"] = ["edu": settings.edu, "realm": settings.realm];
+		additional["social"] = config.hub.social;
+		additional["minecraft"] = ["edu": config.hub.edu, "realm": config.hub.realm];
 		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
 		this.additionalJson = cast(shared)JSONValue(additional);
 	}
@@ -169,23 +159,24 @@ class Handler {
 
 abstract class HandlerThread : SafeThread {
 
-	public static shared(Socket)[] createSockets(T)(string handler, inout string[] addresses, inout ushort port, int backlog) {
+	public static shared(Socket)[] createSockets(T)(shared HubServer server, string handler, inout string[] addresses, inout ushort port, int backlog) {
+		const lang = server.config.lang;
 		shared(Socket)[] sockets;
 		foreach(string address ; addresses) {
 			try {
 				sockets ~= cast(shared)socketFromAddress!(BlockingSocket!T)(address, port, backlog);
-				log(translate(Translation("handler.listening"), Settings.defaultLanguage, [Text.green ~ handler ~ Text.reset, address]));
+				log(lang.translate("handler.listening", [Text.green ~ handler ~ Text.reset, address]));
 			} catch(SocketException e) {
-				log(translate(Translation("handler.error.bind"), Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address, Text.yellow ~ (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
+				log(lang.translate("handler.error.bind", [Text.red ~ handler ~ Text.reset, address, Text.yellow ~ (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
 			} catch(Throwable t) {
-				log(translate(Translation("handler.error.address"), Settings.defaultLanguage, [Text.red ~ handler ~ Text.reset, address]));
+				log(lang.translate("handler.error.address", [Text.red ~ handler ~ Text.reset, address]));
 			}
 		}
 		return sockets;
 	}
 
-	public static shared(Socket)[] createSockets(T)(string handler, shared inout string[] addresses, shared inout ushort port, int backlog) {
-		return createSockets!T(handler, cast(string[])addresses, cast()port, backlog);
+	public static shared(Socket)[] createSockets(T)(shared HubServer server, string handler, shared inout string[] addresses, shared inout ushort port, int backlog) {
+		return createSockets!T(server, handler, cast(string[])addresses, cast()port, backlog);
 	}
 
 	protected shared HubServer server;
@@ -193,15 +184,15 @@ abstract class HandlerThread : SafeThread {
 	protected shared(Socket)[] sharedSockets;
 
 	public this(shared HubServer server, shared(Socket)[] sockets) {
-		super(&this.run);
+		super(server.config.lang, &this.run);
 		this.server = server;
 		this.sharedSockets = sockets;
 	}
 
 	protected void run() {
 		void start(shared Socket socket) {
-			auto thread = new SafeThread({ this.listen(socket); });
-			thread.name = Thread.getThis().name ~ "@" ~ (cast()socket).localAddress.to!string;
+			auto thread = new SafeThread(this.server.config.lang, { this.listen(socket); });
+			debug thread.name = Thread.getThis().name ~ "@" ~ (cast()socket).localAddress.to!string;
 			thread.start();
 		}
 		foreach(shared Socket socket ; this.sharedSockets) {

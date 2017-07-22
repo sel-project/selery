@@ -20,7 +20,7 @@ import std.conv : to;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple, Parameters;
 
-import selery.tuple : Tuple;
+import selery.util.tuple : Tuple;
 
 alias size_t class_t;
 

@@ -24,7 +24,7 @@ import selery.command.util : PocketType, CommandSender, WorldCommandSender, Targ
 import selery.entity.entity : Entity;
 import selery.node.server : ServerCommandSender;
 import selery.player.player : Player;
-import selery.tuple : Tuple;
+import selery.util.tuple : Tuple;
 
 alias param = Tuple!(string, "param");
 

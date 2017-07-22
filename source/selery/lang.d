@@ -18,87 +18,144 @@ import std.algorithm : canFind;
 import std.array : Appender;
 import std.conv : to, ConvException;
 import std.file : exists, read;
+import std.path : dirSeparator;
 import std.string;
 import std.traits : isArray, staticIndexOf;
 
+import selery.files : Files;
 import selery.format : Text;
 
-shared struct Lang {
+final class Lang {
 
-	private static shared(Lang) instance;
+	private Files files;
 
-	public static void init(string[] langs, string[] dirs) {
-		instance = shared(Lang)(langs, dirs);
+	private string language;
+	private string[] acceptedLanguage;
+
+	private string[] additionalFolders;
+
+	private Translatable[string][string] messages;
+
+	public this(Files files) {
+		this.files = files;
 	}
 
-	private shared string[] supported;
-	private shared Translatable[string][string] langs;
-
-	// ["../res/lang/system/", "../plugins/example/lang/"]
-	private shared this(string[] langs, string[] dirs) {
-		this.supported = cast(shared)langs;
-		foreach(string lang ; langs) {
-			foreach(string ppath ; dirs) {
-				string realpath = (ppath ~ lang ~ ".lang");
-				if(!exists(realpath)) realpath = (ppath ~ lang.split("_")[0] ~ ".lang");
-				if(exists(realpath)) {
-					foreach(string line ; (cast(string)read(realpath)).split("\n")) {
-						auto eq = line.split("=");
-						if(eq.length > 1) {
-							Element[] elements;
-							immutable message = eq[1..$].join("=").strip;
-							string next;
-							ptrdiff_t index = -1;
-							foreach(i, c; message) {
-								if(index >= 0) {
-									if(c == '}') {
-										try {
-											auto num = to!size_t(message[index+1..i]);
-											if(next.length) {
-												elements ~= Element(next);
-												next.length = 0;
-											}
-											elements ~= Element(num);
-										} catch(ConvException) {
-											next ~= message[index..i+1];
-										}
-										index = -1;
-									}
-								} else {
-									if(c == '{') {
-										index = i;
-									} else {
-										next ~= c;
-									}
-								}
-							}
-							if(index >= 0) next ~= message[index..$];
-							if(next.length) elements ~= Element(next);
-							if(elements.length) this.langs[lang][eq[0].strip] = cast(shared)Translatable(elements);
-						}
-					}
+	/**
+	 * Loads languages in lang/system and lang/messages.
+	 * Throws: RangeError if one of the given languages is not supported by the software.
+	 */
+	public Lang load(string language, string[] acceptedLanguages) {
+		assert(acceptedLanguages.canFind(language));
+		foreach(type ; ["system", "messages"]) {
+			foreach(lang ; acceptedLanguages) {
+				immutable dir = "lang" ~ dirSeparator ~ type ~ dirSeparator;
+				string file = dir ~ lang ~ ".lang";
+				if(this.files.hasAsset(file)) this.loadImpl(lang, this.files.readAsset(file));
+				else {
+					file = dir ~ lang[0..lang.indexOf("_")] ~ ".lang";
+					if(this.files.hasAsset(file)) this.loadImpl(lang, this.files.readAsset(file));
 				}
 			}
 		}
-	}
-	
-	/**
-	 * Gets the pointer to a translation from a combination
-	 * of a language and a string that identifies a translation.
-	 */
-	public static shared(Translatable)* get(string lang, string str) {
-		auto l = lang in instance.langs;
-		return l ? str in *l : null;
+		foreach(dir ; this.additionalFolders) this.loadDir(dir);
+		return this;
 	}
 
-	public static string getBestLanguage(string lang) {
-		if(lang.length < 5 || lang[2] != '_') return instance.supported[0];
-		else if(instance.supported.canFind(lang)) return lang;
-		else {
-			foreach(supp ; instance.supported) {
-				if(lang.startsWith(supp[0..2])) return supp;
+	/**
+	 * loads languages from a specific directory.
+	 */
+	public Lang add(string dir) {
+		this.additionalFolders ~= dir;
+		this.loadDir(dir);
+		return this;
+	}
+
+	/**
+	 * Translates a message in the given language with the given parameters.
+	 * If the language is omitted the message is translated using the default
+	 * language.
+	 * Returns: the translated message if the language and the message exist or the message if not
+	 */
+	public inout string translate(string message, string language, string[] params=[]) {
+		auto lang = language in this.messages;
+		if(lang) {
+			auto translatable = message in *lang;
+			if(translatable) {
+				return (*translatable).build(params);
 			}
-			return instance.supported[0];
+		}
+		return message;
+	}
+
+	/// ditto
+	public inout string translate(string message, string[] params=[]) {
+		return this.translate(message, this.language, params);
+	}
+
+	/// ditto
+	public inout string translate(inout Translation message, string language, string[] params=[]) {
+		return this.translate(message.sel, language, params);
+	}
+
+	/// ditto
+	public inout string translate(inout Translation message, string[] params=[]) {
+		return this.translate(message.sel, this.language, params);
+	}
+
+	private void loadDir(string dir) {
+		if(!dir.endsWith(dirSeparator)) dir ~= dirSeparator;
+		foreach(language ; this.acceptedLanguage) {
+			if(!this.loadFile(language, dir ~ language ~ ".lang")) this.loadFile(language, dir ~ language[0..language.indexOf("_")] ~ ".lang");
+		}
+	}
+
+	private bool loadFile(string language, string file) {
+		if(exists(file)) {
+			this.loadImpl(language, read(file));
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private void loadImpl(string language, void[] data) {
+		foreach(string line ; split(cast(string)data, "\n")) {
+			immutable equals = line.indexOf("=");
+			if(equals != -1) {
+				immutable message = line[0..equals].strip;
+				immutable text = line[equals+1..$].strip;
+				if(message.length) {
+					Element[] elements;
+					string next;
+					ptrdiff_t index = -1;
+					foreach(i, c; text) {
+						if(index >= 0) {
+							if(c == '}') {
+								try {
+									auto num = to!size_t(text[index+1..i]);
+									if(next.length) {
+										elements ~= Element(next);
+										next.length = 0;
+									}
+									elements ~= Element(num);
+								} catch(ConvException) {
+									next ~= text[index..i+1];
+								}
+								index = -1;
+							}
+						} else {
+							if(c == '{') {
+								index = i;
+							} else {
+								next ~= c;
+							}
+						}
+					}
+					if(index >= 0) next ~= text[index..$];
+					if(next.length) elements ~= Element(next);
+					if(elements.length) this.messages[language][message] = Translatable(elements);
+				}
+			}
 		}
 	}
 
@@ -106,13 +163,17 @@ shared struct Lang {
 
 		Element[] elements;
 
-		public shared string build(string[] args) {
+		public inout string build(string[] args) {
 			Appender!string ret;
 			foreach(element ; this.elements) {
 				if(element.isString) {
-					ret.put(element.store.data);
-				} else if(element.store.index < args.length) {
-					ret.put(args[element.store.index]);
+					ret.put(element.data);
+				} else if(element.index < args.length) {
+					ret.put(args[element.index]);
+				} else {
+					ret.put("{");
+					ret.put(to!string(element.index));
+					ret.put("}");
 				}
 			}
 			return ret.data;
@@ -122,38 +183,25 @@ shared struct Lang {
 
 	private static struct Element {
 
-		private union Store {
+		union {
 			string data;
 			size_t index;
 		}
 
-		public Store store;
 		public bool isString;
 
 		public this(string data) {
-			this.store.data = data;
+			this.data = data;
 			this.isString = true;
 		}
 
 		public this(size_t index) {
-			this.store.index = index;
+			this.index = index;
 			this.isString = false;
 		}
 
 	}
 	
-}
-
-/**
- * Translates a translatable elements into a string in the given language.
- */
-public string translate(Translation translation, string lang, string[] args=[]) {
-	auto t = Lang.get(lang, translation.sel);
-	if(t) {
-		return (*t).build(args);
-	} else {
-		return translation.sel;
-	}
 }
 
 /**
@@ -179,16 +227,27 @@ struct Translation {
 	enum DISCONNECT_END_OF_STREAM = all("disconnect.endOfStream");
 	enum DISCONNECT_LOST = all("disconnect.lost");
 	enum DISCONNECT_SPAM = all("disconnect.spam");
-
-	enum CONNECTION_JOIN = Translation("connection.join", "multiplayer.player.joined", "multiplayer.player.joined");
-	enum CONNECTION_LEFT = Translation("connection.left", "multiplayer.player.left", "multiplayer.player.left");
+	
+	enum MULTIPLAYER_JOINED = all("multiplayer.player.joined");
+	enum MULTIPLAYER_LEFT = all("multiplayer.player.left");
 
 	public static nothrow @safe @nogc Translation all(const string translation) {
 		return Translation(translation, translation, translation);
 	}
 
 	/// Values.
-	public string sel, minecraft, pocket;
+	public string sel, minecraft, pocket; //TODO change to selery
+
+}
+
+struct Message {
+
+	union {
+
+		struct { string message; string[] params; }
+		Translation translation;
+
+	}
 
 }
 

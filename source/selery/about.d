@@ -14,7 +14,7 @@
  */
 module selery.about;
 
-import std.algorithm : sort, reverse;
+import std.algorithm : sort, reverse, canFind;
 import std.conv : to;
 import std.json : JSONValue;
 import std.string : toLower, split, join, startsWith;
@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum ubyte build = 12;
+	enum int build = 13;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -103,7 +103,7 @@ const struct Software {
 	 * Unstable versions are not fully tested and may fail to compile
 	 * on some systems.
 	 */
-	enum bool stable = build == 0;
+	enum bool stable = build >= 0;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the
@@ -120,7 +120,7 @@ const struct Software {
 	
 	/**
 	 * Display name of the software that contains both the software name
-	 * and the version in the format name/version (for example `Selery/1.1.0`).
+	 * and the version in the format name/version (for example `Selery/0.0.1`).
 	 */
 	enum string display = name ~ "/" ~ displayVersion;
 	
@@ -130,12 +130,7 @@ const struct Software {
 	 */
 	enum ubyte api = 4;
 	
-	/**
-	 * Version of the external console protocol used by the software.
-	 */
-	deprecated enum ubyte externalConsole = 2; // scheduled to be replaced by the panel protocol after 1.1
-	
-	enum ubyte panel = 1;
+	enum ubyte remotePanel = 1;
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
@@ -211,6 +206,14 @@ enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
 
 /// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];
+
+uint[] validateProtocols(ref uint[] protocols, uint[] accepted, uint[] default_) {
+	uint[] ret;
+	foreach(protocol ; protocols) {
+		if(accepted.canFind(protocol)) ret ~= protocol;
+	}
+	return (protocols = (ret.length ? ret : default_));
+}
 
 version(D_Ddoc) {
 

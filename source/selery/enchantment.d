@@ -17,7 +17,7 @@ module selery.enchantment;
 import std.algorithm : min;
 import std.conv : to;
 import std.regex : ctRegex, replaceAll;
-import std.string : toLower, replace;
+import std.string : toLower, replace, startsWith;
 
 import selery.util.util : roman;
 
@@ -56,9 +56,11 @@ final class Enchantment {
 	 * Enchantment.fromString("sharpness", 1);
 	 * Enchantment.fromString("Fire Protection", 4);
 	 * Enchantment.fromString("silk-touch", 1);
+	 * Enchantment.fromString("minecraft:protection", 2);
 	 * ---
 	 */
 	public static @safe Enchantment fromString(string name, ubyte level) {
+		if(name.startsWith("minecraft:")) name = name[10..$];
 		auto ret = name.toLower.replaceAll(ctRegex!`[ \-]`, "_") in strings;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
@@ -90,9 +92,9 @@ final class Enchantment {
 	public const sul.enchantments.Enchantment enchantment;
 	public immutable ubyte level;
 	
-	public @safe this(sul.enchantments.Enchantment enchantment, ubyte level) {
+	public pure nothrow @safe @nogc this(sul.enchantments.Enchantment enchantment, ubyte level) {
 		this.enchantment = enchantment;
-		this.level = min(level, ubyte(1));
+		this.level = level == 0 ? ubyte(1) : level;
 	}
 	
 	public @safe this(sul.enchantments.Enchantment enchantment, string level) {

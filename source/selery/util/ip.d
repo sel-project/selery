@@ -20,15 +20,15 @@ import std.net.curl : CurlException;
 import std.path : dirSeparator;
 import std.string : split;
 
-import selery.path : Paths;
-import selery.tuple : Tuple;
+import selery.files : Files;
+import selery.util.tuple : Tuple;
 import selery.util.util : seconds;
 
 alias Addresses = Tuple!(uint, "cached", string, "v4", string, "v6");
 
-private bool load(string file, ref Addresses addresses) {
-	if(exists(Paths.hidden ~ "ip" ~ dirSeparator ~ file)) {
-		auto parts = split(cast(string)read(Paths.hidden ~ "ip" ~ dirSeparator ~ file), "\n");
+private bool load(inout Files files, string file, ref Addresses addresses) {
+	if(files.hasTemp("ip_" ~ file)) {
+		auto parts = split(cast(string)files.readTemp("ip_" ~ file), "\n");
 		if(parts.length == 3) {
 			addresses.cached = to!uint(parts[0]);
 			addresses.v4 = parts[1];
@@ -39,19 +39,18 @@ private bool load(string file, ref Addresses addresses) {
 	return false;
 }
 
-private void save(string file, ref Addresses addresses) {
-	mkdirRecurse(Paths.hidden ~ "ip");
-	write(Paths.hidden ~ "ip" ~ dirSeparator ~ file, addresses.cached.to!string ~ "\n" ~ addresses.v4 ~ "\n" ~ addresses.v6);
+private void save(inout Files files, string file, ref Addresses addresses) {
+	files.writeTemp("ip_" ~ file, addresses.cached.to!string ~ "\n" ~ addresses.v4 ~ "\n" ~ addresses.v6);
 }
 
-public Addresses localAddresses() {
+public Addresses localAddresses(inout Files files) {
 	//TODO
 	return Addresses.init;
 }
 
-public Addresses publicAddresses() {
+public Addresses publicAddresses(inout Files files) {
 	Addresses ret;
-	if(!load("public", ret) || ret.cached < seconds - 60 * 60 * 3) { // cache for 3 hours
+	if(!load(files, "public", ret) || ret.cached < seconds - 60 * 60 * 3) { // cache for 3 hours
 		string get(string url) {
 			static import std.net.curl;
 			import etc.c.curl : CurlOption;
@@ -66,7 +65,7 @@ public Addresses publicAddresses() {
 		ret.cached = seconds;
 		ret.v4 = get("http://ipecho.net/plain");
 		//TODO v6
-		save("public", ret);
+		save(files, "public", ret);
 	}
 	return ret;
 }

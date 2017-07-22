@@ -53,7 +53,7 @@ import selery.util.thread : SafeThread;
 final class RconHandler : HandlerThread {
 	
 	public this(shared HubServer server) {
-		with(server.settings) super(server, createSockets!TcpSocket("rcon", rconAddresses, rconPort, RCON_BACKLOG));
+		with(server.config.hub) super(server, createSockets!TcpSocket(server, "rcon", rconAddresses, rconPort, RCON_BACKLOG));
 	}
 	
 	protected override void listen(shared Socket sharedSocket) {
@@ -61,7 +61,7 @@ final class RconHandler : HandlerThread {
 		while(true) {
 			Socket client = socket.accept();
 			if(!this.server.isBlocked(client.remoteAddress)) {
-				new SafeThread({
+				new SafeThread(this.server.config.lang, {
 					shared RconSession session = new shared RconSession(this.server, client);
 					delete session;
 				}).start();
@@ -106,12 +106,12 @@ final class RconSession : Session {
 		this.remoteAddress = socket.remoteAddress.to!string;
 		if(Thread.getThis().name == "") Thread.getThis().name = "rconSession#" ~ to!string(this.id);
 		// wait for the login or disconnect
-		ubyte[] payload = new ubyte[14 + server.settings.rconPassword.length];
+		ubyte[] payload = new ubyte[14 + server.config.hub.rconPassword.length];
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(1));
 		auto recv = socket.receive(payload);
 		if(recv >= 14) {
 			// format is length(int32le), requestId(int32le), packetId(int32le), payload(ubyte[]), padding(x0, x0)
-			if(payload[8] == 3 && payload[12..$-2] == server.settings.rconPassword) {
+			if(payload[8] == 3 && payload[12..$-2] == server.config.hub.rconPassword) {
 				this.send(payload[4..8], 2);
 				server.add(this);
 				this.loop();

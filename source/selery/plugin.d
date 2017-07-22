@@ -15,7 +15,8 @@
 module selery.plugin;
 
 import selery.about;
-import selery.tuple : Tuple;
+import selery.util.tuple : Tuple;
+import selery.server : Server;
 
 /**
  * Informations about a plugin and registration-related
@@ -99,7 +100,7 @@ class Plugin {
 		return this.n_textures;
 	}
 	
-	public abstract void load();
+	public abstract void load(shared Server server);
 	
 }
 

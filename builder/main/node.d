@@ -19,27 +19,29 @@ import std.conv : to;
 import std.socket;
 import std.string : startsWith;
 
-import selery.config : ConfigType;
+import selery.config : Config;
 import selery.crash : logCrash;
 import selery.node.plugin : NodePlugin, PluginOf;
 import selery.node.server : NodeServer;
-import selery.start : startup;
 import selery.util.util : UnloggedException;
 
 import pluginloader;
+import starter;
 
 void main(string[] args) {
 
-	if(startup(ConfigType.node, "node", args)) {
+	start(ConfigType.node, "node", args, (Config config){
 
-		T find(T)(T def, string[] dec...) {
+		T find(T)(T def, string opt0, string opt1=null) {
 			foreach(i, arg; args) {
-				foreach(d ; dec) {
-					if(arg.startsWith(d ~ "=")) {
-						auto ret = to!T(arg[d.length+1..$]);
-						args = args[0..i] ~ args[i+1..$];
-						return ret;
-					}
+				if(arg.startsWith(opt0 ~ "=")) {
+					auto ret = to!T(arg[opt0.length+1..$]);
+					args = args[0..i] ~ args[i+1..$];
+					return ret;
+				} else if(opt1 !is null && arg == opt1 && i < args.length - 1) {
+					auto ret = to!T(args[i+1]);
+					args = args[0..i] ~ args[i+2..$];
+					return ret;
 				}
 			}
 			return def;
@@ -47,9 +49,9 @@ void main(string[] args) {
 
 		auto name = find!string("node", "--name", "-n");
 		auto password = find!string("", "--password", "-p");
-		auto ip = find!string("localhost", "--ip", "--address");
-		auto port = find!ushort(cast(ushort)28232, "--port");
-		auto main = find!bool(true, "--main", "-m");
+		auto ip = find!string("localhost", "--ip");
+		auto port = find!ushort(ushort(28232), "--port");
+		auto main = find!bool(true, "--main");
 
 		Address address;
 
@@ -63,12 +65,10 @@ void main(string[] args) {
 				throw e;
 			}
 		}
-		
-		shared NodeServer server;
 
 		try {
 			
-			server = new shared NodeServer(address, name, password, main, loadPlugins!(PluginOf, NodePlugin)(), args);
+			new shared NodeServer(address, name, password, main, config, loadPlugins!(PluginOf, NodePlugin)(), args);
 			
 		} catch(LinkTerminated) {
 			
@@ -76,7 +76,7 @@ void main(string[] args) {
 			
 		} catch(Throwable e) {
 
-			logCrash("node", server is null ? "en_GB" : server.settings.language, e);
+			logCrash("node", config.lang, e);
 			
 		} finally {
 			
@@ -84,7 +84,8 @@ void main(string[] args) {
 			exit(1);
 			
 		}
-	}
+		
+	});
 	
 }
 

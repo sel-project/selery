@@ -1,4 +1,4 @@
-/++ dub.sdl:
+/+ dub.sdl:
 name "selery-init"
 dependency "toml" version="~>0.4.0-rc.3"
 dependency "toml:json" version="~>0.4.0-rc.3"
@@ -33,7 +33,7 @@ import std.string;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 10;
+enum size_t __GENERATOR__ = 13;
 
 void main(string[] args) {
 
@@ -214,16 +214,21 @@ void main(string[] args) {
 			auto main = "main" in value;
 			if(main && main.type == TOML_TYPE.STRING) {
 				string[] spl = main.str.split(".");
-				string[] m;
-				foreach(string s ; spl) {
-					if(s == s.idup.toLower) {
-						m ~= s;
-					} else {
-						break;
+				if(plugin.single.length) {
+					plugin.mod = spl[0];
+					plugin.main = main.str;
+				} else {
+					string[] m;
+					foreach(string s ; spl) {
+						if(s == s.idup.toLower) {
+							m ~= s;
+						} else {
+							break;
+						}
 					}
+					plugin.mod = m.join(".");
+					plugin.main = main.str;
 				}
-				plugin.mod = m.join(".");
-				plugin.main = main.str;
 			}
 			plugin.api = exists(path ~ "api.d"); //TODO
 			if(plugin.single.length) {
@@ -276,7 +281,11 @@ void main(string[] args) {
 	builder["targetType"] = "executable";
 	builder["sourceFiles"] = ["main/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
-	builder["dependencies"] = ["selery": ["path": ".."]];
+	builder["dependencies"] = [
+		"selery": ["path": ".."],
+		"toml": ["version": "~>0.4.0-rc.3"],
+		"toml:json": ["version": "~>0.4.0-rc.3"],
+	];
 	
 	size_t count = 0;
 		
@@ -335,13 +344,13 @@ void main(string[] args) {
 				return "null";
 			}
 			if(value.main.length) {
-				imports ~= "static import " ~ value.mod ~ ";";
+				imports ~= "static import " ~ value.mod ~ ";\n";
 			}
-			immutable load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`,`" ~ value.name ~ "`," ~ value.authors.to!string ~ ",`" ~ value.vers ~ "`," ~ to!string(value.api) ~ "," ~ extra("lang") ~ "," ~ extra("textures") ~ ");";
+			immutable load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
 			if(value.main.length) {
-				loads ~= "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
+				loads ~= "\tstatic if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }\n";
 			} else {
-				loads ~= load;
+				loads ~= "\t" ~ load ~ "\n";
 			}
 		}
 		
@@ -349,7 +358,7 @@ void main(string[] args) {
 
 	if(paths.length > 2) paths = paths[0..$-2];
 
-	writeDiff(".selery/builder.d", "module pluginloader;import selery.plugin:Plugin;" ~ imports ~ "Plugin[] loadPlugins(alias PluginOf, T)(){Plugin[] ret;" ~ loads ~ "return ret;}");
+	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.plugin : Plugin;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T)(){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
 
 	foreach(value ; ordered) {
 		writeDiff(".selery/plugins/" ~ value.id ~ "/dub.json", JSONValue(value.dub).toPrettyString());

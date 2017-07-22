@@ -21,11 +21,13 @@ import std.typecons : Tuple, tuple;
 import std.uri : encodeComponent;
 
 import selery.about;
+import selery.hub.server : HubServer;
 import selery.session.player : Player = PlayerSession;
 import selery.util.thread : SafeThread;
 
 class GoogleAnalytics {
 
+	private shared HubServer server;
 	private immutable string app;
 
 	private shared string[] requestQueue;
@@ -33,7 +35,7 @@ class GoogleAnalytics {
 	private shared bool sending;
 	private shared Tuple!(string, string)[] postRequestQueue;
 
-	public shared this(string app) {
+	public shared this(shared HubServer server, string app) {
 		this.app = app;
 	}
 
@@ -79,7 +81,7 @@ class GoogleAnalytics {
 	private shared void sendRequestsImpl(string type, string data) {
 		if(!this.sending) {
 			sending = true;
-			new SafeThread("googleAnalytics", {
+			new SafeThread("googleAnalytics", this.server.config.lang, {
 				post("www.google-analytics.com/" ~ type, data);
 				while(this.postRequestQueue.length) {
 					auto next = this.postRequestQueue[0];

@@ -26,12 +26,26 @@ import std.uuid : UUID;
 
 import selery.about;
 import selery.hub.server : HubServer;
-import selery.hub.settings : Settings;
 import selery.network.session : Session;
 import selery.session.hncom : AbstractNode;
-import selery.util.world : World;
 
 import HncomPlayer = sel.hncom.player;
+
+class World {
+	
+	public immutable uint id;
+	public immutable string name;
+	public immutable ubyte dimension;
+	
+	public World parent;
+	
+	public shared this(uint id, string name, ubyte dimension) {
+		this.id = id;
+		this.name = name;
+		this.dimension = dimension;
+	}
+	
+}
 
 /**
  * Session for players.
@@ -68,7 +82,7 @@ abstract class PlayerSession : Session {
 	
 	public shared this(shared HubServer server) {
 		super(server);
-		this.n_language = Settings.defaultLanguage;
+		this.n_language = server.config.hub.language;
 	}
 	
 	/**

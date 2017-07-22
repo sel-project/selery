@@ -18,10 +18,8 @@ static import std.file;
 import std.path : dirSeparator;
 import std.string : split, join, replace;
 
-import selery.path : Paths;
-
 private string path(string mod)() {
-	return Paths.resources ~ mod.split(".")[0] ~ dirSeparator;
+	return "resources" ~ dirSeparator ~ mod.split(".")[0] ~ dirSeparator;
 }
 
 public @property bool exists(string mod=__MODULE__)(string file) {

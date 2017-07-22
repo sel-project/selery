@@ -19,7 +19,7 @@ import core.atomic : atomicOp;
 import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
 import std.datetime : time_t, dur;
-import std.file : exists, read;
+import std.file : read;
 import std.json;
 import std.regex : ctRegex, replaceAll;
 import std.socket;
@@ -31,10 +31,8 @@ import std.zlib : Compress, HeaderFormat;
 import selery.about;
 import selery.constants;
 import selery.hub.server : HubServer;
-import selery.hub.settings : Settings;
 import selery.network.handler : HandlerThread;
 import selery.network.socket;
-import selery.path : Paths;
 import selery.util.thread : SafeThread;
 import selery.util.util : seconds;
 
@@ -54,7 +52,7 @@ class HttpHandler : HandlerThread {
 	private shared size_t sessionsCount;
 	
 	public this(shared HubServer server, shared string* socialJson) {
-		with(server.settings) super(server, createSockets!TcpSocket("http", webAddresses, webPort, WEB_BACKLOG));
+		with(server.config.hub) super(server, createSockets!TcpSocket(server, "http", webAddresses, webPort, WEB_BACKLOG));
 		this.socialJson = socialJson;
 		(cast(shared)this).reload();
 	}
@@ -69,7 +67,7 @@ class HttpHandler : HandlerThread {
 	}
 	
 	private void handleClient(Socket socket) {
-		new SafeThread({
+		new SafeThread(this.server.config.lang, {
 				char[] buffer = new char[WEB_BUFFER_SIZE];
 				auto recv = socket.receive(buffer);
 				if(recv > 0) {
@@ -88,15 +86,15 @@ class HttpHandler : HandlerThread {
 	}
 	
 	public void reloadInfoJson() {
-		auto settings = this.server.settings;
+		const config = this.server.config.hub;
 		JSONValue[string] json, software, protocols;
 		with(Software) {
 			software["name"] = JSONValue(name);
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
 			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "stable": JSONValue(stable)]);
-			if(settings.pocket) protocols["pocket"] = JSONValue(settings.pocket.protocols);
-			if(settings.minecraft) protocols["minecraft"] = JSONValue(settings.minecraft.protocols);
+			if(config.pocket) protocols["pocket"] = JSONValue(config.pocket.protocols);
+			if(config.minecraft) protocols["minecraft"] = JSONValue(config.minecraft.protocols);
 			json["software"] = JSONValue(software);
 			json["protocols"] = JSONValue(protocols);
 		}
@@ -105,36 +103,37 @@ class HttpHandler : HandlerThread {
 	
 	public void reloadWebResources() {
 		
-		auto settings = this.server.settings;
+		const config = this.server.config;
 		
 		this.website = "";
-		try { this.website = (cast()settings.social)["website"].str; } catch(JSONException) {}
+		try { this.website = config.hub.social["website"].str; } catch(JSONException) {}
 		
 		// index
-		string index = cast(string)read(Paths.res ~ "index.html");
-		index = index.replace("{DEFAULT_LANG}", settings.language[0..2]);
-		index = index.replace("{DISPLAY_NAME}", settings.displayName);
+		string index = cast(string)config.files.readAsset("index.html");
+		index = index.replace("{DEFAULT_LANG}", config.hub.language[0..2]);
+		index = index.replace("{DISPLAY_NAME}", config.hub.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);
-		index = index.replace("{PC}", settings.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(settings.minecraft.port) ~ "</p>") : "");
-		index = index.replace("{PE}", settings.pocket ? ("<p>Minecraft&nbsp;" ~ (settings.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(settings.pocket.port) ~ "</p>") : "");
-		if(settings.serverIp.length) index = index.replace("{IP}", settings.serverIp);
+		index = index.replace("{PC}", config.hub.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(config.hub.minecraft.port) ~ "</p>") : "");
+		index = index.replace("{PE}", config.hub.pocket ? ("<p>Minecraft&nbsp;" ~ (config.hub.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(config.hub.pocket.port) ~ "</p>") : "");
+		if(config.hub.serverIp.length) index = index.replace("{IP}", config.hub.serverIp);
 		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;
 		this.index.compress();
 		
 		// icon.png
-		if(exists(Paths.home ~ settings.icon)) {
-			this.icon.uncompressed = cast(shared string)read(Paths.home ~ settings.icon);
+		if(this.server.favicon.length) {
+			// must be valid if not empty
+			this.icon.uncompressed = cast(shared string)read(config.hub.favicon);
 			this.icon.compress();
 		}
 		
 		// status.json
-		this.reloadWebStatus(settings);
+		this.reloadWebStatus();
 		
 	}
 	
-	public void reloadWebStatus(shared const Settings settings) {
-		ubyte[] status = nativeToLittleEndian(server.onlinePlayers) ~ nativeToLittleEndian(server.maxPlayers);
+	public void reloadWebStatus() {
+		ubyte[] status = nativeToLittleEndian(this.server.onlinePlayers) ~ nativeToLittleEndian(this.server.maxPlayers);
 		static if(JSON_STATUS_SHOW_PLAYERS) {
 			foreach(player ; this.server.players) {
 				status ~= nativeToLittleEndian(player.id);
@@ -164,7 +163,7 @@ class HttpHandler : HandlerThread {
 				return Response(200, "OK", ["Content-Type": "application/json; charset=utf-8"], *this.socialJson);
 			case "status":
 				auto time = seconds;
-				if(time - this.lastStatusUpdate > JSON_STATUS_REFRESH_TIMEOUT) this.reloadWebStatus(server.settings);
+				if(time - this.lastStatusUpdate > JSON_STATUS_REFRESH_TIMEOUT) this.reloadWebStatus();
 				auto response = Response(200, "OK", ["Content-Type": "application/octet-stream"], this.status.uncompressed);
 				if(this.status.isCompressed) {
 					response = this.returnWebResource(this.status, request, response);

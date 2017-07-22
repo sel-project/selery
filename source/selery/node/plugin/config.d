@@ -20,7 +20,6 @@ import std.string : split, join, strip, indexOf;
 import std.traits : isArray;
 
 import selery.node.plugin.file;
-import selery.path : Paths;
 
 enum _;
 

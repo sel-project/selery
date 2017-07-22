@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.tuple;
+module selery.util.tuple;
 
 import std.conv : to;
 import std.traits : isDynamicArray;

@@ -23,15 +23,15 @@ import selery.network.session : Session;
 class PanelHandler : HandlerThread {
 
 	public this(shared HubServer server) {
-		super(server, createSockets!TcpSocket("panel", server.settings.panelAddresses, server.settings.panelPort, 8));
+		with(server.config.hub) super(server, createSockets!TcpSocket(server, "panel", panelAddresses, panelPort, 8));
 	}
 
 	protected override void listen(shared Socket sharedSocket) {
 		Socket socket = cast()sharedSocket;
-		while(true) {
+		/*while(true) {
 			auto client = socket.accept();
-
-		}
+			//TODO
+		}*/
 	}
 
 }

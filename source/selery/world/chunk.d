@@ -30,7 +30,6 @@ import selery.block.block : Block;
 import selery.block.blocks : BlockStorage;
 import selery.block.tile : Tile;
 import selery.math.vector;
-import selery.path : Paths;
 import selery.world.io;
 import selery.world.world : World;
 
@@ -69,7 +68,7 @@ class Chunk {
 	public @safe this(World world, ChunkPosition position, string location=null) {
 		this.n_world = world;
 		if(location is null) {
-			this.location = Paths.worlds ~ world.name ~ dirSeparator ~ "chunks" ~ dirSeparator ~ to!string(position.x) ~ "_" ~ to!string(position.z) ~ ".sc";
+			this.location = "worlds" ~ dirSeparator ~ world.name ~ dirSeparator ~ "chunks" ~ dirSeparator ~ to!string(position.x) ~ "_" ~ to!string(position.z) ~ ".sc";
 		} else {
 			assert(location.endsWith(dirSeparator ~ to!string(position.x) ~ "_" ~ to!string(position.z) ~ ".sc"));
 			this.location = location;	

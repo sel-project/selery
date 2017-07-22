@@ -56,7 +56,7 @@ import selery.player.minecraft : MinecraftPlayerImpl;
 import selery.player.player : Player, isPlayer;
 import selery.player.pocket : PocketPlayerImpl;
 import selery.plugin : Plugin, loadPluginAttributes;
-import selery.task : TaskManager, areValidTaskArgs;
+import selery.util.task : TaskManager, areValidTaskArgs;
 import selery.util.color : Color;
 import selery.util.random : Random;
 import selery.util.util : call;
@@ -686,7 +686,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		logImpl(this.name, this.id, -1, join(cast(string[])formats, "") ~ translate(translation, this.server.settings.language, args));
+		logImpl(this.name, this.id, -1, join(cast(string[])formats, "") ~ this.server.config.lang.translate(translation, args));
 	}
 
 	/**
@@ -874,7 +874,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		//TODO custom message
 		if(event is null || event.announce) {
-			this.broadcast(Text.yellow, Translation.CONNECTION_JOIN, player.displayName);
+			this.broadcast(Text.yellow, Translation.MULTIPLAYER_JOINED, player.displayName);
 		}
 
 		// spawn to entities
@@ -957,7 +957,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			auto event = this.callEventIfExists!PlayerDespawnEvent(player);
 			if(event is null || event.announce) {
 				//TODO custom message
-				this.broadcast(Text.yellow, Translation.CONNECTION_LEFT, player.displayName);
+				this.broadcast(Text.yellow, Translation.MULTIPLAYER_LEFT, player.displayName);
 			}
 			foreach(viewer ; player.viewers) {
 				viewer.hide(player);

@@ -14,21 +14,19 @@
  */
 module loader.hub;
 
-import selery.config : ConfigType;
+import selery.config : Config;
 import selery.hub.plugin : HubPlugin, PluginOf;
 import selery.hub.server : HubServer;
-import selery.start : startup;
 
 import pluginloader;
+import starter;
 
 void main(string[] args) {
 
-	bool edu, realm;
+	start(ConfigType.hub, "hub", args, (Config config){
 
-	if(startup(ConfigType.hub, "hub", args, edu, realm)) {
+		new shared HubServer(false, config, loadPlugins!(PluginOf, HubPlugin)(), args);
 
-		new shared HubServer(false, edu, realm, loadPlugins!(PluginOf, HubPlugin)());
-
-	}
+	});
 
 }

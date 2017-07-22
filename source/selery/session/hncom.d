@@ -42,15 +42,13 @@ import sel.hncom.handler : Handler = HncomHandler;
 import selery.about;
 import selery.constants;
 import selery.hub.server : HubServer, List;
-import selery.hub.settings;
 import selery.lang : translate;
 import selery.network.handler : HandlerThread;
 import selery.network.session : Session;
 import selery.network.socket;
-import selery.session.player : PlayerSession, Skin;
+import selery.session.player : WorldSession = World, PlayerSession, Skin;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
-import selery.util.world : WorldSession = World;
 
 import Util = sel.hncom.util;
 import Login = sel.hncom.login;
@@ -67,7 +65,7 @@ class HncomHandler : HandlerThread {
 	
 	public this(shared HubServer server, shared JSONValue* additionalJson) {
 		string ip = "::";
-		string[] nodes = cast(string[])server.settings.config.acceptedNodes;
+		string[] nodes = cast(string[])server.config.hub.acceptedNodes;
 		if(nodes.length) {
 			if(nodes.length == 1) {
 				if(nodes[0] == "::1") ip = "::1";
@@ -76,8 +74,8 @@ class HncomHandler : HandlerThread {
 			}
 			if(ip == "::") {
 				ip = "0.0.0.0";
-				foreach(range ; server.settings.acceptedNodes) {
-					if(range.addressFamily != AddressFamily.INET) {
+				foreach(range ; server.config.hub.acceptedNodes) {
+					if(range.canFind(':')) {
 						ip = "::";
 						break;
 					}
@@ -91,7 +89,7 @@ class HncomHandler : HandlerThread {
 				socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
 			}
 		}
-		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.settings.hncomPort, 8);
+		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.config.hub.hncomPort, 8);
 		this.address = cast(shared)socket.localAddress;
 		super(server, [cast(shared)socket]);
 		this.additionalJson = additionalJson;
@@ -108,7 +106,7 @@ class HncomHandler : HandlerThread {
 				continue;
 			}
 			if(this.server.acceptNode(address)) {
-				new SafeThread({
+				new SafeThread(this.server.config.lang, {
 					shared ClassicNode node = new shared ClassicNode(this.server, client, this.additionalJson);
 					delete node;
 				}).start();
@@ -177,7 +175,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	}
 
 	protected shared void exchageInfo(Receiver!(uint, Endian.littleEndian) receiver) {
-		with(cast()server.settings) {
+		with(cast()server.config.hub) {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(minecraft) games[__JAVA__] = Login.HubInfo.GameInfo(minecraft.motd, minecraft.protocols, minecraft.onlineMode, minecraft.port);
 			if(pocket) games[__POCKET__] = Login.HubInfo.GameInfo(pocket.motd, pocket.protocols, pocket.onlineMode, pocket.port);
@@ -501,11 +499,11 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	 * Tells the node to reload its configurations.
 	 */
 	public shared void reload() {
-		with(this.server.settings) {
+		with(cast()this.server.config.hub) {
 			string[ubyte] motds;
 			if(minecraft) motds[__JAVA__] = minecraft.motd;
 			if(pocket) motds[__POCKET__] = pocket.motd;
-			this.send(Status.Reload(cast(string)displayName, motds, cast(string)language, cast(string[])acceptedLanguages, cast()*this.additionalJson).encode());
+			this.send(Status.Reload(displayName, motds, language, acceptedLanguages, cast()*this.additionalJson).encode());
 		}
 	}
 	
@@ -613,7 +611,7 @@ class ClassicNode : AbstractNode {
 		if(receiver.has) {
 			ubyte[] payload = receiver.next;
 			if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
-				immutable password = server.settings.hncomPassword;
+				immutable password = server.config.hub.hncomPassword;
 				auto request = Login.ConnectionRequest.fromBuffer(payload);
 				this.n_name = request.name.idup;
 				this.n_main = request.main;

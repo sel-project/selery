@@ -44,7 +44,7 @@ import selery.world.world : World; // do not move this import down
 
 import selery.about;
 import selery.command.command : Command, CommandSender;
-import selery.config : Config, ConfigType;
+import selery.config : Config;
 import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
@@ -52,18 +52,18 @@ import selery.event.server.server : ServerEvent;
 import selery.event.server;
 import selery.event.world.world : WorldEvent;
 import selery.format : Text, writeln;
-import selery.lang : Lang, translate, Translation, Messageable;
+import selery.lang : Lang, Translation, Messageable;
 import selery.log;
 import selery.math.vector : EntityPosition;
 import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
-import selery.path : Paths;
 import selery.player.minecraft : MinecraftPlayer;
 import selery.player.player : Player;
 import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
 import selery.plugin : Plugin;
-import selery.tuple : Tuple;
+import selery.server : Server;
+import selery.util.tuple : Tuple;
 import selery.util.ip : publicAddresses;
 import selery.util.memory : Memory;
 import selery.util.node : Node;
@@ -77,21 +77,11 @@ import HncomUtil = sel.hncom.util;
 import HncomStatus = sel.hncom.status;
 import HncomPlayer = sel.hncom.player;
 
-// Server's instance
-private shared NodeServer n_server;
-private shared std.concurrency.Tid server_tid;
-
-/**
- * Gets the server instance (plugins should use this
- * function to get the server's instance).
- */
-public deprecated nothrow @property @safe @nogc shared(NodeServer) server() {
-	return n_server;
-}
-
 // the signal could be handled on another thread!
 private shared bool running = true;
 private shared bool stoppedWithSignal = false;
+
+private shared std.concurrency.Tid server_tid;
 
 public nothrow @property @safe @nogc bool isServerRunning() {
 	return running;
@@ -128,7 +118,7 @@ private struct Stop {}
 /**
  * Singleton for the server instance.
  */
-final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!clientbound {
+final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientbound {
 
 	public immutable bool lite;
 
@@ -148,8 +138,8 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 	public shared std.concurrency.Tid tid; //TODO make private
 
-	private shared Config n_settings;
-	private shared uint n_node_max;
+	private shared Config _config;
+
 	private shared size_t n_online;
 	private shared size_t n_max;
 
@@ -171,6 +161,8 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins, string[] args) {
 
+		assert(config.node !is null);
+
 		debug Thread.getThis().name = "NodeServer";
 
 		this.lite = cast(TidAddress)hub !is null;
@@ -184,21 +176,20 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 		this.tid = server_tid = cast(shared)std.concurrency.thisTid;
 		
-		n_server = cast(shared)this;
-		
 		this.n_hub_address = cast(shared)hub;
-		
-		{
-			//TODO temp folder is not loaded at this point
-			// load language from the last execution (or default language)
-			if(std.file.exists(Paths.temp ~ "lang")) {
-				this.n_settings.language = cast(string)std.file.read(Paths.temp ~ "lang");
-			} else {
-				this.n_settings.language = "en_GB";
-			}
-			this.n_settings.acceptedLanguages = [this.n_settings.language];
-			Lang.init(cast(string[])this.n_settings.acceptedLanguages, cast(string[])[Paths.langSystem]);
+
+		config.hub = new Config.Hub();
+
+		// load language from the last execution (or default language)
+		if(config.files.hasTemp("lang")) {
+			config.hub.language = cast(string)config.files.readTemp("lang");
+		} else {
+			config.hub.language = "en_GB";
 		}
+		//config.hub.acceptedLanguages = [config.hub.language];
+		config.lang.load(config.hub.language, [config.hub.language]);
+
+		this._config = cast(shared)config;
 
 		if(lite) {
 
@@ -207,13 +198,13 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 		} else {
 
-			log(translate(Translation("startup.connecting"), this.n_settings.language, [to!string(hub), name]));
+			log(config.lang.translate("startup.connecting", [to!string(hub), name]));
 
 			try {
 				this.handler = new shared SocketHandler(hub);
 				this.handler.send(HncomLogin.ConnectionRequest(password, name, main).encode());
 			} catch(SocketException e) {
-				error_log(translate(Translation("warning.connectionError"), this.n_settings.language, [to!string(hub), e.msg]));
+				error_log(config.lang.translate("warning.connectionError", [to!string(hub), e.msg]));
 				return;
 			}
 
@@ -237,13 +228,13 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 							default: return "unknown";
 						}
 					}();
-					error_log(translate(Translation("status." ~ reason), this.n_settings.language));
+					error_log(config.lang.translate("status." ~ reason));
 					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-						error_log(translate(Translation("warning.protocolRequired"), this.n_settings.language, [to!string(__PROTOCOL__), to!string(response.protocol)]));
+						error_log(config.lang.translate("warning.protocolRequired", [to!string(__PROTOCOL__), to!string(response.protocol)]));
 					}
 				}
 			} else {
-				error_log(translate(Translation("warning.refused"), this.n_settings.language));
+				error_log(config.lang.translate("warning.refused"));
 			}
 
 			this.handler.close();
@@ -258,19 +249,17 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
 			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer));
 		} else {
-			error_log(translate(Translation("warning.closed"), this.n_settings.language));
+			error_log(this.config.lang.translate("warning.closed"));
 		}
 
 	}
 
 	private shared void handleInfoImpl(HncomLogin.HubInfo info) {
 
-		Config settings;
+		Config config = cast()this._config;
 
 		this.n_id = info.serverId;
 		this.uuid_count = info.reservedUUIDs;
-
-		auto type = this.n_hub_address is null ? ConfigType.lite : ConfigType.node;
 
 		if(info.additionalJSON.type != JSON_TYPE.OBJECT) info.additionalJSON = parseJSON("{}");
 
@@ -278,16 +267,17 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 			auto edu = "edu" in *minecraft;
 			auto realm = "realm" in *minecraft;
-			settings = Config(type, edu && edu.type == JSON_TYPE.TRUE, realm && realm.type == JSON_TYPE.TRUE);
-		} else {
-			settings = Config(type, false, false);
+			config.hub.edu = edu && edu.type == JSON_TYPE.TRUE;
+			config.hub.realm = realm && realm.type == JSON_TYPE.TRUE;
 		}
-		settings.load();
-		Rules.reload(settings);
 
-		settings.displayName = info.displayName;
-		settings.language = info.language;
-		settings.acceptedLanguages = info.acceptedLanguages;
+		Rules.reload(config.node);
+
+		config.hub.displayName = info.displayName;
+		config.hub.language = info.language;
+		config.hub.acceptedLanguages = info.acceptedLanguages;
+
+		//TODO validate languages
 
 		this.n_online = info.online;
 		this.n_max = info.max;
@@ -303,105 +293,103 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		}
 
 		// save latest language used
-		std.file.write(Paths.temp ~ "lang", settings.language);
+		config.files.writeTemp("lang", config.hub.language);
 
 		version(Windows) {
-			//executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.display);
+			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.name ~ " " ~ Software.fullVersion);
 		}
 
-		// reload languages and save cache
-		string[] paths;
+		// reload languages
+		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			if(plugin.languages !is null) paths ~= plugin.languages;
+			if(plugin.languages !is null) config.lang.add(plugin.languages);
 		}
-		Lang.init(settings.acceptedLanguages, paths ~ Paths.langSystem ~ Paths.langMessages);
-		std.file.write(Paths.temp ~ "lang", settings.language);
+
+		void handleGameInfo(ubyte type, HncomLogin.HubInfo.GameInfo info) {
+			void set(ref Config.Hub.Game game) {
+				game.enabled = true;
+				game.protocols = info.protocols;
+				game.motd = info.motd;
+				game.onlineMode = info.onlineMode;
+				game.port = info.port;
+			}
+			if(type == __JAVA__) {
+				set(config.hub.minecraft);
+			} else if(type == __POCKET__) {
+				set(config.hub.pocket);
+			} else {
+				error_log(config.lang.translate("warning.invalidGame", [to!string(type), Software.name]));
+			}
+		}
 
 		foreach(game, info ; info.gamesInfo) {
-			this.handleGameInfo(game, info, settings);
+			handleGameInfo(game, info);
 		}
 
 		// check protocols and print warnings if necessary
 		void check(string name, uint[] requested, uint[] supported) {
 			foreach(req ; requested) {
 				if(!supported.canFind(req)) {
-					warning_log(translate(Translation("warning.invalidProtocol"), settings.language, [to!string(req), name]));
+					warning_log(config.lang.translate("warning.invalidProtocol", [to!string(req), name]));
 				}
 			}
 		}
 
-		check("Minecraft", settings.minecraft.protocols, supportedMinecraftProtocols.keys);
-		check("Minecraft: Pocket Edition", settings.pocket.protocols, supportedPocketProtocols.keys);
+		check("Minecraft", config.hub.minecraft.protocols, supportedMinecraftProtocols.keys);
+		check("Minecraft: Pocket Edition", config.hub.pocket.protocols, supportedPocketProtocols.keys);
 
-		this.n_settings = cast(shared)settings;
+		this._config = cast(shared)config;
 
 		this.finishConstruction();
 
-	}
-
-	private shared void handleGameInfo(ubyte type, typeof(HncomLogin.HubInfo.gamesInfo.init[0]) info, ref Config settings) {
-		void set(ref Config.Game game) {
-			game.enabled = true;
-			game.protocols = info.protocols;
-			game.motd = info.motd;
-			game.onlineMode = info.onlineMode;
-			game.port = info.port;
-		}
-		if(type == __JAVA__) {
-			set(settings.minecraft);
-		} else if(type == __POCKET__) {
-			set(settings.pocket);
-		} else {
-			error_log(translate(Translation("warning.invalidGame"), settings.language, [to!string(type), Software.name]));
-		}
 	}
 
 	private shared void finishConstruction() {
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		log(translate(Translation("startup.starting"), this.n_settings.language, [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
+		log(this.config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
 
 		static if(!__supported) {
-			warning_log(translate(Translation("startup.unsupported"), this.n_settings.language, [Software.name]));
+			warning_log(this.config.lang.translate("startup.unsupported", [Software.name]));
 		}
 
 		this.globalListener = new EventListener!WorldEvent();
 
 		// default skins for players that connect with invalid skins
-		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Steve.bin"));
-		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])std.file.read(Paths.skin ~ "Standard_Alex.bin"));
+		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])this.config.files.readAsset("skin/Standard_Steve.bin"));
+		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])this.config.files.readAsset("skin/Standard_Alex.bin"));
 
 		// load creative inventories
 		foreach(immutable protocol ; SupportedPocketProtocols) {
 			string[] failed;
-			if(this.settings.pocket.protocols.canFind(protocol)) {
-				if(!mixin("PocketPlayerImpl!" ~ protocol.to!string ~ ".loadCreativeInventory()")) {
+			if(this.config.hub.pocket.protocols.canFind(protocol)) {
+				if(!mixin("PocketPlayerImpl!" ~ protocol.to!string).loadCreativeInventory(this.config.files)) {
 					failed ~= supportedPocketProtocols[protocol];
 				}
 			}
 			if(failed.length) {
-				warning_log(translate(Translation("warning.creativeFailed"), this.n_settings.language, [failed.join(", ")]));
+				warning_log(this.config.lang.translate("warning.creativeFailed", [failed.join(", ")]));
 			}
 		}
 
 		// create resource pack files
-		string[] textures = [Paths.textures]; // ordered from least prioritised to most prioritised
+		string[] textures = []; // ordered from least prioritised to most prioritised
 		foreach_reverse(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
 			if(plugin.textures !is null) textures ~= plugin.textures;
 		}
-		if(textures.length > 1) {
+		if(textures.length) {
 			
-			log(translate(Translation("startup.resourcePacks"), this.n_settings.language));
+			log(this.config.lang.translate("startup.resourcePacks"));
 
 			auto rp_uuid = this.nextUUID;
 			auto rp = createResourcePacks(this, rp_uuid, textures);
 			std.concurrency.spawn(&serveResourcePacks, std.concurrency.thisTid, cast(string)rp.minecraft2.idup, cast(string)rp.minecraft3.idup);
 			ushort port = std.concurrency.receiveOnly!ushort();
 
-			auto ip = publicAddresses();
+			auto ip = publicAddresses(this.config.files);
 			//TODO also try to use local address before using 127.0.0.1
 
 			MinecraftPlayer.updateResourcePacks(rp.minecraft2, rp.minecraft3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
@@ -409,27 +397,25 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 
 		}
 
-		this.n_node_max = this.n_settings.maxPlayers;
-
 		this.start_time = milliseconds;
 
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			plugin.load();
+			plugin.load(this);
 			auto args = [
 				Text.green ~ plugin.name ~ (plugin.api ? " + API" : "") ~ Text.reset,
 				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
 				Text.white ~ plugin.vers
 			];
-			log(translate(Translation("startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : ""))), this.n_settings.language, args));
+			log(this.config.lang.translate("startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : "")), args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomLogin.NodeInfo nodeInfo;
 		uint[][ubyte] games;
-		static if(supportedMinecraftProtocols.length) nodeInfo.acceptedGames[__JAVA__] = supportedMinecraftProtocols.keys;
-		static if(supportedPocketProtocols.length) nodeInfo.acceptedGames[__POCKET__] = supportedPocketProtocols.keys;
-		nodeInfo.max = this.n_node_max;
+		if(this.config.node.minecraft) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.minecraft.protocols;
+		if(this.config.node.pocket) nodeInfo.acceptedGames[__POCKET__] = cast(uint[])this.config.node.pocket.protocols;
+		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
 			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.name, plugin.vers);
@@ -460,7 +446,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 			sigset(SIGINT, &extsig);
 		}
 
-		log(translate(Translation("startup.started"), this.n_settings.language));
+		log(this.config.lang.translate("startup.started"));
 
 		if(this.lite) {
 			// only send the message to the hub that will also send it to the connected
@@ -551,7 +537,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 			}
 		}
 
-		log(translate(Translation("startup.stopped"), this.n_settings.language, []));
+		log(this.config.lang.translate("startup.stopped"));
 
 		version(Windows) {
 			// perform suicide
@@ -621,20 +607,12 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		return this.n_args;
 	}
 
-	/**
-	 * Gets the server's settings.
-	 * Example:
-	 * ---
-	 * // server name
-	 * log("Welcome to ", server.settings.name);
-	 * 
-	 * // game version
-	 * static if(__pocket) assert(server.settings.pocket);
-	 * static if(__minecraft) log("Port for Minecraft: ", server.settings.minecraft.port); 
-	 * ---
-	 */
-	public shared pure nothrow @property @trusted @nogc const(Config) settings() {
-		return cast(const)this.n_settings;
+	public override shared pure nothrow @property @trusted @nogc const(Config) config() {
+		return cast()this._config;
+	}
+
+	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
+		return cast(const(Plugin)[])this.n_plugins;
 	}
 
 	/**
@@ -651,7 +629,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	 * ---
 	 */
 	public shared pure nothrow @property @safe @nogc string name() {
-		return this.n_settings.displayName;
+		return this._config.hub.displayName;
 	}
 	
 	/**
@@ -668,7 +646,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	 * If the value is 0 there's no limit.
 	 */
 	public shared pure nothrow @property @safe @nogc size_t max() {
-		return this.n_node_max;
+		return this._config.node.maxPlayers;
 	}
 	
 	/**
@@ -855,18 +833,6 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	}
 
 	/**
-	 * Gets the plugins actived on the server.
-	 * Example:
-	 * ---
-	 * log("There are ", server.plugins.filter!(a => a.author == "sel-plugins").length, " by sel-plugins");
-	 * log("There are ", server.plugins.filter!(a => a.api).length, " plugins with APIs");
-	 * ---
-	 */
-	public shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
-		return cast(const(Plugin)[])this.n_plugins;
-	}
-
-	/**
 	 * Gets the server's default world.
 	 */
 	public shared pure nothrow @property const(WorldInfo) world() {
@@ -932,7 +898,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 		auto world = id in this._worlds;
 		if(world) {
 			if((*world).id == this._default_world_id) {
-				warning_log(translate(Translation("warning.removingDefaultWorld"), this.n_settings.language));
+				warning_log(this.config.lang.translate("warning.removingDefaultWorld"));
 			} else {
 				std.concurrency.send(cast()world.tid, Close());
 				return true;
@@ -982,7 +948,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	}
 	
 	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		log(join(cast(string[])formats, ""), translate(message, this.n_settings.language, args));
+		log(join(cast(string[])formats, ""), (cast(shared)this).config.lang.translate(message, args));
 	}
 
 	// hub-node communication and related methods
@@ -990,9 +956,9 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	public shared bool changePlayerLanguage(uint hubId, string language) {
 		auto player = hubId in this._players;
 		if(player) {
-			if(language == (*player).language || !this.n_settings.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(cast(const)*player, language)) return false;
+			if(language == (*player).language || !this.config.hub.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(cast(const)*player, language)) return false;
 			(*player).language = language;
-			this.handler.send(new HncomPlayer.UpdateLanguage(hubId, language).encode());
+			this.handler.send(HncomPlayer.UpdateLanguage(hubId, language).encode());
 			return true;
 		} else {
 			return false;
@@ -1001,7 +967,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	
 	public shared void updatePlayerDisplayName(uint hubId) {
 		auto player = hubId in this._players;
-		if(player) this.handler.send(new HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
+		if(player) this.handler.send(HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
 	}
 
 	/*
@@ -1009,14 +975,14 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	 */
 	public shared void kick(uint hubId, string reason) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
-			this.handler.send(new HncomPlayer.Kick(hubId, reason, false).encode());
+			this.handler.send(HncomPlayer.Kick(hubId, reason, false).encode());
 		}
 	}
 
 	/// ditto
 	public shared void kick(uint hubId, string reason, string[] args) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
-			this.handler.send(new HncomPlayer.Kick(hubId, reason, true, args).encode());
+			this.handler.send(HncomPlayer.Kick(hubId, reason, true, args).encode());
 		}
 	}
 
@@ -1025,7 +991,7 @@ final class NodeServer : EventListener!ServerEvent, Messageable, HncomHandler!cl
 	 */
 	public shared void transfer(uint hubId, inout Node node) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.transferred)) {
-			this.handler.send(new HncomPlayer.Transfer(hubId, node.hubId).encode());
+			this.handler.send(HncomPlayer.Transfer(hubId, node.hubId).encode());
 		}
 	}
 
@@ -1244,7 +1210,7 @@ class ServerCommandSender : CommandSender {
 	}
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		logImpl("command", -1, this.id, join(cast(string[])formats, ""), translate(translation, cast()this.server.settings.language, args));
+		logImpl("command", -1, this.id, join(cast(string[])formats, ""), this.server.config.lang.translate(translation, args));
 	}
 
 	alias server this;

@@ -130,7 +130,7 @@ abstract class MinecraftPlayer : Player {
 		if(translation.minecraft.length) {
 			this.server.kick(this.hubId, translation.minecraft, args);
 		} else {
-			this.disconnect(translate(translation, this.lang, args));
+			this.disconnect(this.server.config.lang.translate(translation, this.lang, args));
 		}
 	}
 
@@ -139,7 +139,7 @@ abstract class MinecraftPlayer : Player {
 			this.viewDistance = min(this.world.rules.viewDistance, viewDistance);
 			this.world.playerUpdateRadius(this);
 		}
-		lang = this.server.settings.acceptedLanguages.canFind(language) ? language : this.server.settings.language;
+		lang = this.server.config.hub.acceptedLanguages.canFind(language) ? language : this.server.config.hub.language;
 		if(lang != this.lang) {
 			this.lang = lang;
 		}
@@ -286,7 +286,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 		} else {
 			string pre;
 			foreach(format ; formats) pre ~= format;
-			this.sendMessageImpl(pre ~ translate(message, this.lang, args));
+			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.lang, args));
 		}
 	}
 	

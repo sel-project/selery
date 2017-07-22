@@ -42,7 +42,6 @@ import sel.hncom.player : HncomAdd = Add;
 import selery.about;
 import selery.constants;
 import selery.hub.server : HubServer;
-import selery.lang : Lang;
 import selery.network.handler : UnconnectedHandler;
 import selery.network.session;
 import selery.session.player : PlayerSession, Skin;
@@ -85,14 +84,14 @@ class PocketHandler : UnconnectedHandler {
 	private shared int[session_t]* querySessions;
 	
 	private shared ubyte[]* shortQuery, longQuery;
-	
+
 	private shared PocketSession[session_t] sessions;
 	
 	private __gshared Mutex mutex;
 	private __gshared Condition condition;
 	
 	public this(shared HubServer server, shared string* socialJson, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("pocket", pocket.addresses, pocket.port, -1), POCKET_BUFFER_SIZE);
+		with(server.config.hub.pocket) super(server, createSockets!UdpSocket(server, "pocket", addresses, port, -1), POCKET_BUFFER_SIZE);
 		this.socialJson = socialJson;
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
@@ -102,8 +101,8 @@ class PocketHandler : UnconnectedHandler {
 		
 	protected override void run() {
 		this.condition = new Condition(this.mutex = new Mutex());
-		new SafeThread(&this.timeout).start();
-		//new SafeThread(&this.decompression).start();
+		new SafeThread(this.server.config.lang, &this.timeout).start();
+		//new SafeThread(this.server.config.lang, &this.decompression).start();
 		super.run();
 	}
 	
@@ -136,7 +135,7 @@ class PocketHandler : UnconnectedHandler {
 					break;
 				case 254:
 					// query
-					if(this.server.settings.query && payload.length >= 7 && payload[1] == 253) {
+					if(this.server.config.hub.query && payload.length >= 7 && payload[1] == 253) {
 						switch(payload[2]) {
 							case 0:
 								// query
@@ -206,18 +205,18 @@ class PocketHandler : UnconnectedHandler {
 	}
 
 	public override shared void reload() {
-		with(this.server) {
+		with(this.server.config.hub.pocket) {
 			this.status = [
 				std.array.join([
 					"MCPE",
-					settings.pocket.motd,
-					to!string(settings.pocket.protocols[$-1]),
-					supportedPocketProtocols[settings.pocket.protocols[$-1]][0],
+					motd,
+					to!string(protocols[$-1]),
+					supportedPocketProtocols[protocols[$-1]][0],
 					""
 				], ";"),
 				std.array.join([
 					"",
-					to!string(id),
+					to!string(this.server.id),
 					Software.display,
 					Software.lname,
 					""
@@ -570,7 +569,7 @@ final class PocketSession : PlayerSession {
 		bool accepted = false;
 		this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
-		auto protocols = this.server.settings.pocket.protocols;
+		auto protocols = this.server.config.hub.pocket.protocols;
 		if(this.n_protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
 		else if(!protocols.canFind(this.n_protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
 		else {
@@ -578,9 +577,9 @@ final class PocketSession : PlayerSession {
 			this.functionHandler = &this.handleFail;
 			this.acceptSplit = false;
 			// kick if the server is edu and the client is not
-			if(this.server.settings.edu) { //TODO optimise this control
+			if(this.server.config.hub.edu) { //TODO optimise this control
 				auto error = (){
-					if(!this.edu && !this.server.settings.allowVanillaPlayers) return PlayStatus.EDITION_MISMATCH_EDU_TO_VANILLA;
+					if(!this.edu && !this.server.config.hub.allowVanillaPlayers) return PlayStatus.EDITION_MISMATCH_EDU_TO_VANILLA;
 					//TODO implement invalidTenant
 					else return PlayStatus.OK;
 				}();
@@ -659,17 +658,17 @@ final class PocketSession : PlayerSession {
 					if(os && os.type == JSON_TYPE.INTEGER) this.device = os.integer;
 					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
 					if(input && input.type == JSON_TYPE.INTEGER) this.inputMode = input.integer;
-					this.language = Lang.getBestLanguage(lang.str);
+					with(this.server.config.hub) this.language = acceptedLanguages.canFind(lang.str) ? lang.str : "en_GB";
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
-					if(this.server.settings.whitelist) {
+					if(this.server.config.hub.whitelist) {
 						with(this.server.whitelist) {
 							bool v = contains(username);
 							//static if(__onlineMode) v = v || contains(PE, uuid);
 							if(!v) throw new Exception("disconnectionScreen.notAllowed"); // You're not invited to play on this server
 						}
 					}
-					if(this.server.settings.blacklist) {
+					if(this.server.config.hub.blacklist) {
 						with(this.server.blacklist) {
 							bool v = !contains(username);
 							//static if(__onlineMode) v = v && contains(PE, uuid);

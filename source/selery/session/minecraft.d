@@ -69,7 +69,7 @@ class MinecraftHandler : HandlerThread {
 	private __gshared Condition condition;
 	
 	public this(shared HubServer server, shared string* socialJson, bool delegate(string ip) acceptIp, shared ubyte[]* legacyStatus, shared ubyte[]* legacyStatusOld) {
-		with(server.settings) super(server, createSockets!TcpSocket("minecraft", minecraft.addresses, minecraft.port, MINECRAFT_BACKLOG));
+		with(server.config.hub) super(server, createSockets!TcpSocket(server, "minecraft", minecraft.addresses, minecraft.port, MINECRAFT_BACKLOG));
 		this.socialJson = socialJson;
 		this.acceptIp = acceptIp;
 		this.legacyStatus = legacyStatus;
@@ -80,7 +80,7 @@ class MinecraftHandler : HandlerThread {
 		
 	protected override void run() {
 		this.condition = new Condition(this.mutex = new Mutex());
-		new SafeThread(&this.timeout).start();
+		new SafeThread(this.server.config.lang, &this.timeout).start();
 		super.run();
 		enum tps = 1000000 / MINECRAFT_HANDLER_TPS;
 		StopWatch watch;
@@ -224,12 +224,10 @@ class MinecraftHandler : HandlerThread {
 
 	public override shared void reload() {
 		JSONValue[string] status;
-		with(this.server.settings) {
-			// version.protocol, version.name, players.online and players.max will be set by the session
-			status["description"] = ["text": JSONValue(minecraft.motd)];
-			if(iconData.length) status["favicon"] = iconData;
-			this.status = cast(shared)status;
-		}
+		// version.protocol, version.name, players.online and players.max will be set by the session
+		status["description"] = ["text": JSONValue(this.server.config.hub.minecraft.motd)];
+		if(this.server.favicon.length) status["favicon"] = this.server.favicon;
+		this.status = cast(shared)status;
 	}
 	
 }
@@ -241,7 +239,7 @@ class MinecraftQueryHandler : UnconnectedHandler {
 	private shared ubyte[]* shortQuery, longQuery;
 	
 	public this(shared HubServer server, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.settings) super(server, createSockets!UdpSocket("minecraftQuery", minecraft.addresses, minecraft.port, -1), 15);
+		with(server.config.hub.minecraft) super(server, createSockets!UdpSocket(server, "minecraftQuery", addresses, port, -1), 15);
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
 		this.longQuery = longQuery;
@@ -342,7 +340,7 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 		immutable length = varuint.fromBuffer(payload);
 		if(length && varuint.fromBuffer(payload) == Status.Request.ID) {
 			auto status = cast(JSONValue[string])this.handler.status;
-			uint protocol = this.server.settings.minecraft.protocols.canFind(this.protocol) ? this.protocol : this.server.settings.minecraft.protocols[$-1];
+			uint protocol = this.server.config.hub.minecraft.protocols.canFind(this.protocol) ? this.protocol : this.server.config.hub.minecraft.protocols[$-1];
 			status["version"] = JSONValue(["protocol": JSONValue(protocol), "name": JSONValue(supportedMinecraftProtocols[protocol][0])]);
 			status["players"] = JSONValue(["online": JSONValue(this.server.onlinePlayers), "max": JSONValue(this.server.maxPlayers)]);
 			this.send(new Status.Response(JSONValue(status).toString()).encode());
@@ -475,7 +473,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		this.n_username = this.m_display_name = Login.LoginStart.fromBuffer(payload).username.idup;
 		this.send(new Login.SetCompression(1024).encode());
 		// disconnect if wrong protocol or name
-		auto protocols = this.server.settings.minecraft.protocols;
+		auto protocols = this.server.config.hub.minecraft.protocols;
 		string message = "";
 		if(this.protocol > protocols[$-1]) {
 			message = "Could not connect: Outdated server!";
@@ -502,14 +500,14 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		string disconnect = (){
 
 			// check whitelist and blacklist
-			if(this.server.settings.whitelist) {
+			if(this.server.config.hub.whitelist) {
 				with(this.server.whitelist) {
 					bool valid = contains(this.username);
 					static if(__onlineMode) valid = valid || contains(PC, this.uuid);
 					if(!valid) return "You're not invited to play on this server.";
 				}
 			}
-			if(this.server.settings.blacklist) {
+			if(this.server.config.hub.blacklist) {
 				with(this.server.blacklist) {
 					bool valid = !contains(this.username);
 					static if(__onlineMode) valid = valid && contains(PC, this.uuid);

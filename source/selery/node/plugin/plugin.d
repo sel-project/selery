@@ -23,7 +23,8 @@ public import selery.plugin;
 import selery.command.util : CommandSender;
 import selery.event.server : ServerEvent;
 import selery.event.world : WorldEvent;
-import selery.node.server : server;
+import selery.node.server : NodeServer;
+import selery.server : Server;
 
 interface NodePlugin {}
 
@@ -40,14 +41,14 @@ class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 		static if(!is(T : Object)) this.hasMain = true;
 	}
 
-	public override void load() {
+	public override void load(shared Server server) {
 		static if(!is(T == Object)) {
 			static if(is(T == class)) {
 				T main = new T();
 			} else {
 				T main = T();
 			}
-			loadPluginAttributes!(true, ServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()server);
+			loadPluginAttributes!(true, ServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast(NodeServer)server);
 		}
 	}
 

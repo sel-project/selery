@@ -18,19 +18,18 @@ import std.algorithm : min, max;
 import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
-import std.file : write, read, exists, mkdirRecurse;
+import std.file : write, read, exists, mkdir;
 import std.string : split, replace;
 
 import selery.about;
 import selery.format : Text, writeln;
-import selery.lang : translate, Translation;
-import selery.path : Paths;
+import selery.lang : Lang;
 
-public string logCrash(string type, string lang, Throwable e) {
+public string logCrash(string type, const Lang lang, Throwable e) {
 
-	string filename = Paths.crash ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
+	string filename = "crash/" ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
 
-	writeln(Text.red ~ translate(Translation("warning.crash"), lang, [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
+	writeln(Text.red ~ lang.translate("warning.crash", [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
 
 	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
 	file ~= "Message: " ~ e.msg ~ newline;
@@ -45,10 +44,10 @@ public string logCrash(string type, string lang, Throwable e) {
 			file ~= "[" ~ (i + 1).to!string ~ "] " ~ errfile[i] ~ newline;
 		}
 	}
-	if(!exists(Paths.crash)) mkdirRecurse(Paths.crash);
+	if(!exists("crash")) mkdir("crash");
 	write(filename, file);
 
-	writeln(Text.red ~ translate(Translation("warning.savedCrash"), lang, [filename]));
+	writeln(Text.red ~ lang.translate("warning.savedCrash", [filename]));
 
 	return filename;
 

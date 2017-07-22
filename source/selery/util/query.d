@@ -53,7 +53,7 @@ class Queries : Thread {
 		this.server = server;
 		this.socialJson = socialJson;
 		// set best ip/port
-		with(server.settings) {
+		with(server.config.hub) {
 			if(serverIp.length) {
 				this.pocketIp = this.minecraftIp = serverIp;
 			} else {
@@ -119,8 +119,8 @@ class Queries : Thread {
 	private void regenerateMinecraftLegacyStatus() {
 		/* new (since 1.4) */ {
 			ubyte[] payload = [0, 167, 0, 49, 0, 0];
-			with(this.server.settings) {
-				foreach(string status ; [to!string(minecraft.protocols[$-1]), supportedMinecraftProtocols[minecraft.protocols[$-1]][0], minecraft.motd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
+			with(this.server.config.hub.minecraft) {
+				foreach(string status ; [to!string(protocols[$-1]), supportedMinecraftProtocols[protocols[$-1]][0], motd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
 					foreach(wchar wc ; to!wstring(status)) {
 						ushort s = cast(ushort)wc;
 						payload ~= [(s >> 8) & 255, s & 255];
@@ -134,8 +134,8 @@ class Queries : Thread {
 		}
 		/* old (from beta 1.8 to 1.3) */ {
 			ubyte[] payload;
-			with(this.server.settings) {
-				foreach(wchar wc ; to!wstring(minecraft.motd ~ "§" ~ to!string(this.server.onlinePlayers) ~ "§" ~ to!string(this.server.maxPlayers))) {
+			with(this.server.config.hub.minecraft) {
+				foreach(wchar wc ; to!wstring(motd ~ "§" ~ to!string(this.server.onlinePlayers) ~ "§" ~ to!string(this.server.maxPlayers))) {
 					ushort s = cast(ushort)wc;
 					payload ~= [(s >> 8) & 255, s & 255];
 				}
@@ -146,7 +146,7 @@ class Queries : Thread {
 	}
 
 	private void regenerateShortQueries() {
-		with(this.server.settings) {
+		with(this.server.config.hub) {
 			ubyte[] pe, pc;
 			void add(string value) {
 				ubyte[] buff = cast(ubyte[])value ~ 0;
@@ -154,8 +154,8 @@ class Queries : Thread {
 				if(minecraft) pc ~= buff;
 			}
 			static if(QUERY_SHOW_MOTD) {
-				if(pocket) pe ~= cast(ubyte[])pocketMotd ~ ubyte.init;
-				if(minecraft) pc ~= cast(ubyte[])minecraftMotd ~ ubyte.init;
+				if(pocket) pe ~= cast(ubyte[])pocket.motd ~ ubyte.init;
+				if(minecraft) pc ~= cast(ubyte[])minecraft.motd ~ ubyte.init;
 			} else {
 				add(displayName);
 			}
@@ -177,7 +177,7 @@ class Queries : Thread {
 	}
 
 	private void regenerateLongQueries() {
-		with(this.server.settings) {
+		with(this.server.config.hub) {
 			ubyte[] pe, pc;
 			void add(string key, string value) {
 				ubyte[] buff = cast(ubyte[])key ~ 0 ~ cast(ubyte[])value ~ 0;
@@ -187,10 +187,10 @@ class Queries : Thread {
 			void addTo(ref ubyte[] buffer, string key, string value) {
 				buffer ~= cast(ubyte[])key ~ 0 ~ cast(ubyte[])value ~ 0;
 			}
-			add("splitnum", "P");
+			add("splitnum", x"80");
 			static if(QUERY_SHOW_MOTD) {
-				if(pocket) addTo(pe, "hostname", pocketMotd);
-				if(minecraft) addTo(pc, "hostname", minecraftMotd);
+				if(pocket) addTo(pe, "hostname", pocket.motd);
+				if(minecraft) addTo(pc, "hostname", minecraft.motd);
 			} else {
 				add("hostname", displayName);
 			}

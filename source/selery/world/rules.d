@@ -17,7 +17,6 @@ module selery.world.rules;
 import std.conv : to;
 
 import selery.config : Config;
-import selery.path : Paths;
 
 enum Gamemode : ubyte {
 
@@ -41,11 +40,11 @@ struct Rules {
 
 	private static shared Rules def;
 
-	public static nothrow @property @safe @nogc const(Rules) defaultRules() {
+	public deprecated static nothrow @property @safe @nogc const(Rules) defaultRules() {
 		return def;
 	}
 
-	public static void reload(Config config) {
+	public static void reload(Config.Node config) {
 		Rules rules;
 		rules.gamemode = to!Gamemode(config.gamemode);
 		rules.difficulty = to!Difficulty(config.difficulty);
@@ -72,7 +71,7 @@ struct Rules {
 	
 	float thunders = 1f / 100000f;
 	
-	ubyte difficulty = Difficulty.normal;
+	ubyte difficulty = Difficulty.easy;
 	
 	bool chunksAutosending = true; //check if chunks will be sent automatically (calling the event)
 	size_t viewDistance = 16; // ~800 chunks
