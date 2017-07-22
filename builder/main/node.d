@@ -53,18 +53,7 @@ void main(string[] args) {
 		auto port = find!ushort(ushort(28232), "--port");
 		auto main = find!bool(true, "--main");
 
-		Address address;
-
-		try {
-			address = getAddress(ip, port)[0];
-		} catch(SocketException e) {
-			version(Posix) {
-				// assume it's a unix address
-				address = new UnixAddress(ip);
-			} else {
-				throw e;
-			}
-		}
+		Address address = getAddress(ip, port)[0];
 
 		try {
 			

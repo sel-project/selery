@@ -13,6 +13,7 @@
 .selery
 docs
 /builder/dub.json
+/builder/views
 /crash
 /plugins
 /resources

@@ -20,7 +20,7 @@ import std.concurrency : LinkTerminated;
 import std.conv : to;
 import std.file : write, exists, mkdirRecurse;
 import std.path : dirSeparator;
-import std.string : indexOf, lastIndexOf;
+import std.string : indexOf, lastIndexOf, replace;
 
 import selery.config : Config;
 import selery.crash : logCrash;
@@ -39,21 +39,6 @@ void main(string[] args) {
 
 	static if(__traits(compiles, import("portable.zip"))) {
 
-		// should be executed in an empty directory
-		//mkdirRecurse(Paths.res);
-
-		import std.zip;
-
-		/*auto zip = new ZipArchive(cast(void[])import("portable.zip"));
-
-		foreach(name, member; zip.directory) {
-			if(name.indexOf("/") != -1) mkdirRecurse(Paths.res ~ name[0..name.lastIndexOf("/")]);
-			if(!exists(Paths.res ~ name)) {
-				zip.expand(member);
-				write(Paths.res ~ name, member.expandedData);
-			}
-		}*/
-
 		enum type = "portable";
 
 	} else {
@@ -66,7 +51,9 @@ void main(string[] args) {
 	
 		static if(type == "portable") {
 		
-			//TODO override assets reader
+			import std.zip;
+			
+			import selery.files : Files;
 			
 			auto portable = new ZipArchive(cast(void[])import("portable.zip"));
 			
@@ -77,7 +64,7 @@ void main(string[] args) {
 				}
 				
 				public override inout bool hasAsset(string file) {
-					return convert(file) in portable.directory;
+					return !!(convert(file) in portable.directory);
 				}
 				
 				public override inout void[] readAsset(string file) {

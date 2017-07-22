@@ -82,14 +82,7 @@ class HncomHandler : HandlerThread {
 				}
 			}
 		}
-		Socket socket = null;
-		version(Posix) {
-			if(server.settings.hncomUseUnixSockets && (ip == "127.0.0.1" || ip == "::1")) {
-				this.unixSocketAddress = server.settings.hncomUnixSocketAddress;
-				socket = new BlockingSocket!UnixSocket(new UnixAddress(this.unixSocketAddress));
-			}
-		}
-		if(socket is null) socket = new BlockingSocket!TcpSocket(ip, server.config.hub.hncomPort, 8);
+		Socket socket = new BlockingSocket!TcpSocket(ip, server.config.hub.hncomPort, 8);
 		this.address = cast(shared)socket.localAddress;
 		super(server, [cast(shared)socket]);
 		this.additionalJson = additionalJson;
