@@ -7,10 +7,10 @@ targetType "library"
 
 dependency "imageformats" version="~>6.1.1"
 dependency "resusage" version="~>0.2.7"
-dependency "sel-hncom" version="~>3.0.1"
+dependency "sel-hncom" version="~>3.0.2"
 dependency "sel-nbt" version="~>2.0.2"
 //dependency "sel-stream" version="~>0.0.3"
 dependency "sel-utils" version="~>1.2.74"
 
-versions "NoBlocks"
+//versions "NoBlocks"
 versions "NoItems"

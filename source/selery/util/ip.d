@@ -54,9 +54,9 @@ public Addresses publicAddresses(inout Files files) {
 		string get(string url) {
 			static import std.net.curl;
 			import etc.c.curl : CurlOption;
-			auto http = std.net.curl.HTTP();
-			http.handle.set(CurlOption.timeout, 3);
 			try {
+				auto http = std.net.curl.HTTP();
+				http.handle.set(CurlOption.timeout, 3);
 				auto res = std.net.curl.get(url).idup;
 				if(res.split(".").length == 4) return res;
 			} catch(CurlException) {}

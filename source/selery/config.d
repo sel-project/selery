@@ -108,7 +108,7 @@ class Config {
 		
 		bool web = false;
 		
-		string[] webAddresses = ["::"];
+		string[] webAddresses = ["0.0.0.0", "::"];
 		
 		ushort webPort = 80;
 		

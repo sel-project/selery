@@ -34,6 +34,8 @@ import std.traits : Parameters;
 import std.uuid : UUID;
 import std.zlib : UnCompress;
 
+import imageformats.png : read_png_from_mem;
+
 import resusage.memory;
 import resusage.cpu;
 
@@ -211,7 +213,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 			// wait for ConnectionResponse
 			ubyte[] buffer = this.handler.receive();
 			if(buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
-				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
+				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer[1..$]);
 				if(response.status == HncomLogin.ConnectionResponse.OK) {
 					this.handleInfo();
 				} else {
@@ -247,7 +249,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 
 		ubyte[] buffer = this.handler.receive();
 		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
-			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer));
+			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer[1..$]));
 		} else {
 			error_log(this.config.lang.translate("warning.closed"));
 		}
@@ -358,8 +360,8 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 		this.globalListener = new EventListener!WorldEvent();
 
 		// default skins for players that connect with invalid skins
-		Skin.STEVE = Skin("Standard_Steve", cast(ubyte[])this.config.files.readAsset("skin/Standard_Steve.bin"));
-		Skin.ALEX = Skin("Standard_Alex", cast(ubyte[])this.config.files.readAsset("skin/Standard_Alex.bin"));
+		Skin.STEVE = Skin("Standard_Steve", read_png_from_mem(cast(ubyte[])this.config.files.readAsset("skin/steve.png")).pixels);
+		Skin.ALEX = Skin("Standard_Alex", read_png_from_mem(cast(ubyte[])this.config.files.readAsset("skin/alex.png")).pixels);
 
 		// load creative inventories
 		foreach(immutable protocol ; SupportedPocketProtocols) {
@@ -472,62 +474,32 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 	}
 
 	private shared void start() {
-
-		void delegate() receive;
-		if(!this.lite) {
-			receive = (){
-				std.concurrency.receive(
-					&handlePromptCommand,
-					//TODO kick
-					//TODO close result
-					(immutable(ubyte)[] payload){
-						// from the hub
-						if(payload.length) {
-							(cast()this).handleHncom(payload.dup);
-						} else {
-							// close
-							running = false;
-						}
-					},
-					&handleShutdown,
-				);
-			};
-		} else {
-			auto hncom = cast()this;
-			receive = (){
-				std.concurrency.receive(
-					&handlePromptCommand,
-					//TODO kick
-					//TODO close result
-					&hncom.handleUtilUncompressed,
-					&hncom.handleUtilCompressed,
-					&hncom.handleStatusLatency,
-					&hncom.handleStatusReload,
-					&hncom.handleStatusAddNode,
-					&hncom.handleStatusRemoveNode,
-					&hncom.handleStatusReceiveMessage,
-					&hncom.handleStatusUpdatePlayers,
-					&hncom.handleStatusRemoteCommand,
-					&hncom.handlePlayerAdd,
-					&hncom.handlePlayerRemove,
-					&hncom.handlePlayerUpdateLatency,
-					&hncom.handlePlayerUpdatePacketLoss,
-					&hncom.handlePlayerGamePacket,
-					&hncom.handlePlayerPackets,
-					&handleShutdown,
-				);
-			};
-		}
 		
 		//TODO request first latency calculation
 
 		while(running) {
 
 			// receive messages
-			receive();
-
+			std.concurrency.receive(
+				&handlePromptCommand,
+				//TODO kick (wolrd)
+				//TODO close result (world)
+				(immutable(ubyte)[] payload){
+					// from the hub
+					if(payload.length) {
+						(cast()this).handleHncom(payload.dup);
+					} else {
+						// close
+						running = false;
+					}
+				},
+				(Stop stop){
+					running = false;
+				},
+			);
+			
 		}
-
+		
 		this.handler.close();
 
 		// call @stop plugins
@@ -539,18 +511,14 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 
 		log(this.config.lang.translate("startup.stopped"));
 
-		version(Windows) {
+		/*version(Windows) {
 			// perform suicide
 			executeShell("taskkill /PID " ~ to!string(getpid) ~ " /F");
-		} else {
+		} else {*/
 			import std.c.stdlib : exit;
 			exit(0);
-		}
+		//}
 
-	}
-
-	private shared void handleShutdown(Stop stop) {
-		this.shutdown();
 	}
 
 	/**
@@ -558,8 +526,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 	 * player from the server.
 	 */
 	public shared void shutdown() {
-		//foreach(player ; this.players_hubid) player.kick(message);
-		running = false;
+		std.concurrency.send(cast()server_tid, Stop());
 	}
 
 	/**

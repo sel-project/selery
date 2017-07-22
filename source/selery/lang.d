@@ -27,16 +27,16 @@ import selery.format : Text;
 
 final class Lang {
 
-	private Files files;
+	private const Files files;
 
 	private string language;
-	private string[] acceptedLanguage;
+	private string[] acceptedLanguages;
 
 	private string[] additionalFolders;
 
 	private Translatable[string][string] messages;
 
-	public this(Files files) {
+	public this(inout Files files) {
 		this.files = files;
 	}
 
@@ -46,15 +46,12 @@ final class Lang {
 	 */
 	public Lang load(string language, string[] acceptedLanguages) {
 		assert(acceptedLanguages.canFind(language));
+		this.language = language;
+		this.acceptedLanguages = acceptedLanguages;
 		foreach(type ; ["system", "messages"]) {
 			foreach(lang ; acceptedLanguages) {
-				immutable dir = "lang" ~ dirSeparator ~ type ~ dirSeparator;
-				string file = dir ~ lang ~ ".lang";
+				immutable file = "lang" ~ dirSeparator ~ type ~ dirSeparator ~ lang ~ ".lang";
 				if(this.files.hasAsset(file)) this.loadImpl(lang, this.files.readAsset(file));
-				else {
-					file = dir ~ lang[0..lang.indexOf("_")] ~ ".lang";
-					if(this.files.hasAsset(file)) this.loadImpl(lang, this.files.readAsset(file));
-				}
 			}
 		}
 		foreach(dir ; this.additionalFolders) this.loadDir(dir);
@@ -104,7 +101,7 @@ final class Lang {
 
 	private void loadDir(string dir) {
 		if(!dir.endsWith(dirSeparator)) dir ~= dirSeparator;
-		foreach(language ; this.acceptedLanguage) {
+		foreach(language ; this.acceptedLanguages) {
 			if(!this.loadFile(language, dir ~ language ~ ".lang")) this.loadFile(language, dir ~ language[0..language.indexOf("_")] ~ ".lang");
 		}
 	}

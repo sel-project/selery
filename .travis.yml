@@ -10,9 +10,6 @@ os:
   - osx
 
 matrix:
-  exclude:
-    - d: dmd-2.075.0
-      os: osx
   allow_failures:
     - os: osx
       d: dmd-2.073.2
@@ -27,6 +24,8 @@ script:
   - ./selery-init node
   - dub build --compiler=$DC --build=release
   - ./selery-init default
+  - dub build --compiler=$DC --build=release
+  - ./selery-init portable
   - dub build --compiler=$DC --build=release
   - cd ..
   

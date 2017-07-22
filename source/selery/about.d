@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum int build = 13;
+	enum int build = 16;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -103,7 +103,7 @@ const struct Software {
 	 * Unstable versions are not fully tested and may fail to compile
 	 * on some systems.
 	 */
-	enum bool stable = build >= 0;
+	enum bool stable = build < 0;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the

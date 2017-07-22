@@ -18,8 +18,5 @@ docs
 /plugins
 /resources
 /worlds
-/plugins.json
-/selery.toml
-/hub.selery.toml
-/node.selery.toml
+/*.toml
 /favicon.png

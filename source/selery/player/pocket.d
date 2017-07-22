@@ -14,17 +14,11 @@
  */
 module selery.player.pocket;
 
-import etc.c.curl : CurlOption;
-
 import std.algorithm : max, min, sort;
 import std.conv : to;
 import std.digest.digest : toHexString;
 import std.digest.sha : sha256Of;
-import std.file : read, write, exists, mkdirRecurse;
 import std.json;
-import std.net.curl : get, HTTP, CurlException;
-import std.process : executeShell;
-import std.socket : Address;
 import std.string : split, join, startsWith, replace, strip, toLower;
 import std.system : Endian;
 import std.typecons : Tuple;
@@ -203,43 +197,35 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	public static bool loadCreativeInventory(const Files files) {
 		immutable cached = "creative_" ~ __protocol.to!string;
 		if(!files.hasTemp(cached)) {
+			immutable asset = "creative/" ~ __protocol.to!string ~ ".json";
+			if(!files.hasAsset(asset)) return false;
 			auto packet = new Play.ContainerSetContent(121, 0);
-			try {
-				auto http = HTTP();
-				http.handle.set(CurlOption.ssl_verifypeer, false);
-				http.handle.set(CurlOption.timeout, 5);
-				foreach(item ; parseJSON(get("https://sel-utils.github.io/api/json/creative/pocket" ~ __protocol.to!string ~ ".min.json", http).idup)["items"].array) {
-					auto obj = item.object;
-					auto meta = "meta" in obj;
-					auto ench = "enchantments" in obj;
-					auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
-					if(ench) {
-						stream.buffer.length = 0;
-						auto list = new Named!(ListOf!Compound)("ench");
-						foreach(e ; (*ench).array) {
-							auto eobj = e.object;
-							list ~= new Compound(new Named!Short("id", eobj["id"].integer.to!short), new Named!Short("lvl", eobj["level"].integer.to!short));
-						}
-						stream.writeTag(new Compound(list));
-						slot.nbt = stream.buffer.dup;
+			foreach(item ; parseJSON(cast(string)files.readAsset(asset))["items"].array) {
+				auto obj = item.object;
+				auto meta = "meta" in obj;
+				auto ench = "enchantments" in obj;
+				auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
+				if(ench) {
+					stream.buffer.length = 0;
+					auto list = new Named!(ListOf!Compound)("ench");
+					foreach(e ; (*ench).array) {
+						auto eobj = e.object;
+						list ~= new Compound(new Named!Short("id", eobj["id"].integer.to!short), new Named!Short("lvl", eobj["level"].integer.to!short));
 					}
-					packet.slots ~= slot;
+					stream.writeTag(new Compound(list));
+					slot.nbt = stream.buffer.dup;
 				}
-			} catch(CurlException) {}
-			if(packet.slots.length) {
-				ubyte[] encoded = packet.encode();
-				Compress c = new Compress(9);
-				creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
-				creative_inventory ~= cast(ubyte[])c.flush();
-				files.writeTemp(cached, creative_inventory);
-				return true;
-			} else {
-				return false;
+				packet.slots ~= slot;
 			}
+			ubyte[] encoded = packet.encode();
+			Compress c = new Compress(9);
+			creative_inventory = cast(ubyte[])c.compress(varuint.encode(encoded.length.to!uint) ~ encoded);
+			creative_inventory ~= cast(ubyte[])c.flush();
+			files.writeTemp(cached, creative_inventory);
 		} else {
 			creative_inventory = cast(ubyte[])files.readTemp(cached);
-			return true;
 		}
+		return true;
 	}
 
 	protected Types.BlockPosition toBlockPosition(BlockPosition vector) {

@@ -52,8 +52,8 @@ private string createMessage(E...)() {
 }
 
 void log(string mod=__MODULE__, E...)(E args) {
-	static if(mod.startsWith("sel.")) {
-		enum m = mod[4..$].replace(".", "/");
+	static if(mod.startsWith("selery.")) {
+		enum m = mod[7..$].replace(".", "/");
 	} else {
 		enum m = "plugin/" ~ mod.replace(".", "/");
 	}

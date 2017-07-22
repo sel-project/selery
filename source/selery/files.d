@@ -67,7 +67,7 @@ class Files {
 	 * Writes buffer to a temp file.
 	 */
 	public inout void writeTemp(string file, const(void)[] buffer) {
-		return write(file, buffer);
+		return write(this.temp ~ file, buffer);
 	}
 	
 }

@@ -277,7 +277,7 @@ void main(string[] args) {
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
 	builder["targetPath"] = "..";
-	builder["targetName"] = "selery-" ~ type;
+	builder["targetName"] = "selery-" ~ type ~ (type == "portable" ? "-" ~ software["fullVersion"].str : "");
 	builder["targetType"] = "executable";
 	builder["sourceFiles"] = ["main/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];

@@ -19,7 +19,7 @@ import std.conv : to;
 import std.file : exists, read, write, tempDir, mkdirRecurse;
 import std.json : JSONValue;
 import std.path : dirSeparator, buildNormalizedPath;
-import std.string : replace, split, toLower;
+import std.string : replace, split, toLower, toUpper;
 import std.traits : isArray, isAssociativeArray;
 import std.uuid : UUID, parseUUID;
 
@@ -44,8 +44,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	immutable filename = (){
 		final switch(type) with(ConfigType) {
 			case server: return "selery.toml";
-			case hub: return "hub.selery.toml";
-			case node: return "node.selery.toml";
+			case hub: return "selery.hub.toml";
+			case node: return "selery.node.toml";
 		}
 	}();
 
@@ -182,9 +182,9 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			config.node = new Config.Node();
 		}
 	
-		string file = "# " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration file" ~ newline;
+		string file = "# " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration file" ~ newline ~ newline;
 		
-		file ~= "uuid = \"" ~ config.uuid.toString() ~ "\"" ~ newline;
+		file ~= "uuid = \"" ~ config.uuid.toString().toUpper() ~ "\"" ~ newline;
 		if(hub) file ~= "display-name = \"" ~ config.hub.displayName ~ "\"" ~ newline;
 		if(node) file ~= "max-players = " ~ (config.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(config.node.maxPlayers)) ~ newline;
 		if(hub) file ~= "whitelist = " ~ to!string(config.hub.whitelist) ~ newline;
@@ -205,7 +205,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			file ~= "port = " ~ to!string(port) ~ newline;
 			file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 		}
-		if(hub) with(config.hub.minecraft) {
+		if(hub) with(config.hub.pocket) {
 			file ~= newline ~ "[pocket]" ~ newline;
 			file ~= "enabled = " ~ to!string(enabled) ~ newline;
 			file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
@@ -214,7 +214,6 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			file ~= "port = " ~ to!string(port) ~ newline;
 			file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 			if(config.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(config.hub.allowVanillaPlayers);
-			file ~= newline;
 		}
 		if(type == ConfigType.node) with(config.node.minecraft) {
 			file ~= newline ~ "[minecraft]" ~ newline;
@@ -269,7 +268,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	
 	}
 	
-	immutable temp = buildNormalizedPath(tempDir() ~ dirSeparator ~ "selery" ~ dirSeparator ~ config.uuid.toString());
+	immutable temp = buildNormalizedPath(tempDir() ~ dirSeparator ~ "selery" ~ dirSeparator ~ config.uuid.toString().toUpper());
 	mkdirRecurse(temp);
 	
 	config.files = new Files("assets", temp);

@@ -50,7 +50,6 @@ import selery.player.player;
 import selery.util.util : array_index;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.music : Instruments;
 import selery.world.world : World, Dimension;
 
 import sul.utils.var : varuint;
@@ -709,7 +708,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 	}
 
 	public override void sendMusic(EntityPosition position, ubyte instrument, uint pitch) {
-		@property string sound() {
+		/*@property string sound() {
 			final switch(instrument) {
 				case Instruments.HARP: return "harp";
 				case Instruments.DOUBLE_BASS: return "bass";
@@ -719,7 +718,7 @@ class MinecraftPlayerImpl(uint __protocol) : MinecraftPlayer {
 			}
 		}
 		enum float[] pitches = [.5, .533333, .566666, .6, .633333, .666666, .7, .75, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.25, 1.333333, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2];
-		this.sendPacket(new Clientbound.NamedSoundEffect("block.note." ~ sound, 2, (cast(Vector3!int)position).tuple, 16, pitches[pitch]));
+		this.sendPacket(new Clientbound.NamedSoundEffect("block.note." ~ sound, 2, (cast(Vector3!int)position).tuple, 16, pitches[pitch]));*/
 	}
 
 

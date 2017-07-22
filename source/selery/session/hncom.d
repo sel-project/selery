@@ -605,7 +605,7 @@ class ClassicNode : AbstractNode {
 			ubyte[] payload = receiver.next;
 			if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
 				immutable password = server.config.hub.hncomPassword;
-				auto request = Login.ConnectionRequest.fromBuffer(payload);
+				auto request = Login.ConnectionRequest.fromBuffer(payload[1..$]);
 				this.n_name = request.name.idup;
 				this.n_main = request.main;
 				Login.ConnectionResponse response;
@@ -638,7 +638,7 @@ class ClassicNode : AbstractNode {
 			if(receiver.has) {
 				ubyte[] payload = receiver.next;
 				if(payload.length && payload[0] == Login.NodeInfo.ID) {
-					return Login.NodeInfo.fromBuffer(payload);
+					return Login.NodeInfo.fromBuffer(payload[1..$]);
 				}
 			} else {
 				auto recv = socket.receive(buffer);
@@ -646,7 +646,7 @@ class ClassicNode : AbstractNode {
 					this.server.traffic.receive(recv);
 					receiver.add(buffer[0..recv]);
 				} else {
-					throw new Exception("Connection closed during exchange of informations");
+					return Login.NodeInfo.init;
 				}
 			}
 		}
@@ -739,34 +739,3 @@ class LiteNode : AbstractNode {
 	}
 	
 }
-
-/**
- * Session of a node. It's executed in a dedicated thread.
- */
-/+class Node(bool lite) : AbstractNode {
-	
-	protected override shared void loop(Receiver!(uint, Endian.littleEndian) receiver) {
-		static if(lite) {
-
-		} else {
-			Socket socket = cast()this.socket;
-			socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // blocking without timeout
-			ubyte[] buffer = new ubyte[NODE_BUFFER_SIZE];
-			while(true) {
-				auto recv = socket.receive(buffer);
-				if(recv <= 0) break; // closed
-				this.server.traffic.receive(recv);
-				// stack up
-				receiver.add(buffer[0..recv]);
-				while(receiver.has) {
-					if(receiver.length == 0) {
-						// connection is interrupted when the data length is 0!
-						return;
-					}
-					(cast()this).handleHncom(receiver.next);
-				}
-			}
-		}
-	}
-	
-}+/
