@@ -17,7 +17,6 @@ module selery.constants;
 //TODO move this module to a configuration file
 
 import std.base64 : Base64;
-import std.datetime : time_t;
 
 /**
  * Size of the buffer for the SEL protocol (hub-node communication).
@@ -53,7 +52,7 @@ enum int MINECRAFT_BACKLOG = 64;
 
 enum size_t MINECRAFT_BUFFER_LENGTH = 2048;
 
-enum time_t MINECRAFT_HANDLER_TPS = 1000;
+enum ulong MINECRAFT_HANDLER_TPS = 1000;
 
 enum size_t MINECRAFT_KEEP_ALIVE_TIMEOUT = 12;
 
@@ -69,13 +68,13 @@ enum int EXTERNAL_CONSOLE_BACKLOG = 16;
 
 enum size_t EXTERNAL_CONSOLE_GENERIC_BUFFER_LENGTH = 1024;
 
-enum time_t EXTERNAL_CONSOLE_AUTH_TIMEOUT = 24000;
+enum ulong EXTERNAL_CONSOLE_AUTH_TIMEOUT = 24000;
 
 enum size_t EXTERNAL_CONSOLE_LOGIN_ATTEMPS = 10;
 
 enum bool EXTERNAL_CONSOLE_LOG_FAILED_ATTEMPTS = true;
 
-enum time_t EXTERNAL_CONSOLE_TIMEOUT = 8000;
+enum ulong EXTERNAL_CONSOLE_TIMEOUT = 8000;
 
 enum size_t EXTERNAL_CONSOLE_CONNECTED_BUFFER_LENGTH = 2048;
 
@@ -89,7 +88,7 @@ enum size_t WEB_BUFFER_SIZE = 1024;
 
 enum size_t MAX_WEB_CLIENTS = 32;
 
-enum time_t WEB_TIMEOUT = 4000;
+enum ulong WEB_TIMEOUT = 4000;
 
 /**
  * Compression format for web resources.
@@ -102,7 +101,7 @@ enum int WEB_COMPRESSION_LEVEL = 6;
 
 enum size_t JSON_STATUS_COMPRESSION_THRESOLD = 1024;
 
-enum time_t JSON_STATUS_REFRESH_TIMEOUT = 10;
+enum ulong JSON_STATUS_REFRESH_TIMEOUT = 10;
 
 enum bool JSON_STATUS_SHOW_PLAYERS = true;
 

@@ -18,7 +18,7 @@ import core.atomic : atomicOp;
 
 import std.bitmanip : nativeToLittleEndian;
 import std.conv : to;
-import std.datetime : time_t, dur;
+import std.datetime : dur;
 import std.file : read;
 import std.json;
 import std.regex : ctRegex, replaceAll;
@@ -47,7 +47,7 @@ class HttpHandler : HandlerThread {
 	
 	private shared string website;
 	
-	private shared time_t lastStatusUpdate;
+	private shared ulong lastStatusUpdate;
 	
 	private shared size_t sessionsCount;
 	

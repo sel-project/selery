@@ -43,7 +43,6 @@ import sel.hncom.status : RemoteCommand;
 import selery.about;
 import selery.config : Config;
 import selery.format : Text;
-import selery.lang : Lang, Translation;
 import selery.log : log;
 import selery.network.handler : Handler;
 import selery.plugin : Plugin;
@@ -155,7 +154,7 @@ class HubServer {
 		log(config.lang.translate("startup.started"), "\n");
 
 		static if(!__supported) {
-			log(translate(Translation("startup.unsupported"), this.n_settings.language, [Software.name]));
+			log(config.lang.translate("startup.unsupported", [Software.name]));
 		}
 
 		version(DigitalMars) {
