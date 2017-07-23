@@ -99,7 +99,6 @@ build_script:
   - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
   - selery-init --version > version.txt
   - set /p selery=<version.txt
-  - echo %selery%
   - selery-init portable
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init hub

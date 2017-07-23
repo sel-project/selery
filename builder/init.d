@@ -25,15 +25,17 @@ import std.ascii : newline;
 import std.conv : ConvException, to;
 import std.file;
 import std.json;
-import std.path : dirSeparator, buildNormalizedPath, absolutePath;
+import std.path : dirSeparator, buildNormalizedPath, absolutePath, relativePath;
 import std.process : executeShell;
+import std.regex : matchFirst, ctRegex;
 import std.stdio : writeln;
 import std.string;
+import std.zip;
 
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 13;
+enum size_t __GENERATOR__ = 18;
 
 void main(string[] args) {
 
@@ -69,8 +71,6 @@ void main(string[] args) {
 
 	if(type == "portable") {
 
-		import std.zip;
-
 		auto zip = new ZipArchive();
 
 		// get all files in assets
@@ -95,67 +95,92 @@ void main(string[] args) {
 
 	TOMLDocument[string] plugs; // plugs[location] = settingsfile
 
-	void loadPlugin(string path) {
+	bool loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["selery.toml", "selery.json", "package.json"]) {
+		foreach(pack ; ["selery.toml", "selery.json"]) {
 			if(exists(path ~ pack)) {
 				if(pack.endsWith(".toml")) {
 					auto toml = parseTOML(cast(string)read(path ~ pack));
 					toml["single"] = false;
 					plugs[path] = toml;
-					return;
+					return true;
 				} else {
 					auto json = parseJSON(cast(string)read(path ~ pack));
 					if(json.type == JSON_TYPE.OBJECT) {
 						json["single"] = false;
 						plugs[path] = TOMLDocument(toTOML(json).table);
-						return;
+						return true;
 					}
 				}
 			}
 		}
+		return false;
 	}
-
-	void addSinglePlugin(string path, string mod, TOMLDocument toml) {
-		//TODO name must not be a field
-		toml["name"] = mod;
-		plugs[path] = toml;
-	}
-
-	void loadSinglePlugin(string location) {
-		immutable expectedModule = location[location.lastIndexOf("/")+1..$-2];
-		auto file = cast(string)read(location);
-		auto s = file.split("\n");
-		if(s.length) {
-			auto fl = s[0].strip;
-			if(fl.startsWith("/+") && fl.endsWith(":")) {
-				string[] pack;
-				bool closed = false;
-				s = s[1..$];
-				while(s.length) {
-					immutable line = s[0].strip;
-					s = s[1..$];
-					if(line == "+/") {
-						closed = true;
-						break;
-					} else {
-						pack ~= line;
-					}
-				}
-				if(closed && s.length && s[0].strip == "module " ~ expectedModule ~ ";") {
-					switch(fl[2..$-1].strip) {
-						case "selery.toml":
-							return addSinglePlugin(location, expectedModule, parseTOML(pack.join("\n")));
-						case "selery.json":
-						case "package.json":
-							auto json = parseJSON(pack.join(""));
-							return addSinglePlugin(location, expectedModule, TOMLDocument(toTOML(json).table));
-						default:
+	
+	void loadZippedPlugin(string path) {
+		// unzip and load as normal plugin
+		auto data = read(path);
+		auto zip = new ZipArchive(data);
+		immutable name = path[path.lastIndexOf("/")+1..$-4];
+		immutable dest = ".selery/plugins/" ~ name ~ "/";
+		bool update = true;
+		if(exists(dest)) {
+			if(exists(dest ~ "crc32")) {
+				update = false;
+				auto json = parseJSON(cast(string)read(dest ~ "crc32")).object;
+				// compare file names
+				if(sort(json.keys).release() != sort(zip.directory.keys).release()) update = true;
+				else {
+					// compare file's crc32
+					foreach(name, member; zip.directory) {
+						if(member.crc32 != json[name].integer) {
+							update = true;
 							break;
+						}
 					}
 				}
 			}
-			addSinglePlugin(location, expectedModule, parseTOML(""));
+			if(update) {
+				foreach(string file ; dirEntries(dest, SpanMode.breadth)) {
+					if(file.isFile) remove(file);
+				}
+			}
+		} else {
+			mkdirRecurse(dest);
+		}
+		if(update) {
+			JSONValue[string] files;
+			foreach(name, member; zip.directory) {
+				files[name] = member.crc32;
+				if(!name.endsWith("/")) {
+					zip.expand(member);
+					if(name.indexOf("/") != -1) mkdirRecurse(dest ~ name[0..name.lastIndexOf("/")]);
+					write(dest ~ name, member.expandedData);
+				}
+			}
+			write(dest ~ "crc32", JSONValue(files).toString());
+		}
+		if(!loadPlugin(dest)) loadPlugin(dest ~ name);
+	}
+
+	void loadSinglePlugin(string location) {
+		immutable name = location[location.lastIndexOf("/")+1..$-2];
+		foreach(line ; split(cast(string)read(location), "\n")) {
+			if(line.strip.startsWith("module") && line[6..$].strip.startsWith(name ~ ";")) {
+				string main = name ~ ".";
+				bool uppercase = true;
+				foreach(c ; name) {
+					if(c == '-') {
+						uppercase = true;
+					} else {
+						if(uppercase) main ~= toUpper("" ~ c);
+						else main ~= c;
+						uppercase = false;
+					}
+				}
+				plugs[location] = TOMLDocument(["name": TOMLValue(name), "main": TOMLValue(main)]);
+				break;
+			}
 		}
 	}
 
@@ -163,13 +188,13 @@ void main(string[] args) {
 
 		// load plugins in plugins folder
 		if(exists("../plugins")) {
-			foreach(string ppath ; dirEntries("../plugins/", SpanMode.breadth)) {
-				if(ppath["../plugins/".length+1..$].indexOf(dirSeparator) == -1) {
-					if(ppath.isDir) {
-						loadPlugin(ppath);
-					} else if(ppath.isFile && ppath.endsWith(".d")) {
-						loadSinglePlugin(ppath);
-					}
+			foreach(string ppath ; dirEntries("../plugins/", SpanMode.shallow)) {
+				if(ppath.isDir) {
+					loadPlugin(ppath);
+				} else if(ppath.isFile && ppath.endsWith(".zip")) {
+					loadZippedPlugin(ppath);
+				} else if(ppath.isFile && ppath.endsWith(".d")) {
+					loadSinglePlugin(ppath);
 				}
 			}
 		}
@@ -180,14 +205,14 @@ void main(string[] args) {
 	
 	foreach(path, value; plugs) {
 		Info plugin;
-		plugin.id = plugin.name = value["name"].str; //TODO must be checked [a-z0-9_]{1,}
+		plugin.name = value["name"].str;
+		checkName(plugin.name);
 		if(path.isFile) {
 			plugin.single = buildNormalizedPath(absolutePath(path));
 		} else {
 			if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-			plugin.single = "";
 		}
-		if(plugin.id !in info) {
+		if(plugin.name !in info) {
 			plugin.toml = value;
 			plugin.path = buildNormalizedPath(absolutePath(path));
 			if(!plugin.path.endsWith(dirSeparator)) plugin.path ~= dirSeparator;
@@ -232,16 +257,18 @@ void main(string[] args) {
 			}
 			plugin.api = exists(path ~ "api.d"); //TODO
 			if(plugin.single.length) {
-				plugin.vers = "~single";
+				plugin.version_ = "~single";
 			}
-			info[plugin.id] = plugin;
+			info[plugin.name] = plugin;
+		} else {
+			throw new Exception("Plugin '" ~ plugin.name ~ " at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
 		}
 	}
 
 	auto ordered = info.values;
 
 	// sort by priority (or alphabetically)
-	sort!"a.priority == b.priority ? a.id < b.id : a.priority > b.priority"(ordered);
+	sort!"a.priority == b.priority ? a.name < b.name : a.priority > b.priority"(ordered);
 
 	// control api version
 	foreach(ref inf ; ordered) {
@@ -266,9 +293,9 @@ void main(string[] args) {
 				}
 			}
 			if(api.length == 0 || api.canFind(software["api"].integer)) {
-				writeln(inf.name, " ", inf.vers, ": loaded");
+				writeln(inf.name, " ", inf.version_, ": loaded");
 			} else {
-				writeln(inf.name, " ", inf.vers, ": cannot load due to wrong api ", api);
+				writeln(inf.name, " ", inf.version_, ": cannot load due to wrong api ", api);
 				inf.active = false;
 			}
 		}
@@ -286,53 +313,42 @@ void main(string[] args) {
 		"toml": ["version": "~>0.4.0-rc.3"],
 		"toml:json": ["version": "~>0.4.0-rc.3"],
 	];
+	builder["subPackages"] = new JSONValue[0];
 	
 	size_t count = 0;
 		
 	string imports = "";
 	string loads = "";
-	string paths = "";
 
 	string[] fimports;
-
-	JSONValue[string] dub;
-	dub["selery"] = JSONValue(["path": libraries]);
 	
 	if(!exists(".selery")) mkdir(".selery");
 
 	foreach(ref value ; ordered) {
 		if(value.active) {
 			count++;
-			if(!exists(".selery/plugins/" ~ value.id)) mkdirRecurse(".selery/plugins/" ~ value.id);
-			string[] sourceFiles;
 			if(value.single.length) {
-				sourceFiles = [value.single];
+				builder["sourceFiles"].array ~= JSONValue(relativePath(value.single));
 			} else {
-				/*value.dub["sourcePaths"] = [value.path ~ "src"];
-				value.dub["importPaths"] = [value.path ~ "src"];*/
-				foreach(string file ; dirEntries(value.path ~ "src", SpanMode.breadth)) {
-					if(file.isFile) sourceFiles ~= file;
-				}
-			}
-			value.dub["sourceFiles"] = sourceFiles;
-			version(Windows) {
-				mkdirRecurse(".selery/plugins/" ~ value.id ~ "/.dub");
-				write(".selery/plugins/" ~ value.id ~ "/.dub/version.json", JSONValue(["version": value.vers]).toString());
-			}
-			builder["dependencies"][value.id] = ["path": ".selery/plugins/" ~ value.id];
-			if("dependencies" !in value.dub) value.dub["dependencies"] = (JSONValue[string]).init;
-			value.dub["name"] = value.id;
-			value.dub["targetType"] = "library";
-			value.dub["configurations"] = [JSONValue(["name": "plugin"])];
-			auto dptr = "dependencies" in value.toml;
-			if(dptr && dptr.type == TOML_TYPE.TABLE) {
-				foreach(name, d; dptr.table) {
-					if(name.startsWith("dub:")) {
-						value.dub["dependencies"][name[4..$]] = toJSON(d);
+				JSONValue[string] sub;
+				sub["name"] = value.name;
+				sub["targetPath"] = "libs";
+				sub["targetType"] = "library";
+				sub["configurations"] = [["name": "plugin"]];
+				sub["dependencies"] = ["selery": ["path": ".."]];
+				sub["sourcePaths"] = [relativePath(value.path ~ "src")];
+				sub["importPaths"] = [relativePath(value.path ~ "src")];
+				auto dptr = "dependencies" in value.toml;
+				if(dptr && dptr.type == TOML_TYPE.TABLE) {
+					foreach(name, d; dptr.table) {
+						//if(name.startsWith("dub:")) {
+							sub["dependencies"][name/*[4..$]*/] = toJSON(d);
+						//}
 					}
 				}
+				builder["subPackages"].array ~= JSONValue(sub);
+				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			value.dub["dependencies"]["selery"] = ["path": libraries];
 			string extra(string path) {
 				auto ret = value.path ~ path;
 				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
@@ -346,26 +362,29 @@ void main(string[] args) {
 			if(value.main.length) {
 				imports ~= "static import " ~ value.mod ~ ";\n";
 			}
-			immutable load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.id ~ "`, `" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.vers ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
-			if(value.main.length) {
-				loads ~= "\tstatic if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }\n";
-			} else {
-				loads ~= "\t" ~ load ~ "\n";
-			}
+			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
+			if(value.single.length) load = "static if(is(typeof(" ~ value.main ~ ")) && is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
+			loads ~= "\t" ~ load ~ "\n";
 		}
 		
 	}
 
-	if(paths.length > 2) paths = paths[0..$-2];
-
 	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.plugin : Plugin;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T)(){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
-
-	foreach(value ; ordered) {
-		writeDiff(".selery/plugins/" ~ value.id ~ "/dub.json", JSONValue(value.dub).toPrettyString());
-	}
 	
-	writeDiff("dub.json", JSONValue(builder).toPrettyString());
+	writeDiff("dub.json", JSONValue(builder).toString());
 
+}
+
+enum invalid = ["selery", "sel", "toml", "default", "hub", "node", "builder", "starter", "pluginloader"];
+
+void checkName(string name) {
+	void error(string message) {
+		throw new Exception("Cannot load plugin '" ~ name ~ "': " ~ message);
+	}
+	if(name.matchFirst(ctRegex!`[^a-z0-9\-]`)) error("Name contains characters outside the range a-z0-9-");
+	if(name.length == 0 || name.length > 64) error("Invalid name length: " ~ name.length.to!string ~ " is not between 1 and 64");
+	if(invalid.canFind(name)) error("Name is reserved");
 }
 
 void writeDiff(string location, const void[] data) {
@@ -385,13 +404,10 @@ struct Info {
 
 	public string name = "";
 	public string[] authors = [];
-	public string vers = "~local";
-
-	public string id;
+	public string version_ = "~local";
+	
 	public string path;
 	public string mod;
 	public string main;
-
-	public JSONValue[string] dub;
 
 }

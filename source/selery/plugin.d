@@ -23,8 +23,7 @@ import selery.util.tuple : Tuple;
  * utilities.
  */
 class Plugin {
-	
-	protected string n_namespace;
+
 	protected string n_name;
 	protected string[] n_authors;
 	protected string n_version;
@@ -34,15 +33,6 @@ class Plugin {
 	protected string n_languages, n_textures;
 	
 	public void delegate()[] onstart, onreload, onstop;
-	
-	/**
-	 * Gets the plugin's namespace that corresponds to the plugin's
-	 * source code in plugins/<namespace> and the plugin's resources
-	 * in resources/<namespace>.
-	 */
-	public pure nothrow @property @safe @nogc string namespace() {
-		return this.n_namespace;
-	}
 	
 	/**
 	 * Gets the plugin's name as indicated in the plugin's

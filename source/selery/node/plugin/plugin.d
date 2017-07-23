@@ -30,8 +30,7 @@ interface NodePlugin {}
 
 class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 
-	public this(string namespace, string name, string[] authors, string vers, bool api, string languages, string textures) {
-		this.n_namespace = namespace;
+	public this(string name, string[] authors, string vers, bool api, string languages, string textures) {
 		this.n_name = name;
 		this.n_authors = authors;
 		this.n_version = vers;
