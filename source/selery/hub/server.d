@@ -150,8 +150,7 @@ class HubServer {
 			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.name ~ " " ~ Software.fullVersion);
 		}
 
-		log(config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.reset ~ " " ~ Software.fullVersion ~ " " ~ Software.fullCodename]));
-		log(config.lang.translate("startup.started"), "\n");
+		log(config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.reset ~ " " ~ Text.white ~ Software.fullVersion ~ Text.reset ~ " " ~ Software.fullCodename]));
 
 		static if(!__supported) {
 			log(config.lang.translate("startup.unsupported", [Software.name]));
@@ -213,7 +212,11 @@ class HubServer {
 			this.analytics = new shared GoogleAnalytics(this, config.googleAnalytics);
 		}*/
 
+		//TODO load plugins
+
 		this.started = milliseconds;
+
+		log(config.lang.translate("startup.started"));
 
 		int last_online, last_max = this.maxPlayers;
 		size_t next_analytics = 0;
@@ -530,7 +533,7 @@ class HubServer {
 	}
 
 	public synchronized shared void add(shared AbstractNode node) {
-		log(Text.green, "+ ", Text.white, node.toString());
+		if(!this.lite) log(Text.green, "+ ", Text.white, node.toString());
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
 		// update players

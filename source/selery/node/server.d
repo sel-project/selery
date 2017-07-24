@@ -351,7 +351,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		log(this.config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " (" ~ Text.white ~ Software.codename ~ " " ~ Text.reset ~ Software.codenameEmoji ~ ")"]));
+		if(!this.lite) log(this.config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " " ~ Software.fullCodename]));
 
 		static if(!__supported) {
 			warning_log(this.config.lang.translate("startup.unsupported", [Software.name]));

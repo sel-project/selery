@@ -703,6 +703,7 @@ class LiteNode : AbstractNode {
 
 	public shared this(shared HubServer server, shared JSONValue* additionalJson) {
 		super(server, additionalJson);
+		tid = cast(shared)std.concurrency.thisTid;
 		ready = true;
 		this.node = cast(shared)std.concurrency.receiveOnly!(std.concurrency.Tid)();
 		this.n_main = true;

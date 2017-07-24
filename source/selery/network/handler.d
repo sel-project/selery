@@ -101,8 +101,6 @@ class Handler {
 
 		}
 
-		log();
-
 	}
 
 	/**

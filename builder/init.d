@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 18;
+enum size_t __GENERATOR__ = 20;
 
 void main(string[] args) {
 
@@ -77,7 +77,7 @@ void main(string[] args) {
 		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
 			if(file.isFile) {
 				auto member = new ArchiveMember();
-				member.name = file[7..$].replace("\\", "/");
+				member.name = file[10..$].replace("\\", "/");
 				member.expandedData(cast(ubyte[])read(file));
 				member.compressionMethod = CompressionMethod.deflate;
 				zip.addMember(member);
@@ -332,7 +332,7 @@ void main(string[] args) {
 			} else {
 				JSONValue[string] sub;
 				sub["name"] = value.name;
-				sub["targetPath"] = "libs";
+				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
 				sub["targetType"] = "library";
 				sub["configurations"] = [["name": "plugin"]];
 				sub["dependencies"] = ["selery": ["path": ".."]];
@@ -364,7 +364,7 @@ void main(string[] args) {
 			}
 			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
 			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
-			if(value.single.length) load = "static if(is(typeof(" ~ value.main ~ ")) && is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
+			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
 			loads ~= "\t" ~ load ~ "\n";
 		}
 		

@@ -54,6 +54,7 @@ void main(string[] args) {
 			import std.zip;
 			
 			import selery.files : Files;
+			import selery.lang : Lang;
 			
 			auto portable = new ZipArchive(cast(void[])import("portable.zip"));
 			
@@ -80,6 +81,8 @@ void main(string[] args) {
 				}
 			
 			};
+			
+			config.lang = new Lang(config.files);
 		
 		}
 

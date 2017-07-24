@@ -15,7 +15,7 @@
 module selery.node.plugin.plugin;
 
 import std.conv : to;
-import std.traits : isAbstractClass, getUDAs, hasUDA;
+import std.traits : Parameters;
 
 import selery.about;
 public import selery.plugin;
@@ -42,12 +42,13 @@ class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 
 	public override void load(shared Server server) {
 		static if(!is(T == Object)) {
-			static if(is(T == class)) {
-				T main = new T();
+			auto node = cast(shared NodeServer)server;
+			static if(is(typeof(T.__ctor)) && Parameters!(T.__ctor).length == 1 && is(Parameters!(T.__ctor)[0] == typeof(node))) {
+				T main = new T(node);
 			} else {
-				T main = T();
+				T main = new T();
 			}
-			loadPluginAttributes!(true, ServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast(NodeServer)server);
+			loadPluginAttributes!(true, ServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()node);
 		}
 	}
 
