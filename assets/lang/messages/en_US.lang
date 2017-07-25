@@ -36,6 +36,9 @@ commands.generic.usage.noparam=Usage:
 commands.generic.usage=Usage: {0}
 commands.generic.version.mismatch=The requested version doesn't exist for this command
 commands.generic.version.missing=Command calls not from chat should specify the command's version
+commands.help.description=Provides help/list of commands.
+commands.help.footer=Tip: Use the <tab> key while typing a command to auto-complete the command or its arguments
+commands.help.header=--- Showing help page {0} of {1} (/help <page>) ---
 
 death.attack.anvil={0} was squashed by a falling anvil
 death.attack.arrow.item={0} was shot by {1} using {2}

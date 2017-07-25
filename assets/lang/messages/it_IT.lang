@@ -36,6 +36,9 @@ commands.generic.usage.noparam=Utilizzo:
 commands.generic.usage=Utilizzo: {0}
 commands.generic.version.mismatch=Questo comando non dispone della versione richiesta
 commands.generic.version.missing=Per i comandi non impartiti attraverso la chat è necessario specificare la versione del comando
+commands.help.description=Fornisce aiuto/elenco di comandi.
+commands.help.footer=Suggerimento: usa il tasto <tab> mentre scrivi un comando per completare automaticamente il comando o i suoi parametri
+commands.help.header=--- Pagina di aiuto {0} di {1} (/help <pagina>) ---
 
 death.attack.anvil=Un'incudine ha schiacciato {0}
 death.attack.arrow.item={1} ha trafitto {0} con {2}
