@@ -164,6 +164,8 @@ class Config {
 
 		uint maxPlayers = 20;
 
+		bool helpCommand = true;
+
 		string gamemode = "survival";
 
 		string difficulty = "easy";

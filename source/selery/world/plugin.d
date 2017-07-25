@@ -1,9 +1,11 @@
 ﻿module selery.world.plugin;
 
 import std.algorithm : canFind;
+import std.conv : to;
 import std.datetime : Duration;
 import std.traits : hasUDA, getUDAs, Parameters;
 
+import selery.about : tick_t;
 import selery.event.event : CancellableOf;
 import selery.plugin : event, cancel, command, op, hidden;
 import selery.world.world : World;
@@ -66,16 +68,16 @@ uint[] getStates(alias fun)() {
 
 struct task {
 
-	size_t ticks;
+	tick_t ticks;
 
-	public this(size_t ticks) {
+	public this(tick_t ticks) {
 		assert(ticks != 0);
 		this.ticks = ticks;
 	}
 
 	public this(Duration duration) {
 		assert(duration.total!"msecs"() % 50 == 0);
-		this(duration.total!"msecs"() / 50);
+		this(to!tick_t(duration.total!"msecs"() / 50));
 	}
 
 }

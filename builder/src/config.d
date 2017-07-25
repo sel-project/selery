@@ -153,6 +153,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			set!"pocket.enabled"(pocket.enabled);
 			set!"pocket.accepted-protocols"(pocket.protocols);
 			set!"max-players"(maxPlayers);
+			set!"help-command"(helpCommand);
 			set!"world.gamemode"(gamemode);
 			set!"world.difficulty"(difficulty);
 			set!"world.pvp"(pvp);
@@ -187,6 +188,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 		file ~= "uuid = \"" ~ config.uuid.toString().toUpper() ~ "\"" ~ newline;
 		if(hub) file ~= "display-name = \"" ~ config.hub.displayName ~ "\"" ~ newline;
 		if(node) file ~= "max-players = " ~ (config.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(config.node.maxPlayers)) ~ newline;
+		if(node) file ~= "help-command = " ~ to!string(config.node.helpCommand) ~ newline;
 		if(hub) file ~= "whitelist = " ~ to!string(config.hub.whitelist) ~ newline;
 		if(hub) file ~= "blacklist = " ~ to!string(config.hub.blacklist) ~ newline;
 		if(hub && !config.hub.realm) file ~= "query = " ~ to!string(config.hub.query) ~ newline;

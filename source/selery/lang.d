@@ -258,11 +258,11 @@ struct Message {
 		this.translation = translation;
 	}
 	
-	public pure nothrow @property @safe @nogc bool isMessage() {
+	public inout pure nothrow @property @safe @nogc bool isMessage() {
 		return this._ismsg;
 	}
 	
-	public pure nothrow @property @safe @nogc bool isTranslation() {
+	public inout pure nothrow @property @safe @nogc bool isTranslation() {
 		return !this._ismsg;
 	}
 

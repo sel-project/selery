@@ -33,8 +33,9 @@ class Command {
 
 	enum MISSING_DESCRIPTION = Message("No description given");
 
-	deprecated alias Arg = CommandArg;
-	
+	/**
+	 * Command's overload.
+	 */
 	public class Overload {
 
 		public abstract pure nothrow @property @safe @nogc bool callableByServer();

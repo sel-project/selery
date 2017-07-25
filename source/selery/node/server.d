@@ -17,7 +17,7 @@ module selery.node.server;
 import core.atomic : atomicOp;
 import core.thread : getpid, Thread;
 
-import std.algorithm : canFind;
+import std.algorithm : canFind, sort, clamp, min;
 import std.ascii : newline;
 import std.bitmanip : nativeToBigEndian;
 static import std.concurrency;
@@ -25,7 +25,7 @@ import std.conv : to;
 import std.datetime : dur, StopWatch, Duration;
 static import std.file;
 import std.json;
-import std.math : round;
+import std.math : round, ceil;
 import std.process : executeShell;
 import std.socket : SocketException, Address, InternetAddress, Internet6Address;
 import std.string;
@@ -45,7 +45,7 @@ import sel.hncom.handler : HncomHandler;
 import selery.world.world : World; // do not move this import down
 
 import selery.about;
-import selery.command.command : Command, CommandSender;
+import selery.command.command : Command, CommandSender, WorldCommandSender;
 import selery.config : Config;
 import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
@@ -61,7 +61,7 @@ import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.minecraft : MinecraftPlayer;
-import selery.player.player : Player;
+import selery.player.player : Player, InputMode;
 import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
 import selery.plugin : Plugin;
 import selery.server : Server;
@@ -428,6 +428,16 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 			this.handler.send(nodeInfo.encode());
 		}
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
+
+		// register help command if enabled in the settings
+		if(this.config.node.helpCommand) {
+			auto command = new Command("help", Message(Translation("commands.help.description")));
+			auto _this = cast()this;
+			command.add!helpCommand(&_this.helpCommand);				// ServerCommandSender
+			command.add!helpCommandByPage(&_this.helpCommandByPage);	// WorldCommandSender
+			command.add!helpCommandByName(&_this.helpCommandByName);	// Player
+			this.commands["help"] = cast(shared)command;
+		}
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -1132,6 +1142,111 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 		} else {
 			(cast()this).callEventIfExists!UnknownCommandEvent(sender);
 		}
+	}
+
+	private void helpCommand(ServerCommandSender sender) {
+		Command[] commands;
+		foreach(command ; sender.registeredCommands) {
+			if(!command.hidden) {
+				foreach(overload ; command.overloads) {
+					if(overload.callableByServer) {
+						commands ~= command;
+						break;
+					}
+				}
+			}
+		}
+		sort!((a, b) => a.command < b.command)(commands);
+		foreach(cmd ; commands) {
+			if(cmd.description.isTranslation) {
+				sender.sendMessage(Text.yellow, cmd.description.translation);
+			} else {
+				sender.sendMessage(Text.yellow, cmd.description.message);
+			}
+			string[] usages;
+			foreach(overload ; cmd.overloads) {
+				if(overload.callableByServer) {
+					usages ~= ("/" ~ cmd.command ~ " " ~ this.formatArg(overload));
+				}
+			}
+			if(usages.length == 1) {
+				sender.sendMessage(Translation("commands.generic.usage"), usages[0]);
+			} else {
+				sender.sendMessage(Translation("commands.generic.usage"), "");
+				foreach(usage ; usages) {
+					sender.sendMessage("- ", usage);
+				}
+			}
+		}
+	}
+
+	private void helpCommandByPage(WorldCommandSender sender, int page) {
+		auto player = cast(Player)sender;
+		if(player) {
+			Command[] commands;
+			foreach(command ; player.commandMap) {
+				if(!command.hidden) commands ~= command;
+			}
+			sort!((a, b) => a.command < b.command)(commands);
+			immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
+			page = clamp(--page, 0, pages - 1);
+			sender.sendMessage(Text.darkGreen, Translation.all("commands.help.header"), page+1, pages);
+			string[] messages;
+			foreach(command ; commands[page*7..min($, (page+1)*7)]) {
+				messages ~= (command.command ~ " " ~ this.formatArgs(command)[0]);
+			}
+			sender.sendMessage(messages.join("\n"));
+			if(player.inputMode == InputMode.keyboard) {
+				sender.sendMessage(Text.green, Translation.all("commands.help.footer"));
+			}
+		} else {
+			sender.sendMessage("Sorry, no help today!");
+		}
+	}
+
+	private void helpCommandByName(Player sender, string command) { // use Command as arg when available
+		auto cmd = sender.commandByName(command);
+		if(cmd !is null) {
+			sender.sendMessage(Text.yellow ~ cmd.command ~ ":");
+			if(cmd.description.isTranslation) {
+				sender.sendMessage(Text.yellow, cmd.description.translation);
+			} else {
+				sender.sendMessage(Text.yellow, cmd.description.message);
+			}
+			auto params = formatArgs(cmd);
+			foreach(ref param ; params) {
+				param = "- /" ~ command ~ " " ~ param;
+			}
+			sender.sendMessage(Translation.all("commands.generic.usage"), "");
+			sender.sendMessage(params.join("\n"));
+		} else {
+			sender.sendMessage(Text.red, Translation.all("commands.generic.notFound"));
+		}
+	}
+
+	private string[] formatArgs(Command command) {
+		string[] ret;
+		foreach(overload ; command.overloads) {
+			ret ~= this.formatArg(overload);
+		}
+		return ret;
+	}
+	
+	private string formatArg(Command.Overload overload) {
+		string[] p;
+		foreach(i, param; overload.params) {
+			if(overload.pocketTypeOf(i) == "stringenum" && overload.enumMembers(i).length == 1) {
+				p ~= overload.enumMembers(i)[0];
+			} else {
+				string full = param ~ ": " ~ overload.typeOf(i);
+				if(i < overload.requiredArgs) {
+					p ~= "<" ~ full ~ ">";
+				} else {
+					p ~= "[" ~ full ~ "]";
+				}
+			}
+		}
+		return p.join(" ");
 	}
 
 }

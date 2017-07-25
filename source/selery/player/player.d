@@ -29,6 +29,7 @@ import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.blocks : Blocks;
 import selery.block.tile : Tile, Container;
+import selery.command.args : CommandArg;
 import selery.command.command : Command, WorldCommandSender;
 import selery.effect : Effects, Effect;
 import selery.entity.entity : Entity, Rotation;
@@ -783,7 +784,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * Calls a command specifying which overload.
 	 * Returns: true if the command has been called, false otherwise
 	 */
-	public bool callCommandOverload(string cmd, size_t overload, Command.Arg[] args) {
+	public bool callCommandOverload(string cmd, size_t overload, CommandArg[] args) {
 		auto ptr = cmd.toLower in this.commands;
 		return ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op) && (*ptr).overloads[overload].callArgs(this, args);
 	}

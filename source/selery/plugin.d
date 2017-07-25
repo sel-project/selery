@@ -183,7 +183,7 @@ void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritanc
 			}
 			// commands
 			static if(commands && hasUDA!(F, command) && Parameters!F.length >= 1 && is(Parameters!F[0] : CommandBase)) {
-				enum c = getUDAs!(F, command);
+				enum c = getUDAs!(F, command)[0];
 				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, hasUDA!(F, op), hasUDA!(F, hidden));
 			}
 		}

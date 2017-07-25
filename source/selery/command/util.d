@@ -18,6 +18,7 @@ import std.algorithm : sort;
 import std.conv : to, ConvException;
 import std.random : uniform;
 import std.string : split, join, toLower, startsWith, replace;
+import std.traits : isIntegral, isFloatingPoint;
 import std.typecons : Tuple;
 
 import selery.entity.entity : Entity;
@@ -136,6 +137,23 @@ private string toSnakeCase(string str) {
 		}
 	}
 	return ret;
+}
+
+struct Ranged(T, string _type, T _min, T _max) if((isIntegral!T || isFloatingPoint!T) && _min < _max && (_type == "[]" || _type == "(]" || _type == "[)" || _type == "()")) {
+
+	enum type = _type;
+
+	enum min = _min;
+	enum max = _max;
+
+	T value;
+
+	alias value this;
+
+}
+
+template Ranged(T, T min, T max) if(isIntegral!T || isFloatingPoint!T) {
+	static if(isIntegral!T) alias Ranged = Ranged!(T, "[]", min, max);
 }
 
 /**
