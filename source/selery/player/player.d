@@ -67,6 +67,7 @@ abstract class Player : Human, WorldCommandSender {
 
 	public immutable ubyte gameId;
 
+	private string _display_name;
 	public string chatName;
 
 	protected bool connectedSameMachine, connectedSameNetwork;
@@ -119,7 +120,7 @@ abstract class Player : Human, WorldCommandSender {
 		this.info = info;
 		this.gameId = info.type;
 		this._id = hubId * 2; // always an even number
-		this.chatName = info.displayName;
+		this._display_name = this.chatName = info.displayName;
 		this.connectedSameMachine = this.info.ip.startsWith("127.0.") || this.info.ip == "::1";
 		this.connectedSameNetwork = this.info.ip.startsWith("192.168.");
 		this.showNametag = true;
@@ -207,14 +208,24 @@ abstract class Player : Human, WorldCommandSender {
 	 * It can be edited on PlayerPreLoginEvent.
 	 */
 	public final override pure nothrow @property @safe @nogc string displayName() {
-		return this.info.displayName;
+		return this._display_name;
 	}
 	
 	/// ditto
 	public final @property @trusted string displayName(string displayName) {
 		//TODO update MinecraftPlayer's list
 		//TODO update name on the hub
-		return this.displayName;
+		//TODO update info
+		return this._display_name = displayName;
+	}
+
+	/**
+	 * Updates the display name but only for the current world and children/parents.
+	 * When the player is transferred to another node or to another group of world the
+	 * display name is resetted.
+	 */
+	public final pure nothrow @property @safe @nogc string localDisplayName(string displayName) {
+		return this._display_name = displayName;
 	}
 	
 	/**

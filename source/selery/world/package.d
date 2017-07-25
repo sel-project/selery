@@ -15,8 +15,10 @@
 /// DDOC_EXCLUDE
 module selery.world;
 
+public import selery.plugin : event, cancel, command, op, hidden;
 public import selery.world.chunk : Chunk;
 public import selery.world.map : Map;
+public import selery.world.plugin : task, state;
 public import selery.world.world : World, Time, Difficulty, Rules;
 
 public import sul.biomes : Biomes;

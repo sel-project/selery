@@ -22,6 +22,7 @@ import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, has
 import selery.command.args : StringReader, CommandArg;
 import selery.command.util : PocketType, CommandSender, WorldCommandSender, Target, Position;
 import selery.entity.entity : Entity;
+import selery.lang : Message;
 import selery.node.server : ServerCommandSender;
 import selery.player.player : Player;
 import selery.util.tuple : Tuple;
@@ -29,6 +30,8 @@ import selery.util.tuple : Tuple;
 alias param = Tuple!(string, "param");
 
 class Command {
+
+	enum MISSING_DESCRIPTION = Message("No description given");
 
 	deprecated alias Arg = CommandArg;
 	
@@ -279,7 +282,7 @@ class Command {
 	immutable size_t id;
 	
 	immutable string command;
-	immutable string description;
+	immutable Message description;
 	immutable string[] aliases;
 
 	immutable bool op;
@@ -287,7 +290,7 @@ class Command {
 	
 	Overload[] overloads;
 	
-	this(string command, string description="", string[] aliases=[], bool op=false, bool hidden=false) {
+	this(string command, Message description=MISSING_DESCRIPTION, string[] aliases=[], bool op=false, bool hidden=false) {
 		this.id = count++;
 		this.command = command.toLower;
 		this.description = description;

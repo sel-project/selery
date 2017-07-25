@@ -15,6 +15,7 @@
 module selery.plugin;
 
 import selery.about;
+import selery.lang : Translation, Message;
 import selery.server : Server;
 import selery.util.tuple : Tuple;
 
@@ -106,14 +107,39 @@ enum inherit;
 enum cancel;
 
 // attributes for commands
-alias command = Tuple!(string, "command");
-alias aliases = Tuple!(string[], "aliases");
-alias description = Tuple!(string, "description");
+struct command {
+
+	enum NO_DESCRIPTION = Message("");
+
+	string command;
+	string[] aliases;
+	Message description;
+
+	public this(string command, string[] aliases=[], Message description=NO_DESCRIPTION) {
+		this.command = command;
+		this.aliases = aliases;
+		this.description = description;
+	}
+
+	public this(string command, string[] aliases, string description) {
+		this(command, aliases, Message(description));
+	}
+
+	public this(string command, string[] aliases, Translation description) {
+		this(command, aliases, Message(description));
+	}
+
+	public this(string command, string description) {
+		this(command, [], description);
+	}
+
+	public this(string command, Translation description) {
+		this(command, [], description);
+	}
+
+}
 enum op;
 enum hidden;
-
-// attributes for tasks
-struct task { tick_t interval; }
 
 void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritance, CommandBase, bool tasks, T, S)(T class_, Plugin plugin, S storage) {
 
@@ -157,20 +183,8 @@ void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritanc
 			}
 			// commands
 			static if(commands && hasUDA!(F, command) && Parameters!F.length >= 1 && is(Parameters!F[0] : CommandBase)) {
-				static if(hasUDA!(F, description)) {
-					enum d = getUDAs!(F, description)[0].description;
-				} else {
-					enum d = "";
-				}
-				string[] a;
-				foreach(alias_ ; getUDAs!(F, aliases)) {
-					a ~= alias_.aliases;
-				}
-				storage.registerCommand!F(mixin(del), getUDAs!(F, command)[0].command, d, a, hasUDA!(F, op), hasUDA!(F, hidden));
-			}
-			// tasks
-			static if(tasks && hasUDA!(F, task) && (Parameters!F.length == 0 || Parameters!F.length == 1 && is(Parameters!F[0] : tick_t))) {
-				storage.addTask(mixin(del), getUDAs!(F, task)[0].interval);
+				enum c = getUDAs!(F, command);
+				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, hasUDA!(F, op), hasUDA!(F, hidden));
 			}
 		}
 	}

@@ -239,11 +239,31 @@ struct Translation {
 
 struct Message {
 
+	private bool _ismsg;
+
 	union {
 
-		struct { string message; string[] params; }
+		string message;
 		Translation translation;
 
+	}
+
+	public this(string message) {
+		this._ismsg = true;
+		this.message = message;
+	}
+
+	public this(Translation translation) {
+		this._ismsg = false;
+		this.translation = translation;
+	}
+	
+	public pure nothrow @property @safe @nogc bool isMessage() {
+		return this._ismsg;
+	}
+	
+	public pure nothrow @property @safe @nogc bool isTranslation() {
+		return !this._ismsg;
 	}
 
 }

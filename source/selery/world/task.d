@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.util.task;
+module selery.world.task;
 
 import selery.about : tick_t;
 
@@ -23,24 +23,29 @@ final class TaskManager {
 	private size_t tids = 0;
 	private Task[] tasks;
 	
-	public @safe size_t add(E...)(void delegate(E) task, size_t interval, size_t repeat, tick_t stick) if(areValidTaskArgs!E) {
-		this.tasks ~= new TaskOf!E(this.tids, task, interval, repeat, stick);
+	public @safe size_t add()(void delegate() task, size_t interval, size_t repeat, tick_t stick) {
+		this.tasks ~= new Task(this.tids, task, interval, repeat, stick);
 		return this.tids++;
 	}
 	
-	public @safe void remove(E...)(void delegate(E) task) if(areValidTaskArgs!E) {
-		foreach(Task t; this.tasks) {
-			if(cast(TaskOf!E)t && (cast(TaskOf!E)t).task == task) array_remove(t, this.tasks);
+	public @safe bool remove()(void delegate() task) {
+		foreach(index, t; this.tasks) {
+			if(t.task == task) {
+				this.tasks = this.tasks[0..index] ~ this.tasks[index+1..$];
+				return true;
+			}
 		}
+		return false;
 	}
 	
-	public @safe void remove(size_t tid) {
+	public @safe bool remove(size_t tid) {
 		foreach(index, task; this.tasks) {
 			if(task.id == tid) {
 				this.tasks = this.tasks[0..index] ~ this.tasks[index+1..$];
-				break;
+				return true;
 			}
 		}
+		return false;
 	}
 	
 	public void tick(tick_t tick) {
@@ -56,65 +61,40 @@ final class TaskManager {
 	
 }
 
-abstract class Task {
+final class Task {
 	
 	public immutable size_t id;
 	
-	public @safe @nogc this(size_t id) {
-		this.id = id;
-	}
-	
-	public @safe @nogc bool expired();
-	
-	public void execute(tick_t stick);
-	
-	public override bool opEquals(Object o) {
-		return cast(Task)o ? (cast(Task)o).id == this.id : false;
-	}
-	
-}
-
-final class TaskOf(E...) : Task if(areValidTaskArgs!E) {
-	
-	private void delegate(E) n_task;
+	private void delegate() _task;
 	private size_t interval;
 	private size_t repeat;
 	
 	private tick_t start;
 	private tick_t ticks = 0;
 	
-	public @trusted this(size_t id, void delegate(E) task, size_t interval, size_t repeat, tick_t start) {
+	public @safe this(size_t id, void delegate() task, size_t interval, size_t repeat, tick_t start) {
 		assert(interval != 0, "0 is not a valid interval");
-		super(id);
-		this.n_task = task;
+		this.id = id;
+		this._task = task;
 		this.interval = interval;
 		this.repeat = repeat;
 		this.start = start % this.interval;
 	}
 	
-	public override pure nothrow @property @safe @nogc bool expired() {
+	public pure nothrow @property @safe @nogc bool expired() {
 		return this.repeat == 0;
 	}
 	
-	public override void execute(tick_t stick) {
+	public void execute(tick_t stick) {
 		if(stick % this.interval == this.start) {
-			static if(E.length == 0) {
-				this.n_task();
-			} else {
-				this.n_task(this.ticks);
-			}
+			this._task();
 			this.ticks++;
 			if(this.repeat < uint.max) this.repeat--;
 		}
 	}
 	
-	public pure nothrow @property @safe @nogc void delegate(E) task() {
-		return this.n_task;
-	}
-	
-	public override @safe bool opEquals(Object o) {
-		if(cast(Task)o) return (cast(Task)o).id == this.id;
-		else return false;
+	public pure nothrow @property @safe @nogc void delegate() task() {
+		return this._task;
 	}
 	
 }

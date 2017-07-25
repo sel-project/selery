@@ -47,7 +47,7 @@ import selery.format : Text;
 import selery.item.item : Item;
 import selery.item.items : ItemStorage, Items;
 import selery.item.slot : Slot;
-import selery.lang : Messageable, Translation, translate;
+import selery.lang : Messageable, Translation, Message;
 import selery.log;
 import selery.math.vector;
 import selery.node.info : PlayerInfo, WorldInfo;
@@ -58,11 +58,12 @@ import selery.player.pocket : PocketPlayerImpl;
 import selery.plugin : Plugin, loadPluginAttributes;
 import selery.util.color : Color;
 import selery.util.random : Random;
-import selery.util.task : TaskManager, areValidTaskArgs;
+import selery.world.task : TaskManager;
 import selery.util.util : call;
 import selery.world.chunk;
 import selery.world.generator;
 import selery.world.map : Map;
+import selery.world.plugin : loadWorld;
 import selery.world.rules : Rules, Gamemode, Difficulty;
 import selery.world.thread;
 
@@ -84,7 +85,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			world.setListener(parent.inheritance);
 			world.inheritance = parent.inheritance;
 		}
-		loadPluginAttributes!(false, WorldEvent, Object, true, WorldCommandSender, true)(world, Plugin.init, world);
+		world._update_state = delegate(int oldState, uint newState){ loadWorld(world, oldState, newState); };
+		world.updateState(0);
 		world.start();
 	}
 
@@ -122,6 +124,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	protected string n_type;
 
 	private shared(WorldInfo)[uint] children_info;
+
+	private int _state = -1;
+	protected void delegate(int, uint) _update_state;
 
 	protected Player[uint] all_players; // only used by the main parent
 
@@ -411,6 +416,23 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Gets the current world's state.
+	 */
+	protected final pure nothrow @property @safe @nogc uint currentState() {
+		return this._state;
+	}
+
+	/**
+	 * Updates the world's state.
+	 */
+	protected final void updateState(uint state) {
+		if(this._state != state) {
+			this._update_state(this._state, state);
+			this._state = state;
+		}
 	}
 
 	public void startMainWorldLoop() {
@@ -1528,7 +1550,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, bool op, bool hidden) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
@@ -1551,7 +1573,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Returns:
 	 * 		the new task id that can be used to remove the task
 	 */
-	public @safe size_t addTask(E...)(void delegate(E) task, size_t interval, size_t repeat=size_t.max) if(areValidTaskArgs!E) {
+	public @safe size_t addTask(void delegate() task, size_t interval, size_t repeat=size_t.max) {
 		return this.tasks.add(task, interval, repeat, this.ticks);
 	}
 	
@@ -1561,7 +1583,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Executes a task one time after the given ticks.
 	 */
-	public @safe size_t delay(E...)(void delegate(E) task, size_t timeout) if(areValidTaskArgs!E) {
+	public @safe size_t delay(void delegate() task, size_t timeout) {
 		return this.addTask(task, timeout, 1);
 	}
 	
@@ -1569,7 +1591,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Removes a task using the task's delegate or the id returned
 	 * by the addTask function.
 	 */
-	public @safe void removeTask(E...)(void delegate(E) task) if(areValidTaskArgs!E) {
+	public @safe void removeTask(void delegate() task) {
 		this.tasks.remove(task);
 	}
 	

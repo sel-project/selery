@@ -318,3 +318,17 @@ interface Cancellable {
 
 /// ditto
 alias Cancelable = Cancellable;
+
+class CancellableOf {
+
+	static CancellableOf instance;
+
+	static this() {
+		instance = new CancellableOf();
+	}
+
+	void createCancellable(T:Cancellable)(T event) {
+		event.cancel();
+	}
+
+}

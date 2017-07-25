@@ -119,7 +119,7 @@ class HubServer {
 
 	private shared GoogleAnalytics analytics;
 
-	public shared this(bool lite, Config config, Plugin[] plugins, string[] args) {
+	public shared this(bool lite, Config config, Plugin[] plugins=[], string[] args=[]) {
 
 		assert(config.files !is null);
 		assert(config.lang !is null);

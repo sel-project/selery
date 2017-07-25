@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 20;
+enum size_t __GENERATOR__ = 22;
 
 void main(string[] args) {
 
@@ -164,13 +164,13 @@ void main(string[] args) {
 	}
 
 	void loadSinglePlugin(string location) {
-		immutable name = location[location.lastIndexOf("/")+1..$-2];
+		immutable name = location[location.lastIndexOf("/")+1..$-2].replace("-", "_");
 		foreach(line ; split(cast(string)read(location), "\n")) {
 			if(line.strip.startsWith("module") && line[6..$].strip.startsWith(name ~ ";")) {
 				string main = name ~ ".";
 				bool uppercase = true;
 				foreach(c ; name) {
-					if(c == '-') {
+					if(c == '_') {
 						uppercase = true;
 					} else {
 						if(uppercase) main ~= toUpper("" ~ c);
@@ -178,7 +178,7 @@ void main(string[] args) {
 						uppercase = false;
 					}
 				}
-				plugs[location] = TOMLDocument(["name": TOMLValue(name), "main": TOMLValue(main)]);
+				plugs[location] = TOMLDocument(["name": TOMLValue(name.replace("_", "-")), "main": TOMLValue(main)]);
 				break;
 			}
 		}
@@ -255,9 +255,15 @@ void main(string[] args) {
 					plugin.main = main.str;
 				}
 			}
-			plugin.api = exists(path ~ "api.d"); //TODO
 			if(plugin.single.length) {
 				plugin.version_ = "~single";
+			} else {
+				foreach(string file ; dirEntries(plugin.path ~ "src", SpanMode.breadth)) {
+					if(file.isFile && file.endsWith(dirSeparator ~ "api.d")) {
+						plugin.api = true;
+						break;
+					}
+				}
 			}
 			info[plugin.name] = plugin;
 		} else {
@@ -354,7 +360,7 @@ void main(string[] args) {
 				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
 					foreach(f ; dirEntries(ret, SpanMode.breadth)) {
 						// at least one element inside
-						return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
+						if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
 					}
 				}
 				return "null";

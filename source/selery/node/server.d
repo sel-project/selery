@@ -54,7 +54,7 @@ import selery.event.server.server : ServerEvent;
 import selery.event.server;
 import selery.event.world.world : WorldEvent;
 import selery.format : Text, writeln;
-import selery.lang : Lang, Translation, Messageable;
+import selery.lang : Lang, Translation, Message, Messageable;
 import selery.log;
 import selery.math.vector : EntityPosition;
 import selery.network.hncom;
@@ -161,7 +161,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 
 	private shared Command[string] commands;
 
-	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins, string[] args) {
+	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins=[], string[] args=[]) {
 
 		assert(config.node !is null);
 
@@ -899,7 +899,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, string description, string[] aliases, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, bool op, bool hidden) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this.commands;
