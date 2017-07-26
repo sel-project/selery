@@ -429,15 +429,19 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 		}
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 
-		// register help command if enabled in the settings
+		// register commands if enabled in the settings
+		auto _this = cast()this;
 		if(this.config.node.helpCommand) {
 			auto command = new Command("help", Message(Translation("commands.help.description")));
-			auto _this = cast()this;
 			command.add!helpCommand(&_this.helpCommand);				// ServerCommandSender
 			command.add!helpCommandByPage(&_this.helpCommandByPage);	// WorldCommandSender
 			command.add!helpCommandByName(&_this.helpCommandByName);	// Player
 			this.commands["help"] = cast(shared)command;
 		}
+		if(this.config.node.aboutCommand) _this.registerCommand!aboutCommand(&_this.aboutCommand, "about", Message(Translation("commands.about.description")), [], false, false);
+		if(this.config.node.pluginsCommand) _this.registerCommand!pluginsCommand(&_this.pluginsCommand, "plugins", Message(Translation("commands.plugins.description")), [], false, false);
+		if(this.config.node.reloadCommand) _this.registerCommand!reloadCommand(&_this.reloadCommand, "reload", Message(Translation("commands.reload.description")), [], true, false);
+		if(this.config.node.stopCommand) _this.registerCommand!stopCommand(&_this.stopCommand, "stop", Message(Translation("commands.stop.description")), [], true, false);
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -1247,6 +1251,35 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 			}
 		}
 		return p.join(" ");
+	}
+
+	private void aboutCommand(CommandSender sender) {
+		sender.sendMessage(Software.name ~ " " ~ Software.fullVersion);
+	}
+
+	private void pluginsCommand(CommandSender sender) {
+		foreach(_plugin ; (cast(shared)this).plugins) {
+			auto plugin = cast()_plugin;
+			sender.sendMessage("* ", plugin.name, " ", plugin.vers);
+		}
+	}
+
+	private void reloadCommand(CommandSender sender) {
+		foreach(plugin ; (cast(shared)this).plugins) {
+			if(plugin.onreload.length) {
+				foreach(reload ; (cast()plugin).onreload) reload();
+			}
+		}
+	}
+
+	private void stopCommand(CommandSender sender, bool gracefully=true) {
+		if(gracefully) {
+			if(running) (cast(shared)this).shutdown();
+			else sender.sendMessage(Text.red, Translation("commands.stop.failed"));
+		} else {
+			import std.c.stdlib : exit;
+			exit(0);
+		}
 	}
 
 }

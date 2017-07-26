@@ -47,3 +47,10 @@ status.unknown = Could not connect! Unknown reason
 handler.listening = Handler {0} listening on {1}
 handler.error.bind = Handler {0} cannot bind on {1}: {2}
 handler.error.address = Handler {0} cannot resolve address {1}
+
+commands.about.description = Shows information about the server's software
+commands.plugins.description = Shows a list of the plugins loaded on the server
+commands.reload.description = Reloads the configuration files and the reloadable plugins
+commands.reload.success = Settings and plugins have been reloaded
+commands.stop.description = Stops the server
+commands.stop.failed = Server is already stopping

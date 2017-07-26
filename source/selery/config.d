@@ -166,6 +166,14 @@ class Config {
 
 		bool helpCommand = true;
 
+		bool aboutCommand = true;
+
+		bool pluginsCommand = true;
+
+		bool reloadCommand = true;
+
+		bool stopCommand = true;
+
 		string gamemode = "survival";
 
 		string difficulty = "easy";

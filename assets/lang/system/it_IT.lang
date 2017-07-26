@@ -47,3 +47,10 @@ status.unknown = Impossibile connettersi! Ragione sconosciuta
 handler.listening = Handler {0} in ascolto su {1}
 handler.error.bind = Handler {0} non può ascoltare su {1}: {2}
 handler.error.address = Handler {0} non può risolvere l'indirizzo {1}
+
+commands.about.description = Mostra informazioni sul software del server
+commands.plugins.description = Mostra una lista dei plugin abilitati nel server
+commands.reload.description = Ricarica i file di configurazione e i plugin ricaricabili
+commands.reload.success = Le impostazioni e i plugin sono stati ricaricati
+commands.stop.description = Ferma il server
+commands.stop.failed = Il server si sta già fermando
