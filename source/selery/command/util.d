@@ -32,6 +32,11 @@ import selery.world.world : World;
  * Interface for command senders.
  */
 interface CommandSender : Messageable {
+
+	/**
+	 * Gets the command sender's current server.
+	 */
+	public pure nothrow @property @safe @nogc shared(NodeServer) server();
 	
 	/**
 	 * Gets the command sender's current position.
@@ -141,6 +146,10 @@ private string toSnakeCase(string str) {
 
 struct Ranged(T, string _type, T _min, T _max) if((isIntegral!T || isFloatingPoint!T) && _min < _max && (_type == "[]" || _type == "(]" || _type == "[)" || _type == "()")) {
 
+	enum __is_range;
+
+	alias Type = T;
+
 	enum type = _type;
 
 	enum min = _min;
@@ -152,12 +161,17 @@ struct Ranged(T, string _type, T _min, T _max) if((isIntegral!T || isFloatingPoi
 
 }
 
-template Ranged(T, T min, T max) if(isIntegral!T || isFloatingPoint!T) {
-	static if(isIntegral!T) alias Ranged = Ranged!(T, "[]", min, max);
+alias Ranged(T, T min, T max) = Ranged!(T, "[]", min, max);
+
+enum isRanged(T) = __traits(hasMember, T, "__is_range");
+
+template minImpl(T) {
+	static if(isIntegral!T) enum minImpl = T.min;
+	else enum minImpl = T.min_normal;
 }
 
 /**
- * Indicates a position with abslutes and/or relatives coordinates.
+ * Indicates a position with absolutes and/or relatives coordinates.
  * Example:
  * ---
  * auto pos = Position(Position.Point.fromString("~"), Position.Point.fromString("1"), Position.Point.fromString("~10"));

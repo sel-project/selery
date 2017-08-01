@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -12,9 +12,21 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/// DDOC_EXCLUDE
-module selery.event.server;
+module selery.event.hub.server;
 
-public import selery.event.server.node : NodeAddedEvent, NodeRemovedEvent, NodeMessageEvent;
-public import selery.event.server.player : PlayerJoinEvent, PlayerLeftEvent, PlayerLanguageUpdatedEvent, PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
-public import selery.event.server.server : ServerEvent, InvalidParametersEvent, UnknownCommandEvent;
+import selery.event.event : Event;
+import selery.hub.server : HubServer;
+
+abstract class HubServerEvent : Event {
+	
+	private shared HubServer _server;
+	
+	public this(shared HubServer server) {
+		this._server = server;
+	}
+	
+	public final pure nothrow @property @safe @nogc shared(HubServer) server() {
+		return this._server;
+	}
+	
+}

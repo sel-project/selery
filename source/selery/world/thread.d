@@ -23,6 +23,7 @@ import std.traits : isAbstractClass, Parameters;
 
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
+import selery.world.rules : Difficulty, Gamemode;
 import selery.world.world : World;
 
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
@@ -104,6 +105,29 @@ struct Broadcast {
 
 	string message;
 	bool children;
+
+}
+
+// server to world
+struct UpdateDifficulty {
+
+	Difficulty difficulty;
+
+}
+
+// server to world
+struct UpdatePlayerGamemode {
+
+	uint playerId;
+	Gamemode gamemode;
+
+}
+
+// server to world
+struct UpdatePlayerOpStatus {
+
+	uint playerId;
+	bool op;
 
 }
 

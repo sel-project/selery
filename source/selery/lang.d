@@ -122,10 +122,11 @@ final class Lang {
 				immutable message = line[0..equals].strip;
 				immutable text = line[equals+1..$].strip;
 				if(message.length) {
+					immutable comment = text.indexOf("##");
 					Element[] elements;
 					string next;
 					ptrdiff_t index = -1;
-					foreach(i, c; text) {
+					foreach(i, c; text[0..comment==-1?$:comment]) {
 						if(index >= 0) {
 							if(c == '}') {
 								try {
@@ -230,6 +231,14 @@ struct Translation {
 
 	public static nothrow @safe @nogc Translation all(const string translation) {
 		return Translation(translation, translation, translation);
+	}
+
+	public static nothrow @safe @nogc Translation fromMinecraft(const string translation) {
+		return Translation(translation, translation, "");
+	}
+
+	public static nothrow @safe @nogc Translation fromPocket(const string translation) {
+		return Translation(translation, "", translation);
 	}
 
 	/// Values.

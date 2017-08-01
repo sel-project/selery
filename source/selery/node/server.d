@@ -45,13 +45,14 @@ import sel.hncom.handler : HncomHandler;
 import selery.world.world : World; // do not move this import down
 
 import selery.about;
-import selery.command.command : Command, CommandSender, WorldCommandSender;
+import selery.command.command : Command, CommandSender;
+import selery.command.execute : executeCommand;
+import selery.commands : Commands;
 import selery.config : Config;
 import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
-import selery.event.server.server : ServerEvent;
-import selery.event.server;
+import selery.event.node;
 import selery.event.world.world : WorldEvent;
 import selery.format : Text, writeln;
 import selery.lang : Lang, Translation, Message, Messageable;
@@ -61,7 +62,7 @@ import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.minecraft : MinecraftPlayer;
-import selery.player.player : Player, InputMode;
+import selery.player.player : Player;
 import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
 import selery.plugin : Plugin;
 import selery.server : Server;
@@ -120,7 +121,7 @@ private struct Stop {}
 /**
  * Singleton for the server instance.
  */
-final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientbound {
+final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!clientbound {
 
 	public immutable bool lite;
 
@@ -430,18 +431,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 
 		// register commands if enabled in the settings
-		auto _this = cast()this;
-		if(this.config.node.helpCommand) {
-			auto command = new Command("help", Message(Translation("commands.help.description")));
-			command.add!helpCommand(&_this.helpCommand);				// ServerCommandSender
-			command.add!helpCommandByPage(&_this.helpCommandByPage);	// WorldCommandSender
-			command.add!helpCommandByName(&_this.helpCommandByName);	// Player
-			this.commands["help"] = cast(shared)command;
-		}
-		if(this.config.node.aboutCommand) _this.registerCommand!aboutCommand(&_this.aboutCommand, "about", Message(Translation("commands.about.description")), [], false, false);
-		if(this.config.node.pluginsCommand) _this.registerCommand!pluginsCommand(&_this.pluginsCommand, "plugins", Message(Translation("commands.plugins.description")), [], false, false);
-		if(this.config.node.reloadCommand) _this.registerCommand!reloadCommand(&_this.reloadCommand, "reload", Message(Translation("commands.reload.description")), [], true, false);
-		if(this.config.node.stopCommand) _this.registerCommand!stopCommand(&_this.stopCommand, "stop", Message(Translation("commands.stop.description")), [], true, false);
+		Commands.register(this);
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -937,7 +927,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 	public shared bool changePlayerLanguage(uint hubId, string language) {
 		auto player = hubId in this._players;
 		if(player) {
-			if(language == (*player).language || !this.config.hub.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(cast(const)*player, language)) return false;
+			if(language == (*player).language || !this.config.hub.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(this, cast(const)*player, language)) return false;
 			(*player).language = language;
 			this.handler.send(HncomPlayer.UpdateLanguage(hubId, language).encode());
 			return true;
@@ -984,7 +974,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 				std.concurrency.send(cast()(*player).world.tid, RemovePlayer(hubId));
 			}
 			this._players.remove(hubId);
-			(cast()this).callEventIfExists!PlayerLeftEvent(cast(const)*player, reason);
+			(cast()this).callEventIfExists!PlayerLeftEvent(this, cast(const)*player, reason);
 			return true;
 		} else {
 			return false;
@@ -1085,7 +1075,7 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 		// add to the lists
 		this._players[player.hubId] = cast(shared)player;
 
-		auto event = (cast()this).callEventIfExists!PlayerJoinEvent(cast(const)player, packet.reason);
+		auto event = (cast()this).callEventIfExists!PlayerJoinEvent(cast(shared)this, cast(const)player, packet.reason);
 
 		//TODO allow kicking from event
 
@@ -1131,160 +1121,12 @@ final class NodeServer : EventListener!ServerEvent, Server, HncomHandler!clientb
 	// handles a command from various sources.
 	private shared void handleCommand(ubyte origin, Address address, string command, int id=-1) {
 		auto sender = new ServerCommandSender(this, origin, address, id);
-		string found;
-		foreach(_c ; this.commands) {
-			auto c = cast()_c;
-			foreach(cname ; c.command ~ c.aliases) {
-				if(command.startsWith(cname)) {
-					if(c.call(sender, command[cname.length..$])) return;
-					else found = cname;
-				}
-			}
-		}
-		if(found) {
-			(cast()this).callEventIfExists!InvalidParametersEvent(sender, found);
-		} else {
-			(cast()this).callEventIfExists!UnknownCommandEvent(sender);
-		}
-	}
-
-	private void helpCommand(ServerCommandSender sender) {
-		Command[] commands;
-		foreach(command ; sender.registeredCommands) {
-			if(!command.hidden) {
-				foreach(overload ; command.overloads) {
-					if(overload.callableByServer) {
-						commands ~= command;
-						break;
-					}
-				}
-			}
-		}
-		sort!((a, b) => a.command < b.command)(commands);
-		foreach(cmd ; commands) {
-			if(cmd.description.isTranslation) {
-				sender.sendMessage(Text.yellow, cmd.description.translation);
-			} else {
-				sender.sendMessage(Text.yellow, cmd.description.message);
-			}
-			string[] usages;
-			foreach(overload ; cmd.overloads) {
-				if(overload.callableByServer) {
-					usages ~= ("/" ~ cmd.command ~ " " ~ this.formatArg(overload));
-				}
-			}
-			if(usages.length == 1) {
-				sender.sendMessage(Translation("commands.generic.usage"), usages[0]);
-			} else {
-				sender.sendMessage(Translation("commands.generic.usage"), "");
-				foreach(usage ; usages) {
-					sender.sendMessage("- ", usage);
-				}
-			}
-		}
-	}
-
-	private void helpCommandByPage(WorldCommandSender sender, int page) {
-		auto player = cast(Player)sender;
-		if(player) {
-			Command[] commands;
-			foreach(command ; player.commandMap) {
-				if(!command.hidden) commands ~= command;
-			}
-			sort!((a, b) => a.command < b.command)(commands);
-			immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
-			page = clamp(--page, 0, pages - 1);
-			sender.sendMessage(Text.darkGreen, Translation.all("commands.help.header"), page+1, pages);
-			string[] messages;
-			foreach(command ; commands[page*7..min($, (page+1)*7)]) {
-				messages ~= (command.command ~ " " ~ this.formatArgs(command)[0]);
-			}
-			sender.sendMessage(messages.join("\n"));
-			if(player.inputMode == InputMode.keyboard) {
-				sender.sendMessage(Text.green, Translation.all("commands.help.footer"));
-			}
-		} else {
-			sender.sendMessage("Sorry, no help today!");
-		}
-	}
-
-	private void helpCommandByName(Player sender, string command) { // use Command as arg when available
-		auto cmd = sender.commandByName(command);
-		if(cmd !is null) {
-			sender.sendMessage(Text.yellow ~ cmd.command ~ ":");
-			if(cmd.description.isTranslation) {
-				sender.sendMessage(Text.yellow, cmd.description.translation);
-			} else {
-				sender.sendMessage(Text.yellow, cmd.description.message);
-			}
-			auto params = formatArgs(cmd);
-			foreach(ref param ; params) {
-				param = "- /" ~ command ~ " " ~ param;
-			}
-			sender.sendMessage(Translation.all("commands.generic.usage"), "");
-			sender.sendMessage(params.join("\n"));
-		} else {
-			sender.sendMessage(Text.red, Translation.all("commands.generic.notFound"));
-		}
-	}
-
-	private string[] formatArgs(Command command) {
-		string[] ret;
-		foreach(overload ; command.overloads) {
-			ret ~= this.formatArg(overload);
-		}
-		return ret;
-	}
-	
-	private string formatArg(Command.Overload overload) {
-		string[] p;
-		foreach(i, param; overload.params) {
-			if(overload.pocketTypeOf(i) == "stringenum" && overload.enumMembers(i).length == 1) {
-				p ~= overload.enumMembers(i)[0];
-			} else {
-				string full = param ~ ": " ~ overload.typeOf(i);
-				if(i < overload.requiredArgs) {
-					p ~= "<" ~ full ~ ">";
-				} else {
-					p ~= "[" ~ full ~ "]";
-				}
-			}
-		}
-		return p.join(" ");
-	}
-
-	private void aboutCommand(CommandSender sender) {
-		sender.sendMessage(Software.name ~ " " ~ Software.fullVersion);
-	}
-
-	private void pluginsCommand(CommandSender sender) {
-		foreach(_plugin ; (cast(shared)this).plugins) {
-			auto plugin = cast()_plugin;
-			sender.sendMessage("* ", plugin.name, " ", plugin.vers);
-		}
-	}
-
-	private void reloadCommand(CommandSender sender) {
-		foreach(plugin ; (cast(shared)this).plugins) {
-			if(plugin.onreload.length) {
-				foreach(reload ; (cast()plugin).onreload) reload();
-			}
-		}
-	}
-
-	private void stopCommand(CommandSender sender, bool gracefully=true) {
-		if(gracefully) {
-			if(running) (cast(shared)this).shutdown();
-			else sender.sendMessage(Text.red, Translation("commands.stop.failed"));
-		} else {
-			import std.c.stdlib : exit;
-			exit(0);
-		}
+		executeCommand(sender, cast(Command[])this.commands.values, command).trigger(sender);
 	}
 
 }
 
-class ServerCommandSender : CommandSender {
+final class ServerCommandSender : CommandSender {
 
 	enum Origin : ubyte {
 
@@ -1296,16 +1138,20 @@ class ServerCommandSender : CommandSender {
 
 	}
 
-	public shared NodeServer server;
+	private shared NodeServer _server;
 	public immutable ubyte origin;
 	public const Address address;
 	private int id;
 
 	public this(shared NodeServer server, ubyte origin, Address address, int id) {
-		this.server = server;
+		this._server = server;
 		this.origin = origin;
 		this.address = address;
 		this.id = id;
+	}
+
+	public override pure nothrow @property @safe @nogc shared(NodeServer) server() {
+		return this._server;
 	}
 	
 	public override EntityPosition position() {

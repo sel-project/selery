@@ -28,7 +28,6 @@ public import selery.node.server : NodeServer, ServerCommandSender;
 public import selery.node.plugin.config : Config, _, Value, value;
 public import selery.node.plugin.file : exists, isDir, isFile, read, write, remove;
 public import selery.node.plugin.plugin : NodePlugin, PluginOf, start, reload, stop, event, global, inherit, cancel, command, op, hidden;
-public import selery.command.command : param;
 
 // command sender
 public import selery.player.player : Player;
@@ -36,7 +35,7 @@ public import selery.command.command : CommandSender, WorldCommandSender;
 public import selery.world.world : World;
 
 // command utils
-public import selery.command.util : SingleEnum, SnakeCaseEnum, Position, Target;
+public import selery.command.util : SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
 
 // logging
 public import selery.log : log, debug_log, warning_log, error_log;

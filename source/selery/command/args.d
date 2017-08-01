@@ -173,59 +173,60 @@ class QuotedStringNotClosedException : ConvException {
 struct CommandArg {
 	
 	enum Type {
+
 		target,
 		position,
 		boolean,
 		integer,
 		floating,
 		string
+
 	}
 	
-	private union Store {
+	union {
+
 		Target target;
 		Position position;
 		bool boolean;
 		long integer;
 		double floating;
 		string str;
+
 	}
-	public Store store;
-	private Type n_type;
+	private Type _type;
 	
 	public this(Target target) {
-		this.store.target = target;
-		this.n_type = Type.target;
+		this.target = target;
+		this._type = Type.target;
 	}
 	
 	public this(Position position) {
-		this.store.position = position;
-		this.n_type = Type.position;
+		this.position = position;
+		this._type = Type.position;
 	}
 	
 	public this(bool boolean) {
-		this.store.boolean = boolean;
-		this.n_type = Type.boolean;
+		this.boolean = boolean;
+		this._type = Type.boolean;
 	}
 	
 	public this(long integer) {
-		this.store.integer = integer;
-		this.n_type = Type.integer;
+		this.integer = integer;
+		this._type = Type.integer;
 	}
 	
 	public this(double floating) {
-		this.store.floating = floating;
-		this.n_type = Type.floating;
+		this.floating = floating;
+		this._type = Type.floating;
 	}
 	
 	public this(string str) {
-		this.store.str = str;
-		this.n_type = Type.string;
+		this.str = str;
+		this._type = Type.string;
 	}
 	
 	public pure nothrow @property @safe @nogc Type type() {
-		return this.n_type;
+		return this._type;
 	}
-
-	alias store this;
 	
 }

@@ -21,7 +21,7 @@ import selery.about;
 public import selery.plugin;
 
 import selery.command.util : CommandSender;
-import selery.event.server : ServerEvent;
+import selery.event.node : NodeServerEvent;
 import selery.event.world : WorldEvent;
 import selery.node.server : NodeServer;
 import selery.server : Server;
@@ -48,7 +48,7 @@ class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 			} else {
 				T main = new T();
 			}
-			loadPluginAttributes!(true, ServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()node);
+			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()node);
 		}
 	}
 

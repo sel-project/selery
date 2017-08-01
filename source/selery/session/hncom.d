@@ -616,7 +616,7 @@ class ClassicNode : AbstractNode {
 				else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
 				else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 				else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-				else if(["threads", "usage"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+				else if(["reload", "stop"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
 				this.send(response.encode());
 				if(response.status == Login.ConnectionResponse.OK) {
 					this.exchageInfo(receiver);

@@ -139,6 +139,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private Random n_random;
 
 	public Rules rules;
+
+	private Difficulty _difficulty;
+	private Gamemode _gamemode; // default gamemode
 	
 	private tick_t n_ticks = 0;
 
@@ -506,6 +509,24 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			foreach(child ; this.children) {
 				child.broadcast(packet.message);
 			}
+		}
+	}
+
+	private void handleUpdateDifficulty(UpdateDifficulty packet) {
+		//TODO
+	}
+
+	private void handleUpdatePlayerGamemode(UpdatePlayerGamemode packet) {
+		auto player = packet.playerId in this.all_players;
+		if(player) {
+			(*player).gamemode = packet.gamemode;
+		}
+	}
+
+	private void handleUpdatePlayerOpStatus(UpdatePlayerOpStatus packet) {
+		auto player = packet.playerId in this.all_players;
+		if(player) {
+			(*player).op = packet.op;
 		}
 	}
 

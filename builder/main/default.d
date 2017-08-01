@@ -58,6 +58,8 @@ void main(string[] args) {
 			
 			auto portable = new ZipArchive(cast(void[])import("portable.zip"));
 			
+			//TODO config.files is overwritten on reload
+			
 			config.files = new class Files {
 			
 				public this() {

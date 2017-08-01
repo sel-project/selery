@@ -31,13 +31,13 @@ import selery.block.blocks : Blocks;
 import selery.block.tile : Tile, Container;
 import selery.command.args : CommandArg;
 import selery.command.command : Command, WorldCommandSender;
+import selery.command.execute : executeCommand;
 import selery.effect : Effects, Effect;
 import selery.entity.entity : Entity, Rotation;
 import selery.entity.human : Human, Skin, Exhaustion;
 import selery.entity.interfaces : Collectable;
 import selery.entity.metadata;
 import selery.entity.noai : ItemEntity, Painting, Lightning;
-import selery.event.server : PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent, InvalidParametersEvent, UnknownCommandEvent;
 import selery.event.world;
 import selery.format : Text, unformat;
 import selery.inventory.inventory;
@@ -48,6 +48,7 @@ import selery.lang : Translation;
 import selery.log;
 import selery.math.vector;
 import selery.network.hncom : Handler;
+import selery.node.server : NodeServer;
 import selery.node.info : PlayerInfo;
 import selery.util.node : Node;
 import selery.util.util : milliseconds, call;
@@ -380,6 +381,10 @@ abstract class Player : Human, WorldCommandSender {
 			}
 			this.inventory.update_viewers = 0;
 		}
+	}
+
+	public override pure nothrow @property @safe @nogc shared(NodeServer) server() {
+		return super.server();
 	}
 
 	public override pure nothrow @property @safe @nogc World world() {
@@ -775,7 +780,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * Calls a command if the player has it.
 	 * Returns: true if the command has been called, false otherwise
 	 */
-	public bool callCommand(string cmd, string args) {
+	deprecated public bool callCommand(string cmd, string args) {
 		auto ptr = cmd.toLower in this.commands;
 		return ptr && (!(*ptr).op || this.op) && (*ptr).call(this, args);
 	}
@@ -786,7 +791,7 @@ abstract class Player : Human, WorldCommandSender {
 	 */
 	public bool callCommandOverload(string cmd, size_t overload, CommandArg[] args) {
 		auto ptr = cmd.toLower in this.commands;
-		return ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op) && (*ptr).overloads[overload].callArgs(this, args);
+		return ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op) && executeCommand(this, (*ptr).overloads[overload], args).trigger(this);
 	}
 	
 	/**
@@ -795,12 +800,12 @@ abstract class Player : Human, WorldCommandSender {
 	public Command registerCommand(Command _command) {
 		auto command = new Command(_command.command, _command.description, _command.aliases.dup, _command.op, _command.hidden);
 		foreach(overload ; _command.overloads) {
-			if(overload.callableByPlayer) command.overloads ~= overload;
+			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
 		foreach(string cc ; command.aliases ~ command.command) {
 			this.commands[cc.toLower] = command;
 		}
-		if(command.command != "*") this.commands_not_aliases[command.command] = command;
+		this.commands_not_aliases[command.command] = command;
 		return command;
 	}
 
@@ -1043,19 +1048,7 @@ abstract class Player : Human, WorldCommandSender {
 	public void handleTextMessage(string message) {
 		if(!this.alive || message.length == 0) return;
 		if(message[0] == '/') {
-			message = message[1..$].strip;
-			string found;
-			foreach(string commandName, command; this.commands) {
-				if(message.startsWith(commandName) && (message.length == commandName.length || message[commandName.length] == ' ') && (!command.op || this.op)) {
-					if(command.call(this, message[commandName.length..$])) return;
-					else found = commandName;
-				}
-			}
-			if(found.length) {
-				(cast()this.server).callEventIfExists!InvalidParametersEvent(this, found);
-			} else {
-				(cast()this.server).callEventIfExists!UnknownCommandEvent(this);
-			}
+			executeCommand(this, this.commands.values, message[1..$]).trigger(this);
 		} else {
 			message = unformat(message); // pocket and custom clients can send formatted messages
 			PlayerChatEvent event = this.world.callEventIfExists!PlayerChatEvent(this, message);

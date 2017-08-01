@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum uint build = 26;
+	enum uint build = 35;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -156,7 +156,7 @@ enum supportedMinecraftProtocols = cast(string[][uint])[
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	113: ["1.1.0", "1.1.1", "1.1.2", "1.1.3"],
+	113: ["1.1.0", "1.1.1", "1.1.2", "1.1.3", "1.1.4"],
 ];
 
 /**

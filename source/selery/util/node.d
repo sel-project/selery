@@ -24,7 +24,7 @@ import selery.player.player : Player;
  */
 class Node {
 
-	private shared NodeServer server;
+	public shared NodeServer server;
 	
 	/**
 	 * Id of the node, given by the hub.

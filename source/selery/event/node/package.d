@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2017 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -13,8 +13,9 @@
  * 
  */
 /// DDOC_EXCLUDE
-module selery.event;
+module selery.event.node;
 
-public import selery.event.event : Event, Cancellable;
-public import selery.event.server;
-public import selery.event.world;
+//TODO commands
+public import selery.event.node.node : NodeAddedEvent, NodeRemovedEvent, NodeMessageEvent;
+public import selery.event.node.player : PlayerJoinEvent, PlayerLeftEvent, PlayerLanguageUpdatedEvent, PlayerLatencyUpdatedEvent, PlayerPacketLossUpdatedEvent;
+public import selery.event.node.server : NodeServerEvent;

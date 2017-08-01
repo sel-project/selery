@@ -8,7 +8,7 @@ language.bidirectional = false
 
 startup.connecting = Conexión a {0} con nombre "{1}"
 startup.running = Rellenado con {0} el {1} entre {2}
-startup.starting = Inicializar server con {0}
+startup.starting = Inicializar servidor con {0}
 startup.resourcePacks = Construyendo paquetes de recursos
 startup.plugin.enabled = Habilitado {0}
 startup.plugin.enabled.author = Habilitado {0} por {1}
@@ -17,11 +17,11 @@ startup.started = Servidor iniciado
 startup.stopped = Servidor terminado
 startup.unsupported = Este sistema operativo no es completamente soportado por {0}. Algo podría no trabajar de manera correcta
 
-warning.overload = Attención! El server es sobrecargado y el numero de tick esta bajo!
+warning.overload = Attención! El servidor es sobrecargado y el numero de tick esta bajo!
 warning.connectionError = Es imposible establecer una conexión con el hub a la dirección "{0}": {1}
 warning.refused = La conexión ha sido rechazada
 warning.closed = El hub ha serrado la conexión
-warning.outofram = El server esta utilizando demasiada memoria RAM y se terminará
+warning.outofram = El servidor esta utilizando demasiada memoria RAM y se terminará
 warning.protocolRequired = El nudo utiliza el protocolo {0}, pero el protocolo {1} es requerido por el hub
 warning.invalidGame = El juego con el id {0} requerido por el hub no esta soportado por esta versión de {1}
 warning.invalidProtocol = El protocolo {0} para el juego "{1}" aceptado por el hub no es soportado por el nudo
@@ -31,19 +31,29 @@ warning.unknownPacket = Paquete desconocido recibido por {0} con ID {1} ({2} byt
 warning.crash = {0}: {1} in {2} a la línea {3}
 warning.savedCrash = Un archivador con los detalles del problema ha sido guardado en {0}
 warning.blocked = Bloqueado {0} para {1} segundos
-warning.unknownWorld = Mundo {0} no puede ser leido porque su formato no es conocido por {1}
+warning.unknownWorld = El mundo {0} no puede ser leido porque su formato no es conocido por {1}
 warning.creativeFailed = 
 
 status.outdatedHub = No ha sido posible conectarse! Hub obsoleto
 status.outdatedNode = No ha sido posible conectarse! Nodo obsoleto
-status.passwordRequired = El hub necesita de una clave
-status.wrongPassword = Clave incorrecta!
+status.passwordRequired = El hub necesita de una contraseña
+status.wrongPassword = Contraseña incorrecta!
 status.invalidNameLength = Extensión del nombre inadecuada
 status.invalidNameCharacters = El nombre elegido contiene caracteres inválidos. Comproba la documentación del hub para ver cuales caracteres pueden ser utilizados
-status.nameAlreadyUsed = Un nudo con el mismo nombre es ya conectado 
+status.nameAlreadyUsed = Un nodo con el mismo nombre es ya conectado 
 status.nameReserved = El hub ha reservado el nombre elejido y no puede ser usado
 status.unknown = No ha sido posible conectarse! Razón desconocida
 
 handler.listening = Handler {0} monitoreando {1}
 handler.error.bind = Handler {0} no puede monitorear {1}: {2}
 handler.error.address = Handler {0} no puede resolver la dirección {1}
+
+commands.about.description =
+commands.about.software = Software: {0}
+commands.about.plugins = Plugins ({0}):
+commands.generic.notFound = Comando desconocido. Escribe /help para ver la lista de comandos
+commands.help.invalidSender = Perdón, no ayuda hoy!
+commands.reload.description =
+commands.reload.success =
+commands.stop.failed = El servidor ya está siendo detenido
+commands.transfer.description = Transfiere un jugador a otro nodo.

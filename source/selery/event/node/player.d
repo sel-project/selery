@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.event.server.player;
+module selery.event.node.player;
 
 import std.conv : to;
 
@@ -20,21 +20,23 @@ import sel.hncom.player : Add, Remove;
 
 import selery.about : Software;
 import selery.event.event : Cancellable;
-import selery.event.server.server : ServerEvent;
+import selery.event.node.server : NodeServerEvent;
 import selery.node.info : PlayerInfo, WorldInfo;
+import selery.node.server : NodeServer;
 import selery.player.player : Player;
 import selery.world.world : World;
 
-class PlayerEvent : ServerEvent {
+class PlayerEvent : NodeServerEvent {
 
-	private const(PlayerInfo) n_player;
+	private const(PlayerInfo) _player;
 
-	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
-		this.n_player = player;
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player) {
+		super(server);
+		this._player = player;
 	}
 
 	public final pure nothrow @property @safe @nogc const(PlayerInfo) player() {
-		return this.n_player;
+		return this._player;
 	}
 
 }
@@ -57,17 +59,17 @@ final class PlayerJoinEvent : PlayerEvent {
 		
 	}
 
-	private ubyte n_reason;
+	private immutable ubyte _reason;
 
 	public shared(WorldInfo) world;
 	
-	public pure nothrow @safe @nogc this(inout PlayerInfo player, ubyte reason) {
-		super(player);
-		this.n_reason = reason;
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player, ubyte reason) {
+		super(server, player);
+		this._reason = reason;
 	}
 
 	public pure nothrow @property @safe @nogc ubyte reason() {
-		return this.n_reason;
+		return this._reason;
 	}
 	
 }
@@ -94,15 +96,15 @@ final class PlayerLeftEvent : PlayerEvent {
 		
 	}
 
-	private ubyte n_reason;
+	private immutable ubyte _reason;
 	
-	public pure nothrow @safe @nogc this(inout PlayerInfo player, ubyte reason) {
-		super(player);
-		this.n_reason = reason;
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player, ubyte reason) {
+		super(server, player);
+		this._reason = reason;
 	}
 	
 	public pure nothrow @property @safe @nogc ubyte reason() {
-		return this.n_reason;
+		return this._reason;
 	}
 	
 }
@@ -125,8 +127,8 @@ final class PlayerLanguageUpdatedEvent : PlayerEvent, Cancellable {
 	public immutable string oldLanguage;
 	public immutable string newLanguage;
 	
-	public pure nothrow @safe @nogc this(inout PlayerInfo player, string lang) {
-		super(player);
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player, string lang) {
+		super(server, player);
 		this.oldLanguage = player.language;
 		this.newLanguage = lang;
 	}
@@ -144,8 +146,8 @@ final class PlayerLanguageUpdatedEvent : PlayerEvent, Cancellable {
  */
 final class PlayerLatencyUpdatedEvent : PlayerEvent {
 
-	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
-		super(player);
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player) {
+		super(server, player);
 	}
 
 	/**
@@ -175,8 +177,8 @@ final class PlayerLatencyUpdatedEvent : PlayerEvent {
  */
 final class PlayerPacketLossUpdatedEvent : PlayerEvent {
 
-	public pure nothrow @safe @nogc this(inout PlayerInfo player) {
-		super(player);
+	public pure nothrow @safe @nogc this(shared NodeServer server, inout PlayerInfo player) {
+		super(server, player);
 	}
 
 	/**

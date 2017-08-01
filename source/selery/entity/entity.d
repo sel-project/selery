@@ -210,7 +210,7 @@ abstract class Entity : EventListener!WorldEvent {
 		return this.n_world;
 	}
 
-	public final pure nothrow @property @safe @nogc shared(NodeServer) server() {
+	public pure nothrow @property @safe @nogc shared(NodeServer) server() {
 		return this.world.server;
 	}
 

@@ -14,28 +14,18 @@
  */
 module selery.config;
 
-import std.algorithm : sort, uniq, filter, canFind;
-import std.array : array;
-import std.ascii : newline;
-import std.conv : to;
-import std.datetime : Clock;
-import std.file : read, write, exists, tempDir;
-import std.json : JSONValue, JSON_TYPE;
-import std.path : dirSeparator;
-import std.process : environment;
+import std.algorithm : canFind;
+import std.json : JSONValue;
 import std.random : uniform;
-import std.socket : getAddress, AddressFamily;
-import std.string;
-import std.traits : isArray, isAssociativeArray;
-import std.uuid : UUID, randomUUID, parseUUID;
+import std.socket : getAddress;
+import std.string : indexOf, startsWith;
+import std.uuid : UUID, randomUUID;
 
 import selery.about;
 import selery.files : Files;
 import selery.lang : Lang;
 
 class Config {
-
-	enum DISPLAY_NAME = "A Minecraft Server";
 
 	enum LANGUAGES = ["en_GB", "en_US", "it_IT"];
 
@@ -68,11 +58,11 @@ class Config {
 
 		bool edu, realm;
 
-		string displayName = DISPLAY_NAME;
+		string displayName;
 		
-		Game minecraft = Game(true, DISPLAY_NAME, false, ["0.0.0.0", "::"], ushort(25565), latestMinecraftProtocols);
+		Game minecraft = Game(true, "", false, ["0.0.0.0", "::"], ushort(25565), latestMinecraftProtocols);
 
-		Game pocket = Game(true, DISPLAY_NAME, false, ["0.0.0.0"], ushort(19132), latestPocketProtocols);
+		Game pocket = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestPocketProtocols);
 		
 		bool allowVanillaPlayers = false;
 
@@ -128,6 +118,7 @@ class Config {
 
 			version(Windows) {
 				import std.utf : toUTF8;
+				import std.string : fromStringz;
 				import core.sys.windows.winnls;
 				wchar[] lang = new wchar[3];
 				wchar[] country = new wchar[3];
@@ -135,9 +126,19 @@ class Config {
 				GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
 				this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
 			} else {
+				import std.process : environment;
 				this.language = environment.get("LANG", "en_GB");
 			}
 			this.language = bestLanguage(this.language, this.acceptedLanguages);
+
+			this.displayName = this.minecraft.motd = this.pocket.motd = (){
+				switch(language[0..language.indexOf("_")]) {
+					case "es": return "Un Servidor de Minecraft";
+					case "it": return "Un Server di Minecraft";
+					case "pt": return "Um Servidor de Minecraft";
+					default: return "A Minecraft Server";
+				}
+			}();
 
 			this.panelUsers["admin"] = randomPassword();
 			this.rconPassword = randomPassword();
@@ -164,16 +165,6 @@ class Config {
 
 		uint maxPlayers = 20;
 
-		bool helpCommand = true;
-
-		bool aboutCommand = true;
-
-		bool pluginsCommand = true;
-
-		bool reloadCommand = true;
-
-		bool stopCommand = true;
-
 		string gamemode = "survival";
 
 		string difficulty = "easy";
@@ -189,8 +180,44 @@ class Config {
 		uint randomTickSpeed = 3;
 		
 		bool doScheduledTicks = true;
+		
+		bool aboutCommand = true;
+
+		bool deopCommand = true;
+
+		bool difficultyCommand = true;
+
+		bool gamemodeCommand = true;
+
+		bool helpCommand = true;
+
+		bool kickCommand = true;
+
+		bool meCommand = true;
+
+		bool opCommand = true;
+		
+		bool reloadCommand = true;
+
+		bool sayCommand = true;
+
+		bool seedCommand = true;
+		
+		bool stopCommand = true;
+
+		bool tellCommand = true;
+
+		bool toggledownfallCommand = true;
+
+		bool transferCommand = true;
+
+		bool transferserverCommand = true;
+
+		bool weatherCommand = true;
 
 	}
+
+	public void reload() {}
 
 }
 
@@ -206,7 +233,7 @@ public @property string randomPassword() {
 //TODO move to selery/lang.d
 public string bestLanguage(string lang, string[] accepted) {
 	if(accepted.canFind(lang)) return lang;
-	string similar = lang.split("_")[0] ~ "_";
+	string similar = lang[0..lang.indexOf("_")+1];
 	foreach(al ; accepted) {
 		if(al.startsWith(similar)) return al;
 	}

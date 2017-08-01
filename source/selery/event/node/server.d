@@ -12,14 +12,21 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-/// DDOC_EXCLUDE
-module selery.node;
+module selery.event.node.server;
 
-public import selery.block;
-public import selery.entity;
-public import selery.event;
-public import selery.item;
-public import selery.math;
-public import selery.node.plugin;
-public import selery.player;
-public import selery.world;
+import selery.event.event : Event;
+import selery.node.server : NodeServer;
+
+abstract class NodeServerEvent : Event {
+	
+	private shared NodeServer _server;
+	
+	public pure nothrow @safe @nogc this(shared NodeServer server) {
+		this._server = server;
+	}
+	
+	public final pure nothrow @property @safe @nogc shared(NodeServer) server() {
+		return this._server;
+	}
+	
+}

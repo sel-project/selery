@@ -12,21 +12,23 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.event.server.node;
+module selery.event.node.node;
 
-import selery.event.server : ServerEvent;
+import selery.event.node.server : NodeServerEvent;
+import selery.node.server : NodeServer;
 import selery.util.node : Node;
 
-abstract class NodeEvent : ServerEvent {
+abstract class NodeEvent : NodeServerEvent {
 
-	private const(Node) n_node;
+	protected Node _node;
 
-	public pure nothrow @safe @nogc this(const(Node) node) {
-		this.n_node = node;
+	public pure nothrow @safe @nogc this(Node node) {
+		super(node.server);
+		this._node = node;
 	}
 
 	public final pure nothrow @property @safe @nogc const(Node) node() {
-		return this.n_node;
+		return this._node;
 	}
 
 }
@@ -49,21 +51,21 @@ final class NodeRemovedEvent : NodeEvent {
 
 class NodeMessageEvent : NodeEvent {
 
-	private ubyte[] n_payload;
+	private ubyte[] _payload;
 
-	public pure nothrow @safe @nogc this(const(Node) node, ubyte[] payload) {
+	public pure nothrow @safe @nogc this(Node node, ubyte[] payload) {
 		super(node);
-		this.n_payload = payload;
+		this._payload = payload;
 	}
 
 	public final pure nothrow @property @safe @nogc ubyte[] payload() {
-		return this.n_payload;
+		return this._payload;
 	}
 
 	alias message = payload;
 
 	public void reply(ubyte[] message) {
-
+		this._node.sendMessage(message);
 	}
 
 }
