@@ -199,7 +199,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		if(!files.hasTemp(cached)) {
 			immutable asset = "creative/" ~ __protocol.to!string ~ ".json";
 			if(!files.hasAsset(asset)) return false;
-			auto packet = new Play.ContainerSetContent(121, 0);
+			static if(__protocol < 120) auto packet = new Play.ContainerSetContent(121, 0);
+			else auto packet = new Play.InventoryContent(121);
 			foreach(item ; parseJSON(cast(string)files.readAsset(asset))["items"].array) {
 				auto obj = item.object;
 				auto meta = "meta" in obj;
@@ -422,7 +423,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		} else if(this.spectator) {
 			if(has_creative_inventory) {
 				//TODO remove armor and inventory
-				this.sendPacket(new Play.ContainerSetContent(121, this.id));
+				static if(__protocol < 120) this.sendPacket(new Play.ContainerSetContent(121, this.id));
+				else this.sendPacket(new Play.InventoryContent(121));
 				this.has_creative_inventory = false;
 			}
 		}
@@ -480,11 +482,15 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 						}
 					}
 				}
-				section.skyLight = s.skyLight;
-				section.blockLight = s.blocksLight;
+				static if(__protocol < 120) {
+					section.skyLight = s.skyLight;
+					section.blockLight = s.blocksLight;
+				}
 			} else {
-				section.skyLight = 255;
-				section.blockLight = 0;
+				static if(__protocol < 120) {
+					section.skyLight = 255;
+					section.blockLight = 0;
+				}
 			}
 			data.sections ~= section;
 		}
@@ -530,23 +536,27 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 		foreach(ushort index, bool slot; slots) {
 			if(slot) {
 				//TODO if slot is in the hotbar the third argument should not be 0
-				this.sendPacket(new Play.ContainerSetSlot(0, index, 0, toSlot(this.inventory[index])));
+				static if(__protocol < 120) this.sendPacket(new Play.ContainerSetSlot(0, index, 0, toSlot(this.inventory[index])));
+				//else this.sendPacket(new Play.InventorySlot(0, index, 0, toSlot(this.inventory[index])));
 			}
 		}
 		//normal inventory
 		if((flag & PlayerInventory.INVENTORY) > 0) {
-			this.sendPacket(new Play.ContainerSetContent(0, this.id, toSlots(this.inventory[]), [9, 10, 11, 12, 13, 14, 15, 16, 17]));
+			static if(__protocol < 120) this.sendPacket(new Play.ContainerSetContent(0, this.id, toSlots(this.inventory[]), [9, 10, 11, 12, 13, 14, 15, 16, 17]));
+			else this.sendPacket(new Play.InventoryContent(0, toSlots(this.inventory[])));
 		}
 		//armour
 		if((flag & PlayerInventory.ARMOR) > 0) {
-			this.sendPacket(new Play.ContainerSetContent(120, this.id, toSlots(this.inventory.armor[]), new int[0]));
+			static if(__protocol < 120) this.sendPacket(new Play.ContainerSetContent(120, this.id, toSlots(this.inventory.armor[]), new int[0]));
+			else this.sendPacket(new Play.InventoryContent(120, toSlots(this.inventory.armor[])));
 		}
 		//held item
 		if((flag & PlayerInventory.HELD) > 0) this.sendHeld();
 	}
 	
 	public override void sendHeld() {
-		this.sendPacket(new Play.ContainerSetSlot(0, this.inventory.hotbar[this.inventory.selected] + 9, this.inventory.selected, toSlot(this.inventory.held)));
+		static if(__protocol < 120) this.sendPacket(new Play.ContainerSetSlot(0, this.inventory.hotbar[this.inventory.selected] + 9, this.inventory.selected, toSlot(this.inventory.held)));
+		//else this.sendPacket(new Play.InventorySlot(0, this.inventory.hotbar[this.inventory.selected] + 9, this.inventory.selected, toSlot(this.inventory.held)));
 	}
 	
 	public override void sendEntityEquipment(Player player) {
@@ -650,7 +660,25 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	
 	public override void sendJoinPacket() {
 		//TODO send thunders
-		this.sendPacket(new Play.StartGame(this.id, this.id, this.gamemode==3?1:this.gamemode, (cast(Vector3!float)this.position).tuple, this.yaw, this.pitch, this.world.seed, this.world.dimension, this.world.type=="flat"?2:1, this.world.rules.gamemode==3?1:this.world.rules.gamemode, this.world.rules.difficulty, (cast(Vector3!int)this.spawn).tuple, false, this.world.time.to!uint, this.server.config.hub.edu, this.world.downfall?this.world.weather.intensity:0, 0, !this.server.config.hub.realm, false, new Types.Rule[0], Software.display, this.server.name));
+		auto packet = new Play.StartGame(this.id, this.id);
+		packet.gamemode = this.gamemode==3 ? 1 : this.gamemode;
+		packet.position = (cast(Vector3!float)this.position).tuple;
+		packet.yaw = this.yaw;
+		packet.pitch = this.pitch;
+		packet.seed = this.world.seed;
+		packet.dimension = this.world.dimension;
+		packet.generator = this.world.type=="flat" ? 2 : 1;
+		packet.worldGamemode = this.world.rules.gamemode==3 ? 1 : this.world.rules.gamemode;
+		packet.difficulty = this.world.rules.difficulty;
+		packet.spawnPosition = (cast(Vector3!int)this.spawn).tuple;
+		packet.time = this.world.time.to!uint;
+		packet.vers = this.server.config.hub.edu;
+		packet.rainLevel = this.world.downfall ? this.world.weather.intensity : 0;
+		packet.commandsEnabled = !this.server.config.hub.realm;
+		static if(__protocol >= 120) packet.permissionLevel = this.op ? 1 : 0;
+		packet.levelId = Software.display;
+		packet.worldName = this.server.name;
+		this.sendPacket(packet);
 	}
 
 	public override void sendResourcePack() {}
@@ -767,46 +795,50 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	protected override void sendCommands() {
 		this.sent_commands.clear();
-		JSONValue[string] json;
-		foreach(command ; this.commands_not_aliases) {
-			if(command.command != "*" && (!command.op || this.op)) {
-				JSONValue[string] current;
-				current["permission"] = "any";
-				if(command.aliases.length) {
-					current["aliases"] = command.aliases;
-				}
-				JSONValue[string] overloads;
-				foreach(i, overload; command.overloads) {
-					Tuple!(string, PocketType)[] sent_params;
-					JSONValue[] params;
-					foreach(j, name; overload.params) {
-						auto name_type = Tuple!(string, PocketType)(name, overload.pocketTypeOf(j));
-						sent_params ~= name_type;
-						JSONValue[string] p;
-						p["name"] = name_type[0];
-						p["type"] = name_type[1];
-						/*if(name_type[1] == PocketType.target) {
-							immutable target = overload.typeOf(j);
-							if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
-						}*/
-						if(j >= overload.requiredArgs) p["optional"] = true;
-						if(name_type[1] == PocketType.stringenum) p["enum_values"] = overload.enumMembers(j);
-						params ~= JSONValue(p);
+		static if(__protocol < 120) {
+			JSONValue[string] json;
+			foreach(command ; this.commands_not_aliases) {
+				if(command.command != "*" && (!command.op || this.op)) {
+					JSONValue[string] current;
+					current["permission"] = "any";
+					if(command.aliases.length) {
+						current["aliases"] = command.aliases;
 					}
-					foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
-					overloads[to!string(i)] = JSONValue([
-						"input": ["parameters": JSONValue(params)],
-						"output": (JSONValue[string]).init
-					]);
+					JSONValue[string] overloads;
+					foreach(i, overload; command.overloads) {
+						Tuple!(string, PocketType)[] sent_params;
+						JSONValue[] params;
+						foreach(j, name; overload.params) {
+							auto name_type = Tuple!(string, PocketType)(name, overload.pocketTypeOf(j));
+							sent_params ~= name_type;
+							JSONValue[string] p;
+							p["name"] = name_type[0];
+							p["type"] = name_type[1];
+							/*if(name_type[1] == PocketType.target) {
+								immutable target = overload.typeOf(j);
+								if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
+							}*/
+							if(j >= overload.requiredArgs) p["optional"] = true;
+							if(name_type[1] == PocketType.stringenum) p["enum_values"] = overload.enumMembers(j);
+							params ~= JSONValue(p);
+						}
+						foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
+						overloads[to!string(i)] = JSONValue([
+							"input": ["parameters": JSONValue(params)],
+							"output": (JSONValue[string]).init
+						]);
+					}
+					current["overloads"] = overloads;
+					if(command.hidden) {
+						current["is_hidden"] = true;
+					}
+					json[command.command] = JSONValue(["versions": [JSONValue(current)]]);
 				}
-				current["overloads"] = overloads;
-				if(command.hidden) {
-					current["is_hidden"] = true;
-				}
-				json[command.command] = JSONValue(["versions": [JSONValue(current)]]);
 			}
+			this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
+		} else {
+			// send new cooler packet
 		}
-		this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
 
 	}
 
@@ -969,7 +1001,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 
 	//protected void handleCraftingEventPacket(ubyte window, uint type, UUID uuid, Types.Slot[] input, Types.Slot[] output) {}
 
-	protected void handleAdventureSettingsPacket(uint flags, uint permission) {
+	protected void handleAdventureSettingsPacket(uint flags, uint unknown1, uint permissions=0, uint permissionLevel=0, long unknown2=0) {
 		if(flags & Play.AdventureSettings.FLYING) {
 			if(!this.creative && !this.spectator) this.kick("Flying is not enabled on this server");
 		}

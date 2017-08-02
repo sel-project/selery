@@ -507,7 +507,7 @@ class FallingBlock : Projectile {
 		this.setSize(.98, .98);
 		this.block = block;
 		this.metadata.set!"variant"(block.pocketId | block.pocketMeta << 8);
-		this.n_data = block.minecraftId | block.minecraftMeta << 12;
+		this.n_data = block.javaId | block.javaMeta << 12;
 	}
 
 	public override pure nothrow @property @safe @nogc sul.entities.Entity data() {

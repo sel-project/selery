@@ -79,7 +79,7 @@ abstract class Tool : Item {
 		}
 	}
 	
-	public override pure nothrow @property @safe @nogc ushort minecraftMeta() {
+	public override pure nothrow @property @safe @nogc ushort javaMeta() {
 		return this.damage;
 	}
 	
@@ -320,8 +320,8 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 		}
 	}
 
-	public override void parseMinecraftCompound(Compound compound) {
-		super.parseMinecraftCompound(compound);
+	public override void parseJavaCompound(Compound compound) {
+		super.parseJavaCompound(compound);
 		if(compound.has!Compound("")) compound = compound.get!Compound("");
 		auto display = compound.get!Compound("display");
 		if(display.has!Int("color")) this.color = Color.fromRGB(display.get!Int("color"));

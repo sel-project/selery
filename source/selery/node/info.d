@@ -33,6 +33,10 @@ import selery.player.player : InputMode, DeviceOS;
  */
 final class PlayerInfo {
 
+	enum GAME_JAVA = "Minecraft: Java Edition";
+	enum GAME_POCKET = "Minecraft";
+	enum GAME_EDU = "Minecraft: Education Edition";
+
 	/**
 	 * Player's id assigned by the hub and unique for the player's session.
 	 */
@@ -102,15 +106,11 @@ final class PlayerInfo {
 			}
 		}
 		if(type == __JAVA__) {
-			this.gameEdition = "Minecraft";
-			this.gameVersion = supportedMinecraftProtocols[this.protocol][0];
+			this.gameEdition = GAME_JAVA;
+			this.gameVersion = supportedJavaProtocols[this.protocol][0];
 		} else {
-			this.gameEdition = "Minecraft: " ~ (this.edu ? "Education" : [
-				DeviceOS.fireos: "Fire TV",
-				DeviceOS.gearvr: "Gear VR",
-				DeviceOS.win10: "Windows 10",
-				DeviceOS.nx: "Switch",
-			].get(this.deviceOs, "Pocket")) ~ " Edition";
+			if(this.edu) this.gameEdition = GAME_EDU;
+			else this.gameEdition = GAME_POCKET;
 			this.gameVersion = verifyVersion(this.gameVersion, supportedPocketProtocols[this.protocol]);
 		}
 		this.game = this.gameEdition ~ " " ~ this.gameVersion;

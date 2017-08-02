@@ -60,7 +60,7 @@ class Config {
 
 		string displayName;
 		
-		Game minecraft = Game(true, "", false, ["0.0.0.0", "::"], ushort(25565), latestMinecraftProtocols);
+		Game java = Game(true, "", false, ["0.0.0.0", "::"], ushort(25565), latestJavaProtocols);
 
 		Game pocket = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestPocketProtocols);
 		
@@ -131,7 +131,7 @@ class Config {
 			}
 			this.language = bestLanguage(this.language, this.acceptedLanguages);
 
-			this.displayName = this.minecraft.motd = this.pocket.motd = (){
+			this.displayName = this.java.motd = this.pocket.motd = (){
 				switch(language[0..language.indexOf("_")]) {
 					case "es": return "Un Servidor de Minecraft";
 					case "it": return "Un Server di Minecraft";
@@ -159,7 +159,7 @@ class Config {
 
 		}
 
-		Game minecraft = Game(true, latestMinecraftProtocols);
+		Game java = Game(true, latestJavaProtocols);
 
 		Game pocket = Game(true, latestPocketProtocols);
 

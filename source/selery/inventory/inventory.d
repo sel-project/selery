@@ -47,7 +47,7 @@ class InventoryRangeError : Error {
 	
 }
 
-struct InventorySlot {
+/+struct InventorySlot {
 
 	private Slot n_slot;
 
@@ -81,7 +81,7 @@ struct InventorySlot {
 
 	alias slot this;
 
-}
+}+/
 
 /**
  * Basic inventory class with adding/removing/assigning/filling functions.

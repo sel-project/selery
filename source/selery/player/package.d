@@ -15,6 +15,6 @@
 /// DDOC_EXCLUDE
 module selery.player;
 
+public import selery.player.java : JavaPlayer;
 public import selery.player.player : Player, isPlayer, isPlayerInstance, Gamemode, InputMode, DeviceOS, Puppet, Title;
 public import selery.player.pocket : PocketPlayer;
-public import selery.player.minecraft : MinecraftPlayer;

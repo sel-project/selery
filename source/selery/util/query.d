@@ -34,19 +34,19 @@ class Queries : Thread {
 	private shared string* socialJson;
 
 	public shared string pocketIp = "0.0.0.0";
-	public shared string minecraftIp = "0.0.0.0";
+	public shared string javaIp = "0.0.0.0";
 
 	// every 120 seconds (as it's deprecated and rarely used)
-	private shared ubyte[] n_minecraft_legacy_status, n_minecraft_legacy_status_old;
+	private shared ubyte[] _java_legacy_status, _java_legacy_status_old;
 
 	// every 30 seconds
-	private shared ubyte[] n_pocket_short_query, n_minecraft_short_query;
+	private shared ubyte[] _pocket_short_query, _java_short_query;
 
 	// every 30 seconds
-	private shared ubyte[] n_pocket_long_query, n_minecraft_long_query;
+	private shared ubyte[] _pocket_long_query, _java_long_query;
 
 	// reset every 30 seconds
-	private shared int[session_t] n_query_sessions;
+	private shared int[session_t] _query_sessions;
 
 	public this(shared HubServer server, shared string* socialJson) {
 		super(&this.run);
@@ -55,7 +55,7 @@ class Queries : Thread {
 		// set best ip/port
 		with(server.config.hub) {
 			if(serverIp.length) {
-				this.pocketIp = this.minecraftIp = serverIp;
+				this.pocketIp = this.javaIp = serverIp;
 			} else {
 				void parse(string address, ref shared string ip) {
 					string[] spl = address.split(":");
@@ -69,8 +69,8 @@ class Queries : Thread {
 				foreach(string address ; pocket.addresses) {
 					parse(address, this.pocketIp);
 				}
-				foreach(string address ; minecraft.addresses) {
-					parse(address, this.minecraftIp);
+				foreach(string address ; java.addresses) {
+					parse(address, this.javaIp);
 				}
 			}
 		}
@@ -78,7 +78,7 @@ class Queries : Thread {
 
 	public void run() {
 		while(true) {
-			static if(MINECRAFT_ALLOW_LEGACY_PING) this.regenerateMinecraftLegacyStatus();
+			static if(MINECRAFT_ALLOW_LEGACY_PING) this.regenerateJavaLegacyStatus();
 			foreach(i ; 0..4) {
 				this.regenerateShortQueries();
 				this.regenerateLongQueries();
@@ -88,39 +88,39 @@ class Queries : Thread {
 		}
 	}
 
-	public shared nothrow @property @safe @nogc shared(ubyte[])* minecraftLegacyStatus() {
-		return &this.n_minecraft_legacy_status;
+	public shared nothrow @property @safe @nogc shared(ubyte[])* javaLegacyStatus() {
+		return &this._java_legacy_status;
 	}
 
-	public shared nothrow @property @safe @nogc shared(ubyte[])* minecraftLegacyStatusOld() {
-		return &this.n_minecraft_legacy_status_old;
+	public shared nothrow @property @safe @nogc shared(ubyte[])* javaLegacyStatusOld() {
+		return &this._java_legacy_status_old;
 	}
 
 	public shared nothrow @property @safe shared(ubyte[])* pocketShortQuery() {
-		return &this.n_pocket_short_query;
+		return &this._pocket_short_query;
 	}
 
-	public shared nothrow @property @safe shared(ubyte[])* minecraftShortQuery() {
-		return &this.n_minecraft_short_query;
+	public shared nothrow @property @safe shared(ubyte[])* javaShortQuery() {
+		return &this._java_short_query;
 	}
 
 	public shared nothrow @property @safe shared(ubyte[])* pocketLongQuery() {
-		return &this.n_pocket_long_query;
+		return &this._pocket_long_query;
 	}
 
-	public shared nothrow @property @safe shared(ubyte[])* minecraftLongQuery() {
-		return &this.n_minecraft_long_query;
+	public shared nothrow @property @safe shared(ubyte[])* javaLongQuery() {
+		return &this._java_long_query;
 	}
 
 	public shared nothrow @property @safe shared(int[session_t])* querySessions() {
-		return &this.n_query_sessions;
+		return &this._query_sessions;
 	}
 
-	private void regenerateMinecraftLegacyStatus() {
+	private void regenerateJavaLegacyStatus() {
 		/* new (since 1.4) */ {
 			ubyte[] payload = [0, 167, 0, 49, 0, 0];
-			with(this.server.config.hub.minecraft) {
-				foreach(string status ; [to!string(protocols[$-1]), supportedMinecraftProtocols[protocols[$-1]][0], motd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
+			with(this.server.config.hub.java) {
+				foreach(string status ; [to!string(protocols[$-1]), supportedJavaProtocols[protocols[$-1]][0], motd, to!string(this.server.onlinePlayers), to!string(this.server.maxPlayers)]) {
 					foreach(wchar wc ; to!wstring(status)) {
 						ushort s = cast(ushort)wc;
 						payload ~= [(s >> 8) & 255, s & 255];
@@ -130,18 +130,18 @@ class Queries : Thread {
 			}
 			payload = payload[0..$-2];
 			size_t length = payload.length / 2;
-			this.n_minecraft_legacy_status = cast(shared ubyte[])(cast(ubyte[])[255, (length >> 8) & 255, length & 255] ~ payload);
+			this._java_legacy_status = cast(shared ubyte[])(cast(ubyte[])[255, (length >> 8) & 255, length & 255] ~ payload);
 		}
 		/* old (from beta 1.8 to 1.3) */ {
 			ubyte[] payload;
-			with(this.server.config.hub.minecraft) {
+			with(this.server.config.hub.java) {
 				foreach(wchar wc ; to!wstring(motd ~ "§" ~ to!string(this.server.onlinePlayers) ~ "§" ~ to!string(this.server.maxPlayers))) {
 					ushort s = cast(ushort)wc;
 					payload ~= [(s >> 8) & 255, s & 255];
 				}
 			}
 			size_t length = payload.length / 2;
-			this.n_minecraft_legacy_status_old = cast(shared ubyte[])(cast(ubyte[])[255, (length >> 8) & 255, length & 255] ~ payload);
+			this._java_legacy_status_old = cast(shared ubyte[])(cast(ubyte[])[255, (length >> 8) & 255, length & 255] ~ payload);
 		}
 	}
 
@@ -151,11 +151,11 @@ class Queries : Thread {
 			void add(string value) {
 				ubyte[] buff = cast(ubyte[])value ~ 0;
 				if(pocket) pe ~= buff;
-				if(minecraft) pc ~= buff;
+				if(java) pc ~= buff;
 			}
 			static if(QUERY_SHOW_MOTD) {
 				if(pocket) pe ~= cast(ubyte[])pocket.motd ~ ubyte.init;
-				if(minecraft) pc ~= cast(ubyte[])minecraft.motd ~ ubyte.init;
+				if(java) pc ~= cast(ubyte[])java.motd ~ ubyte.init;
 			} else {
 				add(displayName);
 			}
@@ -166,12 +166,12 @@ class Queries : Thread {
 			if(pocket) {
 				pe ~= nativeToLittleEndian(pocket.port);
 				pe ~= cast(ubyte[])this.pocketIp ~ 0;
-				this.n_pocket_short_query = cast(shared)pe;
+				this._pocket_short_query = cast(shared)pe;
 			}
-			if(minecraft) {
-				pc ~= nativeToLittleEndian(minecraft.port);
-				pc ~= cast(ubyte[])this.minecraftIp ~ 0;
-				this.n_minecraft_short_query = cast(shared)pc;
+			if(java) {
+				pc ~= nativeToLittleEndian(java.port);
+				pc ~= cast(ubyte[])this.javaIp ~ 0;
+				this._java_short_query = cast(shared)pc;
 			}
 		}
 	}
@@ -182,7 +182,7 @@ class Queries : Thread {
 			void add(string key, string value) {
 				ubyte[] buff = cast(ubyte[])key ~ 0 ~ cast(ubyte[])value ~ 0;
 				if(pocket) pe ~= buff;
-				if(minecraft) pc ~= buff;
+				if(java) pc ~= buff;
 			}
 			void addTo(ref ubyte[] buffer, string key, string value) {
 				buffer ~= cast(ubyte[])key ~ 0 ~ cast(ubyte[])value ~ 0;
@@ -190,7 +190,7 @@ class Queries : Thread {
 			add("splitnum", x"80");
 			static if(QUERY_SHOW_MOTD) {
 				if(pocket) addTo(pe, "hostname", pocket.motd);
-				if(minecraft) addTo(pc, "hostname", minecraft.motd);
+				if(java) addTo(pc, "hostname", java.motd);
 			} else {
 				add("hostname", displayName);
 			}
@@ -200,9 +200,9 @@ class Queries : Thread {
 				addTo(pe, "game_id", "MINECRAFTPE");
 				addTo(pe, "version", supportedPocketProtocols[pocket.protocols[$-1]][0]);
 			}
-			if(minecraft) {
+			if(java) {
 				addTo(pc, "game_id", "MINECRAFT");
-				addTo(pc, "version", supportedMinecraftProtocols[minecraft.protocols[$-1]][0]);
+				addTo(pc, "version", supportedJavaProtocols[java.protocols[$-1]][0]);
 			}
 			string[] plugins = this.server.plugins;
 			add("plugins", Software.name ~ " " ~ Software.displayVersion ~ (plugins.length ? ": " ~ plugins.join("; ") : ""));
@@ -213,9 +213,9 @@ class Queries : Thread {
 				addTo(pe, "hostport", to!string(pocket.port));
 				addTo(pe, "hostip", this.pocketIp);
 			}
-			if(minecraft) {
-				addTo(pc, "hostport", to!string(minecraft.port));
-				addTo(pc, "hostip", this.minecraftIp);
+			if(java) {
+				addTo(pc, "hostport", to!string(java.port));
+				addTo(pc, "hostip", this.javaIp);
 			}
 			add("social", *this.socialJson);
 			ubyte[] players = cast(ubyte[])(cast(ubyte[])[0, 1] ~ cast(ubyte[])"player_" ~ 0 ~ 0);
@@ -226,13 +226,13 @@ class Queries : Thread {
 				}
 			}
 			players ~= 0;
-			if(pocket) this.n_pocket_long_query = cast(shared)(pe ~ players);
-			if(minecraft) this.n_minecraft_long_query = cast(shared)(pc ~ players);
+			if(pocket) this._pocket_long_query = cast(shared)(pe ~ players);
+			if(java) this._java_long_query = cast(shared)(pc ~ players);
 		}
 	}
 
 	private nothrow void clearQuerySessions() {
-		this.n_query_sessions.clear();
+		this._query_sessions.clear();
 	}
 
 }

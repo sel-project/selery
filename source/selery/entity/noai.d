@@ -48,10 +48,10 @@ class ItemEntity : Entity, Collectable {
 		this.n_data = 1;
 		this.m_motion = motion;
 		this.n_item = item;
-		static if(supportedMinecraftProtocols.length) {
-			import selery.player.minecraft : MinecraftPlayerImpl;
-			foreach(immutable i ; SupportedMinecraftProtocols) {
-				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = MinecraftPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
+		static if(supportedJavaProtocols.length) {
+			import selery.player.java : JavaPlayerImpl;
+			foreach(immutable i ; SupportedJavaProtocols) {
+				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = JavaPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
 			}
 		}
 		this.setSize(WIDTH, HEIGHT);

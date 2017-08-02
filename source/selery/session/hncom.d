@@ -170,7 +170,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	protected shared void exchageInfo(Receiver!(uint, Endian.littleEndian) receiver) {
 		with(cast()server.config.hub) {
 			Login.HubInfo.GameInfo[ubyte] games;
-			if(minecraft) games[__JAVA__] = Login.HubInfo.GameInfo(minecraft.motd, minecraft.protocols, minecraft.onlineMode, minecraft.port);
+			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, java.port);
 			if(pocket) games[__POCKET__] = Login.HubInfo.GameInfo(pocket.motd, pocket.protocols, pocket.onlineMode, pocket.port);
 			this.sendHubInfo(Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
 		}
@@ -494,7 +494,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	public shared void reload() {
 		with(cast()this.server.config.hub) {
 			string[ubyte] motds;
-			if(minecraft) motds[__JAVA__] = minecraft.motd;
+			if(java) motds[__JAVA__] = java.motd;
 			if(pocket) motds[__POCKET__] = pocket.motd;
 			this.send(Status.Reload(displayName, motds, language, acceptedLanguages, cast()*this.additionalJson).encode());
 		}

@@ -20,7 +20,8 @@ import std.typetuple : TypeTuple;
 
 import selery.about;
 
-mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["pocket":supportedPocketProtocols.keys,"minecraft":supportedMinecraftProtocols.keys]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
+// still named "minecraft" in sel-utils
+mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["pocket":supportedPocketProtocols.keys,"minecraft":supportedJavaProtocols.keys]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
 
 mixin((){
 	string ret;

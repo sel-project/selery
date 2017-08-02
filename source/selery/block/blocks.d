@@ -35,7 +35,7 @@ public class BlockStorage {
 	private static BlockStorage instance;
 	
 	private Block[] sel;
-	private Block*[][256] minecraft, pocket;
+	private Block*[][256] java, pocket;
 	
 	public this() {
 		if(instance is null) {
@@ -47,7 +47,7 @@ public class BlockStorage {
 			instance = this;
 		} else {
 			this.sel = instance.sel.dup;
-			this.minecraft = instance.minecraft.dup;
+			this.java = instance.java.dup;
 			this.pocket = instance.pocket.dup;
 		}
 	}
@@ -57,13 +57,13 @@ public class BlockStorage {
 			if(this.sel.length <= block.id) this.sel.length = block.id + 1;
 			this.sel[block.id] = block;
 			auto pointer = &this.sel[block.id];
-			if(block.minecraft) {
-				if(this.minecraft[block.minecraftId].length <= block.minecraftMeta) this.minecraft[block.minecraftId].length = block.minecraftMeta + 1;
-				this.minecraft[block.minecraftId][block.minecraftMeta] = pointer;
+			if(block.java) {
+				if(this.java[block.javaId].length <= block.javaMeta) this.java[block.javaId].length = block.javaMeta + 1;
+				this.java[block.javaId][block.javaMeta] = pointer;
 			}
 			if(block.pocket) {
-				if(this.minecraft[block.pocketId].length <= block.pocketMeta) this.minecraft[block.pocketId].length = block.pocketMeta + 1;
-				this.minecraft[block.pocketId][block.pocketMeta] = pointer;
+				if(this.pocket[block.pocketId].length <= block.pocketMeta) this.pocket[block.pocketId].length = block.pocketMeta + 1;
+				this.pocket[block.pocketId][block.pocketMeta] = pointer;
 			}
 		}
 	}
@@ -107,8 +107,8 @@ public class BlockStorage {
 	 * assert(blocks.fromMinecraft(248) is null);
 	 * ---
 	 */
-	public @safe Block* fromMinecraft(ubyte id, ubyte meta=0) {
-		auto data = this.minecraft[id];
+	public @safe Block* fromJava(ubyte id, ubyte meta=0) {
+		auto data = this.java[id];
 		if(data.length > meta) return data[meta];
 		else return null;
 	}

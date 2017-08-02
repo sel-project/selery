@@ -326,7 +326,7 @@ public class Living : Entity {
 			this.metadata.set!"potionColor"(0);
 		} else {
 			auto c = color.rgb & 0xFFFFFF;
-			foreach(p ; SupportedMinecraftProtocols) {
+			foreach(p ; SupportedJavaProtocols) {
 				mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
 			}
 			c |= 0xFF000000;

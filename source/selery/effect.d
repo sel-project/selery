@@ -53,7 +53,7 @@ class Effect {
 	
 	//TODO from string
 	
-	//TODO from minecraft
+	//TODO from java
 	
 	//TODO from pocket
 	

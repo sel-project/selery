@@ -94,7 +94,7 @@ class HttpHandler : HandlerThread {
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
 			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "stable": JSONValue(stable)]);
 			if(config.pocket) protocols["pocket"] = JSONValue(config.pocket.protocols);
-			if(config.minecraft) protocols["minecraft"] = JSONValue(config.minecraft.protocols);
+			if(config.java) protocols["java"] = JSONValue(config.java.protocols);
 			json["software"] = JSONValue(software);
 			json["protocols"] = JSONValue(protocols);
 		}
@@ -113,8 +113,8 @@ class HttpHandler : HandlerThread {
 		index = index.replace("{DEFAULT_LANG}", config.hub.language[0..2]);
 		index = index.replace("{DISPLAY_NAME}", config.hub.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);
-		index = index.replace("{PC}", config.hub.minecraft ? ("<p>Minecraft: {IP}:" ~ to!string(config.hub.minecraft.port) ~ "</p>") : "");
-		index = index.replace("{PE}", config.hub.pocket ? ("<p>Minecraft&nbsp;" ~ (config.hub.edu ? "Education" : "Pocket") ~ "&nbsp;Edition: {IP}:" ~ to!string(config.hub.pocket.port) ~ "</p>") : "");
+		index = index.replace("{PC}", config.hub.java ? ("<p>Minecraft&nbsp;Java&nbsp;Edition: {IP}:" ~ to!string(config.hub.java.port) ~ "</p>") : "");
+		index = index.replace("{PE}", config.hub.pocket ? ("<p>Minecraft" ~ (config.hub.edu ? "&nbsp;Education&nbsp;Edition" : "") ~ ": {IP}:" ~ to!string(config.hub.pocket.port) ~ "</p>") : "");
 		if(config.hub.serverIp.length) index = index.replace("{IP}", config.hub.serverIp);
 		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;

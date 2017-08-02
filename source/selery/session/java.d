@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.session.minecraft;
+module selery.session.java;
 
 import core.atomic : atomicOp;
 import core.sync.condition : Condition;
@@ -46,14 +46,14 @@ import selery.util.util : milliseconds;
 
 import sul.utils.var : varuint;
 
-mixin("import Status = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".status;");
-mixin("import Login = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".login;");
-mixin("import Clientbound = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".clientbound;");
-mixin("import Serverbound = sul.protocol.minecraft" ~ newestMinecraftProtocol.to!string ~ ".serverbound;");
+mixin("import Status = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".status;");
+mixin("import Login = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".login;");
+mixin("import Clientbound = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".clientbound;");
+mixin("import Serverbound = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".serverbound;");
 
 private enum __onlineMode = false;
 
-class MinecraftHandler : HandlerThread {
+class JavaHandler : HandlerThread {
 	
 	private shared string* socialJson;
 	
@@ -62,19 +62,19 @@ class MinecraftHandler : HandlerThread {
 	public shared JSONValue[string] status;
 	private shared ubyte[]* legacyStatus, legacyStatusOld;
 	
-	private shared Queue!IMinecraftSession sessions;
+	private shared Queue!IJavaSession sessions;
 	private shared Socket[] newConnections;
 	
 	private __gshared Mutex mutex;
 	private __gshared Condition condition;
 	
 	public this(shared HubServer server, shared string* socialJson, bool delegate(string ip) acceptIp, shared ubyte[]* legacyStatus, shared ubyte[]* legacyStatusOld) {
-		with(server.config.hub) super(server, createSockets!TcpSocket(server, "minecraft", minecraft.addresses, minecraft.port, MINECRAFT_BACKLOG));
+		with(server.config.hub) super(server, createSockets!TcpSocket(server, "java", java.addresses, java.port, MINECRAFT_BACKLOG));
 		this.socialJson = socialJson;
 		this.acceptIp = acceptIp;
 		this.legacyStatus = legacyStatus;
 		this.legacyStatusOld = legacyStatusOld;
-		this.sessions = new shared Queue!IMinecraftSession();
+		this.sessions = new shared Queue!IJavaSession();
 		(cast(shared)this).reload();
 	}
 		
@@ -89,7 +89,7 @@ class MinecraftHandler : HandlerThread {
 		while(true) {
 			watch.reset();
 			watch.start();
-			foreach(shared IMinecraftSession session ; this.sessions.sessions) {
+			foreach(shared IJavaSession session ; this.sessions.sessions) {
 				Socket socket = cast()session.socket;
 				do {
 					recv = socket.receive(buffer); //TODO may be null (from crash file)
@@ -162,11 +162,11 @@ class MinecraftHandler : HandlerThread {
 				if(payload.length && length <= payload.length && payload[0] == Status.Handshake.ID) {
 					auto handshake = Status.Handshake.fromBuffer(payload);
 					if(this.acceptIp(handshake.serverAddress)) {
-						shared IMinecraftSession session;
+						shared IJavaSession session;
 						if(handshake.next == Status.Handshake.STATUS) {
-							session = new shared MinecraftStatusSession(this.server, cast(shared)client, this, handshake);
+							session = new shared JavaStatusSession(this.server, cast(shared)client, this, handshake);
 						} else if(handshake.next == Status.Handshake.LOGIN) {
-							session = new shared MinecraftSession(this.server, cast(shared)client, this, handshake);
+							session = new shared JavaSession(this.server, cast(shared)client, this, handshake);
 						}
 						if(session !is null) {
 							this.sessions.push(session);
@@ -207,16 +207,16 @@ class MinecraftHandler : HandlerThread {
 	}
 	
 	private void timeout() {
-		Thread.getThis().name = "minecraftHandler" ~ dirSeparator ~ "timeout";
+		Thread.getThis().name = "javaHandler" ~ dirSeparator ~ "timeout";
 		while(true) {
 			Thread.sleep(dur!"seconds"(1));
-			foreach(shared IMinecraftSession session ; this.sessions.sessions) {
+			foreach(shared IJavaSession session ; this.sessions.sessions) {
 				session.checkTimeout();
 			}
 		}
 	}
 	
-	public shared void removeSession(shared IMinecraftSession session) {
+	public shared void removeSession(shared IJavaSession session) {
 		if(this.sessions.remove(session)) {
 			delete session;
 		}
@@ -225,21 +225,21 @@ class MinecraftHandler : HandlerThread {
 	public override shared void reload() {
 		JSONValue[string] status;
 		// version.protocol, version.name, players.online and players.max will be set by the session
-		status["description"] = ["text": JSONValue(this.server.config.hub.minecraft.motd)];
+		status["description"] = ["text": JSONValue(this.server.config.hub.java.motd)];
 		if(this.server.favicon.length) status["favicon"] = this.server.favicon;
 		this.status = cast(shared)status;
 	}
 	
 }
 
-class MinecraftQueryHandler : UnconnectedHandler {
+class JavaQueryHandler : UnconnectedHandler {
 	
 	private shared int[session_t]* querySessions;
 	
 	private shared ubyte[]* shortQuery, longQuery;
 	
 	public this(shared HubServer server, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.config.hub.minecraft) super(server, createSockets!UdpSocket(server, "minecraftQuery", addresses, port, -1), 15);
+		with(server.config.hub.java) super(server, createSockets!UdpSocket(server, "javaQuery", addresses, port, -1), 15);
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
 		this.longQuery = longQuery;
@@ -275,7 +275,7 @@ class MinecraftQueryHandler : UnconnectedHandler {
 	
 }
 
-interface IMinecraftSession : Queueable {
+interface IJavaSession : Queueable {
 
 	public shared nothrow @property @safe @nogc uint sessionId();
 
@@ -291,18 +291,18 @@ interface IMinecraftSession : Queueable {
 
 }
 
-final class MinecraftStatusSession : Session, IMinecraftSession {
+final class JavaStatusSession : Session, IJavaSession {
 
 	private shared Socket sharedSocket;
 
-	private shared MinecraftHandler handler;
+	private shared JavaHandler handler;
 	public immutable uint protocol;
 
 	private shared ubyte timeoutIn = 4;
 
 	private shared bool ping;
 
-	public shared this(shared HubServer server, shared Socket socket, MinecraftHandler handler, Status.Handshake handshake) {
+	public shared this(shared HubServer server, shared Socket socket, JavaHandler handler, Status.Handshake handshake) {
 		super(server);
 		this.sharedSocket = socket;
 		this.handler = cast(shared)handler;
@@ -340,8 +340,8 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 		immutable length = varuint.fromBuffer(payload);
 		if(length && varuint.fromBuffer(payload) == Status.Request.ID) {
 			auto status = cast(JSONValue[string])this.handler.status;
-			uint protocol = this.server.config.hub.minecraft.protocols.canFind(this.protocol) ? this.protocol : this.server.config.hub.minecraft.protocols[$-1];
-			status["version"] = JSONValue(["protocol": JSONValue(protocol), "name": JSONValue(supportedMinecraftProtocols[protocol][0])]);
+			uint protocol = this.server.config.hub.java.protocols.canFind(this.protocol) ? this.protocol : this.server.config.hub.java.protocols[$-1];
+			status["version"] = JSONValue(["protocol": JSONValue(protocol), "name": JSONValue(supportedJavaProtocols[protocol][0])]);
 			status["players"] = JSONValue(["online": JSONValue(this.server.onlinePlayers), "max": JSONValue(this.server.maxPlayers)]);
 			this.send(new Status.Response(JSONValue(status).toString()).encode());
 			this.ping = true;
@@ -377,16 +377,16 @@ final class MinecraftStatusSession : Session, IMinecraftSession {
 	}
 
 	public override shared string toString() {
-		return "MinecraftStatusSession(" ~ to!string(this.id) ~ ", " ~ to!string((cast()this.sharedSocket).remoteAddress) ~ ")";
+		return "JavaStatusSession(" ~ to!string(this.id) ~ ", " ~ to!string((cast()this.sharedSocket).remoteAddress) ~ ")";
 	}
 
 }
 
-final class MinecraftSession : PlayerSession, IMinecraftSession {
+final class JavaSession : PlayerSession, IJavaSession {
 
 	private shared Socket sharedSocket;
 
-	private shared MinecraftHandler handler;
+	private shared JavaHandler handler;
 
 	private shared ubyte timeoutTicks = MINECRAFT_KEEP_ALIVE_TIMEOUT - 1;
 	private shared uint keepAliveCount = 0;
@@ -400,7 +400,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 
 	private shared Receiver!varuint receiver;
 
-	public shared this(shared HubServer server, shared Socket socket, MinecraftHandler handler, Status.Handshake handshake) {
+	public shared this(shared HubServer server, shared Socket socket, JavaHandler handler, Status.Handshake handshake) {
 		super(server);
 		this.sharedSocket = socket;
 		this.handler = cast(shared)handler;
@@ -410,7 +410,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		this.n_protocol = handshake.protocol;
 		this.receiver = cast(shared)new Receiver!varuint();
 		this.functionHandler = &this.handleLogin;
-		auto p = handshake.protocol in supportedMinecraftProtocols;
+		auto p = handshake.protocol in supportedJavaProtocols;
 		if(p) this.n_version = (*p)[0];
 		this.n_game_name = "Minecraft";
 	}
@@ -473,7 +473,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 		this.n_username = this.m_display_name = Login.LoginStart.fromBuffer(payload).username.idup;
 		this.send(new Login.SetCompression(1024).encode());
 		// disconnect if wrong protocol or name
-		auto protocols = this.server.config.hub.minecraft.protocols;
+		auto protocols = this.server.config.hub.java.protocols;
 		string message = "";
 		if(this.protocol > protocols[$-1]) {
 			message = "Could not connect: Outdated server!";
@@ -616,7 +616,7 @@ final class MinecraftSession : PlayerSession, IMinecraftSession {
 	}
 
 	public override shared string toString() {
-		return "MinecraftSession(" ~ to!string(this.id) ~ ", " ~ to!string((cast()this.sharedSocket).remoteAddress) ~ ")";
+		return "JavaSession(" ~ to!string(this.id) ~ ", " ~ to!string((cast()this.sharedSocket).remoteAddress) ~ ")";
 	}
 
 }

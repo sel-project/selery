@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum uint build = 35;
+	enum uint build = 36;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -128,7 +128,7 @@ const struct Software {
 	 * Version of the api used by the software. It's used to check the
 	 * compatibility with plugins.
 	 */
-	enum ubyte api = 4;
+	enum ubyte api = 5;
 	
 	enum ubyte remotePanel = 1;
 
@@ -147,22 +147,27 @@ const struct Software {
 /**
  * Protocols supported by the software.
  */
-enum supportedMinecraftProtocols = cast(string[][uint])[
+enum supportedJavaProtocols = cast(string[][uint])[
 	210: ["1.10", "1.10.1", "1.10.2"],
 	315: ["1.11"],
 	316: ["1.11.1", "1.11.2"],
 	335: ["1.12"],
 ];
 
+deprecated alias supportedMinecraftProtocols = supportedJavaProtocols;
+
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
 	113: ["1.1.0", "1.1.1", "1.1.2", "1.1.3", "1.1.4"],
+	//130: ["1.2.0"],
 ];
 
 /**
  * Tuples with the supported protocols.
  */
-alias SupportedMinecraftProtocols = ProtocolsTuple!(supportedMinecraftProtocols);
+alias SupportedJavaProtocols = ProtocolsTuple!(supportedJavaProtocols);
+
+deprecated alias SupportedMinecraftProtocols = SupportedJavaProtocols;
 
 /// ditto
 alias SupportedPocketProtocols = ProtocolsTuple!(supportedPocketProtocols);
@@ -182,7 +187,9 @@ private template ProtocolsImpl(uint[] protocols, E...) {
  * For example 315 and 316 if the latest Minecraft version
  * is 1.11.
  */
-enum latestMinecraftProtocols = latest(supportedMinecraftProtocols);
+enum latestJavaProtocols = latest(supportedJavaProtocols);
+
+deprecated alias latestMinecraftProtocols = latestJavaProtocols;
 
 /// ditto
 enum latestPocketProtocols = latest(supportedPocketProtocols);
@@ -202,7 +209,9 @@ private uint[] latest(string[][uint] protocols) {
 /**
  * Latest protocol released.
  */
-enum newestMinecraftProtocol = latestMinecraftProtocols[$-1];
+enum newestJavaProtocol = latestJavaProtocols[$-1];
+
+deprecated alias newestMinecraftProtocol = newestJavaProtocol;
 
 /// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];

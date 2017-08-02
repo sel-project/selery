@@ -35,7 +35,7 @@ public class ItemStorage {
 	private static ItemStorage instance;
 	
 	private Item function(ushort damage)[] indexes;
-	private Item function(ushort damage)[ushort][] minecraft, pocket;
+	private Item function(ushort damage)[ushort][] java, pocket;
 	private Item function(ushort damage)[string] strings;
 	
 	public this() {
@@ -55,7 +55,7 @@ public class ItemStorage {
 			instance = this;
 		} else {
 			this.indexes = instance.indexes.dup;
-			this.minecraft = instance.minecraft.dup;
+			this.java = instance.java.dup;
 			this.pocket = instance.pocket.dup;
 			this.strings = instance.strings.dup;
 		}
@@ -65,9 +65,9 @@ public class ItemStorage {
 		auto item = f(0);
 		if(this.indexes.length <= item.data.index) this.indexes.length = item.data.index + 1;
 		this.indexes[item.data.index] = f;
-		if(item.minecraft) {
-			if(this.minecraft.length < item.minecraftId) this.minecraft.length = item.minecraftId + 1;
-			this.minecraft[item.minecraftId][item.minecraftMeta] = f;
+		if(item.java) {
+			if(this.java.length < item.javaId) this.java.length = item.javaId + 1;
+			this.java[item.javaId][item.javaMeta] = f;
 		}
 		if(item.pocket) {
 			if(this.pocket.length < item.pocketId) this.pocket.length = item.pocketId + 1;
@@ -84,9 +84,9 @@ public class ItemStorage {
 		return index < this.indexes.length ? this.indexes[index](damage) : null;
 	}
 	
-	public Item fromMinecraft(ushort id, ushort damage=0) {
-		if(this.minecraft.length < id) return null;
-		auto data = this.minecraft[id];
+	public Item fromJava(ushort id, ushort damage=0) {
+		if(this.java.length < id) return null;
+		auto data = this.java[id];
 		auto dam = damage in data;
 		return dam ? (*dam)(damage) : null;
 	}

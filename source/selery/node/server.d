@@ -61,7 +61,7 @@ import selery.math.vector : EntityPosition;
 import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
-import selery.player.minecraft : MinecraftPlayer;
+import selery.player.java : JavaPlayer;
 import selery.player.player : Player;
 import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
 import selery.plugin : Plugin;
@@ -318,7 +318,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 				game.port = info.port;
 			}
 			if(type == __JAVA__) {
-				set(config.hub.minecraft);
+				set(config.hub.java);
 			} else if(type == __POCKET__) {
 				set(config.hub.pocket);
 			} else {
@@ -339,8 +339,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 
-		check("Minecraft", config.hub.minecraft.protocols, supportedMinecraftProtocols.keys);
-		check("Minecraft: Pocket Edition", config.hub.pocket.protocols, supportedPocketProtocols.keys);
+		check("Minecraft: Java Edition", config.hub.java.protocols, supportedJavaProtocols.keys);
+		check("Minecraft (Bedrock Engine)", config.hub.pocket.protocols, supportedPocketProtocols.keys);
 
 		this._config = cast(shared)config;
 
@@ -389,13 +389,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 			auto rp_uuid = this.nextUUID;
 			auto rp = createResourcePacks(this, rp_uuid, textures);
-			std.concurrency.spawn(&serveResourcePacks, std.concurrency.thisTid, cast(string)rp.minecraft2.idup, cast(string)rp.minecraft3.idup);
+			std.concurrency.spawn(&serveResourcePacks, std.concurrency.thisTid, cast(string)rp.java2.idup, cast(string)rp.java3.idup);
 			ushort port = std.concurrency.receiveOnly!ushort();
 
 			auto ip = publicAddresses(this.config.files);
 			//TODO also try to use local address before using 127.0.0.1
 
-			MinecraftPlayer.updateResourcePacks(rp.minecraft2, rp.minecraft3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
+			JavaPlayer.updateResourcePacks(rp.java2, rp.java3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
 			PocketPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
 
 		}
@@ -416,7 +416,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomLogin.NodeInfo nodeInfo;
 		uint[][ubyte] games;
-		if(this.config.node.minecraft) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.minecraft.protocols;
+		if(this.config.node.java) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.java.protocols;
 		if(this.config.node.pocket) nodeInfo.acceptedGames[__POCKET__] = cast(uint[])this.config.node.pocket.protocols;
 		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {

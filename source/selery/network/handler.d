@@ -30,7 +30,7 @@ import selery.network.session;
 import selery.network.socket;
 import selery.session.hncom : HncomHandler, LiteNode;
 import selery.session.http : HttpHandler;
-import selery.session.minecraft : MinecraftHandler, MinecraftQueryHandler;
+import selery.session.java : JavaHandler, JavaQueryHandler;
 import selery.session.panel : PanelHandler;
 import selery.session.pocket : PocketHandler;
 import selery.session.rcon : RconHandler;
@@ -82,10 +82,10 @@ class Handler {
 				this.startThread!PocketHandler(server, &this.socialJson, this.queries.querySessions, this.queries.pocketShortQuery, this.queries.pocketLongQuery);
 			}
 
-			if(minecraft) {
-				this.startThread!MinecraftHandler(server, &this.socialJson, acceptIp, this.queries.minecraftLegacyStatus, this.queries.minecraftLegacyStatusOld);
+			if(java) {
+				this.startThread!JavaHandler(server, &this.socialJson, acceptIp, this.queries.javaLegacyStatus, this.queries.javaLegacyStatusOld);
 				if(query) {
-					this.startThread!MinecraftQueryHandler(server, this.queries.querySessions, this.queries.minecraftShortQuery, this.queries.minecraftLongQuery);
+					this.startThread!JavaQueryHandler(server, this.queries.querySessions, this.queries.javaShortQuery, this.queries.javaLongQuery);
 				}
 			}
 

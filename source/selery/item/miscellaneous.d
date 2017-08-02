@@ -102,7 +102,7 @@ class MapItem(sul.items.Item si) : SimpleItem!(si) {
 		}
 	}
 
-	public override pure nothrow @property @safe @nogc ushort minecraftMeta() {
+	public override pure nothrow @property @safe @nogc ushort javaMeta() {
 		return this.mapId;
 	}
 

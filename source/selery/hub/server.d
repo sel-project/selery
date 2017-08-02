@@ -256,10 +256,10 @@ class HubServer {
 	 * - load languages
 	 */
 	private shared void load(ref Config config) {
-		if(config.hub.minecraft) with(config.hub.minecraft) {
+		if(config.hub.java) with(config.hub.java) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace("\\n", "\n");
-			validateProtocols(protocols, supportedMinecraftProtocols.keys, latestMinecraftProtocols);
+			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
 		}
 		if(config.hub.pocket) with(config.hub.pocket) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");

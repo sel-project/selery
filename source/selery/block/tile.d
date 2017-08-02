@@ -41,7 +41,7 @@ import selery.world.world : World;
 
 static import sul.blocks;
 
-mixin("import sul.protocol.minecraft" ~ latestMinecraftProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
+mixin("import sul.protocol.minecraft" ~ latestJavaProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
 
 /**
  * A special block that contains additional data.
@@ -71,7 +71,7 @@ abstract class Tile : Block {
 	 * They're usually in snake case in Minecraft (flower_pot) and
 	 * in pascal case in Minecraft: Pocket Edition (FlowerPot).
 	 */
-	public abstract pure nothrow @property @safe string minecraftSpawnId();
+	public abstract pure nothrow @property @safe string javaSpawnId();
 
 	/// ditto
 	public abstract pure nothrow @property @safe string pocketSpawnId();
@@ -81,7 +81,7 @@ abstract class Tile : Block {
 	 * The tag may be null if the tile does not exists in the game's
 	 * version or when the tile is in its inital state (or empty).
 	 */
-	public abstract @property Compound minecraftCompound();
+	public abstract @property Compound javaCompound();
 
 	/// ditto
 	public abstract @property Compound pocketCompound();
@@ -90,7 +90,7 @@ abstract class Tile : Block {
 	 * Parses a non-null compound saved in the Minecraft's Anvil
 	 * format.
 	 */
-	public abstract void parseMinecraftCompound(Compound compound);
+	public abstract void parseJavaCompound(Compound compound);
 
 	/**
 	 * Parses a non-null compound saved from a Minecraft: Pocket
@@ -187,18 +187,18 @@ abstract class Sign : Tile {
 	private Compound n_compound;
 	private Named!String[4] texts;
 
-	private Compound minecraft_compound;
-	private Named!String[4] minecraft_texts;
+	private Compound java_compound;
+	private Named!String[4] java_texts;
 
 	public this(sul.blocks.Block data, string a, string b, string c, string d) {
 		super(data);
 		foreach(i ; TypeTuple!(0, 1, 2, 3)) {
 			enum text = "Text" ~ to!string(i + 1);
 			this.texts[i] = new Named!String(text, "");
-			this.minecraft_texts[i] = new Named!String(text, "");
+			this.java_texts[i] = new Named!String(text, "");
 		}
 		this.n_compound = new Compound(this.texts[0], this.texts[1], this.texts[2], this.texts[3]);
-		this.minecraft_compound = new Compound(this.minecraft_texts[0], this.minecraft_texts[1], this.minecraft_texts[2], this.minecraft_texts[3]);
+		this.java_compound = new Compound(this.java_texts[0], this.java_texts[1], this.java_texts[2], this.java_texts[3]);
 		this.setImpl(0, a);
 		this.setImpl(1, b);
 		this.setImpl(2, c);
@@ -217,7 +217,7 @@ abstract class Sign : Tile {
 		this(data, a ? *a : "", b ? *b : "", c ? *c : "", d ? *d : "");
 	}
 	
-	public override pure nothrow @property @safe string minecraftSpawnId() {
+	public override pure nothrow @property @safe string javaSpawnId() {
 		return "sign";
 	}
 	
@@ -258,7 +258,7 @@ abstract class Sign : Tile {
 
 	private @trusted void setImpl(size_t index, string data) {
 		this.texts[index].value = data;
-		this.minecraft_texts[index].value = JSONValue(["text": data]).toString();
+		this.java_texts[index].value = JSONValue(["text": data]).toString();
 	}
 
 	/**
@@ -328,15 +328,15 @@ abstract class Sign : Tile {
 		return this[0].length == 0 && this[1].length == 0 && this[2].length == 0 && this[3].length == 0;
 	}
 
-	public override @property Compound minecraftCompound() {
-		return this.minecraft_compound;
+	public override @property Compound javaCompound() {
+		return this.java_compound;
 	}
 
 	public override @property Compound pocketCompound() {
 		return this.n_compound;
 	}
 
-	public override void parseMinecraftCompound(Compound compound) {
+	public override void parseJavaCompound(Compound compound) {
 		void parse(size_t i, string data) {
 			auto json = parseJSON(data);
 			if(json.type == JSON_TYPE.OBJECT) {
@@ -417,7 +417,7 @@ class WallSignBlock(ubyte facing) : Sign if(facing < 4) {
  */
 class FlowerPot : Tile {
 
-	private enum minecraftItems = cast(string[ushort])[
+	private enum javaItems = cast(string[ushort])[
 		6: "sapling",
 		31: "tallgrass",
 		32: "deadbush",
@@ -430,14 +430,14 @@ class FlowerPot : Tile {
 
 	private Item m_item;
 
-	private Compound pocket_compound, minecraft_compound;
+	private Compound pocket_compound, java_compound;
 
 	public this(sul.blocks.Block data, Item item=null) {
 		super(data);
 		if(item !is null) this.item = item;
 	}
 	
-	public override pure nothrow @property @safe string minecraftSpawnId() {
+	public override pure nothrow @property @safe string javaSpawnId() {
 		return "flower_pot";
 	}
 	
@@ -471,10 +471,10 @@ class FlowerPot : Tile {
 		if(item !is null) {
 			item.clear(); // remove enchantments and custom name
 			this.pocket_compound = new Compound(new Named!Short("item", item.pocketId), new Named!Int("mData", item.pocketMeta));
-			this.minecraft_compound = new Compound(new Named!String("Item", (){ auto ret=item.minecraftId in minecraftItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.minecraftMeta));
+			this.java_compound = new Compound(new Named!String("Item", (){ auto ret=item.javaId in javaItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.javaMeta));
 		} else {
 			this.pocket_compound = null;
-			this.minecraft_compound = null;
+			this.java_compound = null;
 		}
 		this.update();
 		return this.m_item = item;
@@ -488,7 +488,7 @@ class FlowerPot : Tile {
 			else if(!(player.inventory += Slot(this.item, 1)).empty) player.world.drop(Slot(this.item, 1), position.entityPosition + [.5, .375, .5]);
 			this.item = null;
 			return true;
-		} else if(item !is null && item.minecraftId in minecraftItems) {
+		} else if(item !is null && item.javaId in javaItems) {
 			// place
 			this.item = item;
 			ubyte c = player.inventory.held.count;
@@ -498,23 +498,23 @@ class FlowerPot : Tile {
 		return false;
 	}
 
-	public override @property Compound minecraftCompound() {
-		return this.minecraft_compound;
+	public override @property Compound javaCompound() {
+		return this.java_compound;
 	}
 
 	public override @property Compound pocketCompound() {
 		return this.pocket_compound;
 	}
 
-	public override void parseMinecraftCompound(Compound compound) {
+	public override void parseJavaCompound(Compound compound) {
 		if(this.world !is null) {
 			auto item = "Item" in compound;
 			auto meta = "Data" in compound;
 			if(item && cast(String)*item) {
 				immutable name = (cast(String)*item).value;
-				foreach(id, n; minecraftItems) {
+				foreach(id, n; javaItems) {
 					if(name == n) {
-						this.item = this.world.items.fromMinecraft(cast(ushort)id, cast(ushort)(meta && cast(Int)*meta ? cast(Int)*meta : 0));
+						this.item = this.world.items.fromJava(cast(ushort)id, cast(ushort)(meta && cast(Int)*meta ? cast(Int)*meta : 0));
 						break;
 					}
 				}

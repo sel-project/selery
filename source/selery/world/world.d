@@ -52,7 +52,7 @@ import selery.log;
 import selery.math.vector;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
-import selery.player.minecraft : MinecraftPlayerImpl;
+import selery.player.java : JavaPlayerImpl;
 import selery.player.player : Player, isPlayer;
 import selery.player.pocket : PocketPlayerImpl;
 import selery.plugin : Plugin, loadPluginAttributes;
@@ -877,11 +877,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		//TODO load saved info from file
 
-		alias __MINECRAFT__ = __JAVA__; // remove when Minecraft will be ufficially called Java Edition
-
 		Player player = (){
 			final switch(info.type) {
-				foreach(type ; TypeTuple!("Pocket", "Minecraft")) {
+				foreach(type ; TypeTuple!("Pocket", "Java")) {
 					case mixin("__" ~ toUpper(type) ~ "__"): {
 						final switch(info.protocol) {
 							foreach(protocol ; mixin("Supported" ~ type ~ "Protocols")) {

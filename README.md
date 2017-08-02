@@ -1,6 +1,6 @@
 ![SEL Logo](https://i.imgur.com/cTu1FE5.png)
 
-**A Server for Minecraft and Minecraft: Pocket Edition written in [D](https://dlang.org)**
+**A Server for Minecraft (Bedrock Engine) and Minecraft: Java Edition written in [D](https://dlang.org)**
 
 [![Join Chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/sel-project/Lobby)
 [![Build Status](https://travis-ci.org/sel-project/selery.svg?branch=master)](https://travis-ci.org/sel-project/selery)
@@ -8,9 +8,14 @@
 
 The server is still in development and some features are not supported yet.
 
-![Minecraft versions](https://img.shields.io/badge/Minecraft-1.10%20--%201.12-brightgreen.svg)
+Supported Minecraft versions:
+- 1.1.*
+- 1.2 beta
 
-![Minecraft: Pocket Edition versions](https://img.shields.io/badge/Minecraft%3A%20Pocket%20Edition-1.1-brightgreen.svg)
+Supported Minecraft: Java Edition versions:
+- 1.10.*
+- 1.11.*
+- 1.12.*
 
 ### Structure
 

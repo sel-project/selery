@@ -59,13 +59,13 @@ private enum double m = 1.0 / 16.0;
  */
 class Block {
 
-	private const sul.blocks.Block n_data;
+	private const sul.blocks.Block _data;
 
 	private immutable bool has_bounding_box;
 	private BlockAxis bounding_box;
 
 	public this(sul.blocks.Block data) {
-		this.n_data = data;
+		this._data = data;
 		if(data.boundingBox) {
 			this.has_bounding_box = true;
 			with(data.boundingBox) this.bounding_box = new BlockAxis(m * min.x, m * min.y, m * min.z, m * max.x, m * max.y, m * max.z);
@@ -79,7 +79,7 @@ class Block {
 	 * Gets the block's sul data.
 	 */
 	public pure nothrow @property @safe @nogc const sul.blocks.Block data() {
-		return this.n_data;
+		return this._data;
 	}
 
 	/**
@@ -92,15 +92,15 @@ class Block {
 	/**
 	 * Indicates whether the block exists in Minecraft.
 	 */
-	public pure nothrow @property @safe @nogc bool minecraft() {
+	public pure nothrow @property @safe @nogc bool java() {
 		return this.data.minecraft.exists;
 	}
 
-	public pure nothrow @property @safe @nogc ubyte minecraftId() {
+	public pure nothrow @property @safe @nogc ubyte javaId() {
 		return this.data.minecraft.id;
 	}
 
-	public pure nothrow @property @safe @nogc ubyte minecraftMeta() {
+	public pure nothrow @property @safe @nogc ubyte javaMeta() {
 		return this.data.minecraft.meta;
 	}
 

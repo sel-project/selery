@@ -105,13 +105,13 @@ class Item {
 								l = cast(ubyte)lvl.integer;
 							}
 							auto name = "name" in e;
-							auto minecraft = "minecraft" in e;
+							auto java = "java" in e;
 							auto pocket = "pocket" in e;
 							try {
 								if(name && name.type == std.json.JSON_TYPE.STRING) {
 									this.addEnchantment(Enchantment.fromString(name.str, l));
-								} else if(minecraft && minecraft.type == std.json.JSON_TYPE.INTEGER) {
-									this.addEnchantment(Enchantment.fromMinecraft(cast(ubyte)minecraft.integer, l));
+								} else if(java && java.type == std.json.JSON_TYPE.INTEGER) {
+									this.addEnchantment(Enchantment.fromJava(cast(ubyte)java.integer, l));
 								} else if(pocket && pocket.type == std.json.JSON_TYPE.INTEGER) {
 									this.addEnchantment(Enchantment.fromPocket(cast(ubyte)pocket.integer, l));
 								}
@@ -139,17 +139,17 @@ class Item {
 	/**
 	 * Indicates wether the item exists in Minecraft.
 	 */
-	public pure nothrow @property @safe @nogc bool minecraft() {
+	public pure nothrow @property @safe @nogc bool java() {
 		return this.data.minecraft.exists;
 	}
 
 	/// ditto
-	public pure nothrow @property @safe @nogc ushort minecraftId() {
+	public pure nothrow @property @safe @nogc ushort javaId() {
 		return this.data.minecraft.id;
 	}
 
 	/// ditto
-	public pure nothrow @property @safe @nogc ushort minecraftMeta() {
+	public pure nothrow @property @safe @nogc ushort javaMeta() {
 		return this.data.minecraft.meta;
 	}
 
@@ -439,7 +439,7 @@ class Item {
 	 * assert(item.pocketCompound !is null);
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc Compound minecraftCompound() {
+	public final pure nothrow @property @safe @nogc Compound javaCompound() {
 		return this.m_pc_tag;
 	}
 
@@ -458,9 +458,9 @@ class Item {
 	 * assert(item.customName == "custom");
 	 * ---
 	 */
-	public @safe void parseMinecraftCompound(Compound compound) {
+	public @safe void parseJavaCompound(Compound compound) {
 		this.clear();
-		this.parseCompound(compound, &Enchantment.fromMinecraft);
+		this.parseCompound(compound, &Enchantment.fromJava);
 	}
 
 	/// ditto
@@ -738,9 +738,9 @@ class Item {
 	public override bool opEquals(Object o) {
 		if(cast(Item)o) {
 			Item i = cast(Item)o;
-			return this.minecraftId == i.minecraftId &&
+			return this.javaId == i.javaId &&
 					this.pocketId == i.pocketId &&
-					this.minecraftMeta == i.minecraftMeta &&
+					this.javaMeta == i.javaMeta &&
 					this.pocketMeta == i.pocketMeta &&
 					this.customName == i.customName &&
 					this.lore == i.lore &&

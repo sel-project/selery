@@ -38,13 +38,13 @@ public import sul.enchantments : Enchantments;
 final class Enchantment {
 	
 	private static const(sul.enchantments.Enchantment)[string] strings;
-	private static const(sul.enchantments.Enchantment)[ubyte] _minecraft, _pocket;
+	private static const(sul.enchantments.Enchantment)[ubyte] _java, _pocket;
 	
 	public static this() {
 		foreach(e ; __traits(allMembers, Enchantments)) {
 			mixin("alias ench = Enchantments." ~ e ~ ";");
 			strings[ench.name.replace(" ", "_")] = ench;
-			if(ench.minecraft) _minecraft[ench.minecraft.id] = ench;
+			if(ench.minecraft) _java[ench.minecraft.id] = ench;
 			if(ench.pocket) _pocket[ench.pocket.id] = ench;
 		}
 	}
@@ -66,19 +66,19 @@ final class Enchantment {
 	}
 	
 	/**
-	 * Creates an enchantment using its Minecraft id.
+	 * Creates an enchantment using its Minecraft: Java Edition's id.
 	 * Example:
 	 * ---
-	 * assert(Enchantment.fromMinecraft(9, 1).name == "frost walker");
+	 * assert(Enchantment.fromJava(9, 1).name == "frost walker");
 	 * ---
 	 */
-	public static @safe Enchantment fromMinecraft(ubyte id, ubyte level) {
-		auto ret = id in _minecraft;
+	public static @safe Enchantment fromJava(ubyte id, ubyte level) {
+		auto ret = id in _java;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
 	
 	/**
-	 * Creates an enchantment using its Minecraft: Pocket Edition id.
+	 * Creates an enchantment using its Minecraft: Pocket Edition's id.
 	 * Example:
 	 * ---
 	 * assert(Enchantment.fromPocket(9, 2).name == "sharpness");
