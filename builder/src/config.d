@@ -104,12 +104,12 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"display-name"(displayName);
 					set!"edu"(edu);
 					set!"realm"(realm);
-					set!"minecraft.enabled"(minecraft.enabled);
-					set!"minecraft.motd"(minecraft.motd);
-					//set!"minecraft.online-mode"(minecraft.onlineMode);
-					set!"minecraft.addresses"(minecraft.addresses);
-					set!"minecraft.port"(minecraft.port);
-					set!"minecraft.accepted-protocols"(minecraft.protocols);
+					set!"java.enabled"(java.enabled);
+					set!"java.motd"(java.motd);
+					//set!"java.online-mode"(java.onlineMode);
+					set!"java.addresses"(java.addresses);
+					set!"java.port"(java.port);
+					set!"java.accepted-protocols"(java.protocols);
 					set!"pocket.enabled"(pocket.enabled);
 					set!"pocket.motd"(pocket.motd);
 					//set!"pocket.online-mode"(pocket.onlineMode);
@@ -151,8 +151,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				
 				if(isNode) with(this.node = new Config.Node()) {
 				
-					set!"minecraft.enabled"(minecraft.enabled);
-					set!"minecraft.accepted-protocols"(minecraft.protocols);
+					set!"java.enabled"(java.enabled);
+					set!"java.accepted-protocols"(java.protocols);
 					set!"pocket.enabled"(pocket.enabled);
 					set!"pocket.accepted-protocols"(pocket.protocols);
 					set!"max-players"(maxPlayers);
@@ -206,8 +206,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				if(isHub && !this.hub.edu) file ~= "favicon = \"" ~ this.hub.favicon ~ "\"" ~ newline;
 				//if(isHub) file ~= "google-analytics = \"" ~ this.hub.googleAnalytics ~ "\"" ~ newline;
 				if(isHub && !this.hub.realm) file ~= "social = {}" ~ newline; //TODO
-				if(isHub && !this.hub.edu) with(this.hub.minecraft) {
-					file ~= newline ~ "[minecraft]" ~ newline;
+				if(isHub && !this.hub.edu) with(this.hub.java) {
+					file ~= newline ~ "[java]" ~ newline;
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
 					file ~= "online-mode = false" ~ newline;
@@ -225,8 +225,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 					if(this.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(this.hub.allowVanillaPlayers);
 				}
-				if(type == ConfigType.node) with(this.node.minecraft) {
-					file ~= newline ~ "[minecraft]" ~ newline;
+				if(type == ConfigType.node) with(this.node.java) {
+					file ~= newline ~ "[java]" ~ newline;
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 				}
