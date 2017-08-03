@@ -317,12 +317,14 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	public override void flush() {
+		enum padding = [ubyte(0), ubyte(0)];
 		// since protocol 110 everything is compressed
 		if(this.queue.length) {
 			ubyte[] payload;
 			size_t total;
 			size_t total_bytes = 0;
 			foreach(ubyte[] packet ; this.queue) {
+				static if(__protocol >= 120) packet = packet[0] ~ padding ~ packet[1..$];
 				total++;
 				total_bytes += packet.length;
 				payload ~= varuint.encode(packet.length.to!uint);
@@ -837,7 +839,22 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 			}
 			this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
 		} else {
-			// send new cooler packet
+			//TODO doesn't work
+			string[] enums;
+			Types.Command[] commands;
+			foreach(command ; this.commands_not_aliases) {
+				if(command.command == "help") continue;
+				auto pc = Types.Command(command.command, command.description.isTranslation ? command.description.translation.pocket : command.description.message); //TODO translate if not pocket
+				foreach(overload ; command.overloads) {
+					Types.Overload po;
+					foreach(i, name; overload.params) {
+						po.parameters ~= Types.Parameter(name, 0, i >= overload.requiredArgs);
+					}
+					pc.overloads ~= po;
+				}
+				commands ~= pc;
+			}
+			this.sendPacket(new Play.AvailableCommands(enums, 0, commands));
 		}
 
 	}
@@ -863,6 +880,10 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	}
 
 	protected void handleTextChatPacket(string sender, string message) {
+		this.handleTextMessage(message);
+	}
+
+	protected void handleTextChatPacket(ubyte unknown1, string sender, string message) {
 		this.handleTextMessage(message);
 	}
 
@@ -1028,6 +1049,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer {
 	//protected void handleReplaceSelectedItemPacket(Types.Slot slot) {}
 
 	//protected void handleShowCreditsPacket(ubyte[] payload) {}
+
+	protected void handleCommandRequestPacket(string command, uint type, string requestId, uint playerId) {
+		if(command.startsWith("/")) command = command[1..$];
+		if(command.length) {
+			this.callCommand(command);
+		}
+	}
 
 	protected void handleCommandStepPacket(string command, string overload_str, uint u1, uint u2, bool isOutput, ulong u3, string input, string output) {
 		static if(__protocol >= 112) {

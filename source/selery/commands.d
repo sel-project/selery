@@ -70,7 +70,7 @@ struct aliases {
  * [ ] replaceitem
  * [ ] say
  * [ ] setblock
- * [ ] setmaxplayers
+ * [x] setmaxplayers
  * [ ] setworldspawn
  * [ ] spawnpoint
  * [ ] spreadplayers
@@ -224,8 +224,9 @@ final class Commands {
 		if(player) {
 			//TODO display overloads instead of commands
 			Command[] commands;
+			size_t overloads;
 			foreach(command ; player.commandMap) {
-				if(!command.hidden) commands ~= command;
+				if(!command.hidden && (!command.op || player.op)) commands ~= command;
 			}
 			sort!((a, b) => a.command < b.command)(commands);
 			immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
@@ -363,6 +364,12 @@ final class Commands {
 	@vanilla say1(ServerCommandSender sender, string message) {
 		//TODO
 		//sender.server.broadcast("[@] " ~ message);
+	}
+
+	@vanilla @op setmaxplayers0(CommandSender sender, uint players) {
+		//TODO
+		//sender.server.max = players;
+		sender.sendMessage(Messages.setmaxplayers.success, players);
 	}
 
 	@vanilla @op seed0(WorldCommandSender sender) {

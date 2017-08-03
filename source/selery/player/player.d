@@ -127,6 +127,7 @@ abstract class Player : Human, WorldCommandSender {
 		this.connectedSameNetwork = this.info.ip.startsWith("192.168.");
 		this.showNametag = true;
 		this.nametag = name;
+		this.metadata.set!"gravity"(true);
 		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
 		this.n_latency = latency;
 		this.viewDistance = this.rules.viewDistance;
@@ -777,21 +778,22 @@ abstract class Player : Human, WorldCommandSender {
 	}
 	
 	/**
-	 * Calls a command if the player has it.
-	 * Returns: true if the command has been called, false otherwise
+	 * Calls a command from a string.
 	 */
-	deprecated public bool callCommand(string cmd, string args) {
-		auto ptr = cmd.toLower in this.commands;
-		return ptr && (!(*ptr).op || this.op) && (*ptr).call(this, args);
+	public void callCommand(string command) {
+		if(command.length) {
+			//TODO filter non-op commands
+			executeCommand(this, this.commands.values, command).trigger(this);
+		}
 	}
 
 	/**
 	 * Calls a command specifying which overload.
 	 * Returns: true if the command has been called, false otherwise
 	 */
-	public bool callCommandOverload(string cmd, size_t overload, CommandArg[] args) {
+	public void callCommandOverload(string cmd, size_t overload, CommandArg[] args) {
 		auto ptr = cmd.toLower in this.commands;
-		return ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op) && executeCommand(this, (*ptr).overloads[overload], args).trigger(this);
+		if(ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op)) executeCommand(this, (*ptr).overloads[overload], args).trigger(this);
 	}
 	
 	/**
@@ -802,10 +804,12 @@ abstract class Player : Human, WorldCommandSender {
 		foreach(overload ; _command.overloads) {
 			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
-		foreach(string cc ; command.aliases ~ command.command) {
-			this.commands[cc.toLower] = command;
+		if(command.overloads.length) {
+			foreach(string cc ; command.aliases ~ command.command) {
+				this.commands[cc.toLower] = command;
+			}
+			this.commands_not_aliases[command.command] = command;
 		}
-		this.commands_not_aliases[command.command] = command;
 		return command;
 	}
 
@@ -1048,7 +1052,7 @@ abstract class Player : Human, WorldCommandSender {
 	public void handleTextMessage(string message) {
 		if(!this.alive || message.length == 0) return;
 		if(message[0] == '/') {
-			executeCommand(this, this.commands.values, message[1..$]).trigger(this);
+			this.callCommand(message[1..$]);
 		} else {
 			message = unformat(message); // pocket and custom clients can send formatted messages
 			PlayerChatEvent event = this.world.callEventIfExists!PlayerChatEvent(this, message);
@@ -1486,7 +1490,7 @@ mixin template generateHandlers(E...) {
 										{
 											V _variant = _packet.new V();
 											_variant.decode();
-											with(_variant) mixin("return this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");");
+											with(_packet) { with(_variant) mixin("return this.handle" ~ P.stringof ~ V.stringof ~ "Packet(" ~ join((){ string[] f;foreach(fl;P.FIELDS){if(fl!=P.variantField){f~=fl;}}return f; }() ~ V.FIELDS, ",") ~ ");"); }
 										}
 									}
 								}

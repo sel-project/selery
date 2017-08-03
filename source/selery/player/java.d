@@ -126,8 +126,8 @@ abstract class JavaPlayer : Player {
 	}
 	
 	public final override void disconnectImpl(const Translation translation, string[] args) {
-		if(translation.minecraft.length) {
-			this.server.kick(this.hubId, translation.minecraft, args);
+		if(translation.java.length) {
+			this.server.kick(this.hubId, translation.java, args);
 		} else {
 			this.disconnect(this.server.config.lang.translate(translation, this.lang, args));
 		}
@@ -249,9 +249,9 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer {
 	}
 
 	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		if(message.minecraft.length) {
+		if(message.java.length) {
 			JSONValue[string] json;
-			json["translate"] = message.minecraft;
+			json["translate"] = message.java;
 			if(args.length) {
 				JSONValue[] a;
 				foreach(arg ; args) {

@@ -49,7 +49,7 @@ void main(string[] args) {
 	}
 	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 	
-	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output);
+	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output)["software"];
 	
 	foreach(arg ; args) {
 		if(arg == "--version") {

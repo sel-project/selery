@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum uint build = 36;
+	enum uint build = 38;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -154,20 +154,15 @@ enum supportedJavaProtocols = cast(string[][uint])[
 	335: ["1.12"],
 ];
 
-deprecated alias supportedMinecraftProtocols = supportedJavaProtocols;
-
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	113: ["1.1.0", "1.1.1", "1.1.2", "1.1.3", "1.1.4"],
-	//130: ["1.2.0"],
+	130: ["1.2.0"],
 ];
 
 /**
  * Tuples with the supported protocols.
  */
 alias SupportedJavaProtocols = ProtocolsTuple!(supportedJavaProtocols);
-
-deprecated alias SupportedMinecraftProtocols = SupportedJavaProtocols;
 
 /// ditto
 alias SupportedPocketProtocols = ProtocolsTuple!(supportedPocketProtocols);
@@ -189,8 +184,6 @@ private template ProtocolsImpl(uint[] protocols, E...) {
  */
 enum latestJavaProtocols = latest(supportedJavaProtocols);
 
-deprecated alias latestMinecraftProtocols = latestJavaProtocols;
-
 /// ditto
 enum latestPocketProtocols = latest(supportedPocketProtocols);
 
@@ -210,8 +203,6 @@ private uint[] latest(string[][uint] protocols) {
  * Latest protocol released.
  */
 enum newestJavaProtocol = latestJavaProtocols[$-1];
-
-deprecated alias newestMinecraftProtocol = newestJavaProtocol;
 
 /// ditto
 enum newestPocketProtocol = latestPocketProtocols[$-1];
@@ -246,7 +237,7 @@ version(Main) {
 
 	void main(string[] args) {
 
-		write(Software.toJSON().toString());
+		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols.keys), "pocket": JSONValue(supportedPocketProtocols.keys)]));
 
 	}
 

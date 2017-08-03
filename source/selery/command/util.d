@@ -69,6 +69,12 @@ interface WorldCommandSender : CommandSender {
 	
 }
 
+interface CommandHolder {
+
+	//public @property Command[] commands();
+
+}
+
 enum PocketType : string {
 	
 	target = "target",
@@ -287,25 +293,42 @@ alias Position = PositionImpl!EntityPosition;
  * For reference see $(LINK2 https://minecraft.gamepedia.com/Commands#Target_selector_variables, Command on Minecraft Wiki).
  */
 struct Target {
-	
+
+	/**
+	 * Raw input of the selector used.
+	 */
 	public string input;
 	
 	public Entity[] entities;
 	public Player[] players;
-	
+
+	/**
+	 * Indicates whether the target was a player or an entity.
+	 * Example:
+	 * ---
+	 * "Steve" = true
+	 * "@a" = true
+	 * "@e" = false
+	 * "@e[type=player]" = true
+	 * "@r" = true
+	 * "@r[type=creeper]" = false
+	 */
+	public bool player = true;
+
 	public this(string input) {
 		this.input = input;
 	}
 	
-	public this(string input, Entity[] entities) {
+	public this(string input, Entity[] entities, bool player=true) {
 		this(input);
 		this.entities = entities;
 		foreach(entity ; entities) {
 			if(cast(Player)entity) this.players ~= cast(Player)entity;
 		}
+		this.player = player;
 	}
 	
-	public this(string input, Player[] players) {
+	public this(string input, Player[] players, bool player=true) {
 		this(input);
 		this.entities = cast(Entity[])players;
 		this.players = players;
@@ -362,7 +385,7 @@ struct Target {
 								selected ~= data[index];
 								data = data[0..index] ~ data[index+1..$];
 							}
-							return Target(str, selected);
+							return Target(str, selected, is(T == Player));
 						}
 					}
 					auto type = "type" in selectors;
@@ -374,11 +397,11 @@ struct Target {
 				case 'a':
 					auto players = sender.visiblePlayers;
 					filter(sender, players, selectors);
-					return Target(str, players);
+					return Target(str, players, true);
 				case 'e':
 					auto entities = sender.visibleEntities;
 					filter(sender, entities, selectors);
-					return Target(str, entities);
+					return Target(str, entities, false);
 				default:
 					return Target(str);
 			}

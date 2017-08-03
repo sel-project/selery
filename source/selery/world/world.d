@@ -902,6 +902,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		// add and send to the list
 		this.addPlayerList(player);
 
+		// register server's commands
+		foreach(command ; this.server.registeredCommands) {
+			player.registerCommand(command);
+		}
+
 		// register world's commands
 		foreach(command ; this.commands) {
 			player.registerCommand(command);

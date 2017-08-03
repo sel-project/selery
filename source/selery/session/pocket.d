@@ -55,7 +55,7 @@ import Control = sul.protocol.raknet8.control;
 import Unconnected = sul.protocol.raknet8.unconnected;
 import Encapsulated = sul.protocol.raknet8.encapsulated;
 
-mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;");
+mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;"); //TODO disconnect packet may change between different protocols
 
 enum ubyte[16] magic = [0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78];
 
@@ -490,11 +490,11 @@ final class PocketSession : PlayerSession {
 						auto p = readBatch(payload[1..$]);
 						if(p.length == 1) {
 							auto login = p[0];
-							if(login.length && login[0] == Login.ID) {
+							if(login.length > 0 && login[0] == Login.ID) {
 								this.handleLogin(Login.fromBuffer(login));
 							}
 						}
-					} catch(ZlibException) {
+					} catch(ZlibException e) {
 						// before 1.1, disconnect as outdated client
 						this.encapsulate(cast(ubyte[])[254, 2, 0, 0, 0, 1], false);
 						this.close();
@@ -567,7 +567,7 @@ final class PocketSession : PlayerSession {
 
 	private shared void handleLogin(Login login) {
 		bool accepted = false;
-		this.edu = login.vers == Login.EDUCATION;
+		//this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
 		auto protocols = this.server.config.hub.pocket.protocols;
 		if(this.n_protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
@@ -619,6 +619,9 @@ final class PocketSession : PlayerSession {
 					ubyte[] skinData = Base64.decode(cd["SkinData"].str);
 					if(!skinName.length || (skinData.length != 8192 && skinData.length != 16384)) throw new Exception("disconnectionScreen.invalidSkin");
 					this.n_skin = cast(shared)new Skin(skinName, skinData);
+
+					cd.remove("SkinId");
+					cd.remove("SkinData");
 
 					auto serverAddress = "ServerAddress" in cd;
 					auto vers = "GameVersion" in cd;
@@ -786,8 +789,8 @@ private ubyte[][] readBatch(ubyte[] data) {
 	data ~= cast(ubyte[])u.flush();
 	ubyte[][] ret;
 	size_t length, index;
-	while((length = varuint.decode(data, &index)) > 0 && length <= data.length - index) {
-		ret ~= data[index..index+length];
+	while((length = varuint.decode(data, &index)) >= 3 && length <= data.length - index) {
+		ret ~= (data[index..index+1] ~ data[index+3..index+length]); // the id is a little-endian triad now?
 		index += length;
 	}
 	return ret;
@@ -796,7 +799,8 @@ private ubyte[][] readBatch(ubyte[] data) {
 private ubyte[] writeBatch(ubyte[][] packets) {
 	ubyte[] ret;
 	foreach(packet ; packets) {
-		ret ~= varuint.encode(cast(uint)packet.length) ~ packet;
+		packet = packet[0] ~ new ubyte[2] ~ packet[1..$];
+		ret ~= varuint.encode(to!uint(packet.length)) ~ packet;
 	}
 	// packet compressed using this function should be small
 	auto c = new Compress(1, HeaderFormat.deflate);

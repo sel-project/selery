@@ -233,7 +233,7 @@ struct Translation {
 		return Translation(translation, translation, translation);
 	}
 
-	public static nothrow @safe @nogc Translation fromMinecraft(const string translation) {
+	public static nothrow @safe @nogc Translation fromJava(const string translation) {
 		return Translation(translation, translation, "");
 	}
 
@@ -242,7 +242,7 @@ struct Translation {
 	}
 
 	/// Values.
-	public string sel, minecraft, pocket; //TODO change to selery
+	public string sel, java, pocket; //TODO change to selery
 
 }
 
@@ -287,17 +287,17 @@ interface Messageable {
 		static if(isTranslation!E) {
 			string[] message_args;
 			Text[] formats;
-			foreach(arg ; args[staticIndexOf!(Translation, E)+1..$]) {
+			foreach(arg ; args[staticIndexOf!(inout Translation, E)+1..$]) {
 				static if(is(typeof(arg) : string) || (isArray!(typeof(arg)) && is(typeof(arg[0]) : string))) {
 					message_args ~= arg;
 				} else {
 					message_args ~= to!string(arg);
 				}
 			}
-			foreach(arg ; args[0..staticIndexOf!(Translation, E)]) {
+			foreach(arg ; args[0..staticIndexOf!(inout Translation, E)]) {
 				formats ~= arg;
 			}
-			this.sendTranslationImpl(args[staticIndexOf!(Translation, E)], message_args, formats);
+			this.sendTranslationImpl(args[staticIndexOf!(inout Translation, E)], message_args, formats);
 		} else {
 			Appender!string message;
 			foreach(i, arg; args) {
@@ -314,14 +314,14 @@ interface Messageable {
 	}
 	
 	protected void sendMessageImpl(string);
-	
+
 	protected void sendTranslationImpl(const Translation, string[], Text[]);
 
 }
 
 private bool isTranslation(E...)() {
-	static if(staticIndexOf!(Translation, E) >= 0) {
-		return isText!(E[0..staticIndexOf!(Translation, E)]);
+	static if(staticIndexOf!(inout Translation, E) >= 0) {
+		return isText!(E[0..staticIndexOf!(inout Translation, E)]);
 	} else {
 		return false;
 	}

@@ -60,7 +60,7 @@ class Config {
 
 		string displayName;
 		
-		Game java = Game(true, "", false, ["0.0.0.0", "::"], ushort(25565), latestJavaProtocols);
+		Game java = Game(true, "", false, ["0.0.0.0"], ushort(25565), latestJavaProtocols);
 
 		Game pocket = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestPocketProtocols);
 		
@@ -202,7 +202,9 @@ class Config {
 		bool sayCommand = true;
 
 		bool seedCommand = true;
-		
+
+		bool setmaxplayersCommand = true;
+
 		bool stopCommand = true;
 
 		bool tellCommand = true;

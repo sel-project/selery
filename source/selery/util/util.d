@@ -143,7 +143,7 @@ unittest {
 }
 
 /** Check if a value is between 0 and 1 */
-public @property @safe @nogc bool one(double value) {
+public deprecated @property @safe @nogc bool one(double value) {
 	return value >= 0f && value <= 1f;
 }
 

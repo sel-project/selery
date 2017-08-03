@@ -47,7 +47,8 @@ struct CommandResult {
 		invalidParameter,
 
 		invalidNumber,
-		invalidBoolean,	
+		invalidBoolean,
+		targetNotPlayer,
 		playerNotFound,
 		targetNotFound,
 		invalidRangeDown,
@@ -82,6 +83,7 @@ struct CommandResult {
 							case invalidParameter: return generic.invalidParameter;
 							case invalidNumber: return generic.numInvalid;
 							case invalidBoolean: return generic.invalidBoolean;
+							case targetNotPlayer: return generic.targetNotPlayer;
 							case playerNotFound: return generic.playerNotFound;
 							case targetNotFound: return generic.targetNotFound;
 							case invalidRangeDown: return generic.numTooSmall;
@@ -114,7 +116,6 @@ class Command {
 			ENTITIES = "entities",
 			PLAYERS = "players",
 			PLAYER = "player",
-			ENTITY = "entity",
 			POSITION = "x y z",
 			BOOL = "bool",
 			INT = "int",
@@ -146,7 +147,7 @@ class Command {
 		
 	}
 	
-	private class OverloadOf(C:CommandSender, E...) : Overload if(areValidArgs!(E[0..$/2])) {
+	private class OverloadOf(C:CommandSender, E...) : Overload if(areValidArgs!(C, E[0..$/2])) {
 
 		private alias Args = E[0..$/2];
 		private alias Params = E[$/2..$];
@@ -172,7 +173,6 @@ class Command {
 						else static if(is(T == Entity[])) return ENTITIES;
 						else static if(is(T == Player[])) return PLAYERS;
 						else static if(is(T == Player)) return PLAYER;
-						else static if(is(T == Entity)) return ENTITY;
 						else static if(is(T == Position)) return POSITION;
 						else static if(is(T == bool)) return BOOL;
 						else static if(is(T == enum)) return T.stringof;
@@ -189,7 +189,7 @@ class Command {
 			switch(i) {
 				foreach(immutable j, T; Args) {
 					case j:
-						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) return PocketType.target;
+						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return PocketType.target;
 						else static if(is(T == Position)) return PocketType.blockpos;
 						else static if(is(T == bool)) return PocketType.boolean;
 						else static if(is(T == enum) || is(T == Command)) return PocketType.stringenum;
@@ -235,11 +235,13 @@ class Command {
 					static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) {
 						immutable selector = reader.readQuotedString();
 						auto target = Target.fromString(sender, selector);
+						static if(is(T == Player) || is(T == Player[])) {
+							//TODO this control can be done before querying the entities
+							if(!target.player) return CommandResult(CommandResult.targetNotPlayer);
+						}
 						if(target.entities.length == 0) return CommandResult(selector.startsWith("@") ? CommandResult.targetNotFound : CommandResult.playerNotFound);
 						static if(is(T == Player)) {
 							cargs[i] = target.players[0];
-						} else static if(is(T == Entity)) {
-							cargs[i] = target.entities[0];
 						} else static if(is(T == Player[])) {
 							cargs[i] = target.players;
 						} else static if(is(T == Entity[])) {
@@ -410,39 +412,40 @@ class Command {
 		this.hidden = hidden;
 	}
 
+	/**
+	 * Adds an overload from a function.
+	 */
 	void add(alias func)(void delegate(Parameters!func) del) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
 		string[] params = [ParameterIdentifierTuple!func][1..$];
 		//TODO nameable params
 		this.overloads ~= new OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
-	
+
 	/**
-	 * Returns: true if the command has been executed, false otherwise.
+	 * Removes an overload using a function.
 	 */
-	deprecated bool call(C:CommandSender, T)(C sender, T args) if(is(T == string) || is(T == CommandArg[])) {
-		foreach(cmd ; this.overloads) {
-			if(cmd.callArgs(sender, args).successful) return true;
+	bool remove(alias func)() {
+		foreach(i, overload; this.overloads) {
+			if(cast(OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$]))overload) {
+				this.overloads = this.overloads[0..i] ~ this.overloads[i+1..$];
+				return true;
+			}
 		}
 		return false;
 	}
 	
 }
 
-public bool areValidArgs(E...)() {
-	static if(E.length == 0) {
-		return true;
-	} else {
-		alias T = E[0];
-		return (
-			is(T == Target) || is(T == Player) || is(T == Entity) || is(T == Player[]) || is(T == Entity[]) ||
-			is(T == Position) ||
-			is(T == bool) ||
-			isIntegral!T ||
-			isFloatingPoint!T ||
-			isRanged!T ||
-			is(T == Command) ||
-			is(T == string) || is(T == enum)
-		)
-		&& areValidArgs!(E[1..$]);
+public bool areValidArgs(C:CommandSender, E...)() {
+	foreach(T ; E) {
+		static if(!areValidArgsImpl!(C, T)) return false;
 	}
+	return true;
+}
+
+private template areValidArgsImpl(C, T) {
+	static if(is(T == enum) || is(T == string) || is(T == bool) || isIntegral!T || isFloatingPoint!T || isRanged!T) enum areValidArgsImpl = true;
+	else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) enum areValidArgsImpl = is(C : WorldCommandSender);
+	else static if(is(T == Command)) enum areValidArgsImpl = false; //TODO
+	else enum areValidArgsImpl = false;
 }
