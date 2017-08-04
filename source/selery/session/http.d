@@ -42,11 +42,13 @@ class HttpHandler : HandlerThread {
 	private shared WebResource icon;
 	private shared string info;
 	private shared WebResource status;
+
+	private shared string iconRedirect = null;
 	
 	private shared string* socialJson;
 	
 	private shared string website;
-	
+
 	private shared ulong lastStatusUpdate;
 	
 	private shared size_t sessionsCount;
@@ -121,10 +123,16 @@ class HttpHandler : HandlerThread {
 		this.index.compress();
 		
 		// icon.png
-		if(this.server.favicon.length) {
-			// must be valid if not empty
-			this.icon.uncompressed = cast(shared string)read(config.hub.favicon);
-			this.icon.compress();
+		this.icon = WebResource.init;
+		this.iconRedirect = null;
+		with(this.server.icon) {
+			if(url.length) {
+				this.iconRedirect = url;
+			} else if(data.length) {
+				// must be valid if not empty
+				this.icon.uncompressed = cast(string)data;
+				this.icon.compress();
+			}
 		}
 		
 		// status.json
@@ -170,7 +178,10 @@ class HttpHandler : HandlerThread {
 				}
 				return response;
 			case "icon.png":
-				if(this.icon.compressed !is null) {
+				if(this.iconRedirect !is null) {
+					return Response(307, "Temporary Redirect", ["Location": this.iconRedirect]);
+				} else if(this.icon.compressed !is null) {
+					import selery.log; log("yep");
 					auto response = Response(200, "OK", ["Content-Type": "image/png"]);
 					return this.returnWebResource(this.icon, request, response);
 				} else {

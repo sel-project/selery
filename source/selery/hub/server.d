@@ -27,15 +27,17 @@ import std.conv : to;
 import std.file;
 import std.json;
 import std.math : round;
-import std.net.curl;
+import std.net.curl : download, CurlException;
 import std.random : uniform;
 import std.regex : replaceAll, ctRegex;
-import std.socket;
-import std.string : join, split, toLower, strip, indexOf, replace;
+import std.socket : Address, InternetAddress, Internet6Address, AddressFamily;
+import std.string : join, split, toLower, strip, indexOf, replace, startsWith;
 import std.system : endian;
 import std.typecons;
 import std.uuid : parseUUID, UUID;
 import std.utf : UTFException;
+
+import imageformats : ImageIOException, read_png_header_from_mem;
 
 import sel.hncom.login : HubInfo, NodeInfo;
 import sel.hncom.status : RemoteCommand;
@@ -43,7 +45,7 @@ import sel.hncom.status : RemoteCommand;
 import selery.about;
 import selery.config : Config;
 import selery.format : Text;
-import selery.log : log;
+import selery.log : log, warning_log;
 import selery.network.handler : Handler;
 import selery.plugin : Plugin;
 import selery.session.hncom : AbstractNode;
@@ -82,6 +84,26 @@ import selery.util.util : milliseconds;
 	
 }+/
 
+struct Icon {
+
+	string url;
+
+	ubyte[] data;
+	string base64data;
+
+	static Icon fromData(void[] _data) {
+		ubyte[] data = cast(ubyte[])_data;
+		return Icon("", data, "data:image/png;base64," ~ Base64.encode(data).idup);
+	}
+
+	static Icon fromURL(string url, void[] data) {
+		auto ret = fromData(data);
+		ret.url = url;
+		return ret;
+	}
+
+}
+
 class HubServer {
 
 	public immutable bool lite;
@@ -93,7 +115,7 @@ class HubServer {
 
 	private shared Config _config;
 	private shared const(AddressRange)[] _accepted_nodes;
-	private shared string _favicon;
+	private shared Icon _icon;
 
 	private shared uint n_max;
 	private shared size_t unlimited_nodes = 0;
@@ -137,30 +159,23 @@ class HubServer {
 			acceptedNodes ~= AddressRange.parse(node);
 		}
 		this._accepted_nodes = cast(shared const)acceptedNodes;
-
-		this.load(config);
-
-		foreach(plugin ; plugins) {
-			//TODO does this save?
-			if(plugin.languages !is null) config.lang.add(plugin.languages); // absolute path
-		}
-
+		
 		version(Windows) {
 			import std.process : executeShell;
 			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.name ~ " " ~ Software.fullVersion);
 		}
-
+		
+		this.load(config);
+		
 		log(config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.reset ~ " " ~ Text.white ~ Software.fullVersion ~ Text.reset ~ " " ~ Software.fullCodename]));
-
+		
 		static if(!__supported) {
-			log(config.lang.translate("startup.unsupported", [Software.name]));
+			warning_log(config.lang.translate("startup.unsupported", [Software.name]));
 		}
 
-		version(DigitalMars) {
-			debug {} else {
-				// buggy in DMD's release mode
-				//TODO print message
-			}
+		foreach(plugin ; plugins) {
+			//TODO does this save?
+			if(plugin.languages !is null) config.lang.add(plugin.languages); // absolute path
 		}
 
 		this.id = uniform!"[]"(ulong.min, ulong.max);
@@ -256,6 +271,7 @@ class HubServer {
 	 * - load languages
 	 */
 	private shared void load(ref Config config) {
+		// MOTDs and protocols
 		if(config.hub.java) with(config.hub.java) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace("\\n", "\n");
@@ -267,11 +283,7 @@ class HubServer {
 			motd ~= Text.reset;
 			validateProtocols(protocols, supportedPocketProtocols.keys, latestPocketProtocols);
 		}
-		if(exists(config.hub.favicon) && isFile(config.hub.favicon)) {
-			ubyte[] data = cast(ubyte[])read(config.hub.favicon);
-			//TODO validate size
-			this._favicon = "data:image/png;base64," ~ Base64.encode(data).idup;
-		}
+		// languages
 		string[] accepted;
 		foreach(lang ; config.hub.acceptedLanguages) {
 			if(Config.LANGUAGES.canFind(lang)) accepted ~= lang;
@@ -280,6 +292,37 @@ class HubServer {
 		if(!accepted.canFind(config.hub.language)) accepted ~= config.hub.language;
 		config.hub.acceptedLanguages = accepted;
 		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
+		// icon
+		Icon icon;
+		if(exists(config.hub.favicon) && isFile(config.hub.favicon)) {
+			icon = Icon.fromData(read(config.hub.favicon));
+		} else if(config.hub.favicon.startsWith("http://") || config.hub.favicon.startsWith("https://")) {
+			immutable cached = "icon_" ~ Base64.encode(cast(ubyte[])config.hub.favicon).idup;
+			if(!config.files.hasTemp(cached)) {
+				try {
+					static import std.net.curl;
+					std.net.curl.download(config.hub.favicon, config.files.temp ~ cached);
+				} catch(CurlException e) {
+					warning_log(config.lang.translate("warning.iconFailed", [config.hub.favicon, e.msg]));
+				}
+			}
+			if(config.files.hasTemp(cached)) {
+				icon = Icon.fromURL(config.hub.favicon, config.files.readTemp(cached));
+			}
+		}
+		if(icon.data.length) {
+			bool valid = false;
+			try {
+				auto header = read_png_header_from_mem(icon.data);
+				if(header.width == 64 && header.height == 64) valid = true;
+			} catch(ImageIOException) {}
+			if(!valid) {
+				warning_log(config.lang.translate("warning.invalidIcon", [config.hub.favicon]));
+				icon = Icon.init;
+			}
+		}
+		this._icon = cast(shared)icon;
+		// save new config
 		this._config = cast(shared)config;
 	}
 
@@ -317,8 +360,8 @@ class HubServer {
 		return cast()this._config;
 	}
 
-	public shared nothrow @property @safe @nogc string favicon() {
-		return this._favicon;
+	public shared nothrow @property @trusted @nogc const(Icon) icon() {
+		return cast()this._icon;
 	}
 
 	/**

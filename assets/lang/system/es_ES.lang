@@ -32,7 +32,6 @@ warning.crash = {0}: {1} in {2} a la línea {3}
 warning.savedCrash = Un archivador con los detalles del problema ha sido guardado en {0}
 warning.blocked = Bloqueado {0} para {1} segundos
 warning.unknownWorld = El mundo {0} no puede ser leido porque su formato no es conocido por {1}
-warning.creativeFailed = 
 
 status.outdatedHub = No ha sido posible conectarse! Hub obsoleto
 status.outdatedNode = No ha sido posible conectarse! Nodo obsoleto

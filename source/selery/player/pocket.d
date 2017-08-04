@@ -14,7 +14,7 @@
  */
 module selery.player.pocket;
 
-import std.algorithm : max, min, sort;
+import std.algorithm : sort, canFind;
 import std.conv : to;
 import std.digest.digest : toHexString;
 import std.digest.sha : sha256Of;
@@ -184,7 +184,7 @@ abstract class PocketPlayer : Player {
 
 // send function are overwritten with static ifs
 // handle functions are created for every version using static ifs
-class PocketPlayerImpl(uint __protocol) : PocketPlayer {
+class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtocols.keys.canFind(__protocol)) {
 
 	mixin("import Types = sul.protocol.pocket" ~ __protocol.to!string ~ ".types;");
 	mixin("import Play = sul.protocol.pocket" ~ __protocol.to!string ~ ".play;");

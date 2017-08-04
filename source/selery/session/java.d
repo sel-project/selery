@@ -226,7 +226,7 @@ class JavaHandler : HandlerThread {
 		JSONValue[string] status;
 		// version.protocol, version.name, players.online and players.max will be set by the session
 		status["description"] = ["text": JSONValue(this.server.config.hub.java.motd)];
-		if(this.server.favicon.length) status["favicon"] = this.server.favicon;
+		if(this.server.icon.data.length) status["favicon"] = this.server.icon.base64data;
 		this.status = cast(shared)status;
 	}
 	

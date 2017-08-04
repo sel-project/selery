@@ -9,10 +9,10 @@
 The server is still in development and some features are not supported yet.
 
 Supported Minecraft versions:
-- [1.2 build 1](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_1)
+- [1.2 build 2](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_2)
 
 Supported Minecraft: Java Edition versions:
-- [1.12](https://minecraft.gamepedia.com/1.12)
+- [1.12](https://minecraft.gamepedia.com/1.12) and [1.12.1](https://minecraft.gamepedia.com/1.12.1)
 - [1.11](https://minecraft.gamepedia.com/1.11), [1.11.1](https://minecraft.gamepedia.com/1.11.1) and [1.11.2](https://minecraft.gamepedia.com/1.11.2)
 - [1.10](https://minecraft.gamepedia.com/1.10), [1.10.1](https://minecraft.gamepedia.com/1.10.1) and [1.10.2](https://minecraft.gamepedia.com/1.10.2)
 

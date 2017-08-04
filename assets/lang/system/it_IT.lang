@@ -32,7 +32,9 @@ warning.crash = {0}: {1} in {2} alla linea {3}
 warning.savedCrash = Un file con i dettagli del problema è stato salvato in {0}
 warning.blocked = Bloccato {0} per {1} secondi
 warning.unknownWorld = Il mondo {0} non può essere letto perchè in un formato sconosciuto a {1}
-warning.creativeFailed = Impossibile scaricare l'inventario della modalità creativa per Minecraft: Pocket Edition versione/i {0}
+warning.creativeFailed = Impossibile caricare l'inventario della modalità creativa per Minecraft versione/i {0}
+warning.iconFailed = Impossibile scaricare l'icona da {0}: {1}
+warning.invalidIcon = L'icona del file {0} ha un formato o una dimensione invalida. Deve essere un'immagine PNG di dimensioni 64x64
 
 status.outdatedHub = Impossibile connettersi! Hub obsoleta
 status.outdatedNode = Impossibile connettersi! Nodo obsoleto

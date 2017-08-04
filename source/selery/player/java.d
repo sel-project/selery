@@ -157,7 +157,7 @@ abstract class JavaPlayer : Player {
 	
 }
 
-class JavaPlayerImpl(uint __protocol) : JavaPlayer {
+class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.keys.canFind(__protocol)) {
 
 	mixin("import Types = sul.protocol.minecraft" ~ __protocol.to!string ~ ".types;");
 	mixin("import Clientbound = sul.protocol.minecraft" ~ __protocol.to!string ~ ".clientbound;");
