@@ -515,9 +515,6 @@ class HubServer {
 	}
 
 	public shared bool acceptNode(Address address) {
-		version(Posix) {
-			if(cast(UnixAddress)address) return true;
-		}
 		if(this.config.hub.maxNodes != 0) {
 			if(this.nodes.length >= this.config.hub.maxNodes) return false;
 		}
