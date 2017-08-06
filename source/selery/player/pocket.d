@@ -14,7 +14,7 @@
  */
 module selery.player.pocket;
 
-import std.algorithm : sort, canFind;
+import std.algorithm : min, sort, canFind;
 import std.conv : to;
 import std.digest.digest : toHexString;
 import std.digest.sha : sha256Of;

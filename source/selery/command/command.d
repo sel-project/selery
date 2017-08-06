@@ -260,13 +260,13 @@ class Command {
 						if(value == "true") cargs[i] = true;
 						else if(value == "false") cargs[i] = false;
 						else return CommandResult(CommandResult.invalidBoolean, [value]);
-					}  else static if(is(T == enum)) {
+					} else static if(is(T == enum)) {
 						immutable value = reader.readString();
-						switch(value) {
+						switch(value.toLower) {
 							mixin((){
 									string ret;
 									foreach(immutable member ; __traits(allMembers, T)) {
-										ret ~= "case \"" ~ member ~ "\": cargs[i]=T." ~ member ~ "; break;";
+										ret ~= `case "` ~ member.toLower ~ `": cargs[i]=T.` ~ member ~ `; break;`;
 									}
 									return ret;
 								}());
@@ -274,22 +274,28 @@ class Command {
 								return CommandResult(CommandResult.invalidParameter, [value]);
 						}
 					} else static if(isIntegral!T || isFloatingPoint!T || isRanged!T) {
-						static if(isFloatingPoint!T) enum _min = T.min_normal; // float, double and real. not ranged
-						else enum _min = T.min;
 						immutable value = reader.readString();
 						try {
 							static if(isFloatingPoint!T || isRanged!T && isFloatingPoint!(T.Type)) {
-								// numbers cannot be infinite or nan
+								// converted numbers cannot be infinite or nan
 								immutable num = to!double(value);
-								if(std.math.isNaN(num) || std.math.isInfinity(num)) return CommandResult(CommandResult.invalidNumber, [value]);
 							} else {
 								immutable num = to!int(value);
 							}
-							// control bounds
-							static if(!isRanged!T || T.type[0] == '[') { if(num < _min) return CommandResult(CommandResult.invalidRangeDown, [value, to!string(_min)]); }
-							else { if(num <= _min) return CommandResult(CommandResult.invalidRangeDown, [value, to!string(_min)]); }
-							static if(!isRanged!T || T.type[1] == ']') { if(num > T.max) return CommandResult(CommandResult.invalidRangeUp, [value, to!string(T.max)]); }
-							else { if(num >= T.max) return CommandResult(CommandResult.invalidRangeUp, [value, to!string(T.max)]); }
+							// control bounds (on integers and ranged numbers)
+							static if(!isFloatingPoint!T) {
+								enum _min = T.min;
+								static if(!isRanged!T || T.type[0] == '[') {
+									if(num < _min) return CommandResult(CommandResult.invalidRangeDown, [value, to!string(_min)]);
+								} else {
+									if(num <= _min) return CommandResult(CommandResult.invalidRangeDown, [value, to!string(_min)]);
+								}
+								static if(!isRanged!T || T.type[1] == ']') {
+									if(num > T.max) return CommandResult(CommandResult.invalidRangeUp, [value, to!string(T.max)]);
+								} else {
+									if(num >= T.max) return CommandResult(CommandResult.invalidRangeUp, [value, to!string(T.max)]);
+								}
+							}
 							// assign
 							static if(isRanged!T) cargs[i] = T(cast(T.Type)num);
 							else cargs[i] = cast(T)num;

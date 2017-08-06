@@ -20,7 +20,7 @@ import std.conv : to, ConvException;
 import std.file : exists, read;
 import std.path : dirSeparator;
 import std.string;
-import std.traits : isArray, staticIndexOf;
+import std.traits : isArray;
 
 import selery.files : Files;
 import selery.format : Text;
@@ -287,17 +287,17 @@ interface Messageable {
 		static if(isTranslation!E) {
 			string[] message_args;
 			Text[] formats;
-			foreach(arg ; args[staticIndexOf!(inout Translation, E)+1..$]) {
+			foreach(arg ; args[staticIndexOf!(Translation, E)+1..$]) {
 				static if(is(typeof(arg) : string) || (isArray!(typeof(arg)) && is(typeof(arg[0]) : string))) {
 					message_args ~= arg;
 				} else {
 					message_args ~= to!string(arg);
 				}
 			}
-			foreach(arg ; args[0..staticIndexOf!(inout Translation, E)]) {
+			foreach(arg ; args[0..staticIndexOf!(Translation, E)]) {
 				formats ~= arg;
 			}
-			this.sendTranslationImpl(args[staticIndexOf!(inout Translation, E)], message_args, formats);
+			this.sendTranslationImpl(args[staticIndexOf!(Translation, E)], message_args, formats);
 		} else {
 			Appender!string message;
 			foreach(i, arg; args) {
@@ -320,8 +320,8 @@ interface Messageable {
 }
 
 private bool isTranslation(E...)() {
-	static if(staticIndexOf!(inout Translation, E) >= 0) {
-		return isText!(E[0..staticIndexOf!(inout Translation, E)]);
+	static if(staticIndexOf!(Translation, E) >= 0) {
+		return isText!(E[0..staticIndexOf!(Translation, E)]);
 	} else {
 		return false;
 	}
@@ -333,4 +333,12 @@ private bool isText(E...)() {
 	} else {
 		return is(E[0] == Text) && (E.length == 1 || isText!(E[1..$]));
 	}
+}
+
+alias staticIndexOf(T, E...) = staticIndexOfImpl!(0, T, E);
+
+template staticIndexOfImpl(size_t index, T, E...) {
+	static if(index >= E.length) enum ptrdiff_t staticIndexOfImpl = -1;
+	else static if(is(E[index] : T)) enum ptrdiff_t staticIndexOfImpl = index;
+	else enum staticIndexOfImpl = staticIndexOfImpl!(index + 1, T, E);
 }

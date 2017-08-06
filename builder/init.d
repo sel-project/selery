@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 22;
+enum size_t __GENERATOR__ = 25;
 
 void main(string[] args) {
 
@@ -75,7 +75,7 @@ void main(string[] args) {
 
 		// get all files in assets
 		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
-			if(file.isFile) {
+			if(file.isFile && file.indexOf(".git") == -1) {
 				auto member = new ArchiveMember();
 				member.name = file[10..$].replace("\\", "/");
 				member.expandedData(cast(ubyte[])read(file));
@@ -369,6 +369,14 @@ void main(string[] args) {
 				imports ~= "static import " ~ value.mod ~ ";\n";
 			}
 			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+			auto conditions = "conditions" in value.toml;
+			if(conditions && conditions.type == TOML_TYPE.TABLE) {
+				string[] conds;
+				foreach(key, value; conditions.table) {
+					if(value.type == TOML_TYPE.BOOL) conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.boolean) ~ ")";
+				}
+				load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+			}
 			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
 			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
 			loads ~= "\t" ~ load ~ "\n";
@@ -376,13 +384,13 @@ void main(string[] args) {
 		
 	}
 
-	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.plugin : Plugin;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T)(){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
+	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T, bool is_node)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
 
 }
 
-enum invalid = ["selery", "sel", "toml", "default", "hub", "node", "builder", "starter", "pluginloader"];
+enum invalid = ["selery", "sel", "toml", "default", "hub", "node", "builder", "condition", "config", "starter", "pluginloader"];
 
 void checkName(string name) {
 	void error(string message) {

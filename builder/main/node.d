@@ -57,7 +57,7 @@ void main(string[] args) {
 
 		try {
 			
-			new shared NodeServer(address, name, password, main, config, loadPlugins!(PluginOf, NodePlugin)(), args);
+			new shared NodeServer(address, name, password, main, config, loadPlugins!(PluginOf, NodePlugin, true)(config), args);
 			
 		} catch(LinkTerminated) {
 			

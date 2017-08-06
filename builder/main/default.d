@@ -88,13 +88,13 @@ void main(string[] args) {
 		
 		}
 
-		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, HubPlugin)(), args); }).start();
+		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, HubPlugin, false)(config), args); }).start();
 
 		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
 			
-			new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, config, loadPlugins!(NodePluginOf, NodePlugin)(), args);
+			new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, config, loadPlugins!(NodePluginOf, NodePlugin, true)(config), args);
 			
 		} catch(LinkTerminated) {
 			

@@ -25,7 +25,7 @@ void main(string[] args) {
 
 	start(ConfigType.hub, "hub", args, (Config config){
 
-		new shared HubServer(false, config, loadPlugins!(PluginOf, HubPlugin)(), args);
+		new shared HubServer(false, config, loadPlugins!(PluginOf, HubPlugin, false)(config), args);
 
 	});
 
