@@ -244,8 +244,8 @@ public class Living : Entity {
 	}
 
 	/// ditto
-	public Effect* opBinaryRight(string op : "in")(sul.effects.Effect effect) {
-		return this.opBinaryRight!"in"(effect.minecraft.id);
+	public Effect* opBinaryRight(string op : "in")(inout sul.effects.Effect effect) {
+		return this.opBinaryRight!"in"(effect.java.id);
 	}
 
 	/**
@@ -253,9 +253,9 @@ public class Living : Entity {
 	 * Returns: whether the effect has been removed
 	 */
 	public bool removeEffect(sul.effects.Effect effect) {
-		auto e = effect.minecraft.id in this.effects;
+		auto e = effect.java.id in this.effects;
 		if(e) {
-			this.effects.remove(effect.minecraft.id);
+			this.effects.remove(effect.java.id);
 			this.recalculateColors();
 			(*e).onStop();
 			/*if(effect.id == Effects.healthBoost) {
@@ -327,7 +327,7 @@ public class Living : Entity {
 		} else {
 			auto c = color.rgb & 0xFFFFFF;
 			foreach(p ; SupportedJavaProtocols) {
-				mixin("this.metadata.minecraft" ~ p.to!string ~ ".potionColor = c;");
+				mixin("this.metadata.java" ~ p.to!string ~ ".potionColor = c;");
 			}
 			c |= 0xFF000000;
 			foreach(p ; SupportedPocketProtocols) {

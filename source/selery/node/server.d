@@ -406,11 +406,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			auto plugin = cast()_plugin;
 			plugin.load(this);
 			auto args = [
-				Text.green ~ plugin.name ~ (plugin.api ? " + API" : "") ~ Text.reset,
+				Text.green ~ plugin.name ~ Text.reset,
 				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
 				Text.white ~ plugin.vers
 			];
-			log(this.config.lang.translate("startup.plugin.enabled" ~ (!plugin.vers.startsWith("~") ? ".version" : (plugin.authors.length ? ".author" : "")), args));
+			log(this.config.lang.translate("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
@@ -618,6 +618,17 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 */
 	public shared pure nothrow @property @safe @nogc size_t max() {
 		return this._config.node.maxPlayers;
+	}
+
+	/**
+	 * Sets the maximum number of players that can connect to the
+	 * current node.
+	 * 0 can be used for unlimited players.
+	 */
+	public shared @property size_t max(uint max) {
+		this._config.node.maxPlayers = max;
+		this.handler.send(HncomStatus.UpdateMaxPlayers(max).encode());
+		return max;
 	}
 	
 	/**
@@ -924,23 +935,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	// hub-node communication and related methods
 
-	public shared bool changePlayerLanguage(uint hubId, string language) {
-		auto player = hubId in this._players;
-		if(player) {
-			if(language == (*player).language || !this.config.hub.acceptedLanguages.canFind(language) || (cast()this).callCancellableIfExists!PlayerLanguageUpdatedEvent(this, cast(const)*player, language)) return false;
-			(*player).language = language;
-			this.handler.send(HncomPlayer.UpdateLanguage(hubId, language).encode());
-			return true;
-		} else {
-			return false;
-		}
-	}
-	
-	public shared void updatePlayerDisplayName(uint hubId) {
-		auto player = hubId in this._players;
-		if(player) this.handler.send(HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
-	}
-
 	/*
 	 * Kicks a player from the server using Player.kick.
 	 */
@@ -980,17 +974,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			return false;
 		}
 	}
+	
+	public shared void updatePlayerDisplayName(uint hubId) {
+		auto player = hubId in this._players;
+		if(player) this.handler.send(HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
+	}
 
-	/*private shared void handleHncomPacket(ubyte id, ubyte[] data) {
-		switch(id) {
-			foreach(P ; TypeTuple!(HncomUtil.Packets, HncomStatus.Packets, HncomPlayer.Packets, HncomWorld.Packets)) {
-				static if(P.CLIENTBOUND) {
-					case P.ID: mixin("return this.handle" ~ P.stringof ~ "Packet(P.fromBuffer!false(data));");
-				}
-			}
-			default: error_log("Unknown packet received from the hub with id ", id, " and ", data.length, " bytes of data");
-		}
-	}*/
+	// hncom handlers
 
 	protected override void handleUtilUncompressed(HncomUtil.Uncompressed packet) {
 		assert(packet.id == 0); //TODO
@@ -1050,7 +1040,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	protected override void handleStatusListInfo(HncomStatus.ListInfo packet) {}
 
-	protected override void handleStatusUpdateList(HncomStatus.UpdateList packet) {}
+	protected override void handleStatusUpdateListByUUID(HncomStatus.UpdateListByUUID packet) {}
+
+	protected override void handleStatusUpdateListByUsername(HncomStatus.UpdateListByUsername packet) {}
+
+	protected override void handleStatusUpdateListByIp(HncomStatus.UpdateListByIp packet) {}
 
 	protected override void handleStatusPanelCredentials(HncomStatus.PanelCredentials packet) {
 		//TODO start http server for panel
@@ -1069,8 +1063,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		shared PlayerInfo player = cast(shared)new PlayerInfo(packet.hubId, packet.type, packet.protocol, packet.username, packet.displayName, packet.uuid, packet.clientAddress, packet.serverAddress, packet.language, packet.gameData);
 		player.skin = skin;
-
-		//TODO register global commands
 
 		// add to the lists
 		this._players[player.hubId] = cast(shared)player;
@@ -1097,6 +1089,14 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	protected override void handlePlayerRemove(HncomPlayer.Remove packet) {
 		(cast(shared)this).removePlayer(packet.hubId, packet.reason);
+	}
+
+	protected override void handlePlayerUpdateViewDistance(HncomPlayer.UpdateViewDistance packet) {
+		//TODO
+	}
+
+	protected override void handlePlayerUpdateLanguage(HncomPlayer.UpdateLanguage packet) {
+		//TODO
 	}
 
 	protected override void handlePlayerUpdateLatency(HncomPlayer.UpdateLatency packet) {

@@ -333,42 +333,47 @@ struct Skin {
 	public static immutable ushort NORMAL_LENGTH = 32 * 64 * 4;
 	public static immutable ushort COMPLEX_LENGTH = 64 * 64 * 4;
 
-	private bool n_valid = false;
+	private bool _valid = false;
 
-	private string n_name;
-	private ushort n_length;
-	private immutable(ubyte)[] n_data;
+	private string _name;
+	private immutable(ubyte)[] _data;
+	private immutable(ubyte)[] _cape;
+	private string _geometry_name;
+	private immutable(ubyte)[] _geometry_data;
 
-	public string[2] textures;
-
-	public @safe this(string name, ushort length, ubyte[] data, string[2] textures=["", ""]) {
-		this.n_name = name;
-		this.n_length = length;
-		if((length == NORMAL_LENGTH || length == COMPLEX_LENGTH) && length == data.length) {
-			this.n_valid = true;
-			this.n_data = data.idup;
+	public @safe this(string name, ubyte[] data, ubyte[] cape=[], string geometryName="", ubyte[] geometryData=[]) {
+		this._name = name;
+		this._data = data.idup;
+		this._cape = cape.idup;
+		this._geometry_name = geometryName;
+		this._geometry_data = geometryData.idup;
+		if(data.length == NORMAL_LENGTH || data.length == COMPLEX_LENGTH) {
+			this._valid = true;
 		}
-		this.textures = textures;
 	}
 
-	public @safe this(string name, ubyte[] data, string[2] textures=["", ""]) {
-		this(name, data.length & ushort.max, data, textures);
+	public pure nothrow @property @safe @nogc bool valid() {
+		return this._valid;
 	}
 
-	public @property @safe @nogc bool valid() {
-		return this.n_valid;
+	public pure nothrow @property @safe @nogc string name() {
+		return this._name;
 	}
 
-	public @property @safe @nogc string name() {
-		return this.n_name;
+	public pure nothrow @property @safe @nogc immutable(ubyte)[] data() {
+		return this._data;
 	}
 
-	public @property @safe @nogc ushort length() {
-		return this.n_length;
+	public pure nothrow @property @safe @nogc immutable(ubyte)[] cape() {
+		return this._cape;
 	}
 
-	public @property @safe @nogc immutable(ubyte)[] data() {
-		return this.n_data;
-	} 
+	public pure nothrow @property @safe @nogc string geometryName() {
+		return this._geometry_name;
+	}
+
+	public pure nothrow @property @safe @nogc immutable(ubyte)[] geometryData() {
+		return this._geometry_data;
+	}
 
 }

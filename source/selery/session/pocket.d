@@ -37,6 +37,7 @@ import std.uuid : UUID;
 import std.zlib;
 
 import sel.hncom.about;
+import sel.hncom.login : HubInfo;
 import sel.hncom.player : HncomAdd = Add;
 
 import selery.about;
@@ -56,6 +57,21 @@ import Unconnected = sul.protocol.raknet8.unconnected;
 import Encapsulated = sul.protocol.raknet8.encapsulated;
 
 mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;"); //TODO disconnect packet may change between different protocols
+
+private __gshared pure ubyte[] function(string)[uint] _create_disconnect;
+private __gshared pure uint function(ubyte[])[uint] _handle_request_chunk_radius;
+private __gshared uint[uint] _request_chunk_radius_id;
+
+shared static this() {
+
+	foreach(protocol ; SupportedPocketProtocols) {
+		mixin("import sul.protocol.pocket" ~ protocol.to!string ~ ".play : Disconnect, RequestChunkRadius;");
+		_create_disconnect[protocol] = (string message) pure { return new Disconnect(false, message).encode(); };
+		_handle_request_chunk_radius[protocol] = (ubyte[] buffer) pure { return RequestChunkRadius.fromBuffer(buffer).radius; };
+		_request_chunk_radius_id[protocol] = RequestChunkRadius.ID;
+	}
+
+}
 
 enum ubyte[16] magic = [0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78];
 
@@ -115,7 +131,7 @@ class PocketHandler : UnconnectedHandler {
 			switch(payload[0]) {
 				case Unconnected.Ping.ID:
 					auto ping = Unconnected.Ping.fromBuffer(payload);
-					this.sendTo(socket, new Unconnected.Pong(ping.pingId, this.server.id, magic, this.status[0] ~ to!string(this.server.onlinePlayers) ~ ";" ~ to!string(this.server.maxPlayers) ~ this.status[1]).encode(), address);
+					this.sendTo(socket, new Unconnected.Pong(ping.pingId, this.server.id, magic, this.status[0] ~ to!string(this.server.onlinePlayers) ~ ";" ~ (this.server.maxPlayers==HubInfo.UNLIMITED ? "9999999" : to!string(this.server.maxPlayers)) ~ this.status[1]).encode(), address);
 					break;
 				case Unconnected.OpenConnectionRequest1.ID:
 					auto ocr = Unconnected.OpenConnectionRequest1.fromBuffer(payload);
@@ -241,9 +257,8 @@ final class PocketSession : PlayerSession {
 	private void delegate(ubyte[]) shared functionHandler;
 
 	private bool edu = false;
-	private long inputMode;
-	private long device = 0;
-	private string model = "";
+
+	private JSONValue additional_data;
 
 	private shared ubyte nextUpdate;
 
@@ -302,11 +317,7 @@ final class PocketSession : PlayerSession {
 	}
 
 	public override shared JSONValue hncomAddData() {
-		//TODO device os
-		//TODO device type
-		//TODO input mode
-		//TODO xuid
-		return JSONValue(["edu": this.edu]);
+		return this.additional_data;
 	}
 
 	public shared void checkTimeout() {
@@ -618,16 +629,19 @@ final class PocketSession : PlayerSession {
 					string skinName = cd["SkinId"].str;
 					ubyte[] skinData = Base64.decode(cd["SkinData"].str);
 					if(!skinName.length || (skinData.length != 8192 && skinData.length != 16384)) throw new Exception("disconnectionScreen.invalidSkin");
-					this.n_skin = cast(shared)new Skin(skinName, skinData);
+					auto capeData = "CapeData" in cd;
+					auto geometryName = "SkinGeometryName" in cd;
+					auto geometryData = "SkinGeometry" in cd;
+					this.n_skin = cast(shared)new Skin(skinName, skinData, geometryName ? geometryName.str : "", geometryData ? Base64.decode(geometryData.str) : [], capeData ? Base64.decode(capeData.str) : []);
 
 					cd.remove("SkinId");
 					cd.remove("SkinData");
+					cd.remove("CapeData");
+					cd.remove("SkinGeometryName");
+					cd.remove("SkinGeometry");
 
 					auto serverAddress = "ServerAddress" in cd;
 					auto vers = "GameVersion" in cd;
-					auto os = "DeviceOS" in cd;
-					auto model = "DeviceModel" in cd;
-					auto input = "CurrentInputMode" in cd;
 					auto lang = "LanguageCode" in cd;
 					// TenantId for edu
 
@@ -658,10 +672,14 @@ final class PocketSession : PlayerSession {
 							} catch(ConvException) {}
 						}
 					}
-					if(os && os.type == JSON_TYPE.INTEGER) this.device = os.integer;
-					if(model && model.type == JSON_TYPE.STRING) this.model = model.str;
-					if(input && input.type == JSON_TYPE.INTEGER) this.inputMode = input.integer;
 					with(this.server.config.hub) this.language = acceptedLanguages.canFind(lang.str) ? lang.str : "en_GB";
+
+					cd.remove("ServerAddress");
+					cd.remove("LanguageCode");
+
+					cd["edu"] = this.edu;
+
+					this.additional_data = JSONValue(cd);
 
 					// check whitelist and blacklist with username and UUID (if authenticated)
 					if(this.server.config.hub.whitelist) {
@@ -681,7 +699,7 @@ final class PocketSession : PlayerSession {
 
 					// check if there's free space in the server
 					if(this.server.full) {
-						throw new Exception("disconnectionScreen.serverFull");
+						throw new Exception("disconnectionScreen.serverFull.title");
 					}
 
 					// check if it's already online
@@ -697,7 +715,7 @@ final class PocketSession : PlayerSession {
 					this.n_username = this.m_display_name = username.idup;
 					cast()this.n_uuid = uuid;
 
-					this.n_game_name = "Minecraft: " ~ (this.edu ? "Education" : ([7: "Windows 10"].get(this.device, "Pocket"))) ~ " Edition";
+					this.n_game_name = "Minecraft" ~ (this.edu ? ": Education Edition" : "");
 
 					// try to connect a node
 					valid = true;

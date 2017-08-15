@@ -118,10 +118,10 @@ class MapItem(sul.items.Item si) : SimpleItem!(si) {
 
 	public override void parsePocketCompound(Compound compound) {
 		super.parsePocketCompound(compound);
-		if(compound.has!Compound("")) compound = compound.get!Compound("");
+		compound = compound.get!Compound("", compound);
 		if(compound.has!String("map_uuid")) {
 			try {
-				this.mapId = to!ushort(compound.get!String("map_uuid").value);
+				this.mapId = to!ushort(compound.getValue!String("map_uuid", ""));
 			} catch(ConvException e) {}
 		}
 	}

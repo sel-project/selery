@@ -8,8 +8,8 @@
 
 The server is still in development and some features are not supported yet.
 
-Supported Minecraft versions:
-- [1.2 build 2](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_2)
+Supported Minecraft (Bedrock Engine) versions:
+- [1.2 build 4](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_4) and [1.2 build 5](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_5)
 
 Supported Minecraft: Java Edition versions:
 - [1.12](https://minecraft.gamepedia.com/1.12) and [1.12.1](https://minecraft.gamepedia.com/1.12.1)
@@ -22,7 +22,7 @@ SEL is based on the [hub-node communication protocol](https://sel-utils.github.i
 
 ## Create a server
 
-:warning: does not work with DMD >2.074
+:warning: does not work with DMD >=2.074
 
 :warning: doesn't compile using 32-bit DMD
 

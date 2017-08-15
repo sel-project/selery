@@ -51,7 +51,7 @@ class ItemEntity : Entity, Collectable {
 		static if(supportedJavaProtocols.length) {
 			import selery.player.java : JavaPlayerImpl;
 			foreach(immutable i ; SupportedJavaProtocols) {
-				mixin("this.metadata.minecraft" ~ to!string(i) ~ ".item = JavaPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
+				mixin("this.metadata.java" ~ to!string(i) ~ ".item = JavaPlayerImpl!" ~ to!string(i) ~ ".toSlot(item);");
 			}
 		}
 		this.setSize(WIDTH, HEIGHT);

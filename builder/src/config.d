@@ -19,12 +19,12 @@ import std.conv : to;
 import std.file : exists, read, write, tempDir, mkdirRecurse;
 import std.json : JSONValue;
 import std.path : dirSeparator, buildNormalizedPath;
-import std.string : replace, split, toLower, toUpper;
+import std.string : replace, split, join, toLower, toUpper, endsWith;
 import std.traits : isArray, isAssociativeArray;
+import std.typetuple : TypeTuple;
 import std.uuid : UUID, parseUUID;
 
 import selery.about;
-import selery.commands : Commands, convertName;
 import selery.config : Config;
 import selery.files : Files;
 import selery.lang : Lang;
@@ -39,6 +39,14 @@ enum ConfigType {
 	node
 
 }
+
+mixin({
+	string[] commands;
+	foreach(member ; __traits(allMembers, Config.Node)) {
+		static if(member.endsWith("Command")) commands ~= (`"` ~ member[0..$-7] ~ `"`);
+	}
+	return "alias Commands = TypeTuple!(" ~ commands.join(",") ~ ");";
+}());
 
 auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 
@@ -166,10 +174,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"world.do-scheduled-ticks"(doScheduledTicks);
 					
 					// commands
-					foreach(command ; Commands.list) {
-						static if(__traits(hasMember, Config.Node, command ~ "Command")) {
-							set!("commands." ~ convertName(command, "-"))(mixin(command ~ "Command"));
-						}
+					foreach(command ; Commands) {
+						set!("commands." ~ command)(mixin(command ~ "Command"));
 					}
 					
 					// unlimited players
@@ -237,8 +243,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				}
 				if(isNode) with(this.node) {
 					file ~= newline ~ "[world]" ~ newline;
-					file ~= "gamemode = \"" ~ gamemode ~ "\"" ~ newline;
-					file ~= "difficulty = \"" ~ difficulty ~ "\"" ~ newline;
+					file ~= "gamemode = " ~ to!string(gamemode) ~ newline;
+					file ~= "difficulty = " ~ to!string(difficulty) ~ newline;
 					file ~= "pvp = " ~ to!string(pvp) ~ newline;
 					file ~= "pvm = " ~ to!string(pvm) ~ newline;
 					file ~= "do-daylight-cycle = " ~ to!string(doDaylightCycle) ~ newline;
@@ -248,10 +254,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				}
 				if(isNode) with(this.node) {
 					file ~= newline ~ "[commands]" ~ newline;
-					foreach(command ; Commands.list) {
-						static if(__traits(hasMember, Config.Node, command ~ "Command")) {
-							file ~= convertName(command, "-") ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
-						}
+					foreach(command ; Commands) {
+						file ~= command ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
 					}
 				}
 				if(isHub) with(this.hub) {

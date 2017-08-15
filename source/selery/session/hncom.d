@@ -313,6 +313,11 @@ abstract class AbstractNode : Session, Handler!serverbound {
 		}
 	}
 
+	protected override void handleStatusUpdateMaxPlayers(Status.UpdateMaxPlayers packet) {
+		this.n_max = packet.max;
+		this.server.updateMaxPlayers();
+	}
+
 	protected override void handleStatusUpdateUsage(Status.UpdateUsage packet) {
 		this.n_ram = (cast(ulong)packet.ram) * 1024Lu;
 		this.n_cpu = packet.cpu;
@@ -331,7 +336,11 @@ abstract class AbstractNode : Session, Handler!serverbound {
 		this.worlds.remove(packet.worldId);
 	}
 
-	protected override void handleStatusUpdateList(Status.UpdateList packet) {} //TODO
+	protected override void handleStatusUpdateListByUUID(Status.UpdateListByUUID packet) {}
+
+	protected override void handleStatusUpdateListByUsername(Status.UpdateListByUsername packet) {}
+
+	protected override void handleStatusUpdateListByIp(Status.UpdateListByIp packet) {}
 
 	/+private shared void handleUpdateList(Status.UpdateList packet) {
 		shared List list = (){
@@ -411,17 +420,10 @@ abstract class AbstractNode : Session, Handler!serverbound {
 		}
 	}
 
-	protected override void handlePlayerUpdateViewDistance(Player.UpdateViewDistance packet) {
+	protected override void handlePlayerUpdatePermissionLevel(Player.UpdatePermissionLevel packet) {
 		auto player = packet.hubId in this.players;
 		if(player) {
-			(*player).viewDistance = packet.viewDistance;
-		}
-	}
-
-	protected override void handlePlayerUpdateLanguage(Player.UpdateLanguage packet) {
-		auto player = packet.hubId in this.players;
-		if(player) {
-			(*player).language = packet.language;
+			(*player).permissionLevel = packet.permissionLevel;
 		}
 	}
 
@@ -505,7 +507,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverAddress, player.serverPort), Player.Add.Skin(player.skin.name, player.skin.data), player.language, player.hncomAddData()).encode());
+		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverAddress, player.serverPort), Player.Add.Skin(player.skin.name, player.skin.data, player.skin.cape, player.skin.geometryName, player.skin.geometryData), player.language, player.hncomAddData()).encode());
 	}
 	
 	/**

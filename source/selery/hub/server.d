@@ -45,7 +45,7 @@ import sel.hncom.status : RemoteCommand;
 import selery.about;
 import selery.config : Config;
 import selery.format : Text;
-import selery.log : log, warning_log;
+import selery.log : log, warning_log, raw_log;
 import selery.network.handler : Handler;
 import selery.plugin : Plugin;
 import selery.session.hncom : AbstractNode;
@@ -117,8 +117,7 @@ class HubServer {
 	private shared const(AddressRange)[] _accepted_nodes;
 	private shared Icon _icon;
 
-	private shared uint n_max;
-	private shared size_t unlimited_nodes = 0;
+	private shared uint n_max = 0;
 
 	private shared Traffic n_traffic;
 
@@ -231,7 +230,7 @@ class HubServer {
 
 		this.started = milliseconds;
 
-		log(config.lang.translate("startup.started"));
+		if(!this.lite) log(config.lang.translate("startup.started"));
 
 		int last_online, last_max = this.maxPlayers;
 		size_t next_analytics = 0;
@@ -410,14 +409,27 @@ class HubServer {
 	 * Gets the number of max players.
 	 */
 	public shared nothrow @property @safe @nogc const int maxPlayers() {
-		return this.unlimited_nodes ? HubInfo.UNLIMITED : this.n_max;
+		return this.n_max;
+	}
+
+	public shared @property @safe @nogc void updateMaxPlayers() {
+		int max = 0;
+		foreach(node ; this.nodes) {
+			if(node.max == NodeInfo.UNLIMITED) {
+				this.n_max = HubInfo.UNLIMITED;
+				return;
+			} else {
+				max += node.max;
+			}
+		}
+		this.n_max = max;
 	}
 
 	/**
 	 * Indicates whether the server is full.
 	 */
 	public shared @property @safe @nogc const(bool) full() {
-		if(this.unlimited_nodes) return false;
+		if(this.maxPlayers == HubInfo.UNLIMITED) return false;
 		foreach(node ; this.nodes) {
 			if(!node.full) return false;
 		}
@@ -486,9 +498,9 @@ class HubServer {
 
 	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
 		if(node.length) {
-			log("[", node, "][", logger, "] ", message);
+			raw_log("[", node, "][", logger, "] ", message);
 		} else {
-			log("[", logger, "] ", message);
+			raw_log("[", logger, "] ", message);
 		}
 		if(id != -1) {
 			foreach(rcon ; this.rcons) {
@@ -577,8 +589,7 @@ class HubServer {
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
 		// update players
-		if(node.max == NodeInfo.UNLIMITED) atomicOp!"+="(this.unlimited_nodes, 1);
-		else atomicOp!"+="(this.n_max, node.max);
+		this.updateMaxPlayers();
 		// add to main, if main
 		if(node.main) this.main_nodes ~= node;
 		// add plugins
@@ -601,8 +612,7 @@ class HubServer {
 		this.nodes.remove(node.id);
 		this.nodesNames.remove(node.name);
 		// update players
-		if(node.max == NodeInfo.UNLIMITED) atomicOp!"-="(this.unlimited_nodes, 1);
-		else atomicOp!"-="(this.n_max, node.max);
+		this.updateMaxPlayers();
 		// remove from main, if main
 		if(node.main) {
 			foreach(i, n; this.main_nodes) {

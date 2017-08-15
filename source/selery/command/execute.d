@@ -23,11 +23,13 @@ const(CommandResult) executeCommand(CommandSender sender, Command[] commands, st
 }
 
 const(CommandResult) executeCommand(CommandSender sender, Command command, string data) {
-	CommandResult ret = CommandResult.INVALID_SYNTAX;
+	CommandResult ret = CommandResult.NOT_FOUND;
 	foreach(overload ; command.overloads) {
-		const result = executeCommand(sender, overload, data);
-		if(result.successful) return result;
-		else bestResult(ret, result);
+		if(overload.callableBy(sender)) {
+			const result = executeCommand(sender, overload, data);
+			if(result.successful) return result;
+			else bestResult(ret, result);
+		}
 	}
 	return ret;
 }

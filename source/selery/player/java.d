@@ -50,6 +50,7 @@ import selery.player.player;
 import selery.util.util : array_index;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
+import selery.world.rules : Difficulty, Gamemode;
 import selery.world.world : World, Dimension;
 
 import sul.utils.var : varuint;
@@ -129,18 +130,7 @@ abstract class JavaPlayer : Player {
 		if(translation.java.length) {
 			this.server.kick(this.hubId, translation.java, args);
 		} else {
-			this.disconnect(this.server.config.lang.translate(translation, this.lang, args));
-		}
-	}
-
-	protected void handleClientSettings(ubyte viewDistance, string language) {
-		if(viewDistance != this.viewDistance) {
-			this.viewDistance = min(this.world.rules.viewDistance, viewDistance);
-			this.world.playerUpdateRadius(this);
-		}
-		lang = this.server.config.hub.acceptedLanguages.canFind(language) ? language : this.server.config.hub.language;
-		if(lang != this.lang) {
-			this.lang = lang;
+			this.disconnect(this.server.config.lang.translate(translation, this.language, args));
 		}
 	}
 
@@ -159,12 +149,12 @@ abstract class JavaPlayer : Player {
 
 class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.keys.canFind(__protocol)) {
 
-	mixin("import Types = sul.protocol.minecraft" ~ __protocol.to!string ~ ".types;");
-	mixin("import Clientbound = sul.protocol.minecraft" ~ __protocol.to!string ~ ".clientbound;");
-	mixin("import Serverbound = sul.protocol.minecraft" ~ __protocol.to!string ~ ".serverbound;");
+	mixin("import Types = sul.protocol.java" ~ __protocol.to!string ~ ".types;");
+	mixin("import Clientbound = sul.protocol.java" ~ __protocol.to!string ~ ".clientbound;");
+	mixin("import Serverbound = sul.protocol.java" ~ __protocol.to!string ~ ".serverbound;");
 
-	mixin("import sul.attributes.minecraft" ~ __protocol.to!string ~ " : Attributes;");
-	mixin("import sul.metadata.minecraft" ~ __protocol.to!string ~ " : Metadata;");
+	mixin("import sul.attributes.java" ~ __protocol.to!string ~ " : Attributes;");
+	mixin("import sul.metadata.java" ~ __protocol.to!string ~ " : Metadata;");
 
 	// also used by ItemEntity
 	public static Types.Slot toSlot(Slot slot) {
@@ -212,7 +202,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	}
 
 	public Metadata metadataOf(SelMetadata metadata) {
-		mixin("return metadata.minecraft" ~ __protocol.to!string ~ ";");
+		mixin("return metadata.java" ~ __protocol.to!string ~ ";");
 	}
 
 	private Slot picked_up_item;
@@ -285,7 +275,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		} else {
 			string pre;
 			foreach(format ; formats) pre ~= format;
-			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.lang, args));
+			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.language, args));
 		}
 	}
 	
@@ -358,7 +348,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	}
 
 	private Types.ListAddPlayer encodePlayer(Player player) {
-		return Types.ListAddPlayer(player.uuid, player.name, new Types.Property[0], player.gamemode, player.ping, player.name != player.displayName, JSONValue(["text": player.displayName]).toString());
+		return Types.ListAddPlayer(player.uuid, player.name, new Types.Property[0], player.gamemode, player.latency, player.name != player.displayName, JSONValue(["text": player.displayName]).toString());
 	}
 
 	public override void sendUpdateLatency(Player[] players) {
@@ -570,11 +560,11 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	}
 	
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		if(effect.minecraft) this.sendPacket(new Clientbound.EntityEffect(this.id, effect.minecraft.id, effect.level, cast(uint)effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
+		if(effect.java) this.sendPacket(new Clientbound.EntityEffect(this.id, effect.java.id, effect.level, cast(uint)effect.duration, Clientbound.EntityEffect.SHOW_PARTICLES));
 	}
 	
 	protected override void onEffectRemoved(Effect effect) {
-		if(effect.minecraft) this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.minecraft.id));
+		if(effect.java) this.sendPacket(new Clientbound.RemoveEntityEffect(this.id, effect.java.id));
 	}
 	
 	public override void recalculateSpeed() {
@@ -609,8 +599,12 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		this.sendPacket(new Clientbound.TimeUpdate(this.world.ticks, this.world.rules.daylightCycle ? this.world.time : -this.world.time));
 	}
 
-	public override void sendDifficultyPacket() {
-		this.sendPacket(new Clientbound.ServerDifficulty(this.world.rules.difficulty));
+	public override void sendDifficulty(Difficulty difficulty) {
+		this.sendPacket(new Clientbound.ServerDifficulty(difficulty));
+	}
+	
+	public override void sendWorldGamemode(Gamemode gamemode) {
+		// not supported
 	}
 	
 	public override void sendSettingsPacket() {
@@ -648,7 +642,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		Types.BlockChange[][int][int] pc;
 		foreach(PlacedBlock block ; blocks) {
 			auto position = block.position;
-			pc[position.x >> 4][position.z >> 4] ~= Types.BlockChange((position.x & 15) << 4 | (position.z & 15), position.y & 255, block.minecraft.id << 4 | block.minecraft.meta);
+			pc[position.x >> 4][position.z >> 4] ~= Types.BlockChange((position.x & 15) << 4 | (position.z & 15), position.y & 255, block.java.id << 4 | block.java.meta);
 		}
 		foreach(x, pcz; pc) {
 			foreach(z, pb; pcz) {
@@ -725,7 +719,9 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 
 	mixin generateHandlers!(Serverbound.Packets);
 
-	protected void handleTeleportConfirmPacket(uint id) {}
+	protected void handleTeleportConfirmPacket(uint id) {
+		//TODO implement confirmations
+	}
 
 	protected void handleTabCompletePacket(string text, bool command, bool hasPosition, ulong position) {
 		this.handleCompleteMessage(text, command);
@@ -737,11 +733,6 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 
 	protected void handleClientStatusPacket(uint aid) {
 		this.handleClientStatus(aid);
-	}
-
-	protected void handleClientSettingsPacket(string lang, ubyte distance, uint chatMode, bool colors, ubyte skinFlags, uint mainHand) {
-		this.handleClientSettings(distance, lang);
-		//TODO also handle skin flags
 	}
 
 	protected void handleConfirmTransactionPacket(ubyte window, ushort action, bool accepted) {}

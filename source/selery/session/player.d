@@ -68,7 +68,7 @@ abstract class PlayerSession : Session {
 	protected shared string n_username;
 	protected shared string m_display_name;
 
-	protected shared ubyte m_gamemode;
+	protected shared ubyte _permission_level;
 
 	protected shared World m_world;
 	protected shared ubyte n_dimension;
@@ -134,9 +134,9 @@ abstract class PlayerSession : Session {
 	/**
 	 * Gets the game type and version as a human-readable string.
 	 * Examples:
-	 * "Minecraft 1.11.0"
-	 * "Minecraft: Pocket Edition 0.16.1"
-	 * "Minecraft: Education Edition 1.0.2"
+	 * "Minecraft 1.2.0"
+	 * "Minecraft: Java Edition 1.12"
+	 * "Minecraft: Education Edition 1.1.5"
 	 */
 	public final shared nothrow @property @safe string game() {
 		return this.gameName ~ " " ~ this.gameVersion;
@@ -200,15 +200,12 @@ abstract class PlayerSession : Session {
 		return this.m_display_name = displayName;
 	}
 
-	/**
-	 * Gets the player's gamemode that may differ from the world's.
-	 */
-	public final shared nothrow @property @safe @nogc ubyte gamemode() {
-		return this.m_gamemode;
+	public final shared nothrow @property @safe @nogc ubyte permissionLevel() {
+		return this._permission_level;
 	}
 
-	public final shared nothrow @property @safe @nogc ubyte gamemode(ubyte gamemode) {
-		return this.m_gamemode = gamemode;
+	public final shared nothrow @property @safe @nogc ubyte permissionLevel(ubyte permissionLevel) {
+		return this._permission_level = permissionLevel;
 	}
 
 	/**
@@ -470,12 +467,19 @@ class Skin {
 	
 	public immutable string name;
 	public ubyte[] data;
+	public string geometryName;
+	public ubyte[] geometryData;
+	public ubyte[] cape;
+
 	public ubyte[192] face;
 	public string faceBase64;
 	
-	public this(string name, ubyte[] data) {
+	public this(string name, ubyte[] data, string geometryName, ubyte[] geometryData, ubyte[] cape) {
 		this.name = name;
 		this.data = data;
+		this.geometryName = geometryName;
+		this.geometryData = geometryData;
+		this.cape = cape;
 		ubyte[192] face;
 		size_t i = 0;
 		foreach(y ; 0..8) {

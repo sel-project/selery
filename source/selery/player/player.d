@@ -54,7 +54,7 @@ import selery.util.node : Node;
 import selery.util.util : milliseconds, call;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.rules : Rules, Gamemode;
+import selery.world.rules : Rules, Gamemode, Difficulty;
 import selery.world.world : World, Dimension;
 
 import HncomPlayer = sel.hncom.player;
@@ -73,13 +73,6 @@ abstract class Player : Human, WorldCommandSender {
 	public string chatName;
 
 	protected bool connectedSameMachine, connectedSameNetwork;
-	
-	private string m_lang;
-	
-	private InputMode n_input_mode;
-	
-	protected uint n_latency;
-	protected float n_packet_loss = 0;
 	
 	public Rules rules;
 	
@@ -128,9 +121,7 @@ abstract class Player : Human, WorldCommandSender {
 		this.showNametag = true;
 		this.nametag = name;
 		this.metadata.set!"gravity"(true);
-		this.n_input_mode = inputMode < 3 ? cast(InputMode)inputMode : InputMode.keyboard;
-		this.n_latency = latency;
-		this.viewDistance = this.rules.viewDistance;
+		this.viewDistance = this.rules.viewDistance; //TODO from hub
 		//this.connection_time = milliseconds;
 		this.last_chunk_position = this.chunk;
 	}
@@ -291,22 +282,11 @@ abstract class Player : Human, WorldCommandSender {
 	 * The string will be in the Settings.ACCEPTED_LANGUAGES array,
 	 * as indicated in the hub's configuration file.
 	 */
-	public pure nothrow @property @safe @nogc string lang() {
+	public pure nothrow @property @safe @nogc string language() {
 		return this.info.language;
 	}
 
-	/**
-	 * Sets the language of the player, call the events and resend
-	 * the translatable content.
-	 */
-	public @property string lang(string lang) {
-		// check if it's valid (call the event and notify the hub)
-		if(this.server.changePlayerLanguage(this.hubId, lang)) {
-			this.m_lang = lang;
-			//TODO update translatable tiles in the loaded chunks
-		}
-		return this.lang;
-	}
+	deprecated alias lang = language;
 	
 	/**
 	 * Indicates whether or not the player is using Minecraft: Education
@@ -320,7 +300,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * Gets the player's input mode.
 	 */
 	public final pure nothrow @property @safe @nogc InputMode inputMode() {
-		return this.n_input_mode;
+		return this.info.inputMode;
 	}
 	
 	/**
@@ -330,11 +310,11 @@ abstract class Player : Human, WorldCommandSender {
 	 * and may not be accurate.
 	 */
 	public final pure nothrow @property @safe @nogc uint latency() {
-		return this.n_latency;
+		return this.info.latency;
 	}
 
 	/// ditto
-	alias ping = latency;
+	deprecated alias ping = latency;
 
 	/**
 	 * Gets the player's packet loss, if the client is connected through and UDP
@@ -342,7 +322,7 @@ abstract class Player : Human, WorldCommandSender {
 	 * Returns: a value between 0 and 100, where 0 means no packet lost and 100 every packet lost
 	 */
 	public final pure nothrow @property @safe @nogc float packetLoss() {
-		return this.n_packet_loss;
+		return this.info.packetLoss;
 	}
 
 	// *** ENTITY-RELATED PROPERTIES/METHODS ***
@@ -952,7 +932,9 @@ abstract class Player : Human, WorldCommandSender {
 	
 	public abstract void sendTimePacket();
 	
-	public abstract void sendDifficultyPacket();
+	public abstract void sendDifficulty(Difficulty);
+
+	public abstract void sendWorldGamemode(Gamemode);
 	
 	public abstract void sendSettingsPacket();
 	
@@ -1557,7 +1539,7 @@ class Puppet : Player {
 	}
 	
 	public this(World world, EntityPosition position, string name) {
-		this(world, position, name, Skin("Standard_Custom", Skin.NORMAL_LENGTH, new ubyte[Skin.NORMAL_LENGTH]));
+		this(world, position, name, Skin.STEVE);
 	}
 	
 	public this(World world, Player from) {
@@ -1620,7 +1602,9 @@ class Puppet : Player {
 	
 	public override @safe @nogc void sendTimePacket() {}
 	
-	public override @safe @nogc void sendDifficultyPacket() {}
+	public override @safe @nogc void sendDifficulty(Difficulty difficulty) {}
+
+	public override @safe @nogc void sendWorldGamemode(Gamemode gamemode) {}
 	
 	public override @safe @nogc void sendSettingsPacket() {}
 	

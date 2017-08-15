@@ -29,20 +29,20 @@ class Effect {
 	public enum tick_t UNLIMITED = int.max / 20;
 	
 	public static Effect fromId(sul.effects.Effect effect, Living victim, ubyte level, tick_t duration, Living attacker=null) {
-		switch(effect.minecraft.id) {
-			case Effects.speed.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
-			case Effects.slowness.minecraft.id: return new SpeedChange(effect, victim, level, duration, attacker);
-			case Effects.instantHealth.minecraft.id: return new InstantHealth(effect, victim, level, attacker);
-			case Effects.instantDamage.minecraft.id: return new InstantDamage(effect, victim, level, attacker);
-			case Effects.regeneration.minecraft.id: return new Regeneration(effect, victim, level, duration, attacker);
-			case Effects.invisibility.minecraft.id: return new Invisibility(effect, victim, level, duration, attacker);
-			case Effects.hunger.minecraft.id: return new Hunger(effect, victim, level, duration, attacker);
-			case Effects.poison.minecraft.id: return new Poison(effect, victim, level, duration, attacker);
-			case Effects.wither.minecraft.id: return new Wither(effect, victim, level, duration, attacker);
+		switch(effect.java.id) {
+			case Effects.speed.java.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case Effects.slowness.java.id: return new SpeedChange(effect, victim, level, duration, attacker);
+			case Effects.instantHealth.java.id: return new InstantHealth(effect, victim, level, attacker);
+			case Effects.instantDamage.java.id: return new InstantDamage(effect, victim, level, attacker);
+			case Effects.regeneration.java.id: return new Regeneration(effect, victim, level, duration, attacker);
+			case Effects.invisibility.java.id: return new Invisibility(effect, victim, level, duration, attacker);
+			case Effects.hunger.java.id: return new Hunger(effect, victim, level, duration, attacker);
+			case Effects.poison.java.id: return new Poison(effect, victim, level, duration, attacker);
+			case Effects.wither.java.id: return new Wither(effect, victim, level, duration, attacker);
 				//TODO health boost
 				//TODO absorption
-			case Effects.saturation.minecraft.id: return new Saturation(effect, victim, level, duration, attacker);
-			case Effects.levitation.minecraft.id: return new Levitation(effect, victim, level, duration, attacker);
+			case Effects.saturation.java.id: return new Saturation(effect, victim, level, duration, attacker);
+			case Effects.levitation.java.id: return new Levitation(effect, victim, level, duration, attacker);
 			default: return new Effect(effect, victim, level, duration, attacker);
 		}
 	}
@@ -78,7 +78,7 @@ class Effect {
 	}
 	
 	public final pure nothrow @property @safe @nogc ubyte id() {
-		return this.effect.minecraft;
+		return this.effect.java;
 	}
 	
 	public final pure nothrow @property @safe @nogc Living victim() {
@@ -108,7 +108,7 @@ class Effect {
 	}
 	
 	public bool opEquals(sul.effects.Effect e) {
-		return this.id == e.minecraft.id;
+		return this.id == e.java.id;
 	}
 	
 	alias effect this;

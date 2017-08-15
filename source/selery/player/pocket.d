@@ -15,6 +15,7 @@
 module selery.player.pocket;
 
 import std.algorithm : min, sort, canFind;
+import std.base64 : Base64;
 import std.conv : to;
 import std.digest.digest : toHexString;
 import std.digest.sha : sha256Of;
@@ -51,6 +52,7 @@ import selery.node.info : PlayerInfo;
 import selery.player.player;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
+import selery.world.rules : Difficulty, Gamemode;
 import selery.world.world : World, Dimension;
 
 import sul.utils.var : varuint;
@@ -137,7 +139,7 @@ abstract class PocketPlayer : Player {
 		if(translation.pocket.length) {
 			this.server.kick(this.hubId, translation.pocket, args);
 		} else {
-			this.disconnect(this.server.config.lang.translate(translation, this.lang, args));
+			this.disconnect(this.server.config.lang.translate(translation, this.language, args));
 		}
 	}
 
@@ -204,19 +206,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 			foreach(item ; parseJSON(cast(string)files.readAsset(asset))["items"].array) {
 				auto obj = item.object;
 				auto meta = "meta" in obj;
+				auto nbt = "nbt" in obj;
 				auto ench = "enchantments" in obj;
-				auto slot = Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1);
-				if(ench) {
-					stream.buffer.length = 0;
-					auto list = new Named!(ListOf!Compound)("ench");
-					foreach(e ; (*ench).array) {
-						auto eobj = e.object;
-						list ~= new Compound(new Named!Short("id", eobj["id"].integer.to!short), new Named!Short("lvl", eobj["level"].integer.to!short));
-					}
-					stream.writeTag(new Compound(list));
-					slot.nbt = stream.buffer.dup;
-				}
-				packet.slots ~= slot;
+				packet.slots ~= Types.Slot(obj["id"].integer.to!int, (meta ? (*meta).integer.to!int << 8 : 0) | 1, nbt && nbt.str.length ? Base64.decode(nbt.str) : []);
 			}
 			ubyte[] encoded = packet.encode();
 			Compress c = new Compress(9);
@@ -369,7 +361,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		if(message.pocket.length) {
 			this.sendPacket(new Play.Text().new Translation(pre ~ "%" ~ message.pocket, args));
 		} else {
-			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.lang, args));
+			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.language, args));
 		}
 	}
 
@@ -440,7 +432,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	public override void sendAddList(Player[] players) {
 		Types.PlayerList[] list;
 		foreach(Player player ; players) {
-			list ~= Types.PlayerList(toUUID(player.uuid), player.id, player.displayName, Types.Skin(player.skin.name, player.skin.data.dup));
+			list ~= Types.PlayerList(toUUID(player.uuid), player.id, player.displayName, Types.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup));
 		}
 		if(list.length) this.sendPacket(new Play.PlayerList().new Add(list));
 	}
@@ -690,8 +682,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		this.sendPacket(new Play.GameRulesChanged([Types.Rule(Types.Rule.DO_DAYLIGHT_CYCLE, this.world.rules.daylightCycle)]));
 	}
 	
-	public override void sendDifficultyPacket() {
-		this.sendPacket(new Play.SetDifficulty(this.world.rules.difficulty));
+	public override void sendDifficulty(Difficulty difficulty) {
+		this.sendPacket(new Play.SetDifficulty(difficulty));
+	}
+
+	public override void sendWorldGamemode(Gamemode gamemode) {
+		// not supported
 	}
 	
 	public override void sendSettingsPacket() {
@@ -702,7 +698,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		if(this.creative || this.spectator) flags |= Play.AdventureSettings.ALLOW_FLIGHT;
 		//if(this.spectator) flags |= Play.AdventureSettings.NO_CLIP;
 		//if(this.spectator) flags |= Play.AdventureSettings.FLYING;
-		this.sendPacket(new Play.AdventureSettings(flags, this.op ? Play.AdventureSettings.OPERATOR : Play.AdventureSettings.USER));
+		this.sendPacket(new Play.AdventureSettings(flags, this.op ? Play.AdventureSettings.LEVEL_OPERATOR : Play.AdventureSettings.LEVEL_USER));
 	}
 	
 	public override void sendRespawnPacket() {
@@ -894,12 +890,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	protected void handleRiderJumpPacket(long eid) {}
 
-
-	protected void handleRemoveBlockPacket(Types.BlockPosition position) {
-		this.handleStartBlockBreaking(fromBlockPosition(position));
-	}
-
-	protected void handleLevelSoundEventPacket(ubyte sound, typeof(Play.LevelSoundEvent.position) position, uint volume, int pitch, bool u) {}
+	//protected void handleLevelSoundEventPacket(ubyte sound, typeof(Play.LevelSoundEvent.position) position, uint volume, int pitch, bool u1, bool u2) {}
 
 	protected void handleEntityEventPacket(long eid, ubyte evid, int unknown) {
 		if(evid == Play.EntityEvent.USE_ITEM) {
@@ -939,14 +930,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	
 	//protected void handleMobArmorEquipmentPacket(long eid, Types.Slot[4] armor) {}
 
-	protected void handleInteractPacket(ubyte action, long target) {
+	protected void handleInteractPacket(ubyte action, long target, typeof(Play.Interact.targetPosition) position) {
 		switch(action) {
-			case Play.Interact.ATTACK:
-				this.handleAttack(cast(uint)target);
-				break;
-			case Play.Interact.INTERACT:
-				this.handleAttack(cast(uint)target);
-				break;
 			case Play.Interact.LEAVE_VEHICLE:
 				//TODO
 				break;
@@ -970,9 +955,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 				break;
 			case Play.PlayerAction.STOP_BREAK:
 				this.handleBlockBreaking();
-				break;
-			case Play.PlayerAction.RELEASE_ITEM:
-				this.handleReleaseItem();
 				break;
 			case Play.PlayerAction.STOP_SLEEPING:
 				this.handleStopSleeping();
@@ -1025,6 +1007,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	protected void handleAdventureSettingsPacket(uint flags, uint unknown1, uint permissions=0, uint permissionLevel=0, long unknown2=0) {
 		if(flags & Play.AdventureSettings.FLYING) {
 			if(!this.creative && !this.spectator) this.kick("Flying is not enabled on this server");
+			//TODO set as flying
 		}
 	}
 
@@ -1040,12 +1023,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	//protected void handleMapInfoRequestPacket(long mapId) {}
 
-	protected void handleRequestChunkRadiusPacket(uint radius) {
-		this.viewDistance = radius;
-		this.world.playerUpdateRadius(this);
-		this.sendPacket(new Play.ChunkRadiusUpdated(this.viewDistance.to!uint));
-	}
-
 	//protected void handleReplaceSelectedItemPacket(Types.Slot slot) {}
 
 	//protected void handleShowCreditsPacket(ubyte[] payload) {}
@@ -1054,105 +1031,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		if(command.startsWith("/")) command = command[1..$];
 		if(command.length) {
 			this.callCommand(command);
-		}
-	}
-
-	protected void handleCommandStepPacket(string command, string overload_str, uint u1, uint u2, bool isOutput, ulong u3, string input, string output) {
-		static if(__protocol >= 112) {
-			// see https://bugs.mojang.com/browse/MCPE-21968
-			if(command == "help" || command == "?") {
-				if(overload_str == "byPage") overload_str = "0";
-				else if(overload_str == "byName") overload_str = "1";
-			}
-		}
-		auto cmd = command in this.sent_commands;
-		if(cmd) {
-			try {
-				auto overload = to!size_t(overload_str);
-				if(overload < (*cmd).length) {
-					auto data = parseJSON(input);
-					CommandArg[] args;
-					if(data.type == JSON_TYPE.OBJECT) {
-						auto obj = data.object;
-						foreach(param ; (*cmd)[overload]) {
-							auto search = param[0] in obj;
-							if(search) {
-								final switch(param[1]) {
-									case PocketType.target:
-										auto rules = "rules" in *search;
-										auto selector = "selector" in *search;
-										string target = "";
-										if(selector && (*selector).type == JSON_TYPE.STRING) {
-											target = (){
-												switch((*selector).str) {
-													case "nearestPlayer": return "@p";
-													case "randomPlayer": return "@r";
-													case "allPlayers": return "@a";
-													case "allEntities": return "@e";
-													default: throw new Exception("Invalid target selector");
-												}
-											}();
-										}
-										if(rules && (*rules).type == JSON_TYPE.ARRAY) {
-											Tuple!(string, bool)[string] res;
-											foreach(a ; (*rules).array) {
-												auto name = "name" in a;
-												auto value = "value" in a;
-												auto inverted = "inverted" in a;
-												if(name && (*name).type == JSON_TYPE.STRING && value && (*value).type == JSON_TYPE.STRING) {
-													res[(*name).str] = Tuple!(string, bool)((*value).str, inverted && (*inverted).type == JSON_TYPE.TRUE);
-												}
-											}
-											auto name = "name" in res;
-											if(name && !(*name)[1] && target == "@p") {
-												target = (*name)[0];
-											} else {
-												string[] r;
-												foreach(n, value; res) {
-													r ~= n ~ "=" ~ (value[1] ? "!" : "") ~ value[0];
-												}
-												target ~= "[" ~ r.join(",") ~ "]";
-											}
-										}
-										args ~= CommandArg(Target.fromString(this, target)); //TODO optimise creation
-										break;
-									case PocketType.blockpos:
-										Position.Point parsePoint(string coord) {
-											auto c = coord in *search;
-											auto rel = coord ~ "relative" in *search;
-											bool relative = rel && (*rel).type == JSON_TYPE.TRUE;
-											if(c) {
-												if((*c).type == JSON_TYPE.INTEGER) return Position.Point(relative, (*c).integer);
-												else if((*c).type == JSON_TYPE.FLOAT) return Position.Point(relative, (*c).floating);
-											}
-											return Position.Point(relative, 0);
-										}
-										args ~= CommandArg(Position(parsePoint("x"), parsePoint("y"), parsePoint("z")));
-										break;
-									case PocketType.boolean:
-										args ~= CommandArg((*search).type == JSON_TYPE.TRUE);
-										break;
-									case PocketType.integer:
-										args ~= CommandArg((*search).integer);
-										break;
-									case PocketType.floating:
-										if((*search).type == JSON_TYPE.INTEGER) CommandArg(cast(double)(*search).integer);
-										else args ~= CommandArg((*search).floating);
-										break;
-									case PocketType.rawtext:
-									case PocketType.stringenum:
-									case PocketType.string:
-										args ~= CommandArg((*search).str);
-										break;
-								}
-							} else {
-								break;
-							}
-						}
-					}
-					this.callCommandOverload(command, overload, args);
-				}
-			} catch(Exception) {} // invalid overload, json parsing error
 		}
 	}
 	

@@ -46,12 +46,36 @@ import selery.util.util : milliseconds;
 
 import sul.utils.var : varuint;
 
-mixin("import Status = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".status;");
-mixin("import Login = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".login;");
-mixin("import Clientbound = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".clientbound;");
-mixin("import Serverbound = sul.protocol.minecraft" ~ newestJavaProtocol.to!string ~ ".serverbound;");
+mixin("import Status = sul.protocol.java" ~ newestJavaProtocol.to!string ~ ".status;");
+mixin("import Login = sul.protocol.java" ~ newestJavaProtocol.to!string ~ ".login;");
+mixin("import Clientbound = sul.protocol.java" ~ newestJavaProtocol.to!string ~ ".clientbound;");
+mixin("import Serverbound = sul.protocol.java" ~ newestJavaProtocol.to!string ~ ".serverbound;");
 
 private enum __onlineMode = false;
+
+private struct ClientSettings { string language; uint viewDistance; }
+
+private __gshared pure ubyte[] function(uint)[uint] _create_keep_alive;
+private __gshared pure uint function(ubyte[])[uint] _handle_keep_alive;
+private __gshared uint[uint] _keep_alive_id;
+private __gshared pure ubyte[] function(string)[uint] _create_disconnect;
+private __gshared pure ClientSettings function(ubyte[])[uint] _handle_client_settings;
+private __gshared uint[uint] _client_settings_id;
+
+shared static this() {
+
+	foreach(protocol ; SupportedJavaProtocols) {
+		mixin("import Clientbound = sul.protocol.java" ~ protocol.to!string ~ ".clientbound;");
+		mixin("import Serverbound = sul.protocol.java" ~ protocol.to!string ~ ".serverbound;");
+		_create_keep_alive[protocol] = (uint id) pure { return new Clientbound.KeepAlive(id).encode(); };
+		_handle_keep_alive[protocol] = (ubyte[] buffer) pure { return Serverbound.KeepAlive.fromBuffer(buffer).id; };
+		_keep_alive_id[protocol] = Serverbound.KeepAlive.ID;
+		_create_disconnect[protocol] = (string json) pure { return new Clientbound.Disconnect(json).encode(); };
+		_handle_client_settings[protocol] = (ubyte[] buffer) pure { with(Serverbound.ClientSettings.fromBuffer(buffer)){ return ClientSettings(language, viewDistance); } };
+		_client_settings_id[protocol] = Serverbound.ClientSettings.ID;
+	}
+
+}
 
 class JavaHandler : HandlerThread {
 	
@@ -412,7 +436,7 @@ final class JavaSession : PlayerSession, IJavaSession {
 		this.functionHandler = &this.handleLogin;
 		auto p = handshake.protocol in supportedJavaProtocols;
 		if(p) this.n_version = (*p)[0];
-		this.n_game_name = "Minecraft";
+		this.n_game_name = "Minecraft: Java Edition";
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {

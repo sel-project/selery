@@ -36,6 +36,7 @@ import selery.block.blocks : BlockStorage, Blocks;
 import selery.block.tile : Tile;
 import selery.command.command : Command;
 import selery.command.util : WorldCommandSender;
+import selery.config : Config;
 import selery.entity.entity : Entity;
 import selery.entity.living : Living;
 import selery.entity.noai : ItemEntity, Lightning;
@@ -70,6 +71,80 @@ import selery.world.thread;
 static import sul.blocks;
 
 private shared uint world_count = 0;
+
+final class WorldGroup {
+
+	Player[] players;
+
+	Gamemode gamemode;
+	Difficulty difficulty;
+
+	// time-related
+	bool doDayLightCycle;
+	uint _day, _time; //TODO send updates when updated
+
+	// weather-related
+	bool doWeatherCycle;
+	uint _downfall;
+	bool _thunderous;
+
+	//TODO update weather
+
+	public this(const Config.Node config) {
+		this.gamemode = {
+			switch(config.gamemode) {
+				default: return Gamemode.survival;
+				case 1: return Gamemode.creative;
+				case 2: return Gamemode.adventure;
+				case 3: return Gamemode.spectator;
+			}
+		}();
+		this.difficulty = {
+			switch(config.difficulty) {
+				case 0: return Difficulty.peaceful;
+				default: return Difficulty.easy;
+				case 2: return Difficulty.normal;
+				case 3: return Difficulty.hard;
+			}
+		}();
+		this.doDayLightCycle = config.doDaylightCycle;
+		this.doWeatherCycle = config.doWeatherCycle;
+		//TODO more rules
+	}
+
+	void tick() {
+		//TODO update time
+	}
+
+	// updates
+
+	void addPlayer(Player player) {
+		this.players.call!"sendAddList"([player]);
+		this.players ~= player;
+		player.sendAddList(this.players);
+	}
+
+	void removePlayer(Player player, bool closed) {
+		foreach(i, p; this.players) {
+			if(p.hubId == player.hubId) {
+				this.players = this.players[0..i] ~ this.players[i+1..$];
+				this.players.call!"sendRemoveList"([player]);
+				if(!closed) player.sendRemoveList(this.players);
+			}
+		}
+	}
+
+	void updateDifficulty(Difficulty difficulty) {
+		this.difficulty = difficulty;
+		this.players.call!"sendDifficulty"(difficulty);
+	}
+
+	void updateGamemode(Gamemode gamemode) {
+		this.gamemode = gamemode;
+		this.players.call!"sendWorldGamemode"(gamemode);
+	}
+
+}
 
 /**
  * Basic world.
@@ -127,6 +202,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private int _state = -1;
 	protected void delegate(int, uint) _update_state;
+
+	private WorldGroup group;
 
 	protected Player[uint] all_players; // only used by the main parent
 
@@ -206,6 +283,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	
 	public this(uint seed) {
 		this("world", seed);
+	}
+
+	protected final void initParent() {
+		this.group = new WorldGroup(this.server.config.node);
+	}
+
+	protected final void initChild() {
+		this.group = this.parent.group;
 	}
 
 	/*

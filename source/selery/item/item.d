@@ -140,17 +140,17 @@ class Item {
 	 * Indicates wether the item exists in Minecraft.
 	 */
 	public pure nothrow @property @safe @nogc bool java() {
-		return this.data.minecraft.exists;
+		return this.data.java.exists;
 	}
 
 	/// ditto
 	public pure nothrow @property @safe @nogc ushort javaId() {
-		return this.data.minecraft.id;
+		return this.data.java.id;
 	}
 
 	/// ditto
 	public pure nothrow @property @safe @nogc ushort javaMeta() {
-		return this.data.minecraft.meta;
+		return this.data.java.meta;
 	}
 
 	/**
@@ -469,25 +469,22 @@ class Item {
 		this.parseCompound(compound, &Enchantment.fromPocket);
 	}
 
-	private @trusted void parseCompound(Compound compound, Enchantment function(ubyte id, ubyte level) @safe get) {
-		if(compound.has!Compound("")) compound = compound.get!Compound("");
-		if(compound.has!Compound("display")) {
-			auto display = compound.get!Compound("display");
-			if(display.has!String("Name")) {
-				auto name = display.get!String("Name").value;
-				if(name.length) this.customName = name;
-			}
+	private @trusted void parseCompound(Compound compound, Enchantment function(ubyte, ubyte) @safe get) {
+		compound = compound.get!Compound("", compound); //TODO is this still required?
+		auto display = compound.get!Compound("display", null);
+		if(display !is null) {
+			immutable name = display.getValue!String("Name", "");
+			if(name.length) this.customName = name;
 			//TODO lore
 		}
-		if(compound.has!(ListOf!Compound)("ench")) {
-			foreach(e ; compound.get!(ListOf!Compound)("ench")) {
-				if(e.has!Short("id") && e.has!Short("lvl")) {
-					auto ench = get(cast(ubyte)e.get!Short("id").value, cast(ubyte)e.get!Short("lvl").value);
-					if(ench !is null) this.addEnchantment(ench);
-				}
+		auto ench = compound.get!(ListOf!Compound)("ench", null);
+		if(ench !is null) {
+			foreach(e ; ench) {
+				auto getted = get(cast(ubyte)e.getValue!Short("id", short.init), cast(ubyte)e.getValue!Short("lvl", short.init));
+				if(getted !is null) this.addEnchantment(getted);
 			}
 		}
-		if(compound.has!Byte("Unbreakable") && compound.get!Byte("Unbreakable") == true) {
+		if(compound.getValue!Byte("Unbreakable", 0) != 0) {
 			this.unbreakable = true;
 		}
 	}
@@ -532,13 +529,13 @@ class Item {
 				auto n = new Named!String("Name", name);
 				if(compound is null) compound = new Compound(new Named!Compound("display", n));
 				else if(!compound.has!Compound("display")) compound["display"] = new Compound(n);
-				else compound.get!Compound("display")[] = n;
+				else compound.get!Compound("display", null)[] = n;
 			}
 			set(this.m_pc_tag);
 			set(this.m_pe_tag);
 		} else {
 			void reset(ref Compound compound) {
-				auto display = compound.get!Compound("display");
+				auto display = cast(Compound)compound["display"];
 				display.remove("Name");
 				if(display.empty) {
 					compound.remove("display");
@@ -565,12 +562,12 @@ class Item {
 				auto n = new Named!(ListOf!String)("Lore", lore);
 				if(compound is null) compound = new Compound(new Named!Compound("display", n));
 				else if(!compound.has!Compound("display")) compound["display"] = new Compound(n);
-				else compound.get!Compound("display")[] = n;
+				else compound.get!Compound("display", null)[] = n;
 			}
 			set(this.m_pc_tag);
 		} else {
 			void reset(ref Compound compound) {
-				auto display = compound.get!Compound("display");
+				auto display = cast(Compound)compound["display"];
 				display.remove("Lore");
 				if(display.empty) {
 					compound.remove("display");
@@ -604,14 +601,14 @@ class Item {
 			// modify
 			*e = ench;
 			void modify(ref Compound compound, ubyte id) @safe {
-				foreach(ref tag ; compound.get!(ListOf!Compound)("ench")) {
-					if(tag.get!Short("id").value == id) {
-						tag.get!Short("lvl").value = ench.level;
+				foreach(ref tag ; compound.get!(ListOf!Compound)("ench", null)) {
+					if(tag.getValue!Short("id", -1) == id) {
+						tag.get!Short("lvl", null).value = ench.level;
 						break;
 					}
 				}
 			}
-			if(ench.minecraft) modify(this.m_pc_tag, ench.minecraft.id);
+			if(ench.java) modify(this.m_pc_tag, ench.java.id);
 			if(ench.pocket) modify(this.m_pe_tag, ench.pocket.id);
 		} else {
 			// add
@@ -620,9 +617,9 @@ class Item {
 				auto ec = new Compound([new Named!Short("id", id), new Named!Short("lvl", ench.level)]);
 				if(compound is null) compound = new Compound([new Named!(ListOf!Compound)("ench", [ec])]);
 				else if(!compound.has!(ListOf!Compound)("ench")) compound["ench"] = new ListOf!Compound(ec);
-				else compound.get!(ListOf!Compound)("ench") ~= ec;
+				else compound.get!(ListOf!Compound)("ench", null) ~= ec;
 			}
-			if(ench.minecraft) add(this.m_pc_tag, ench.minecraft.id);
+			if(ench.java) add(this.m_pc_tag, ench.java.id);
 			if(ench.pocket) add(this.m_pe_tag, ench.pocket.id);
 		}
 	}
@@ -658,8 +655,8 @@ class Item {
 	 * assert(Enchantments.protection in item);
 	 * ---
 	 */
-	public @safe Enchantment* opBinaryRight(string op : "in")(sul.enchantments.Enchantment ench) {
-		return ench.minecraft.id in this.enchantments;
+	public @safe Enchantment* opBinaryRight(string op : "in")(inout sul.enchantments.Enchantment ench) {
+		return ench.java.id in this.enchantments;
 	}
 
 	/**
@@ -670,30 +667,30 @@ class Item {
 	 * item -= Enchantments.fortune;
 	 * ---
 	 */
-	public @safe void removeEnchantment(sul.enchantments.Enchantment ench) {
-		if(ench.minecraft.id in this.enchantments) {
-			this.enchantments.remove(ench.minecraft.id);
+	public @safe void removeEnchantment(inout sul.enchantments.Enchantment ench) {
+		if(ench.java.id in this.enchantments) {
+			this.enchantments.remove(ench.java.id);
 			void remove(ref Compound compound, ubyte id) @safe {
-				auto list = compound.get!(ListOf!Compound)("ench");
+				auto list = compound.get!(ListOf!Compound)("ench", null);
 				if(list.length == 1) {
 					compound.remove("ench");
 					if(compound.empty) compound = null;
 				} else {
 					foreach(i, e; list) {
-						if(e.get!Short("id").value == id) {
+						if(e.getValue!Short("id", short(-1)) == id) {
 							list.remove(i);
 							break;
 						}
 					}
 				}
 			}
-			if(ench.minecraft) remove(this.m_pc_tag, ench.minecraft.id);
+			if(ench.java) remove(this.m_pc_tag, ench.java.id);
 			if(ench.pocket) remove(this.m_pe_tag, ench.pocket.id);
 		}
 	}
 
 	/// ditto
-	public @safe void opBinaryRight(string op : "-")(sul.enchantments.Enchantment ench) {
+	public @safe void opBinaryRight(string op : "-")(inout sul.enchantments.Enchantment ench) {
 		this.removeEnchantment(ench);
 	}
 

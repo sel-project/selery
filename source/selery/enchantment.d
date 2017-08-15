@@ -44,7 +44,7 @@ final class Enchantment {
 		foreach(e ; __traits(allMembers, Enchantments)) {
 			mixin("alias ench = Enchantments." ~ e ~ ";");
 			strings[ench.name.replace(" ", "_")] = ench;
-			if(ench.minecraft) _java[ench.minecraft.id] = ench;
+			if(ench.java) _java[ench.java.id] = ench;
 			if(ench.pocket) _pocket[ench.pocket.id] = ench;
 		}
 	}
@@ -111,7 +111,7 @@ final class Enchantment {
 	 * ---
 	 */
 	public pure nothrow @property @safe @nogc ubyte id() {
-		return this.enchantment.minecraft.id;
+		return this.enchantment.java.id;
 	}
 	
 	public override bool opEquals(Object o) {

@@ -17,7 +17,7 @@ module selery.commands;
 import std.algorithm : sort, clamp, min, filter;
 import std.conv : to;
 import std.math : ceil;
-import std.string : join, toLower;
+import std.string : join, toLower, startsWith;
 import std.traits : hasUDA, getUDAs;
 import std.typetuple : TypeTuple;
 
@@ -47,7 +47,6 @@ struct aliases {
 
 /**
  * Supported vanilla commands (based on MCPE):
- * 
  * [ ] clear
  * [ ] clone
  * [x] deop
@@ -62,7 +61,7 @@ struct aliases {
  * [x] help
  * [x] kick
  * [ ] kill
- * [ ] list
+ * [x] list
  * [ ] locate
  * [x] me
  * [x] op
@@ -89,6 +88,14 @@ struct aliases {
  * [x] weather
  * [ ] wsserver
  * [ ] xp
+ * 
+ * Supported multiplayer commands:
+ * [ ] ban
+ * [ ] ban-ip
+ * [ ] pardon
+ * [x] reload
+ * [x] stop
+ * [ ] whitelist
  */
 final class Commands {
 
@@ -154,7 +161,7 @@ final class Commands {
 			sender.sendMessage(Messages.about.plugins, this.server.plugins.length);
 			foreach(_plugin ; this.server.plugins) {
 				auto plugin = cast()_plugin;
-				sender.sendMessage("* ", Text.green, plugin.name, Text.reset, " ", plugin.vers);
+				sender.sendMessage("* ", Text.green, plugin.name, Text.reset, " ", (!plugin.vers.startsWith("~") ? "v" : ""), plugin.vers);
 			}
 		}
 	}
@@ -217,6 +224,48 @@ final class Commands {
 
 	@vanilla gamemode5(ServerCommandSender sender, Ranged!(ubyte, 0, 3) gamemode, string target) {
 		this.gamemode4(sender, cast(Gamemode)gamemode.value, target);
+	}
+
+	enum Gamerule { doDayLightCycle, doWeatherCycle, pvp, randomTickSpeed }
+
+	@vanilla @op gamerule0(WorldCommandSender sender) {
+		sender.sendMessage(join([__traits(allMembers, Gamerule)], ", "));
+	}
+
+	@vanilla gamerule1(WorldCommandSender sender, Gamerule rule) {
+		//TODO
+		sender.sendMessage(rule, " = ", {
+				final switch(rule) with(Gamerule) {
+					case doDayLightCycle: return "true";
+					case doWeatherCycle: return "true";
+					case pvp: return "true";
+					case randomTickSpeed: return "3";
+				}
+			}());
+	}
+
+	@vanilla gamerule2(WorldCommandSender sender, Gamerule rule, bool value) {
+		//TODO
+		switch(rule) with(Gamerule) {
+			case doDayLightCycle: break;
+			case doWeatherCycle: break;
+			case pvp: break;
+			default:
+				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
+				return;
+		}
+		sender.sendMessage(Messages.gamerule.success, rule, value);
+	}
+
+	@vanilla gamerule3(WorldCommandSender sender, Gamerule rule, Ranged!(int, 0, int.max) value) {
+		//TODO
+		switch(rule) with(Gamerule) {
+			case randomTickSpeed: break;
+			default:
+				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
+				return;
+		}
+		sender.sendMessage(Messages.gamerule.success, rule, value.value);
 	}
 	
 	@vanilla help0(WorldCommandSender sender, int page) {
@@ -326,6 +375,18 @@ final class Commands {
 		}
 	}
 
+	@vanilla list0(CommandSender sender) {
+		// list players on the current node
+		sender.sendMessage(Messages.list.players, sender.server.online, sender.server.max);
+		if(sender.server.online) {
+			string[] names;
+			foreach(player ; server.players) {
+				names ~= player.displayName;
+			}
+			sender.sendMessage(names.join(", "));
+		}
+	}
+
 	@vanilla me0(Player sender, string message) {
 		sender.world.broadcast("* " ~ sender.displayName ~ " " ~ message);
 	}
@@ -367,8 +428,7 @@ final class Commands {
 	}
 
 	@vanilla @op setmaxplayers0(CommandSender sender, uint players) {
-		//TODO
-		//sender.server.max = players;
+		sender.server.max = players;
 		sender.sendMessage(Messages.setmaxplayers.success, players);
 	}
 

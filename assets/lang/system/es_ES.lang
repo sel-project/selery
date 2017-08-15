@@ -50,7 +50,6 @@ handler.error.address = Handler {0} no puede resolver la dirección {1}
 commands.about.description =
 commands.about.software = Software: {0}
 commands.about.plugins = Plugins ({0}):
-commands.generic.notFound = Comando desconocido. Escribe /help para ver la lista de comandos
 commands.help.invalidSender = Perdón, no ayuda hoy!
 commands.reload.description =
 commands.reload.success =

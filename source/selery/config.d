@@ -165,9 +165,9 @@ class Config {
 
 		uint maxPlayers = 20;
 
-		string gamemode = "survival";
+		uint gamemode = 0;
 
-		string difficulty = "easy";
+		uint difficulty = 1;
 
 		bool pvp = true;
 		
@@ -189,9 +189,13 @@ class Config {
 
 		bool gamemodeCommand = true;
 
+		bool gameruleCommand = true;
+
 		bool helpCommand = true;
 
 		bool kickCommand = true;
+
+		bool listCommand = true;
 
 		bool meCommand = true;
 

@@ -142,11 +142,11 @@ abstract class Entity : EventListener!WorldEvent {
 	 * Indicates whether the entity exists in Minecraft.
 	 */
 	public pure nothrow @property @safe @nogc bool java() {
-		return this.data.minecraft.exists;
+		return this.data.java.exists;
 	}
 
 	public pure nothrow @property @safe @nogc ubyte javaId() {
-		return this.data.minecraft.id;
+		return this.data.java.id;
 	}
 
 	/**

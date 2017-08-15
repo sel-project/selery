@@ -20,14 +20,14 @@ final class Messages {
 
 	@disable this();
 
-	enum about : Translation {
+	enum about {
 
 		plugins = Translation("commands.about.plugins"),
 		software = Translation("commands.about.software"),
 
 	}
 
-	enum deop : Translation {
+	enum deop {
 
 		failed = Translation.all("commands.deop.failed"),
 		message = Translation.fromPocket("commands.deop.message"),
@@ -35,20 +35,27 @@ final class Messages {
 
 	}
 
-	enum difficulty : Translation {
+	enum difficulty {
 
 		success = Translation.all("commands.difficulty.success"),
 
 	}
 
-	enum gamemode : Translation {
+	enum gamemode {
 
 		successOther = Translation.all("commands.gamemode.success.other"),
 		successSelf = Translation.all("commands.gamemode.success.self"),
 
 	}
 
-	enum generic : Translation {
+	enum gamerule {
+
+		invalidType = Translation.fromPocket("commands.gamerule.type.invalid"),
+		success = Translation.all("commands.gamerule.success"),
+
+	}
+
+	enum generic {
 
 		invalidBoolean = Translation.all("commands.generic.boolean.invalid"),
 		invalidParameter = Translation.all("commands.generic.parameter.invalid"),
@@ -64,7 +71,7 @@ final class Messages {
 
 	}
 
-	enum help : Translation {
+	enum help {
 
 		commandAliases = Translation.fromPocket("commands.help.command.aliases"),
 		footer = Translation.all("commands.help.footer"),
@@ -73,14 +80,20 @@ final class Messages {
 
 	}
 
-	enum kick : Translation {
+	enum kick {
 
 		successReason = Translation.all("commands.kick.success.reason"),
 		success = Translation.all("commands.kick.success"),
 
 	}
 
-	enum message : Translation {
+	enum list {
+
+		players = Translation.all("commands.players.list"),
+
+	}
+
+	enum message {
 
 		incoming = Translation.all("commands.message.display.incoming"),
 		outcoming = Translation.all("commands.message.display.outgoing"),
@@ -88,7 +101,7 @@ final class Messages {
 
 	}
 
-	enum op : Translation {
+	enum op {
 
 		failed = Translation.all("commands.op.failed"),
 		message = Translation.fromPocket("commands.op.message"),
@@ -96,45 +109,45 @@ final class Messages {
 
 	}
 
-	enum reload : Translation {
+	enum reload {
 
 		success = Translation("commands.reload.success"),
 
 	}
 
-	enum seed : Translation {
+	enum seed {
 
 		success = Translation.all("commands.seed.success"),
 
 	}
 
-	enum setmaxplayers : Translation {
+	enum setmaxplayers {
 
 		success = Translation.all("commands.setmaxplayers.success"), //TODO check java
 
 	}
 
-	enum stop : Translation {
+	enum stop {
 
 		failed = Translation("commands.stop.failed"),
 		start = Translation.all("commands.stop.start"),
 
 	}
 
-	enum toggledownfall : Translation {
+	enum toggledownfall {
 
 		success = Translation.all("commands.downfall.success"),
 
 	}
 
-	enum transferserver : Translation {
+	enum transferserver {
 
 		invalidPort = Translation.fromPocket("commands.transferserver.invalid.port"),
 		success = Translation.fromPocket("commands.transferserver.successful"),
 
 	}
 
-	enum weather : Translation {
+	enum weather {
 
 		clear = Translation.all("commands.weather.clear"),
 		rain = Translation.all("commands.weather.rain"),

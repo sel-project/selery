@@ -224,7 +224,8 @@ class Command {
 		public override CommandResult callArgs(CommandSender sender, string args) {
 			static if(!is(C == CommandSender)) {
 				C senderc = cast(C)sender;
-				if(senderc is null) return CommandResult.NOT_FOUND;
+				// assuming that the control has already been done
+				//if(senderc is null) return CommandResult.NOT_FOUND;
 			} else {
 				alias senderc = sender;
 			}

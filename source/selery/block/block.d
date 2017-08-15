@@ -93,15 +93,15 @@ class Block {
 	 * Indicates whether the block exists in Minecraft.
 	 */
 	public pure nothrow @property @safe @nogc bool java() {
-		return this.data.minecraft.exists;
+		return this.data.java.exists;
 	}
 
 	public pure nothrow @property @safe @nogc ubyte javaId() {
-		return this.data.minecraft.id;
+		return this.data.java.id;
 	}
 
 	public pure nothrow @property @safe @nogc ubyte javaMeta() {
-		return this.data.minecraft.meta;
+		return this.data.java.meta;
 	}
 
 	/**

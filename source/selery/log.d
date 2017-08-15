@@ -71,3 +71,7 @@ void error_log(string mod=__MODULE__, E...)(E args) {
 void debug_log(E...)(E args) {
 	writeln("[debug] " ~ Text.blue ~ mixin(createMessage!E));
 }
+
+void raw_log(E...)(E args) {
+	writeln(mixin(createMessage!E));
+}

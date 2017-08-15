@@ -322,15 +322,15 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 
 	public override void parseJavaCompound(Compound compound) {
 		super.parseJavaCompound(compound);
-		if(compound.has!Compound("")) compound = compound.get!Compound("");
-		auto display = compound.get!Compound("display");
-		if(display.has!Int("color")) this.color = Color.fromRGB(display.get!Int("color"));
+		compound = compound.get!Compound("", compound);
+		auto display = compound.get!Compound("display", new Compound());
+		if(display.has!Int("color")) this.color = Color.fromRGB(display.getValue!Int("color", 0));
 	}
 
 	public override void parsePocketCompound(Compound compound) {
 		super.parsePocketCompound(compound);
-		if(compound.has!Compound("")) compound = compound.get!Compound("");
-		if(compound.has!Int("customColor")) this.color = Color.fromRGB(compound.get!Int("customColor"));
+		compound = compound.get!Compound("", compound);
+		if(compound.has!Int("customColor")) this.color = Color.fromRGB(compound.getValue!Int("customColor", 0));
 	}
 
 	/**
@@ -347,7 +347,7 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 		if(color is null) {
 			// remove
 			{
-				auto display = this.m_pc_tag.get!Compound("display");
+				auto display = this.m_pc_tag.get!Compound("display", null);
 				display.remove("color");
 				if(display.empty) {
 					this.m_pc_tag.remove("display");
@@ -365,7 +365,7 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 				auto cc = new Named!Int("color", rgb);
 				if(this.m_pc_tag is null) this.m_pc_tag = new Compound(new Named!Compound("display", cc));
 				else if(!this.m_pc_tag.has!Compound("display")) this.m_pc_tag["display"] = new Compound(cc);
-				else this.m_pc_tag.get!Compound("display")[] = cc;
+				else this.m_pc_tag.get!Compound("display", null)[] = cc;
 			}
 			{
 				auto cc = new Named!Int("customColor", rgb);

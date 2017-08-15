@@ -103,6 +103,11 @@ final class PlayerInfo {
 				if(deviceOs && deviceOs.type == JSON_TYPE.INTEGER && deviceOs.integer <= 9) this.deviceOs = cast(DeviceOS)deviceOs.integer;
 				auto deviceModel = "DeviceModel" in data;
 				if(deviceModel && deviceModel.type == JSON_TYPE.STRING) this.deviceModel = deviceModel.str;
+				auto inputMode = "CurrentInputMode" in data;
+				if(inputMode && inputMode.type == JSON_TYPE.INTEGER) {
+					if(inputMode.integer == 0) this.inputMode = InputMode.controller;
+					else if(inputMode.integer == 2) this.inputMode = InputMode.touch;
+				}
 			}
 		}
 		if(type == __JAVA__) {
