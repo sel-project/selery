@@ -178,7 +178,7 @@ class Command {
 						else static if(is(T == enum)) return T.stringof;
 						else static if(isIntegral!T || isRanged!T && isIntegral!(T.Type)) return INT;
 						else static if(isFloatingPoint!T || isRanged!T && isFloatingPoint!(T.Type)) return FLOAT;
-						else return STRING; // also used for enums and commands
+						else return STRING;
 				}
 				default:
 					return UNKNOWN;
@@ -411,6 +411,7 @@ class Command {
 	Overload[] overloads;
 	
 	this(string command, Message description=MISSING_DESCRIPTION, string[] aliases=[], bool op=false, bool hidden=false) {
+		//TODO check range for command and aliases [a-z0-9]{1,}
 		this.id = count++;
 		this.command = command.toLower;
 		this.description = description;

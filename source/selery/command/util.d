@@ -75,16 +75,16 @@ interface CommandHolder {
 
 }
 
-enum PocketType : string {
+enum PocketType {
 	
-	target = "target",
-	blockpos = "blockpos",
-	stringenum = "stringenum",
-	string = "string",
-	rawtext = "rawtext",
-	integer = "int",
-	floating = "float",
-	boolean = "bool",
+	target,
+	blockpos,
+	stringenum,
+	string,
+	rawtext,
+	integer,
+	floating,
+	boolean,
 	
 }
 

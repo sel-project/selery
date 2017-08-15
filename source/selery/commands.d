@@ -183,7 +183,7 @@ final class Commands {
 	@vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
 		//TODO unsupported by selery
 		//sender.world.difficulty = difficulty;
-		sender.sendMessage(Messages.difficulty.success);
+		sender.sendMessage(Messages.difficulty.success, difficulty);
 	}
 	
 	@vanilla difficulty1(WorldCommandSender sender, Ranged!(ubyte, 0, 3) difficulty) {
@@ -542,10 +542,11 @@ private string[] formatArgs(Command command) {
 private string formatArg(Command.Overload overload) {
 	string[] p;
 	foreach(i, param; overload.params) {
-		if(overload.pocketTypeOf(i) == PocketType.stringenum && overload.enumMembers(i).length == 1) {
+		immutable enum_ = overload.pocketTypeOf(i) == PocketType.stringenum;
+		if(enum_ && overload.enumMembers(i).length == 1) {
 			p ~= overload.enumMembers(i)[0];
 		} else {
-			string full = param ~ ": " ~ overload.typeOf(i);
+			string full = enum_ && overload.enumMembers(i).length < 5 ? overload.enumMembers(i).join("|") : (param ~ ": " ~ overload.typeOf(i));
 			if(i < overload.requiredArgs) {
 				p ~= "<" ~ full ~ ">";
 			} else {

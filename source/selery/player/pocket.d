@@ -793,66 +793,53 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	protected override void sendCommands() {
 		this.sent_commands.clear();
-		static if(__protocol < 120) {
-			JSONValue[string] json;
-			foreach(command ; this.commands_not_aliases) {
-				if(command.command != "*" && (!command.op || this.op)) {
-					JSONValue[string] current;
-					current["permission"] = "any";
-					if(command.aliases.length) {
-						current["aliases"] = command.aliases;
-					}
-					JSONValue[string] overloads;
-					foreach(i, overload; command.overloads) {
-						Tuple!(string, PocketType)[] sent_params;
-						JSONValue[] params;
-						foreach(j, name; overload.params) {
-							auto name_type = Tuple!(string, PocketType)(name, overload.pocketTypeOf(j));
-							sent_params ~= name_type;
-							JSONValue[string] p;
-							p["name"] = name_type[0];
-							p["type"] = name_type[1];
-							/*if(name_type[1] == PocketType.target) {
-								immutable target = overload.typeOf(j);
-								if(target.startsWith("player")) p["target_data"] = JSONValue(["players_only": true]);
-							}*/
-							if(j >= overload.requiredArgs) p["optional"] = true;
-							if(name_type[1] == PocketType.stringenum) p["enum_values"] = overload.enumMembers(j);
-							params ~= JSONValue(p);
-						}
-						foreach(cmd ; command.command ~ command.aliases) this.sent_commands[cmd] ~= sent_params;
-						overloads[to!string(i)] = JSONValue([
-							"input": ["parameters": JSONValue(params)],
-							"output": (JSONValue[string]).init
-						]);
-					}
-					current["overloads"] = overloads;
-					if(command.hidden) {
-						current["is_hidden"] = true;
-					}
-					json[command.command] = JSONValue(["versions": [JSONValue(current)]]);
-				}
+		auto packet = new Play.AvailableCommands();
+		ushort addValue(string value) {
+			foreach(ushort i, v; packet.enumValues) {
+				if(v == value) return i;
 			}
-			this.sendPacket(new Play.AvailableCommands(JSONValue(json).toString()));
-		} else {
-			//TODO doesn't work
-			string[] enums;
-			Types.Command[] commands;
-			foreach(command ; this.commands_not_aliases) {
-				if(command.command == "help") continue;
-				auto pc = Types.Command(command.command, command.description.isTranslation ? command.description.translation.pocket : command.description.message); //TODO translate if not pocket
-				foreach(overload ; command.overloads) {
-					Types.Overload po;
-					foreach(i, name; overload.params) {
-						po.parameters ~= Types.Parameter(name, 0, i >= overload.requiredArgs);
-					}
-					pc.overloads ~= po;
-				}
-				commands ~= pc;
-			}
-			this.sendPacket(new Play.AvailableCommands(enums, 0, commands));
+			packet.enumValues ~= value;
+			return cast(ushort)(packet.enumValues.length - 1);
 		}
-
+		uint addEnum(string name, inout(string)[] values) {
+			auto enum_ = Types.Enum(name);
+			foreach(value ; values) {
+				enum_.valuesIndexes ~= addValue(value);
+			}
+			packet.enums ~= enum_;
+			return packet.enums.length.to!uint - 1;
+		}
+		foreach(command ; this.commands_not_aliases) {
+			//TODO check permissions
+			auto pc = Types.Command(command.command, command.description.isTranslation ? (command.description.translation.pocket.length ? command.description.translation.pocket : this.server.config.lang.translate(command.description.translation, this.language)) : command.description.message);
+			if(command.aliases.length) {
+				pc.aliasesEnum = addEnum(command.command ~ ".aliases", command.aliases);
+			}
+			//TODO permission level
+			foreach(overload ; command.overloads) {
+				Types.Overload po;
+				foreach(i, name; overload.params) {
+					auto parameter = Types.Parameter(name, Types.Parameter.VALID, i >= overload.requiredArgs);
+					parameter.type |= {
+						final switch(overload.pocketTypeOf(i)) with(Types.Parameter) {
+							case PocketType.integer: return INT;
+							case PocketType.floating: return FLOAT;
+							case PocketType.target: return TARGET;
+							case PocketType.string: return STRING;
+							case PocketType.blockpos: return POSITION;
+							case PocketType.rawtext: return RAWTEXT;
+							case PocketType.stringenum: return ENUM | addEnum(overload.typeOf(i), overload.enumMembers(i));
+							case PocketType.boolean: return ENUM | addEnum("bool", ["true", "false"]);
+						}
+					}();
+					po.parameters ~= parameter;
+				}
+				pc.overloads ~= po;
+			}
+			packet.commands ~= pc;
+		}
+		if(packet.enumValues.length > 0 && packet.enumValues.length < 257) packet.enumValues.length = 257; //TODO fix protocol
+		this.sendPacket(packet);
 	}
 
 	mixin generateHandlers!(Play.Packets);
