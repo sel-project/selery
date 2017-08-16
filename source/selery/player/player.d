@@ -82,9 +82,9 @@ abstract class Player : Human, WorldCommandSender {
 	public ChunkPosition last_chunk_position = ChunkPosition(int.max, int.max);
 	
 	public size_t chunksUntilSpawn = 0;
-	
-	protected Command[string] commands;
-	protected Command[string] commands_not_aliases;
+
+	private Command[string] _commands;
+	private Command[string] _available_commands;
 	
 	protected BlockPosition breaking;
 	protected bool is_breaking;
@@ -507,6 +507,7 @@ abstract class Player : Human, WorldCommandSender {
 		if(operator ^ this.m_op) {
 			this.m_op = operator;
 			this.sendOpStatus();
+			this.updateAvailableCommands();
 		}
 		return operator;
 	}
@@ -744,51 +745,30 @@ abstract class Player : Human, WorldCommandSender {
 	}
 	
 	/**
-	 * Checks if this player has a specific command.
-	 * Example:
-	 * ---
-	 * if(!player.hasCommand("test")) {
-	 *    player.addCommand("test", (arguments args){ player.sendMessage("test"); });
-	 * }
-	 * ---
-	 */
-	public @safe bool hasCommand(string cmd) {
-		auto ptr = cmd.toLower in this.commands;
-		return ptr && (!(*ptr).op || this.op);
-	}
-	
-	/**
 	 * Calls a command from a string.
 	 */
 	public void callCommand(string command) {
 		if(command.length) {
-			//TODO filter non-op commands
-			executeCommand(this, this.commands.values, command).trigger(this);
+			//TODO use availableCommands
+			executeCommand(this, command).trigger(this);
 		}
-	}
-
-	/**
-	 * Calls a command specifying which overload.
-	 * Returns: true if the command has been called, false otherwise
-	 */
-	public void callCommandOverload(string cmd, size_t overload, CommandArg[] args) {
-		auto ptr = cmd.toLower in this.commands;
-		if(ptr && overload < (*ptr).overloads.length && (!(*ptr).op || this.op)) executeCommand(this, (*ptr).overloads[overload], args).trigger(this);
 	}
 	
 	/**
 	 * Adds a new command using a command-container class.
 	 */
 	public Command registerCommand(Command _command) {
-		auto command = new Command(_command.command, _command.description, _command.aliases.dup, _command.op, _command.hidden);
+		auto command = new Command(_command.name, _command.description, _command.aliases.dup, _command.op, _command.hidden);
 		foreach(overload ; _command.overloads) {
 			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
 		if(command.overloads.length) {
-			foreach(string cc ; command.aliases ~ command.command) {
-				this.commands[cc.toLower] = command;
+			this._commands[command.name] = command;
+			if(!command.op || this.op) {
+				foreach(name ; command.aliases ~ command.name) {
+					this._available_commands[name] = command;
+				}
 			}
-			this.commands_not_aliases[command.command] = command;
 		}
 		return command;
 	}
@@ -796,39 +776,34 @@ abstract class Player : Human, WorldCommandSender {
 	/**
 	 * Removes a command using the command class given in registerCommand.
 	 */
-	public @safe void unregisterCommand(Command command) {
-		foreach(string cmd, c; this.commands) {
-			if(c.id == command.id) {
-				this.commands.remove(cmd);
-				this.commands_not_aliases.remove(cmd);
+	public @safe bool unregisterCommand(Command command) {
+		if(this._commands.remove(command.name)) {
+			foreach(name ; command.aliases ~ command.name) {
+				this._available_commands.remove(name);
 			}
+			return true;
+		} else {
+			return false;
 		}
 	}
 
 	/// ditto
-	public @safe void unregisterCommand(string command) {
-		auto c = command in this.commands;
+	public @safe bool unregisterCommand(string command) {
+		auto c = command in this._commands;
 		return c && this.unregisterCommand(*c);
 	}
 
-	public Command commandByName(string command) {
-		auto ptr = command.toLower in this.commands_not_aliases;
-		return ptr ? *ptr : null;
-	}
-	
-	/**
-	 * Returns: an unsorted list with the available commands
-	 */
-	public @property @trusted Command[] commandMap() {
-		if(this.operator) {
-			return this.commands_not_aliases.values;
-		} else {
-			Command[] ret;
-			foreach(command ; this.commands_not_aliases) {
-				if(!command.op) ret ~= command;
+	protected void updateAvailableCommands() {
+		this._available_commands.clear();
+		foreach(name, command; this._commands) {
+			if(name == command.name && (!command.op || this.op)) {
+				this._available_commands[name] = command;
 			}
-			return ret;
 		}
+	}
+
+	public override @property Command[string] availableCommands() {
+		return this._available_commands;
 	}
 
 	public override EntityPosition position() {
@@ -982,11 +957,12 @@ abstract class Player : Human, WorldCommandSender {
 			string filter = spl.length ? spl[$-1].toLower : "";
 			if(spl.length <= 1) {
 				// send a command
-				foreach(name, command; this.commands_not_aliases) {
-					if(!command.hidden && (!command.op || this.operator)) entries ~= name;
+				foreach(name, command; this.availableCommands) {
+					if(!command.hidden && name != command.name) entries ~= name;
 				}
 			} else {
-				auto cmd = spl[0].toLower in this.commands;
+				//TODO rewrite autocompletion or remove after mc java 1.13 (client-side autocompletion)
+				auto cmd = spl[0] in this._commands;
 				if(cmd) {
 					//TODO use the right overload that matches previous parameters
 					foreach(overload ; (*cmd).overloads) {

@@ -988,8 +988,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.addPlayerList(player);
 
 		// register server's commands
-		foreach(command ; this.server.registeredCommands) {
-			player.registerCommand(command);
+		foreach(name, command; this.server.commands) {
+			if(name != command.name) player.registerCommand(cast()command);
 		}
 
 		// register world's commands

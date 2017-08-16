@@ -30,7 +30,7 @@ abstract class CommandEvent : NodeServerEvent, Cancellable {
 
 }
 
-class CommandNotFoundEvent : CommandEvent {
+final class CommandNotFoundEvent : CommandEvent {
 
 	private string _command;
 
@@ -39,15 +39,23 @@ class CommandNotFoundEvent : CommandEvent {
 		this._command = command;
 	}
 
+	public pure nothrow @property @safe @nogc string command() {
+		return this._command;
+	}
+
 }
 
-class CommandFailedEvent : CommandEvent {
+final class CommandFailedEvent : CommandEvent {
 
 	private Command _command;
 
 	public this(CommandSender sender, Command command) {
 		super(sender);
 		this._command = command;
+	}
+
+	public pure nothrow @property @safe @nogc Command command() {
+		return this._command;
 	}
 
 }

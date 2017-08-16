@@ -28,6 +28,7 @@ import selery.command.util : CommandSender, WorldCommandSender, PocketType, Sing
 import selery.format : Text;
 import selery.lang : Translation, Message;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
+import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode;
 import selery.util.messages : Messages;
 import selery.world.rules : Difficulty, Gamemode;
@@ -267,61 +268,27 @@ final class Commands {
 		}
 		sender.sendMessage(Messages.gamerule.success, rule, value.value);
 	}
-	
-	@vanilla help0(WorldCommandSender sender, int page) {
-		auto player = cast(Player)sender;
-		if(player) {
-			//TODO display overloads instead of commands
-			Command[] commands;
-			size_t overloads;
-			foreach(command ; player.commandMap) {
-				if(!command.hidden && (!command.op || player.op)) commands ~= command;
-			}
-			sort!((a, b) => a.command < b.command)(commands);
-			immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
-			page = clamp(--page, 0, pages - 1);
-			sender.sendMessage(Text.darkGreen, Messages.help.header, page+1, pages);
-			string[] messages;
-			foreach(command ; commands[page*7..min($, (page+1)*7)]) {
-				messages ~= (command.command ~ " " ~ formatArgs(command)[0]);
-			}
-			sender.sendMessage(messages.join("\n"));
-			if(player.inputMode == InputMode.keyboard) {
-				sender.sendMessage(Text.green, Messages.help.footer);
-			}
-		} else {
-			sender.sendMessage(Messages.help.invalidSender);
-		}
-	}
-	
-	@vanilla help1(Player sender, string command) { // use Command as arg when available
-		auto cmd = sender.commandByName(command);
-		if(cmd !is null) {
-			if(cmd.aliases.length) {
-				sender.sendMessage(Text.yellow, Messages.help.commandAliases, cmd.command, cmd.aliases.join(", "));
-			} else {
-				sender.sendMessage(Text.yellow ~ cmd.command ~ ":");
-			}
-			if(cmd.description.isTranslation) {
-				sender.sendMessage(Text.yellow, cmd.description.translation);
-			} else {
-				sender.sendMessage(Text.yellow, cmd.description.message);
-			}
-			auto params = formatArgs(cmd);
-			foreach(ref param ; params) {
-				param = "- /" ~ command ~ " " ~ param;
-			}
-			sender.sendMessage(Messages.generic.usage, "");
-			sender.sendMessage(params.join("\n"));
-		} else {
-			sender.sendMessage(Text.red, Messages.generic.notFound);
-		}
-	}
-	
-	@vanilla help2(ServerCommandSender sender) {
+
+	@vanilla help0(JavaPlayer sender, int page=1) {
+		// pocket players have the help command client-side
 		Command[] commands;
-		foreach(command ; sender.registeredCommands) {
-			if(!command.hidden) {
+		foreach(name, command; sender.availableCommands) {
+			if(command.name == name && !command.hidden) commands ~= command;
+		}
+		sort!((a, b) => a.name < b.name)(commands);
+		immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
+		page = clamp(--page, 0, pages - 1);
+		sender.sendMessage(Text.darkGreen, Messages.help.header, page+1, pages);
+		foreach(command ; commands[page*7..min($, (page+1)*7)]) {
+			sender.sendMessage(command.name, " - ", command.description); //FIXME description may be a translatable string
+		}
+		sender.sendMessage(Text.green, Messages.help.footer);
+	}
+	
+	@vanilla help1(ServerCommandSender sender) {
+		Command[] commands;
+		foreach(name, command; sender.availableCommands) {
+			if(!command.hidden && name == command.name) {
 				foreach(overload ; command.overloads) {
 					if(overload.callableBy(sender)) {
 						commands ~= command;
@@ -330,7 +297,7 @@ final class Commands {
 				}
 			}
 		}
-		sort!((a, b) => a.command < b.command)(commands);
+		sort!((a, b) => a.name < b.name)(commands);
 		foreach(cmd ; commands) {
 			if(cmd.description.isTranslation) {
 				sender.sendMessage(Text.yellow, cmd.description.translation);
@@ -339,9 +306,33 @@ final class Commands {
 			}
 			foreach(overload ; cmd.overloads) {
 				if(overload.callableBy(sender)) {
-					sender.sendMessage("- ", cmd.command, " ", formatArg(overload));
+					sender.sendMessage("- ", cmd.name, " ", formatArg(overload));
 				}
 			}
+		}
+	}
+	
+	@vanilla help2(CommandSender sender, string command) {
+		auto cmd = command in sender.availableCommands;
+		if(cmd) {
+			if(cmd.aliases.length) {
+				sender.sendMessage(Text.yellow, Messages.help.commandAliases, cmd.name, cmd.aliases.join(", "));
+			} else {
+				sender.sendMessage(Text.yellow ~ cmd.name ~ ":");
+			}
+			if(cmd.description.isTranslation) {
+				sender.sendMessage(Text.yellow, cmd.description.translation);
+			} else {
+				sender.sendMessage(Text.yellow, cmd.description.message);
+			}
+			sender.sendMessage(Messages.generic.usage, "");
+			foreach(overload ; cmd.overloads) {
+				if(overload.callableBy(sender)) {
+					sender.sendMessage("- /", cmd.name, " ", formatArg(overload));
+				}
+			}
+		} else {
+			sender.sendMessage(Text.red, Messages.generic.notFound);
 		}
 	}
 
@@ -531,10 +522,10 @@ string convertName(string command, string replacement=" ") {
 
 private enum convertedName(string command) = convertName(command);
 
-private string[] formatArgs(Command command) {
+private string[] formatArgs(Command command, CommandSender sender) {
 	string[] ret;
 	foreach(overload ; command.overloads) {
-		ret ~= formatArg(overload);
+		if(overload.callableBy(sender)) ret ~= formatArg(overload);
 	}
 	return ret;
 }

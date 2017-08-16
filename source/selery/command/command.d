@@ -14,6 +14,7 @@
  */
 module selery.command.command;
 
+import std.algorithm : all;
 import std.conv : ConvException, to;
 static import std.math;
 import std.string : toLower, startsWith;
@@ -59,8 +60,7 @@ struct CommandResult {
 	ubyte result = success;
 	string[] args;
 
-	string query;
-	Command command;
+	string command;
 
 	inout pure nothrow @property @safe @nogc bool successful() {
 		return result == success;
@@ -73,10 +73,10 @@ struct CommandResult {
 		if(this.result != success) {
 			if(this.result == notFound) {
 				//TODO call event with actual used command
-				if(!(cast()sender.server).callCancellableIfExists!CommandNotFoundEvent(sender, this.query)) sender.sendMessage(Text.red, Messages.generic.notFound);
+				if(!(cast()sender.server).callCancellableIfExists!CommandNotFoundEvent(sender, this.command)) sender.sendMessage(Text.red, Messages.generic.notFound);
 			} else {
 				//TODO call event with actual used command
-				if(!(cast()sender.server).callCancellableIfExists!CommandFailedEvent(sender, cast()this.command)) {
+				if(!(cast()sender.server).callCancellableIfExists!CommandFailedEvent(sender, sender.availableCommands.get(this.command, null))) {
 					const message = (){
 						final switch(result) with(Messages) {
 							case invalidSyntax: return generic.invalidSyntax;
@@ -142,8 +142,6 @@ class Command {
 		public abstract bool callableBy(CommandSender sender);
 		
 		public abstract CommandResult callArgs(CommandSender sender, string args);
-
-		public abstract CommandResult callArgs(CommandSender sender, CommandArg[] args);
 		
 	}
 	
@@ -192,7 +190,7 @@ class Command {
 						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return PocketType.target;
 						else static if(is(T == Position)) return PocketType.blockpos;
 						else static if(is(T == bool)) return PocketType.boolean;
-						else static if(is(T == enum) || is(T == Command)) return PocketType.stringenum;
+						else static if(is(T == enum)) return PocketType.stringenum;
 						else static if(is(T == string)) return j == Args.length - 1 ? PocketType.rawtext : PocketType.string;
 						else static if(isIntegral!T || isRanged!T && isIntegral!(T.Type)) return PocketType.integer;
 						else static if(isFloatingPoint!T || isRanged!T && isFloatingPoint!(T.Type)) return PocketType.floating;
@@ -202,14 +200,12 @@ class Command {
 					return PocketType.rawtext;
 			}
 		}
-
+		
 		public override string[] enumMembers(size_t i) {
 			switch(i) {
 				foreach(immutable j, T; E) {
 					static if(is(T == enum)) {
 						case j: return [__traits(allMembers, T)];
-					} else static if(is(T == Command)) {
-						//TODO
 					}
 				}
 				default: return [];
@@ -221,13 +217,13 @@ class Command {
 			else return cast(C)sender !is null;
 		}
 		
-		public override CommandResult callArgs(CommandSender sender, string args) {
+		public override CommandResult callArgs(CommandSender _sender, string args) {
 			static if(!is(C == CommandSender)) {
-				C senderc = cast(C)sender;
+				C sender = cast(C)_sender;
 				// assuming that the control has already been done
 				//if(senderc is null) return CommandResult.NOT_FOUND;
 			} else {
-				alias senderc = sender;
+				alias sender = _sender;
 			}
 			StringReader reader = StringReader(args);
 			Args cargs;
@@ -320,100 +316,28 @@ class Command {
 			}
 			reader.skip();
 			if(reader.eof) {
-				this.del(senderc, cargs);
+				this.del(sender, cargs);
 				return CommandResult.SUCCESS;
 			} else {
 				return CommandResult.INVALID_SYNTAX;
 			}
 		}
-		
-		public override CommandResult callArgs(CommandSender sender, CommandArg[] args) {
-			if(args.length > Args.length) return CommandResult.INVALID_SYNTAX;
-			static if(!is(C == CommandSender)) {
-				C senderc = cast(C)sender;
-				if(senderc is null) return CommandResult.NOT_FOUND;
-			} else {
-				alias senderc = sender;
-			}
-			Args cargs;
-			foreach(immutable i, T; Args) {
-				if(i < args.length) {
-					CommandArg arg = args[i];
-					static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Entity)) {
-						if(arg.type != CommandArg.Type.target) return CommandResult.INVALID_SYNTAX;
-						else if(arg.target.entities.length == 0) return CommandResult(CommandResult.targetNotFound);
-						static if(is(T == Player)) {
-							cargs[i] = arg.target.players[0];
-						} else static if(is(T == Entity)) {
-							cargs[i] = arg.target.entities[0];
-						} else static if(is(T == Player[])) {
-							cargs[i] = arg.target.players;
-						} else static if(is(T == Entity[])) {
-							cargs[i] = arg.target.entities;
-						} else {
-							cargs[i] = arg.target;
-						}
-					} else static if(is(T == Position)) {
-						if(arg.type != CommandArg.Type.position) return CommandResult.INVALID_SYNTAX;
-						cargs[i] = arg.position;
-					} else static if(is(T == bool)) {
-						if(arg.type != CommandArg.Type.boolean) return CommandResult.INVALID_SYNTAX;
-						cargs[i] = arg.boolean;
-					} else static if(isIntegral!T) {
-						if(arg.type != CommandArg.Type.integer) return CommandResult.INVALID_SYNTAX;
-						cargs[i] = cast(T)arg.integer;
-					} else static if(isFloatingPoint!T) {
-						if(arg.type != CommandArg.Type.floating) return CommandResult.INVALID_SYNTAX;
-						cargs[i] = cast(T)arg.floating;
-					} else static if(isRanged!T) {
-						//TODO
-					} else {
-						if(arg.type != CommandArg.Type.string) return CommandResult.INVALID_SYNTAX;
-						//TODO move before numbers! isIntegral and isFloatingPoint may recognise an enum as number
-						static if(is(T == enum)) {
-							switch(arg.str) {
-								mixin((){
-									string ret;
-									foreach(immutable member ; __traits(allMembers, T)) {
-										ret ~= "case \"" ~ member ~ "\": cargs[i]=T." ~ member ~ "; break;";
-									}
-									return ret;
-								}());
-								default:
-									return CommandResult(CommandResult.invalidParameter, [arg.str]);
-							}
-						} else {
-							cargs[i] = arg.str;
-						}
-					}
-				} else {
-					static if(!is(Params[i] == void)) cargs[i] = Params[i];
-					else return CommandResult.INVALID_SYNTAX;
-				}
-			}
-			this.del(senderc, cargs);
-			return CommandResult.SUCCESS;
-		}
-		
+
 	}
-
-	private static size_t count = 0;
-
-	immutable size_t id;
 	
-	immutable string command;
+	immutable string name;
 	immutable Message description;
 	immutable string[] aliases;
 
 	immutable bool op;
 	immutable bool hidden;
-	
+
 	Overload[] overloads;
 	
-	this(string command, Message description=MISSING_DESCRIPTION, string[] aliases=[], bool op=false, bool hidden=false) {
-		//TODO check range for command and aliases [a-z0-9]{1,}
-		this.id = count++;
-		this.command = command.toLower;
+	this(string name, Message description=MISSING_DESCRIPTION, string[] aliases=[], bool op=false, bool hidden=false) {
+		assert(checkCommandName(name));
+		assert(aliases.all!(a => checkCommandName(a))());
+		this.name = name;
 		this.description = description;
 		this.aliases = aliases.idup;
 		this.op = op;
@@ -444,6 +368,15 @@ class Command {
 	
 }
 
+private bool checkCommandName(string name) {
+	if(name.length) {
+		foreach(c ; name) {
+			if((c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_') return false;
+		}
+	}
+	return true;
+}
+
 public bool areValidArgs(C:CommandSender, E...)() {
 	foreach(T ; E) {
 		static if(!areValidArgsImpl!(C, T)) return false;
@@ -453,7 +386,6 @@ public bool areValidArgs(C:CommandSender, E...)() {
 
 private template areValidArgsImpl(C, T) {
 	static if(is(T == enum) || is(T == string) || is(T == bool) || isIntegral!T || isFloatingPoint!T || isRanged!T) enum areValidArgsImpl = true;
-	else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) enum areValidArgsImpl = is(C : WorldCommandSender);
-	else static if(is(T == Command)) enum areValidArgsImpl = false; //TODO
+	else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Position)) enum areValidArgsImpl = is(C : WorldCommandSender);
 	else enum areValidArgsImpl = false;
 }

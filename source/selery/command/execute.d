@@ -1,32 +1,28 @@
 ﻿module selery.command.execute;
 
-import std.string : strip, startsWith;
+import std.string : strip, indexOf;
 import std.traits : isAbstractClass;
 
 import selery.command.args : CommandArg;
 import selery.command.command : CommandResult, Command;
 import selery.command.util : CommandSender;
 
-const(CommandResult) executeCommand(CommandSender sender, Command[] commands, string data) {
+const(CommandResult) executeCommand(CommandSender sender, string args) {
+	args = args.strip;
 	CommandResult ret = CommandResult.NOT_FOUND;
-	data = data.strip;
-	foreach(command ; commands) {
-		foreach(name ; command.command ~ command.aliases) {
-			if(data.length == name.length ? data == name : data.startsWith(name ~ " ")) {
-				const result = executeCommand(sender, command, data[name.length..$]);
-				if(result.successful) return result;
-				else bestResult(ret, result);
-			}
-		}
-	}
+	immutable space = args.indexOf(" ");
+	immutable name = space == -1 ? args : args[0..space];
+	auto command = name in sender.availableCommands;
+	if(command) ret = cast()executeCommand(sender, *command, space == -1 ? "" : args[space+1..$]);
+	ret.command = name;
 	return ret;
 }
 
-const(CommandResult) executeCommand(CommandSender sender, Command command, string data) {
+const(CommandResult) executeCommand(CommandSender sender, Command command, string args) {
 	CommandResult ret = CommandResult.NOT_FOUND;
 	foreach(overload ; command.overloads) {
 		if(overload.callableBy(sender)) {
-			const result = executeCommand(sender, overload, data);
+			const result = executeCommand(sender, overload, args);
 			if(result.successful) return result;
 			else bestResult(ret, result);
 		}
@@ -34,8 +30,8 @@ const(CommandResult) executeCommand(CommandSender sender, Command command, strin
 	return ret;
 }
 
-const(CommandResult) executeCommand(T)(CommandSender sender, Command.Overload overload, T data) if(is(T == string) || is(T == CommandArg[])) {
-	return overload.callArgs(sender, data);
+const(CommandResult) executeCommand(CommandSender sender, Command.Overload overload, string args) {
+	return overload.callArgs(sender, args);
 }
 
 private void bestResult(ref CommandResult current, const CommandResult cmp) {

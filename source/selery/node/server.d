@@ -49,7 +49,6 @@ import selery.command.command : Command, CommandSender;
 import selery.command.execute : executeCommand;
 import selery.commands : Commands;
 import selery.config : Config;
-import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
 import selery.event.node;
@@ -57,12 +56,10 @@ import selery.event.world.world : WorldEvent;
 import selery.format : Text, writeln;
 import selery.lang : Lang, Translation, Message, Messageable;
 import selery.log;
-import selery.math.vector : EntityPosition;
 import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.java : JavaPlayer;
-import selery.player.player : Player;
 import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
 import selery.plugin : Plugin;
 import selery.server : Server;
@@ -160,7 +157,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	public shared EventListener!WorldEvent globalListener;
 
-	private shared Command[string] commands;
+	private shared Command[string] _commands;
 
 	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins=[], string[] args=[]) {
 
@@ -915,16 +912,16 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * Registers a command.
 	 */
 	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, bool op, bool hidden) {
-		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
-		auto ptr = command in this.commands;
+		if(command !in this._commands) this._commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
+		auto ptr = command in this._commands;
 		(cast()*ptr).add!func(del);
+		foreach(alias_ ; aliases) this._commands[alias_] = *ptr;
 	}
 
-	public shared @property Command[] registeredCommands() {
-		return cast(Command[])this.commands.values;
+	public shared @property auto commands() {
+		return this._commands;
 	}
-	
+
 	protected override void sendMessageImpl(string message) {
 		log(message);
 	}
@@ -1120,8 +1117,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	// handles a command from various sources.
 	private shared void handleCommand(ubyte origin, Address address, string command, int id=-1) {
-		auto sender = new ServerCommandSender(this, origin, address, id);
-		executeCommand(sender, cast(Command[])this.commands.values, command).trigger(sender);
+		auto sender = new ServerCommandSender(this, this._commands, origin, address, id);
+		executeCommand(sender, command).trigger(sender);
 	}
 
 }
@@ -1139,12 +1136,14 @@ final class ServerCommandSender : CommandSender {
 	}
 
 	private shared NodeServer _server;
+	private shared Command[string] _commands;
 	public immutable ubyte origin;
 	public const Address address;
 	private int id;
 
-	public this(shared NodeServer server, ubyte origin, Address address, int id) {
+	public this(shared NodeServer server, shared Command[string] commands, ubyte origin, Address address, int id) {
 		this._server = server;
+		this._commands = commands;
 		this.origin = origin;
 		this.address = address;
 		this.id = id;
@@ -1153,17 +1152,9 @@ final class ServerCommandSender : CommandSender {
 	public override pure nothrow @property @safe @nogc shared(NodeServer) server() {
 		return this._server;
 	}
-	
-	public override EntityPosition position() {
-		return EntityPosition(0);
-	}
-	
-	public override Entity[] visibleEntities() {
-		return [];
-	}
 
-	public override Player[] visiblePlayers() {
-		return [];
+	public override @property Command[string] availableCommands() {
+		return cast(Command[string])this._commands;
 	}
 
 	protected override void sendMessageImpl(string message) {

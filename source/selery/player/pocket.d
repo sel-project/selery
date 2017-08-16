@@ -160,11 +160,12 @@ abstract class PocketPlayer : Player {
 		return command;
 	}
 
-	public override @trusted void unregisterCommand(Command command) {
-		super.unregisterCommand(command);
-		if(this.send_commands) {
+	public override @trusted bool unregisterCommand(Command command) {
+		immutable ret = super.unregisterCommand(command);
+		if(ret && this.send_commands) {
 			this.sendCommands();
 		}
+		return ret;
 	}
 
 	protected void sendCommands();
@@ -809,34 +810,34 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 			packet.enums ~= enum_;
 			return packet.enums.length.to!uint - 1;
 		}
-		foreach(command ; this.commands_not_aliases) {
-			//TODO check permissions
-			auto pc = Types.Command(command.command, command.description.isTranslation ? (command.description.translation.pocket.length ? command.description.translation.pocket : this.server.config.lang.translate(command.description.translation, this.language)) : command.description.message);
-			if(command.aliases.length) {
-				pc.aliasesEnum = addEnum(command.command ~ ".aliases", command.aliases);
-			}
-			//TODO permission level
-			foreach(overload ; command.overloads) {
-				Types.Overload po;
-				foreach(i, name; overload.params) {
-					auto parameter = Types.Parameter(name, Types.Parameter.VALID, i >= overload.requiredArgs);
-					parameter.type |= {
-						final switch(overload.pocketTypeOf(i)) with(Types.Parameter) {
-							case PocketType.integer: return INT;
-							case PocketType.floating: return FLOAT;
-							case PocketType.target: return TARGET;
-							case PocketType.string: return STRING;
-							case PocketType.blockpos: return POSITION;
-							case PocketType.rawtext: return RAWTEXT;
-							case PocketType.stringenum: return ENUM | addEnum(overload.typeOf(i), overload.enumMembers(i));
-							case PocketType.boolean: return ENUM | addEnum("bool", ["true", "false"]);
-						}
-					}();
-					po.parameters ~= parameter;
+		foreach(command ; this.availableCommands) {
+			if(!command.hidden) {
+				auto pc = Types.Command(command.name, command.description.isTranslation ? (command.description.translation.pocket.length ? command.description.translation.pocket : this.server.config.lang.translate(command.description.translation, this.language)) : command.description.message);
+				if(command.aliases.length) {
+					pc.aliasesEnum = addEnum(command.name ~ ".aliases", command.aliases);
 				}
-				pc.overloads ~= po;
+				foreach(overload ; command.overloads) {
+					Types.Overload po;
+					foreach(i, name; overload.params) {
+						auto parameter = Types.Parameter(name, Types.Parameter.VALID, i >= overload.requiredArgs);
+						parameter.type |= {
+							final switch(overload.pocketTypeOf(i)) with(Types.Parameter) {
+								case PocketType.integer: return INT;
+								case PocketType.floating: return FLOAT;
+								case PocketType.target: return TARGET;
+								case PocketType.string: return STRING;
+								case PocketType.blockpos: return POSITION;
+								case PocketType.rawtext: return RAWTEXT;
+								case PocketType.stringenum: return ENUM | addEnum(overload.typeOf(i), overload.enumMembers(i));
+								case PocketType.boolean: return ENUM | addEnum("bool", ["true", "false"]);
+							}
+						}();
+						po.parameters ~= parameter;
+					}
+					pc.overloads ~= po;
+				}
+				packet.commands ~= pc;
 			}
-			packet.commands ~= pc;
 		}
 		if(packet.enumValues.length > 0 && packet.enumValues.length < 257) packet.enumValues.length = 257; //TODO fix protocol
 		this.sendPacket(packet);

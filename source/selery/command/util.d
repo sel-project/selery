@@ -21,6 +21,7 @@ import std.string : split, join, toLower, startsWith, replace;
 import std.traits : isIntegral, isFloatingPoint;
 import std.typecons : Tuple;
 
+import selery.command.command : Command;
 import selery.entity.entity : Entity;
 import selery.lang : Messageable;
 import selery.math.vector : EntityPosition, isVector, distance;
@@ -37,23 +38,18 @@ interface CommandSender : Messageable {
 	 * Gets the command sender's current server.
 	 */
 	public pure nothrow @property @safe @nogc shared(NodeServer) server();
-	
+
 	/**
-	 * Gets the command sender's current position.
+	 * Gets the commands that can be called by the command sender
+	 * in its current status.
+	 * Aliases are included in the list and the Command object is
+	 * the same as the non-aliased command.
+	 * Example:
+	 * ---
+	 * assert(sender.availableCommands["help"] is sender.availableCommands["?"]);
+	 * ---
 	 */
-	public EntityPosition position();
-	
-	/**
-	 * Gets the list of the entities visible by the
-	 * command sender.
-	 */
-	public Entity[] visibleEntities();
-	
-	/**
-	 * Gets the list of the players visible by the
-	 * command sender.
-	 */
-	public Player[] visiblePlayers();
+	public @property Command[string] availableCommands();
 	
 }
 
@@ -67,12 +63,23 @@ interface WorldCommandSender : CommandSender {
 	 */
 	public pure nothrow @property @safe @nogc World world();
 	
-}
-
-interface CommandHolder {
-
-	//public @property Command[] commands();
-
+	/**
+	 * Gets the command sender's current position.
+	 */
+	public @property EntityPosition position();
+	
+	/**
+	 * Gets the list of the entities visible by the
+	 * command sender.
+	 */
+	public @property Entity[] visibleEntities();
+	
+	/**
+	 * Gets the list of the players visible by the
+	 * command sender.
+	 */
+	public @property Player[] visiblePlayers();
+	
 }
 
 enum PocketType {
@@ -337,7 +344,7 @@ struct Target {
 	/**
 	 * Creates a target from a username or a selector string.
 	 */
-	public static Target fromString(CommandSender sender, string str) {
+	public static Target fromString(WorldCommandSender sender, string str) {
 		if(str.length >= 2 && str[0] == '@') {
 			string[string] selectors;
 			if(str.length >= 4 && str[2] == '[' && str[$-1] == ']') {
@@ -427,7 +434,7 @@ private struct Res {
 	
 }
 
-private void filter(T:Entity)(CommandSender sender, ref T[] entities, string[string] selectors) {
+private void filter(T:Entity)(WorldCommandSender sender, ref T[] entities, string[string] selectors) {
 	Res data(string key) {
 		auto p = key in selectors;
 		if(p) {
