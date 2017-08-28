@@ -15,7 +15,7 @@
 module selery.event.event;
 
 import std.algorithm : sort, canFind;
-import std.base64 : Base64Impl;
+import std.base64 : Base64Impl, Base64;
 import std.conv : to;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple, Parameters;
@@ -26,7 +26,7 @@ alias size_t class_t;
 
 private @safe class_t hash(T)() if(is(T == class) || is(T == interface)) {
 	size_t result = 1;
-	foreach(ubyte data ; Base64Impl!('.', '_', '=').decode((){ string mangle=T.mangleof;while(mangle.length%4!=0){mangle~="=";}return mangle; }())) {
+	foreach(ubyte data ; Base64Impl!('.', '_', Base64.NoPadding).decode(T.mangleof)) {
 		result ^= (result >> 8) ^ ~(size_t.max / data);
 	}
 	return result;
@@ -57,14 +57,14 @@ private alias Implementations(T) = TypeTuple!(T, BaseClassesTuple!T[0..$-1], Int
  */
 class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 
-	protected Delegate[][class_t] delegates;
+	protected Delegate[][class_t] listeners;
 
 	/**
 	 * Adds an event through a delegate.
 	 * Returns: an id that can be used to unregister the event
 	 */
 	public @trusted size_t addEventListener(T)(void delegate(T) listener) if(is(T == class) && is(T : O) || is(T == interface)) {
-		this.delegates[hash!T] ~= Delegate(cast(void delegate(void*))listener, count);
+		this.listeners[hash!T] ~= Delegate(cast(void delegate(void*))listener, count);
 		return count++;
 	}
 
@@ -74,9 +74,9 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	}
 
 	public @safe void setListener(E...)(EventListener!(O, E) listener) {
-		foreach(hash, delegates; listener.delegates) {
-			foreach(del ; delegates) {
-				this.delegates[hash] ~= Delegate(del.del, del.count);
+		foreach(hash, listeners; listener.listeners) {
+			foreach(del ; listeners) {
+				this.listeners[hash] ~= Delegate(del.del, del.count);
 			}
 		}
 	}
@@ -95,13 +95,13 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	 */
 	public @trusted bool removeEventListener(T)(void delegate(T) listener) {
 		bool removed = false;
-		auto ptr = hash!T in this.delegates;
+		auto ptr = hash!T in this.listeners;
 		if(ptr) {
 			foreach(i, del; *ptr) {
 				if(cast(void delegate(T))del.del == listener) {
 					removed = true;
 					if((*ptr).length == 1) {
-						this.delegates.remove(hash!T);
+						this.listeners.remove(hash!T);
 						break;
 					} else {
 						*ptr = (*ptr)[0..i] ~ (*ptr)[i+1..$];
@@ -130,13 +130,13 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	 * ---
 	 */
 	public @safe bool removeEventListener(size_t count) {
-		foreach(i, delegates; this.delegates) {
-			foreach(j, del; delegates) {
+		foreach(i, listeners; this.listeners) {
+			foreach(j, del; listeners) {
 				if(del.count == count) {
-					if(delegates.length == 1) {
-						this.delegates.remove(i);
+					if(listeners.length == 1) {
+						this.listeners.remove(i);
 					} else {
-						this.delegates[i] = delegates[0..j] ~ delegates[j+1..$];
+						this.listeners[i] = listeners[0..j] ~ listeners[j+1..$];
 					}
 					return true;
 				}
@@ -171,7 +171,7 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 	protected Callable[] callablesOf(T:O)(ref T event) if(is(T == class) && !isAbstractClass!T) {
 		Callable[] callables;
 		foreach_reverse(E ; Implementations!T) {
-			auto ptr = hash!E in this.delegates;
+			auto ptr = hash!E in this.listeners;
 			if(ptr) {
 				foreach(i, del; *ptr) {
 					callables ~= this.createCallable!E(event, del.del, del.count);
@@ -201,13 +201,13 @@ class EventListener(O:Event, Children...) if(areValidChildren!(O, Children)) {
 			return event;
 		}
 		foreach_reverse(E ; Implementations!T) {
-			if(hash!E in this.delegates) return callImpl();
+			if(hash!E in this.listeners) return callImpl();
 		}
 		static if(staticDerivateIndexOf!(T, Children) >= 0) {
 			alias C = Children[staticDerivateIndexOf!(T, Children)];
 			static assert(is(typeof(args[0]) : EventListener!O), T.stringof ~ ".__ctor[0] must extend " ~ (EventListener!O).stringof);
 			foreach_reverse(E ; Implementations!T) {
-				if(hash!E in args[0].delegates) return callImpl();
+				if(hash!E in args[0].listeners) return callImpl();
 			}
 		}
 		return null;
@@ -290,14 +290,14 @@ interface Cancellable {
 
 	public static mixin template Implementation() {
 
-		private bool n_cancelled;
+		private bool _cancelled;
 
 		public override pure nothrow @safe @nogc void cancel() {
-			this.n_cancelled = true;
+			this._cancelled = true;
 		}
 
 		public override pure nothrow @property @safe @nogc bool cancelled() {
-			return this.n_cancelled;
+			return this._cancelled;
 		}
 
 	}

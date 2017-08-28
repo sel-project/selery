@@ -69,7 +69,6 @@ import selery.util.node : Node;
 import selery.util.resourcepack : createResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
-import selery.world.rules : Rules;
 import selery.world.thread;
 
 import HncomLogin = sel.hncom.login;
@@ -270,8 +269,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			config.hub.edu = edu && edu.type == JSON_TYPE.TRUE;
 			config.hub.realm = realm && realm.type == JSON_TYPE.TRUE;
 		}
-
-		Rules.reload(config.node);
 
 		config.hub.displayName = info.displayName;
 		config.hub.language = info.language;
@@ -1078,7 +1075,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		// do not spawn if it has been disconnected during the event
 		if(player.hubId in this._players) {
 
-			std.concurrency.send(cast()world.tid, AddPlayer(player));
+			std.concurrency.send(cast()world.tid, AddPlayer(player, packet.reason != HncomPlayer.Add.FIRST_JOIN));
 
 		}
 

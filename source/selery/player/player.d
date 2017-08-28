@@ -54,8 +54,7 @@ import selery.util.node : Node;
 import selery.util.util : milliseconds, call;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.rules : Rules, Gamemode, Difficulty;
-import selery.world.world : World, Dimension;
+import selery.world.world : Gamemode, Difficulty, Dimension, World;
 
 import HncomPlayer = sel.hncom.player;
 
@@ -73,8 +72,6 @@ abstract class Player : Human, WorldCommandSender {
 	public string chatName;
 
 	protected bool connectedSameMachine, connectedSameNetwork;
-	
-	public Rules rules;
 	
 	public size_t viewDistance;
 	public ChunkPosition[] loaded_chunks;
@@ -121,7 +118,7 @@ abstract class Player : Human, WorldCommandSender {
 		this.showNametag = true;
 		this.nametag = name;
 		this.metadata.set!"gravity"(true);
-		this.viewDistance = this.rules.viewDistance; //TODO from hub
+		this.viewDistance = this.world.viewDistance; //TODO from hub
 		//this.connection_time = milliseconds;
 		this.last_chunk_position = this.chunk;
 	}
@@ -905,19 +902,21 @@ abstract class Player : Human, WorldCommandSender {
 
 	public abstract void sendResourcePack();
 	
-	public abstract void sendTimePacket();
-	
 	public abstract void sendDifficulty(Difficulty);
 
 	public abstract void sendWorldGamemode(Gamemode);
+
+	public abstract void sendDoDaylightCycle(bool);
+	
+	public abstract void sendTime(uint);
+
+	public abstract void sendWeather(bool, bool, uint, uint);
 	
 	public abstract void sendSettingsPacket();
 	
 	public abstract void sendRespawnPacket();
 	
 	public abstract void setAsReadyToSpawn();
-	
-	public abstract void sendWeather();
 	
 	public abstract void sendLightning(Lightning lightning);
 	
@@ -962,26 +961,6 @@ abstract class Player : Human, WorldCommandSender {
 				}
 			} else {
 				//TODO rewrite autocompletion or remove after mc java 1.13 (client-side autocompletion)
-				auto cmd = spl[0] in this._commands;
-				if(cmd) {
-					//TODO use the right overload that matches previous parameters
-					foreach(overload ; (*cmd).overloads) {
-						immutable type = overload.typeOf(spl.length - 2);
-						if(type == "bool") {
-							// boolean value
-							entries = ["true", "false"];
-						} else if(type == "player") {
-							// send a list of the players
-							foreach(player ; this.world.playersList) {
-								entries ~= player.name.replace(" ", "-");
-							}
-						} else {
-							// try enum
-							entries = overload.enumMembers(spl.length - 2);
-						}
-						if(entries.length) break;
-					}
-				}
 			}
 			if(filter.length) {
 				string[] ne;
@@ -1103,7 +1082,7 @@ abstract class Player : Human, WorldCommandSender {
 		bool cancelitem = false;
 		bool cancelblock = false;
 		//log(!this.world.rules.immutableWorld, " ", this.alive, " ", this.is_breaking, " ", this.world[breaking] != Blocks.AIR);
-		if(!this.world.rules.immutableWorld && this.alive && this.is_breaking && !this.world[this.breaking].indestructible) {
+		if(this.alive && this.is_breaking && !this.world[this.breaking].indestructible) {
 			auto event = this.world.callEventIfExists!PlayerBreakBlockEvent(this, this.world[this.breaking], this.breaking);
 			if(event !is null && event.cancelled) {
 				cancelitem = true;
@@ -1188,7 +1167,7 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	protected void handleAttack(Entity entity) {
-		if(this.alive && entity !is null && (cast(Player)entity && this.world.rules.pvp || !cast(Player)entity && this.world.rules.pvm)) {
+		if(this.alive && entity !is null && (cast(Player)entity is null || this.world.pvp)) {
 			if(cast(Player)entity ? !entity.attack(new PlayerAttackedByPlayerEvent(cast(Player)entity, this)).cancelled : !entity.attack(new EntityAttackedByPlayerEvent(entity, this)).cancelled) {
 				this.exhaust(Exhaustion.ATTACKING);
 			}
@@ -1576,8 +1555,6 @@ class Puppet : Player {
 
 	public override @safe @nogc void sendResourcePack() {}
 	
-	public override @safe @nogc void sendTimePacket() {}
-	
 	public override @safe @nogc void sendDifficulty(Difficulty difficulty) {}
 
 	public override @safe @nogc void sendWorldGamemode(Gamemode gamemode) {}
@@ -1587,8 +1564,6 @@ class Puppet : Player {
 	public override @safe @nogc void sendRespawnPacket() {}
 	
 	public override @safe @nogc void setAsReadyToSpawn() {}
-	
-	public override @safe @nogc void sendWeather() {}
 	
 	public override @safe @nogc void sendLightning(Lightning lightning) {}
 	

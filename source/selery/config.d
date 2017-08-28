@@ -167,19 +167,27 @@ class Config {
 
 		uint gamemode = 0;
 
-		uint difficulty = 1;
+		uint difficulty = 2;
 
-		bool pvp = true;
-		
-		bool pvm = true;
+		bool depleteHunger = true;
 		
 		bool doDaylightCycle = true;
-		
-		bool doWeatherCycle = true;
-		
-		uint randomTickSpeed = 3;
+
+		bool doEntityDrops = true;
+
+		bool doFireTick = true;
 		
 		bool doScheduledTicks = true;
+		
+		bool doWeatherCycle = true;
+
+		bool naturalRegeneration = true;
+		
+		bool pvp = true;
+		
+		uint randomTickSpeed = 3;
+
+		uint viewDistance = 10;
 		
 		bool aboutCommand = true;
 
@@ -212,6 +220,8 @@ class Config {
 		bool stopCommand = true;
 
 		bool tellCommand = true;
+
+		bool timeCommand = true;
 
 		bool toggledownfallCommand = true;
 

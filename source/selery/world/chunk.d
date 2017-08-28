@@ -30,7 +30,6 @@ import selery.block.block : Block;
 import selery.block.blocks : BlockStorage;
 import selery.block.tile : Tile;
 import selery.math.vector;
-import selery.world.io;
 import selery.world.world : World;
 
 import sul.biomes : Biome, Biomes;
@@ -305,9 +304,7 @@ class Chunk {
 	}
 
 	public void save() {
-		
-		DefaultSel.writeChunk(this, this.location);
-		
+		//TODO
 	}
 
 	/// Unloads a chunks and frees its memory

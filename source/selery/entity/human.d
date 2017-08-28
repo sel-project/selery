@@ -75,10 +75,10 @@ class Human : Living, Collector, Shooter, PotionThrower {
 	public override void tick() {
 		super.tick();
 		if(this.starvation_tick != 0 && this.ticks % 80 == this.starvation_tick) {
-			if(this.health > (this.world.rules.difficulty == Difficulty.hard ? 0 : (this.world.rules.difficulty == Difficulty.normal ? 1 : 10))) {
+			if(this.health > (this.world.difficulty == Difficulty.hard ? 0 : (this.world.difficulty == Difficulty.normal ? 1 : 10))) {
 				this.attack(new EntityStarveEvent(this));
 			}
-		} else if(this.regeneration_tick != 0 && this.ticks % (this.hunger == 20 ? 10 : 80) == this.regeneration_tick && this.rules.naturalRegeneration) {
+		} else if(this.regeneration_tick != 0 && this.ticks % (this.hunger == 20 ? 10 : 80) == this.regeneration_tick && this.world.naturalRegeneration) {
 			this.heal(new EntityHealEvent(this, 1));
 			this.exhaust(Exhaustion.NATURAL_REGENERATION);
 		}
@@ -190,7 +190,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 	}
 
 	public @safe void exhaust(float amount) {
-		if(this.rules.depleteHunger && this.world.rules.difficulty != Difficulty.peaceful) {
+		if(this.world.depleteHunger && this.world.difficulty != Difficulty.peaceful) {
 			uint old = this.hunger;
 			this.m_hunger.exhaust(amount);
 			if(old != this.hunger) this.hunger = this.hunger;
@@ -229,7 +229,7 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		if(this.hunger == 0 && this.starvation_tick == 0) {
 			//start starvation
 			this.starvation_tick = (this.ticks - 1) % 80;
-		} else if((this.hunger > 18 || this.world.rules.difficulty == Difficulty.peaceful) && this.regeneration_tick == 0 && this.healthNoAbs < this.maxHealthNoAbs) {
+		} else if((this.hunger > 18 || this.world.difficulty == Difficulty.peaceful) && this.regeneration_tick == 0 && this.healthNoAbs < this.maxHealthNoAbs) {
 			//start natural regeneration
 			this.regeneration_tick = (this.ticks - 1) % 80;
 		} else if(this.hunger > 0 && this.starvation_tick != 0) {

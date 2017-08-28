@@ -134,6 +134,16 @@ final class Messages {
 
 	}
 
+	enum time {
+
+		added = Translation.all("commands.time.added"),
+		queryDay = Translation.fromPocket("commands.time.query.day"),
+		queryDaytime = Translation.fromPocket("commands.time.query.daytime"),
+		queryGametime = Translation.fromPocket("commands.time.query.gametime"),
+		set = Translation.all("commands.time.set"),
+
+	}
+
 	enum toggledownfall {
 
 		success = Translation.all("commands.downfall.success"),

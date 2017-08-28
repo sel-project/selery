@@ -31,7 +31,7 @@ import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode;
 import selery.util.messages : Messages;
-import selery.world.rules : Difficulty, Gamemode;
+import selery.world.world : Gamemode, Difficulty, Dimension, Time;
 
 enum vanilla;
 enum op;
@@ -227,7 +227,7 @@ final class Commands {
 		this.gamemode4(sender, cast(Gamemode)gamemode.value, target);
 	}
 
-	enum Gamerule { doDayLightCycle, doWeatherCycle, pvp, randomTickSpeed }
+	enum Gamerule { depleteHunger, doDaylightCycle, doWeatherCycle, naturalRegeneration, pvp, randomTickSpeed }
 
 	@vanilla @op gamerule0(WorldCommandSender sender) {
 		sender.sendMessage(join([__traits(allMembers, Gamerule)], ", "));
@@ -237,10 +237,12 @@ final class Commands {
 		//TODO
 		sender.sendMessage(rule, " = ", {
 				final switch(rule) with(Gamerule) {
-					case doDayLightCycle: return "true";
-					case doWeatherCycle: return "true";
-					case pvp: return "true";
-					case randomTickSpeed: return "3";
+					case depleteHunger: return sender.world.depleteHunger.to!string;
+					case doDaylightCycle: return sender.world.time.cycle.to!string;
+					case doWeatherCycle: return sender.world.weather.cycle.to!string;
+					case naturalRegeneration: return sender.world.naturalRegeneration.to!string;
+					case pvp: return sender.world.pvp.to!string;
+					case randomTickSpeed: return sender.world.randomTickSpeed.to!string;
 				}
 			}());
 	}
@@ -248,9 +250,11 @@ final class Commands {
 	@vanilla gamerule2(WorldCommandSender sender, Gamerule rule, bool value) {
 		//TODO
 		switch(rule) with(Gamerule) {
-			case doDayLightCycle: break;
-			case doWeatherCycle: break;
-			case pvp: break;
+			case depleteHunger: sender.world.depleteHunger = value; break;
+			case doDaylightCycle: sender.world.time.cycle = value; break;
+			case doWeatherCycle: sender.world.weather.cycle = value; break;
+			case naturalRegeneration: sender.world.naturalRegeneration = value; break;
+			case pvp: sender.world.pvp = value; break;
 			default:
 				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
 				return;
@@ -261,7 +265,7 @@ final class Commands {
 	@vanilla gamerule3(WorldCommandSender sender, Gamerule rule, Ranged!(int, 0, int.max) value) {
 		//TODO
 		switch(rule) with(Gamerule) {
-			case randomTickSpeed: break;
+			case randomTickSpeed: sender.world.randomTickSpeed = value; break;
 			default:
 				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
 				return;
@@ -453,8 +457,40 @@ final class Commands {
 		else sender.sendMessage(Text.red, Messages.message.sameTarget);
 	}
 
+	@vanilla @op time0(WorldCommandSender sender, SingleEnum!"add" add, uint amount) {
+		uint time = sender.world.time.time + amount;
+		if(time >= 24000) sender.world.time.day += time / 24000;
+		sender.world.time.time = time;
+		sender.sendMessage(Messages.time.added, amount);
+	}
+
+	enum TimeQuery { day, daytime, gametime }
+
+	@vanilla @op time1(WorldCommandSender sender, SingleEnum!"query" query, TimeQuery time) {
+		final switch(time) with(TimeQuery) {
+			case day:
+				sender.sendMessage(Messages.time.queryDay, sender.world.time.day);
+				break;
+			case daytime:
+				sender.sendMessage(Messages.time.queryDaytime, sender.world.time.time);
+				break;
+			case gametime:
+				sender.sendMessage(Messages.time.queryGametime, sender.world.ticks);
+				break;
+		}
+	}
+
+	@vanilla @op time2(WorldCommandSender sender, SingleEnum!"set" set, uint amount) {
+		sender.sendMessage(Messages.time.set, (sender.world.time.time = amount));
+	}
+
+	@vanilla @op time3(WorldCommandSender sender, SingleEnum!"set" set, Time amount) {
+		this.time2(sender, set, cast(uint)amount);
+	}
+
 	@vanilla @op toggledownfall0(WorldCommandSender sender) {
-		sender.world.downfall = !sender.world.downfall;
+		if(sender.world.weather.raining) sender.world.weather.clear();
+		else sender.world.weather.start();
 		sender.sendMessage(Messages.toggledownfall.success);
 	}
 
@@ -497,13 +533,18 @@ final class Commands {
 
 	@vanilla @op weather0(WorldCommandSender sender, Weather type, int duration=0) {
 		if(type == Weather.clear) {
-			sender.world.downfall = false;
+			if(duration <= 0) sender.world.weather.clear();
+			else sender.world.weather.clear(duration);
 			sender.sendMessage(Messages.weather.clear);
 		} else {
-			if(duration <= 0 || duration > 1000000) duration = sender.world.random.range(6000, 18000);
-			//TODO support rain/thunder and times
-			sender.world.downfall = true;
-			sender.sendMessage(type == Weather.rain ? Messages.weather.rain : Messages.weather.thunder);
+			if(duration <= 0 || duration > 1_000_000) duration = sender.world.random.range(6000, 18000);
+			if(type == Weather.rain) {
+				sender.world.weather.start(duration, false);
+				sender.sendMessage(Messages.weather.rain);
+			} else {
+				sender.world.weather.start(duration, true);
+				sender.sendMessage(Messages.weather.thunder);
+			}
 		}
 	}
 

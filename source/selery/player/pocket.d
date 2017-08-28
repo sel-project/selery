@@ -52,8 +52,7 @@ import selery.node.info : PlayerInfo;
 import selery.player.player;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.rules : Difficulty, Gamemode;
-import selery.world.world : World, Dimension;
+import selery.world.world : Gamemode, Difficulty, Dimension, World;
 
 import sul.utils.var : varuint;
 
@@ -282,6 +281,11 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		import std.bitmanip : bigEndianToNative;
 		return Types.McpeUuid(bigEndianToNative!long(msb), bigEndianToNative!long(lsb));
 	} 
+
+	public static uint convertGamemode(uint gamemode) {
+		if(gamemode == 3) return 1;
+		else return gamemode;
+	}
 
 	public static Metadata metadataOf(SelMetadata metadata) {
 		mixin("return metadata.pocket" ~ __protocol.to!string ~ ";");
@@ -656,19 +660,19 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	public override void sendJoinPacket() {
 		//TODO send thunders
 		auto packet = new Play.StartGame(this.id, this.id);
-		packet.gamemode = this.gamemode==3 ? 1 : this.gamemode;
+		packet.gamemode = convertGamemode(this.gamemode);
 		packet.position = (cast(Vector3!float)this.position).tuple;
 		packet.yaw = this.yaw;
 		packet.pitch = this.pitch;
 		packet.seed = this.world.seed;
 		packet.dimension = this.world.dimension;
 		packet.generator = this.world.type=="flat" ? 2 : 1;
-		packet.worldGamemode = this.world.rules.gamemode==3 ? 1 : this.world.rules.gamemode;
-		packet.difficulty = this.world.rules.difficulty;
+		packet.worldGamemode = convertGamemode(this.world.gamemode);
+		packet.difficulty = this.world.difficulty;
 		packet.spawnPosition = (cast(Vector3!int)this.spawn).tuple;
 		packet.time = this.world.time.to!uint;
 		packet.vers = this.server.config.hub.edu;
-		packet.rainLevel = this.world.downfall ? this.world.weather.intensity : 0;
+		packet.rainLevel = this.world.weather.raining ? this.world.weather.intensity : 0;
 		packet.commandsEnabled = !this.server.config.hub.realm;
 		static if(__protocol >= 120) packet.permissionLevel = this.op ? 1 : 0;
 		packet.levelId = Software.display;
@@ -678,27 +682,41 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	public override void sendResourcePack() {}
 	
-	public override void sendTimePacket() {
-		this.sendPacket(new Play.SetTime(this.world.time.to!uint));
-		this.sendPacket(new Play.GameRulesChanged([Types.Rule(Types.Rule.DO_DAYLIGHT_CYCLE, this.world.rules.daylightCycle)]));
-	}
-	
 	public override void sendDifficulty(Difficulty difficulty) {
 		this.sendPacket(new Play.SetDifficulty(difficulty));
 	}
 
 	public override void sendWorldGamemode(Gamemode gamemode) {
-		// not supported
+		this.sendPacket(new Play.SetDefaultGameType(convertGamemode(gamemode)));
+	}
+
+	public override void sendDoDaylightCycle(bool cycle) {
+		this.sendGamerule(Types.Rule.DO_DAYLIGHT_CYCLE, cycle);
+	}
+	
+	public override void sendTime(uint time) {
+		this.sendPacket(new Play.SetTime(time));
+	}
+	
+	public override void sendWeather(bool raining, bool thunderous, uint time, uint intensity) {
+		if(raining) {
+			this.sendLevelEvent(Play.LevelEvent.START_RAIN, EntityPosition(0), intensity * 24000);
+			if(thunderous) this.sendLevelEvent(Play.LevelEvent.START_THUNDER, EntityPosition(0), time);
+			else this.sendLevelEvent(Play.LevelEvent.STOP_THUNDER, EntityPosition(0), 0);
+		} else {
+			this.sendLevelEvent(Play.LevelEvent.STOP_RAIN, EntityPosition(0), 0);
+			this.sendLevelEvent(Play.LevelEvent.STOP_THUNDER, EntityPosition(0), 0);
+		}
 	}
 	
 	public override void sendSettingsPacket() {
 		uint flags = Play.AdventureSettings.EVP_DISABLED; // player vs environment is disabled and the animation is done by server
-		if(this.world.rules.immutableWorld || this.adventure || this.spectator) flags |= Play.AdventureSettings.IMMUTABLE_WORLD;
-		if(!this.world.rules.pvp || this.spectator) flags |= Play.AdventureSettings.PVP_DISABLED;
-		if(!this.world.rules.pvm || this.spectator) flags |= Play.AdventureSettings.PVM_DISABLED;
+		if(this.adventure || this.spectator) flags |= Play.AdventureSettings.IMMUTABLE_WORLD;
+		if(!this.world.pvp || this.spectator) flags |= Play.AdventureSettings.PVP_DISABLED;
+		if(this.spectator) flags |= Play.AdventureSettings.PVM_DISABLED;
 		if(this.creative || this.spectator) flags |= Play.AdventureSettings.ALLOW_FLIGHT;
-		//if(this.spectator) flags |= Play.AdventureSettings.NO_CLIP;
-		//if(this.spectator) flags |= Play.AdventureSettings.FLYING;
+		if(this.spectator) flags |= Play.AdventureSettings.NO_CLIP;
+		if(this.spectator) flags |= Play.AdventureSettings.FLYING;
 		this.sendPacket(new Play.AdventureSettings(flags, this.op ? Play.AdventureSettings.LEVEL_OPERATOR : Play.AdventureSettings.LEVEL_USER));
 	}
 	
@@ -717,16 +735,6 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		}
 		this.send_commands = true;
 		this.sendCommands();
-	}
-	
-	public override void sendWeather() {
-		if(!this.world.downfall) {
-			this.sendLevelEvent(Play.LevelEvent.STOP_RAIN, EntityPosition(0), 0);
-			this.sendLevelEvent(Play.LevelEvent.STOP_THUNDER, EntityPosition(0), 0);
-		} else {
-			this.sendLevelEvent(Play.LevelEvent.START_RAIN, EntityPosition(0), to!uint(this.world.weather.intensity * 24000));
-			this.sendLevelEvent(Play.LevelEvent.START_THUNDER, EntityPosition(0), this.world.weather.rain.to!uint);
-		}
 	}
 
 	private void sendLevelEvent(typeof(Play.LevelEvent.eventId) evid, EntityPosition position, uint data) {
@@ -843,6 +851,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		this.sendPacket(packet);
 	}
 
+	// generic
+
+	private void sendGamerule(const string name, bool value) {
+		this.sendPacket(new Play.GameRulesChanged([Types.Rule(name, Types.Rule.BOOLEAN, value)]));
+	}
+
 	mixin generateHandlers!(Play.Packets);
 
 	protected void handleResourcePackClientResponsePacket(ubyte status, string[] packIds) {
@@ -863,11 +877,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		//TODO send chunk
 	}
 
-	protected void handleTextChatPacket(string sender, string message) {
-		this.handleTextMessage(message);
-	}
-
-	protected void handleTextChatPacket(ubyte unknown1, string sender, string message) {
+	protected void handleTextChatPacket(bool unknown1, string sender, string message, string xuid) {
 		this.handleTextMessage(message);
 	}
 
@@ -992,7 +1002,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	//protected void handleCraftingEventPacket(ubyte window, uint type, UUID uuid, Types.Slot[] input, Types.Slot[] output) {}
 
-	protected void handleAdventureSettingsPacket(uint flags, uint unknown1, uint permissions=0, uint permissionLevel=0, long unknown2=0) {
+	protected void handleAdventureSettingsPacket(uint flags, uint unknown1, uint permissions, uint permissionLevel, uint customPermissions, long eid) {
 		if(flags & Play.AdventureSettings.FLYING) {
 			if(!this.creative && !this.spectator) this.kick("Flying is not enabled on this server");
 			//TODO set as flying
@@ -1003,7 +1013,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	protected void handleSetPlayerGameTypePacket(int gamemode) {
 		if(this.op && gamemode >= 0 && gamemode <= 2) {
-			this.gamemode = gamemode & 2;
+			this.gamemode = gamemode & 0b11;
 		} else {
 			this.sendGamemode();
 		}

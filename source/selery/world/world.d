@@ -65,32 +65,62 @@ import selery.world.chunk;
 import selery.world.generator;
 import selery.world.map : Map;
 import selery.world.plugin : loadWorld;
-import selery.world.rules : Rules, Gamemode, Difficulty;
 import selery.world.thread;
 
 static import sul.blocks;
 
-private shared uint world_count = 0;
+enum Gamemode : ubyte {
+	
+	survival = 0, s = 0,
+	creative = 1, c = 1,
+	adventure = 2, a = 2,
+	spectator = 3, sp = 3,
+	
+}
+
+enum Difficulty : ubyte {
+	
+	peaceful = 0, p = 0,
+	easy = 1, e = 0,
+	normal = 2, n = 0,
+	hard = 3, h = 0,
+	
+}
+
+enum Dimension : ubyte {
+	
+	overworld = 0,
+	nether = 1,
+	end = 2,
+	
+}
 
 final class WorldGroup {
 
+	Random random;
+
 	Player[] players;
+	Player[uint] playersAA;
 
 	Gamemode gamemode;
 	Difficulty difficulty;
 
-	// time-related
-	bool doDayLightCycle;
-	uint _day, _time; //TODO send updates when updated
+	// rules that the client does not need to know about
+	bool pvp;
+	bool naturalRegeneration;
+	bool depleteHunger;
+	uint randomTickSpeed;
+	uint viewDistance;
 
-	// weather-related
-	bool doWeatherCycle;
-	uint _downfall;
-	bool _thunderous;
+	Time time;
+	Weather weather;
 
-	//TODO update weather
+	private this(ref Random random) {
+		this.random = random;
+	}
 
-	public this(const Config.Node config) {
+	public this(ref Random random, const Config.Node config) {
+		this(random);
 		this.gamemode = {
 			switch(config.gamemode) {
 				default: return Gamemode.survival;
@@ -102,18 +132,37 @@ final class WorldGroup {
 		this.difficulty = {
 			switch(config.difficulty) {
 				case 0: return Difficulty.peaceful;
-				default: return Difficulty.easy;
-				case 2: return Difficulty.normal;
+				case 1: return Difficulty.easy;
+				default: return Difficulty.normal;
 				case 3: return Difficulty.hard;
 			}
 		}();
-		this.doDayLightCycle = config.doDaylightCycle;
-		this.doWeatherCycle = config.doWeatherCycle;
+		this.depleteHunger = config.depleteHunger;
+		this.naturalRegeneration = config.naturalRegeneration;
+		this.pvp = config.pvp;
+		this.randomTickSpeed = config.randomTickSpeed;
+		this.viewDistance = config.viewDistance;
 		//TODO more rules
+		this.time = new Time(config.doDaylightCycle);
+		this.weather = new Weather(config.doWeatherCycle);
+		this.weather.clear();
 	}
 
+	//TODO constructor from world's save file
+
 	void tick() {
-		//TODO update time
+		if(this.time.cycle) {
+			if(++this.time._time == 24000) {
+				this.time._time = 0;
+				this.time.day++;
+			}
+		}
+		if(this.weather.cycle) {
+			if(--this.weather._time == 0) {
+				if(this.weather._raining) this.weather.clear();
+				else this.weather.start();
+			}
+		}
 	}
 
 	// updates
@@ -121,12 +170,14 @@ final class WorldGroup {
 	void addPlayer(Player player) {
 		this.players.call!"sendAddList"([player]);
 		this.players ~= player;
+		this.playersAA[player.hubId] = player;
 		player.sendAddList(this.players);
 	}
 
 	void removePlayer(Player player, bool closed) {
 		foreach(i, p; this.players) {
 			if(p.hubId == player.hubId) {
+				this.playersAA.remove(player.hubId);
 				this.players = this.players[0..i] ~ this.players[i+1..$];
 				this.players.call!"sendRemoveList"([player]);
 				if(!closed) player.sendRemoveList(this.players);
@@ -144,7 +195,99 @@ final class WorldGroup {
 		this.players.call!"sendWorldGamemode"(gamemode);
 	}
 
+	private class Time {
+
+		bool _cycle;
+		uint day;
+		uint _time;
+
+		this(bool cycle) {
+			this._cycle = cycle;
+		}
+
+		@property bool cycle() {
+			return _cycle;
+		}
+
+		@property bool cycle(bool cycle) {
+			players.call!"sendDoDaylightCycle"(cycle);
+			return _cycle = cycle;
+		}
+
+		@property uint time() {
+			return _time;
+		}
+
+		@property uint time(uint time) {
+			time %= 24000;
+			players.call!"sendTime"(time);
+			return _time = time;
+		}
+
+		alias time this;
+
+	}
+
+	private class Weather {
+
+		public bool cycle;
+		private bool _raining, _thunderous;
+		private uint _time;
+		private uint _intensity;
+
+		this(bool cycle) {
+			this.cycle = cycle;
+		}
+
+		@property bool raining() {
+			return _raining;
+		}
+
+		@property bool thunderous() {
+			return _thunderous;
+		}
+
+		@property uint intensity() {
+			return _intensity;
+		}
+
+		void clear(uint duration) {
+			_raining = _thunderous = false;
+			_time = duration;
+			_intensity = 0;
+			update();
+		}
+
+		void clear() {
+			clear(random.range(12000, 180000));
+		}
+
+		void start(uint time, uint intensity, bool thunderous) {
+			assert(intensity > 0);
+			_raining = true;
+			_thunderous = thunderous;
+			_time = time;
+			_intensity = intensity;
+			update();
+		}
+
+		void start(uint time, bool thunderous) {
+			start(time, random.range(1, 4), thunderous);
+		}
+
+		void start() {
+			start(random.range(12000, 24000), random.range(0, 1) == 1);
+		}
+
+		private void update() {
+			players.call!"sendWeather"(_raining, _thunderous, _time, _intensity);
+		}
+
+	}
+
 }
+
+private shared uint world_count = 0;
 
 /**
  * Basic world.
@@ -155,8 +298,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.info = info;
 		world.n_server = server;
 		world.setListener(cast()server.globalListener);
-		if(parent !is null) {
-			world.players_list = parent.players_list;
+		if(parent is null) {
+			world.initParent();
+		} else {
+			world.initChild();
 			world.setListener(parent.inheritance);
 			world.inheritance = parent.inheritance;
 		}
@@ -185,7 +330,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}+/
 
 	public immutable uint id;
-	public immutable string n_name;
+	public immutable string _name;
 
 	protected shared WorldInfo info;
 
@@ -205,8 +350,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private WorldGroup group;
 
-	protected Player[uint] all_players; // only used by the main parent
-
 	private World n_parent;
 	private World[] n_children;
 	
@@ -214,11 +357,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	protected ItemStorage n_items;
 	
 	private Random n_random;
-
-	public Rules rules;
-
-	private Difficulty _difficulty;
-	private Gamemode _gamemode; // default gamemode
 	
 	private tick_t n_ticks = 0;
 
@@ -237,17 +375,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	public bool updateBlocks = false;
 
+	//TODO move in chunks
+
 	private PlacedBlock[] updated_blocks;
 	private Tile[size_t] updated_tiles;
 	
 	private Entity[size_t] w_entities;
 	private Player[size_t] w_players;
-	public PlayersList players_list;
-	
-	private tick_t m_time;
-
-	protected tick_t no_rain;
-	protected Weather m_weather;
 
 	private ScheduledUpdate[] scheduled_updates;
 
@@ -255,26 +389,19 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private Command[string] commands;
 	
-	public this(string name="world", Rules rules=Rules.defaultRules.dup, Generator generator=null, uint seed=unpredictableSeed) {
+	public this(string name="world", Generator generator=null, uint seed=unpredictableSeed) {
 		this.id = atomicOp!"+="(world_count, 1);
-		this.n_name = name;
+		this._name = name;
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
 		if(this.n_items is null) this.n_items = new ItemStorage();
-		this.rules = this.parent is null ? rules : this.parent.rules.dup;
 		this.n_random = Random(this.seed);
 		this.inheritance = new EventListener!WorldEvent();
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
 		this.n_type = this.generator.type;
 		this.spawnPoint = this.generator.spawn;
-		this.no_rain = this.random.next(0, 180000);
-		this.players_list = new PlayersList();
 		this.tasks = new TaskManager();
-	}
-
-	public this(string name, Generator generator, uint seed=unpredictableSeed) {
-		this(name, Rules.defaultRules.dup, generator, seed);
 	}
 	
 	public this(string name, uint seed) {
@@ -286,7 +413,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	protected final void initParent() {
-		this.group = new WorldGroup(this.server.config.node);
+		this.group = new WorldGroup(this.random, this.server.config.node);
 	}
 
 	protected final void initChild() {
@@ -352,20 +479,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * ---
 	 */
 	public final pure nothrow @property @safe @nogc immutable(string) name() {
-		return this.n_name;
-	}
-
-	/**
-	 * Gets the world's dimension as a group of bytes.
-	 * Example:
-	 * ---
-	 * if(world.dimension == Dimension.nether) {
-	 *    log("world is nether!");
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @property @safe @nogc Dimension dimension() {
-		return this.n_dimension;
+		return this._name;
 	}
 
 	/**
@@ -386,15 +500,160 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		return this.n_type;
 	}
 	
+	/**
+	 * Gets the world's dimension as a group of bytes.
+	 * Example:
+	 * ---
+	 * if(world.dimension == Dimension.nether) {
+	 *    log("world is nether!");
+	 * }
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc Dimension dimension() {
+		return this.n_dimension;
+	}
+
+	/**
+	 * Gets/sets the world's gamemode.
+	 */
+	public final pure nothrow @property @safe @nogc Gamemode gamemode() {
+		return this.group.gamemode;
+	}
+
+	/// ditto
+	public final @property Gamemode gamemode(Gamemode gamemode) {
+		this.group.updateGamemode(gamemode);
+		return gamemode;
+	}
+
+	/// ditto
+	public final @property Gamemode gamemode(int gamemode) {
+		with(Gamemode) assert(gamemode >= survival && gamemode <= spectator);
+		return this.gamemode = cast(Gamemode)gamemode;
+	}
+
+	/**
+	 * Gets/sets the world's difficulty.
+	 */
+	public final pure nothrow @property @safe @nogc Difficulty difficulty() {
+		return this.group.difficulty;
+	}
+
+	/// ditto
+	public final @property Difficulty difficulty(Difficulty difficulty) {
+		this.group.updateDifficulty(difficulty);
+		return difficulty;
+	}
+
+	/// ditto
+	public final @property Difficulty difficulty(int difficulty) {
+		assert(difficulty >= Difficulty.peaceful && difficulty <= Difficulty.hard);
+		return this.difficulty = cast(Difficulty)difficulty;
+	}
+
+	/**
+	 * Gets/sets whether the pvp (player vs player) is active in the
+	 * current group of worlds.
+	 */
+	public final pure nothrow @property @safe @nogc bool pvp() {
+		return this.group.pvp;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc bool pvp(bool pvp) {
+		return this.group.pvp = pvp;
+	}
+
+	/**
+	 * Gets/sets whether player's health regenerates naturally or not.
+	 */
+	public final pure nothrow @property @safe @nogc bool naturalRegeneration() {
+		return this.group.naturalRegeneration;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc bool naturalRegeneration(bool naturalRegeneration) {
+		return this.group.naturalRegeneration = naturalRegeneration;
+	}
+
+	/**
+	 * Gets/sets whether players' hunger is depleted when the world's difficulty
+	 * is not set to peaceful.
+	 */
+	public final pure nothrow @property @safe @nogc bool depleteHunger() {
+		return this.group.depleteHunger;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc bool depleteHunger(bool depleteHunger) {
+		return this.group.depleteHunger = depleteHunger;
+	}
+
+	/**
+	 * Gets the world's time manager.
+	 * Example:
+	 * ---
+	 * log("Time of the day is ", world.time.time);
+	 * log("Day is ", world.time.day);
+	 * log("Do daylight cycle? ", world.time.cycle);
+	 * world.time = 25000;
+	 * assert(world.time == 1000);
+	 * world.time = Time.noon;
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc auto time() {
+		return this.group.time;
+	}
+
+	/**
+	 * Gets the world's weather manager.
+	 * Example:
+	 * ---
+	 * log("is it raining? ", world.weather.raining);
+	 * log("do weather cycle? ", world.weather.cycle);
+	 * world.weather.start();
+	 * world.weather.clear();
+	 * world.weather.start(24000);
+	 * assert(world.weather.raining);
+	 * ---
+	 */
+	public final pure nothrow @property @safe @nogc auto weather() {
+		return this.group.weather;
+	}
+
+	/**
+	 * Gets/sets the worlds group's default highest view distance for players.
+	 */
+	public final pure nothrow @property @safe @nogc uint viewDistance() {
+		return this.group.viewDistance;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc uint viewDistance(uint viewDistance) {
+		return this.group.viewDistance = viewDistance;
+	}
+
+	/**
+	 * Gets/sets the world's random tick speed.
+	 */
+	public final pure nothrow @property @safe @nogc uint randomTickSpeed() {
+		return this.group.randomTickSpeed;
+	}
+
+	/// ditto
+	public final pure nothrow @property @safe @nogc uint randomTickSpeed(uint randomTickSpeed) {
+		return this.group.randomTickSpeed = randomTickSpeed;
+	}
+	
 	/*
-	 * Gets the blocks.
+	 * Gets the world's blocks.
 	 */
 	public final pure nothrow @property @safe @nogc ref BlockStorage blocks() {
 		return this.n_blocks;
 	}
 	
 	/*
-	 * Gets the items
+	 * Gets the world's items.
 	 */
 	public final pure nothrow @property @safe @nogc ref ItemStorage items() {
 		return this.n_items;
@@ -464,7 +723,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * auto nether = overworld.addChild!Nether();
 	 * ---
 	 */
-	public final World addChild(World world) {
+	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
+		return this.addChildImpl(new T(args));
+	}
+
+	private World addChildImpl(World world) {
 		assert(world.parent is null);
 		world.n_parent = this;
 		world.n_server = this.server;
@@ -472,15 +735,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.info.tid = this.info.tid;
 		world.info.parent = this.info;
 		this.info.children[world.id] = world.info;
-		world.players_list = this.players_list;
 		World.startWorld(this.server, world.info, world, this);
 		this.n_children ~= world;
-		return world;
-	}
-
-	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
-		T world = new T(args);
-		this.addChild(world);
 		return world;
 	}
 
@@ -525,6 +781,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	public void startMainWorldLoop() {
 
+		void tickChildren(World world) {
+			world.tick();
+			foreach(child ; world.children) tickChildren(child);
+		}
+
 		StopWatch timer;
 
 		while(!this._stopped) {
@@ -534,11 +795,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			// handle server's message (new players, new packets, ...)
 			this.handleServerPackets();
 
-			// do the world ticking
-			this.tick();
+			// tick the group
+			this.group.tick();
+
+			// tick the world and the children
+			tickChildren(this);
 
 			// flush player's packets
-			foreach(player ; this.all_players) player.flush();
+			foreach(player ; this.group.players) player.flush();
 
 			// sleep until next tick
 			timer.stop();
@@ -559,57 +823,58 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				&this.handleRemovePlayer,
 				&this.handleGamePacket,
 				&this.handleBroadcast,
+				&this.handleUpdateDifficulty,
+				&this.handleUpdatePlayerGamemode,
 				&this.handleClose,
 			)) {}
 	}
 
 	private void handleAddPlayer(AddPlayer packet) {
-		this.all_players[packet.player.hubId] = this.spawnPlayer(packet.player);
+		//TODO allow spawning in a child
+		this.spawnPlayer(packet.player, packet.transferred);
 	}
 
 	private void handleRemovePlayer(RemovePlayer packet) {
-		//TODO
-		// could also be in a child
-		// call player.world.despawn
-		auto player = packet.playerId in this.all_players;
+		//TODO could also be in a child
+		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
-			this.removePlayerList(*player);
-			this.all_players.remove(packet.playerId);
+			this.group.removePlayer(*player, false); //TODO whether the player has left the server
 			this.despawnPlayer(*player);
 			(*player).close();
 		}
 	}
 
 	private void handleGamePacket(GamePacket packet) {
-		auto player = packet.playerId in this.all_players;
+		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
 			(*player).handle(packet.payload[0], packet.payload[1..$].dup);
 		}
 	}
 
 	private void handleBroadcast(Broadcast packet) {
-		this.broadcast(packet.message);
 		if(packet.children) {
-			//TODO children of children
-			foreach(child ; this.children) {
-				child.broadcast(packet.message);
+			void broadcastImpl(World world) {
+				world.broadcast(packet.message);
 			}
+			broadcastImpl(this);
+		} else {
+			this.broadcast(packet.message);
 		}
 	}
 
 	private void handleUpdateDifficulty(UpdateDifficulty packet) {
-		//TODO
+		this.difficulty = packet.difficulty;
 	}
 
 	private void handleUpdatePlayerGamemode(UpdatePlayerGamemode packet) {
-		auto player = packet.playerId in this.all_players;
+		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
 			(*player).gamemode = packet.gamemode;
 		}
 	}
 
 	private void handleUpdatePlayerOpStatus(UpdatePlayerOpStatus packet) {
-		auto player = packet.playerId in this.all_players;
+		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
 			(*player).op = packet.op;
 		}
@@ -617,7 +882,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private void handleClose(Close packet) {
 		ubyte status;
-		if(this.all_players.length) {
+		if(this.group.players.length) {
 			// cannot close if there are players online in the world or in the children
 			status = CloseResult.PLAYERS_ONLINE;
 		} else {
@@ -640,59 +905,24 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		// tasks
 		if(this.tasks.length) this.tasks.tick(this.ticks);
 
-		// update the time
-		if(this.rules.daylightCycle) {
-			this.m_time++;
-			if(this.m_time >= 24000) {
-				this.m_time %= 24000;
-			}
-		}
-
-		// update the weather
-		if(this.rules.toggledownfall) {
-			bool update = false;
-			if(this.m_weather.rain != 0) {
-				this.m_weather.tick();
-				if(this.m_weather.rain == 0) {
-					update = true;
-					foreach(ref cx ; this.n_chunks) {
-						foreach(ref chunk ; cx) {
-							chunk.resetSnow();
-						}
-					}
-					this.no_rain = this.random.next(12000, 180000); // .5 to 7.5 days
-				}
-			} else if(--this.no_rain == 0) {
-				// toggle downfall
-				this.m_weather.rain = this.random.next(12000, 24000); // .5 to 1 day
-				this.m_weather.thunder = this.random.probability(.25f);
-				this.m_weather.intensity = this.random.range!ubyte(1, 3);
-				update = true;
-			}
-			if(update) {
-				this.w_players.call!"sendWeather"();
-			}
-		}
-
 		// random chunk ticks
-		if(this.rules.chunkTick) {
+		//if(this.rules.chunkTick) {
 			foreach(ref c ; this.n_chunks) {
 				foreach(ref chunk ; c) {
 					int cx = chunk.x << 4;
 					int cz = chunk.z << 4;
-					if(this.m_weather.rain != 0 && this.m_weather.thunder && this.random.probability(this.rules.thunders)) {
+					if(this.weather.thunderous && this.random.probability(1f/100_000)) {
 						ubyte random = this.random.range!ubyte;
 						ubyte x = (random >> 4) & 0xF;
 						ubyte z = random & 0xF;
 						auto y = chunk.firstBlock(x, z);
 						if(y >= 0) this.strike(EntityPosition(chunk.x << 4 | x, y, chunk.z << 4 | z));
 					}
-					if(this.m_weather.rain != 0 && this.random.probability(.03125f * this.m_weather.intensity)) {
+					if(this.weather.raining && this.random.probability(.03125f * this.weather.intensity)) {
 						auto xz = chunk.nextSnow;
 						auto y = chunk.firstBlock(xz.x, xz.z);
 						if(y > 0) {
-							enum drop = .05f / 30;
-							float temperature = chunk.biomes[xz.z << 4 | xz.x].temperature - drop * min(0, y - 64);
+							immutable temperature = chunk.biomes[xz.z << 4 | xz.x].temperature - (.05f / 30) * min(0, y - 64);
 							if(temperature <= .95) {
 								BlockPosition position = BlockPosition(cx | xz.x, y, cz | xz.z);
 								Block dest = this[position];
@@ -717,7 +947,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					foreach(i, section; chunk.sections) {
 						if(section.tick) {
 							immutable y = i << 4;
-							foreach(j ; 0..this.rules.randomTick) {
+							foreach(j ; 0..this.randomTickSpeed) {
 								auto random = this.random.next(0, 4096);
 								auto block = section.blocks[random];
 								if(block && (*block).doRandomTick) {
@@ -728,7 +958,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 					}
 				}
 			}
-		}
+		//}
 
 		// scheduled updates
 		/*if(this.scheduled_updates.length > 0) {
@@ -775,6 +1005,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			this.w_players.call!"sendBlocks"(this.updated_blocks);
 			this.updated_blocks.length = 0;
 		}
+
 		// send the updated tiles
 		if(this.updated_tiles.length > 0) {
 			foreach(Tile tile ; this.updated_tiles) {
@@ -784,10 +1015,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			this.updated_tiles.clear();
 		}
 
-		// tick the children
-		foreach(world ; this.n_children) {
-			world.tick();
-		}
 	}
 	
 	/**
@@ -815,71 +1042,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
 		logImpl(this.name, this.id, -1, join(cast(string[])formats, "") ~ this.server.config.lang.translate(translation, args));
-	}
-
-	/**
-	 * Gets the world's time.
-	 * The returned value is always in range 0..24000, where
-	 * 0 is sunrise.
-	 * The time doesn't change if the field daylight-cycle in the
-	 * world's rules is set to false.
-	 * Example:
-	 * ---
-	 * if(world.time > Time.sunset) {
-	 *    world.time = Time.sunrise;
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @property @safe @nogc tick_t time() {
-		return this.m_time;
-	}
-
-	/**
-	 * Sets the world's time.
-	 * If the given value is not in the range 0..24000 the value
-	 * will be the modulo of the division for 24000.
-	 * Example:
-	 * ---
-	 * world.time = 30000;
-	 * assert(world.time == Time.noon);
-	 * ---
-	 */
-	public final @property tick_t time(tick_t time) {
-		this.m_time = time %= 24000;
-		this.w_players.call!"sendTimePacket"();
-		return this.m_time;
-	}
-
-	/**
-	 * Whether or not it's raining or snowing.
-	 */
-	public @property @safe @nogc bool downfall() {
-		return this.m_weather.rain != 0;
-	}
-
-	/**
-	 * Toggles or untoggles downfalls.
-	 * Example:
-	 * ---
-	 * if(world.downfall) {
-	 *    world.downfall = false;
-	 * }
-	 * ---
-	 */
-	public @property bool downfall(bool downfall) {
-		if(downfall != this.downfall) {
-			if(!downfall) this.no_rain = this.random.next(0, 180000);
-			this.m_weather.rain = downfall ? this.random.next(24000) : 0;
-			this.w_players.call!"sendWeather"();
-		}
-		return downfall;
-	}
-
-	/**
-	 * Gets the current weather.
-	 */
-	public final pure nothrow @property @safe @nogc Weather weather() {
-		return this.m_weather;
 	}
 
 	/**
@@ -922,41 +1084,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/*
-	 * Adds a player to the world's players list and
-	 * broadcasts the packet to the players in the world (and related).
-	 */
-	public final void addPlayerList(Player player) {
-		this.players_list.players.call!"sendAddList"([player]); // only the new player
-		this.players_list ~= player;
-		player.sendAddList(this.players_list); // all the players and itself
-	}
-
-	/*
-	 * Removes a player from the world's players list and
-	 * broadcasts the packet to the players in the world (and related).
-	 */
-	public final void removePlayerList(Player player) {
-		foreach(i, p; this.players_list) {
-			if(player == p) {
-				this.players_list.players.call!"sendRemoveList"([player]);
-				this.players_list = this.players_list[0..i] ~ this.players_list[i+1..$];
-				break;
-			}
-		}
-	}
-
-	/*
-	 * Gets the player's list (online players without the hidden ones).
-	 */
-	public final @property @safe @nogc Player[] playersList() {
-		return this.players_list;
-	}
-
-	/*
 	 * Creates and spawn a player when it comes from another world group,
-	 * node or is a new connection.
+	 * node or from a new connection.
 	 */
-	private Player spawnPlayer(shared PlayerInfo info) {
+	private Player spawnPlayer(shared PlayerInfo info, bool transferred) {
 
 		info.world = this.info; // set as the main world even when spawned in a child
 
@@ -985,7 +1116,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		player.sendJoinPacket();
 
 		// add and send to the list
-		this.addPlayerList(player);
+		this.group.addPlayer(player);
 
 		// register server's commands
 		foreach(name, command; this.server.commands) {
@@ -1044,8 +1175,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		player.sendSettingsPacket();
 		player.sendRespawnPacket();
-		player.sendTimePacket();
-		player.sendWeather();
 		player.sendInventory();
 		player.sendMetadata(player);
 
@@ -1386,8 +1515,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	// Handles the player's chunk request
 	public final void playerUpdateRadius(Player player) {
-		if(player.viewDistance > this.rules.viewDistance) player.viewDistance = this.rules.viewDistance;
-		if(this.rules.chunksAutosending) {
+		if(player.viewDistance > this.viewDistance) player.viewDistance = this.viewDistance;
+		//TODO allow disallowing auto-sending
+		//if(this.rules.chunksAutosending) {
 			ChunkPosition pos = player.chunk;
 			if(player.last_chunk_position != pos) {
 				player.last_chunk_position = pos;
@@ -1430,7 +1560,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				player.loaded_chunks = new_chunks;
 
 			}
-		}
+		//}
 
 	}
 
@@ -1651,9 +1781,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/// schedules a block update
 	public @safe void scheduleBlockUpdate(Block block, uint time) {
-		if(this.rules.scheduledTicks) {
+		/*if(this.rules.scheduledTicks) {
 			this.scheduled_updates ~= ScheduledUpdate(block, time);
-		}
+		}*/
 	}
 
 	/**
@@ -1760,40 +1890,13 @@ private struct ScheduledUpdate {
 
 }
 
-struct Weather {
+enum Time : uint {
 
-	public tick_t rain = 0;
-	public bool thunder = false;
-
-	public ubyte intensity = 1; // 1, 2 or 3
-
-	public @safe @nogc void tick() {
-		this.rain--;
-	}
-
-}
-
-enum Time : tick_t {
-
-	sunrise = 0,
+	day = 1000,
+	night = 13000,
+	midnight = 18000,
 	noon = 6000,
+	sunrise = 23000,
 	sunset = 12000,
-	midnight = 18000
-
-}
-
-enum Dimension : ubyte {
-
-	overworld = 0,
-	nether = 1,
-	end = 2
-
-}
-
-class PlayersList {
-
-	Player[] players;
-
-	alias players this;
 
 }

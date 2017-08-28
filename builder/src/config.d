@@ -166,12 +166,16 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"max-players"(maxPlayers);
 					set!"world.gamemode"(gamemode);
 					set!"world.difficulty"(difficulty);
-					set!"world.pvp"(pvp);
-					set!"world.pvm"(pvm);
+					set!"world.deplete-hunger"(depleteHunger);
 					set!"world.do-daylight-cycle"(doDaylightCycle);
-					set!"world.do-weather-cycle"(doWeatherCycle);
-					set!"world.random-tick-speed"(randomTickSpeed);
+					set!"world.do-entity-drops"(doEntityDrops);
+					set!"world.do-fire-tick"(doFireTick);
 					set!"world.do-scheduled-ticks"(doScheduledTicks);
+					set!"world.do-weather-cycle"(doWeatherCycle);
+					set!"natural-regeneration"(naturalRegeneration);
+					set!"world.pvp"(pvp);
+					set!"world.random-tick-speed"(randomTickSpeed);
+					set!"view-distance"(viewDistance);
 					
 					// commands
 					foreach(command ; Commands) {
@@ -245,12 +249,16 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					file ~= newline ~ "[world]" ~ newline;
 					file ~= "gamemode = " ~ to!string(gamemode) ~ newline;
 					file ~= "difficulty = " ~ to!string(difficulty) ~ newline;
-					file ~= "pvp = " ~ to!string(pvp) ~ newline;
-					file ~= "pvm = " ~ to!string(pvm) ~ newline;
+					file ~= "deplete-hunger = " ~ to!string(depleteHunger) ~ newline;
 					file ~= "do-daylight-cycle = " ~ to!string(doDaylightCycle) ~ newline;
-					file ~= "do-weather-cycle = " ~ to!string(doWeatherCycle) ~ newline;
-					file ~= "random-tick-speed = " ~ to!string(randomTickSpeed) ~ newline;
+					file ~= "do-entity-drops = " ~ to!string(doEntityDrops) ~ newline;
+					file ~= "do-fire-tick = " ~ to!string(doFireTick) ~ newline;
 					file ~= "do-scheduled-ticks = " ~ to!string(doScheduledTicks) ~ newline;
+					file ~= "do-weather-cycle = " ~ to!string(doWeatherCycle) ~ newline;
+					file ~= "natural-regeneration = " ~ to!string(naturalRegeneration) ~ newline;
+					file ~= "pvp = " ~ to!string(pvp) ~ newline;
+					file ~= "random-tick-speed = " ~ to!string(randomTickSpeed) ~ newline;
+					file ~= "view-distance = " ~ to!string(viewDistance) ~ newline;
 				}
 				if(isNode) with(this.node) {
 					file ~= newline ~ "[commands]" ~ newline;

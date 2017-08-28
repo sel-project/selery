@@ -50,8 +50,7 @@ import selery.player.player;
 import selery.util.util : array_index;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.rules : Difficulty, Gamemode;
-import selery.world.world : World, Dimension;
+import selery.world.world : Gamemode, Difficulty, Dimension, World;
 
 import sul.utils.var : varuint;
 
@@ -463,7 +462,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		auto from = convertDimension(_from);
 		auto to = convertDimension(_to);
 		if(from != to) this.sendPacket(new Clientbound.Respawn(to==-1?1:to-1));
-		this.sendPacket(new Clientbound.Respawn(to, this.world.rules.difficulty, this.world.rules.gamemode, this.world.type));
+		this.sendPacket(new Clientbound.Respawn(to, this.world.difficulty, this.world.gamemode, this.world.type));
 	}
 
 	public override void sendInventory(ubyte flag=PlayerInventory.ALL, bool[] slots=[]) {
@@ -574,7 +573,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 
 	public override void sendJoinPacket() {
 		if(!this.first_spawned) {
-			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode, convertDimension(this.world.dimension), this.world.rules.difficulty, ubyte.max, this.world.type, false));
+			this.sendPacket(new Clientbound.JoinGame(this.id, this.gamemode, convertDimension(this.world.dimension), this.world.difficulty, ubyte.max, this.world.type, false));
 			this.first_spawned = true;
 		}
 		this.sendPacket(new Clientbound.PluginMessage("MC|Brand", cast(ubyte[])Software.name));
@@ -594,10 +593,6 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 			this.sendPacket(new Clientbound.ResourcePackSend("http://" ~ url ~ resourcePackPort ~ "/" ~ v, mixin("resourcePack" ~ v ~ "Hash")));
 		}
 	}
-	
-	public override void sendTimePacket() {
-		this.sendPacket(new Clientbound.TimeUpdate(this.world.ticks, this.world.rules.daylightCycle ? this.world.time : -this.world.time));
-	}
 
 	public override void sendDifficulty(Difficulty difficulty) {
 		this.sendPacket(new Clientbound.ServerDifficulty(difficulty));
@@ -606,6 +601,18 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	public override void sendWorldGamemode(Gamemode gamemode) {
 		// not supported
 	}
+
+	public override void sendDoDaylightCycle(bool cycle) {
+		this.sendPacket(new Clientbound.TimeUpdate(this.world.ticks, cycle ? this.world.time : -this.world.time));
+	}
+	
+	public override void sendTime(uint time) {
+		this.sendPacket(new Clientbound.TimeUpdate(this.world.ticks, this.world.time.cycle ? time : -time));
+	}
+	
+	public override void sendWeather(bool raining, bool thunderous, uint time, uint intensity) {
+		this.sendPacket(new Clientbound.ChangeGameState(raining ? Clientbound.ChangeGameState.BEGIN_RAINING : Clientbound.ChangeGameState.END_RAINING, intensity - 1));
+	}
 	
 	public override void sendSettingsPacket() {
 		//TODO
@@ -613,17 +620,13 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	}
 	
 	public override void sendRespawnPacket() {
-		this.sendPacket(new Clientbound.Respawn(convertDimension(this.world.dimension), this.world.rules.difficulty, to!ubyte(this.gamemode), this.world.type));
+		this.sendPacket(new Clientbound.Respawn(convertDimension(this.world.dimension), this.world.difficulty, to!ubyte(this.gamemode), this.world.type));
 	}
 	
 	public override void setAsReadyToSpawn() {
 		//if(!this.first_spawned) {
 		//this.sendPacket(packet!"PlayerPositionAndLook"(this));
 		this.sendPosition();
-	}
-	
-	public override void sendWeather() {
-		this.sendPacket(new Clientbound.ChangeGameState(this.world.weather.rain != 0 ? Clientbound.ChangeGameState.BEGIN_RAINING : Clientbound.ChangeGameState.END_RAINING, this.world.weather.intensity - 1));
 	}
 
 	public override void sendLightning(Lightning lightning) {

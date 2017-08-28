@@ -9,7 +9,7 @@
 The server is still in development and some features are not supported yet.
 
 Supported Minecraft (Bedrock Engine) versions:
-- [1.2 build 4](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_4) and [1.2 build 5](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_5)
+- [1.2 build 6](https://minecraft.gamepedia.com/Pocket_Edition_1.2_build_6)
 
 Supported Minecraft: Java Edition versions:
 - [1.12](https://minecraft.gamepedia.com/1.12) and [1.12.1](https://minecraft.gamepedia.com/1.12.1)

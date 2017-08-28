@@ -38,7 +38,7 @@ import selery.math.vector;
 import selery.node.server : NodeServer;
 import selery.player.player : Player;
 import selery.util.util : safe, call;
-import selery.world.world : World, Rules;
+import selery.world.world : World;
 
 static import sul.entities;
 public import sul.entities : Entities;
@@ -58,7 +58,6 @@ abstract class Entity : EventListener!WorldEvent {
 	protected UUID n_uuid;
 
 	protected World n_world;
-	public Rules rules;
 
 	private Entity[size_t] n_watchlist;
 	private Entity[size_t] n_viewers; //edited by other entities
@@ -107,7 +106,6 @@ abstract class Entity : EventListener!WorldEvent {
 		//assert(world !is null, "World can't be null");
 		this._id = reserveLocalId();
 		this.n_world = world;
-		this.rules = this.world.rules.dup;
 		this.n_uuid = cast()this.server.nextUUID;
 		this.m_position = this.m_last = this.oldposition = position;
 		this.m_motion = EntityPosition(0, 0, 0);

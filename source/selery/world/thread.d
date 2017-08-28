@@ -23,8 +23,7 @@ import std.traits : isAbstractClass, Parameters;
 
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
-import selery.world.rules : Difficulty, Gamemode;
-import selery.world.world : World;
+import selery.world.world : Gamemode, Difficulty, World;
 
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
 
@@ -56,7 +55,7 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 struct AddPlayer {
 
 	shared PlayerInfo player;
-	//TODO reason
+	bool transferred;
 
 }
 
