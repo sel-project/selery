@@ -111,7 +111,7 @@ abstract class Player : Human, WorldCommandSender {
 		super(world, position, info.skin);
 		this.info = info;
 		this.gameId = info.type;
-		this._id = hubId * 2; // always an even number
+		this._id++; // always an even number
 		this._display_name = this.chatName = info.displayName;
 		this.connectedSameMachine = this.info.ip.startsWith("127.0.") || this.info.ip == "::1";
 		this.connectedSameNetwork = this.info.ip.startsWith("192.168.");

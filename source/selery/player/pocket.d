@@ -811,6 +811,9 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 			return cast(ushort)(packet.enumValues.length - 1);
 		}
 		uint addEnum(string name, inout(string)[] values) {
+			foreach(uint i, enum_; packet.enums) {
+				if(enum_.name == name) return i;
+			}
 			auto enum_ = Types.Enum(name);
 			foreach(value ; values) {
 				enum_.valuesIndexes ~= addValue(value);

@@ -51,7 +51,7 @@ abstract class Entity : EventListener!WorldEvent {
 	private static uint count = -1;
 
 	public static @safe @nogc uint reserveLocalId() {
-		return count += 2; // always an odd number
+		return count += 2; // always an odd number (starting from 1)
 	}
 
 	protected uint _id;
