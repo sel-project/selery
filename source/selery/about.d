@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum uint build = 64;
+	enum uint build = 65;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -153,11 +153,12 @@ enum supportedJavaProtocols = cast(string[][uint])[
 	316: ["1.11.1", "1.11.2"],
 	335: ["1.12"],
 	338: ["1.12.1"],
+	340: ["1.12.2"],
 ];
 
 /// ditto
 enum supportedPocketProtocols = cast(string[][uint])[
-	134: ["1.2.0"],
+	137: ["1.2.0", "1.2.1"],
 ];
 
 /**
