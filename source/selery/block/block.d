@@ -105,18 +105,18 @@ class Block {
 	}
 
 	/**
-	 * Indicates whether the block exists in Minecraft: Pocket Edition.
+	 * Indicates whether the block exists in Minecraft.
 	 */
-	public pure nothrow @property @safe @nogc bool pocket() {
-		return this.data.pocket.exists;
+	public pure nothrow @property @safe @nogc bool bedrock() {
+		return this.data.bedrock.exists;
 	}
 
-	public pure nothrow @property @safe @nogc ubyte pocketId() {
-		return this.data.pocket.id;
+	public pure nothrow @property @safe @nogc ubyte bedrockId() {
+		return this.data.bedrock.id;
 	}
 
-	public pure nothrow @property @safe @nogc ubyte pocketMeta() {
-		return this.data.pocket.meta;
+	public pure nothrow @property @safe @nogc ubyte bedrockMeta() {
+		return this.data.bedrock.meta;
 	}
 
 	/**

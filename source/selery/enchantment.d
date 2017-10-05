@@ -30,7 +30,7 @@ public import sul.enchantments : Enchantments;
  * ---
  * auto e = new Enchantment(Enchantments.sharpness, "V");
  * Enchantment.fromString("luck of the sea", 5);
- * assert(e.pocket && e.pocket.id == 9);
+ * assert(e.bedrock && e.bedrock.id == 9);
  * assert(e.minecraft.id == 16);
  * assert(!Enchantment.fromMinecraft(71).pocket);
  * ---
@@ -38,14 +38,14 @@ public import sul.enchantments : Enchantments;
 final class Enchantment {
 	
 	private static const(sul.enchantments.Enchantment)[string] strings;
-	private static const(sul.enchantments.Enchantment)[ubyte] _java, _pocket;
+	private static const(sul.enchantments.Enchantment)[ubyte] _java, _bedrock;
 	
 	public static this() {
 		foreach(e ; __traits(allMembers, Enchantments)) {
 			mixin("alias ench = Enchantments." ~ e ~ ";");
 			strings[ench.name.replace(" ", "_")] = ench;
 			if(ench.java) _java[ench.java.id] = ench;
-			if(ench.pocket) _pocket[ench.pocket.id] = ench;
+			if(ench.bedrock) _bedrock[ench.bedrock.id] = ench;
 		}
 	}
 	
@@ -78,14 +78,14 @@ final class Enchantment {
 	}
 	
 	/**
-	 * Creates an enchantment using its Minecraft: Pocket Edition's id.
+	 * Creates an enchantment using its Minecraft's id.
 	 * Example:
 	 * ---
-	 * assert(Enchantment.fromPocket(9, 2).name == "sharpness");
+	 * assert(Enchantment.fromBedrock(9, 2).name == "sharpness");
 	 * ---
 	 */
-	public static @safe Enchantment fromPocket(ubyte id, ubyte level) {
-		auto ret = id in _pocket;
+	public static @safe Enchantment fromBedrock(ubyte id, ubyte level) {
+		auto ret = id in _bedrock;
 		return ret ? new Enchantment(*ret, level) : null;
 	}
 	

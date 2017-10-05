@@ -148,14 +148,14 @@ abstract class Entity : EventListener!WorldEvent {
 	}
 
 	/**
-	 * Indicates whether the entity exists in Minecraft: Pocket Edition.
+	 * Indicates whether the entity exists in Minecraft.
 	 */
-	public pure nothrow @property @safe @nogc bool pocket() {
-		return this.data.pocket.exists;
+	public pure nothrow @property @safe @nogc bool bedrock() {
+		return this.data.bedrock.exists;
 	}
 
-	public pure nothrow @property @safe @nogc ubyte pocketId() {
-		return this.data.pocket.id;
+	public pure nothrow @property @safe @nogc ubyte bedrockId() {
+		return this.data.bedrock.id;
 	}
 
 	/**

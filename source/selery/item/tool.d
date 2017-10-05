@@ -83,7 +83,7 @@ abstract class Tool : Item {
 		return this.damage;
 	}
 	
-	public override pure nothrow @property @safe @nogc ushort pocketMeta() {
+	public override pure nothrow @property @safe @nogc ushort bedrockMeta() {
 		return this.damage;
 	}
 	
@@ -327,8 +327,8 @@ class ColorableArmorItem(sul.items.Item si, ushort durability, ubyte atype, uint
 		if(display.has!Int("color")) this.color = Color.fromRGB(display.getValue!Int("color", 0));
 	}
 
-	public override void parsePocketCompound(Compound compound) {
-		super.parsePocketCompound(compound);
+	public override void parseBedrockCompound(Compound compound) {
+		super.parseBedrockCompound(compound);
 		compound = compound.get!Compound("", compound);
 		if(compound.has!Int("customColor")) this.color = Color.fromRGB(compound.getValue!Int("customColor", 0));
 	}

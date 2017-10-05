@@ -66,7 +66,7 @@ class Queries : Thread {
 						} catch(Exception) {}
 					}
 				}
-				foreach(string address ; pocket.addresses) {
+				foreach(string address ; bedrock.addresses) {
 					parse(address, this.pocketIp);
 				}
 				foreach(string address ; java.addresses) {
@@ -150,7 +150,7 @@ class Queries : Thread {
 			ubyte[] pe, pc;
 			void add(string value) {
 				ubyte[] buff = cast(ubyte[])value ~ 0;
-				if(pocket) pe ~= buff;
+				if(bedrock) pe ~= buff;
 				if(java) pc ~= buff;
 			}
 			static if(QUERY_SHOW_MOTD) {
@@ -163,8 +163,8 @@ class Queries : Thread {
 			add("world");
 			add(to!string(this.server.onlinePlayers));
 			add(to!string(this.server.maxPlayers));
-			if(pocket) {
-				pe ~= nativeToLittleEndian(pocket.port);
+			if(bedrock) {
+				pe ~= nativeToLittleEndian(bedrock.port);
 				pe ~= cast(ubyte[])this.pocketIp ~ 0;
 				this._pocket_short_query = cast(shared)pe;
 			}
@@ -181,7 +181,7 @@ class Queries : Thread {
 			ubyte[] pe, pc;
 			void add(string key, string value) {
 				ubyte[] buff = cast(ubyte[])key ~ 0 ~ cast(ubyte[])value ~ 0;
-				if(pocket) pe ~= buff;
+				if(bedrock) pe ~= buff;
 				if(java) pc ~= buff;
 			}
 			void addTo(ref ubyte[] buffer, string key, string value) {
@@ -196,9 +196,9 @@ class Queries : Thread {
 			}
 			add("gametype", Software.name);
 			add("whitelist", whitelist ? "on" : "off");
-			if(pocket) {
+			if(bedrock) {
 				addTo(pe, "game_id", "MINECRAFTPE");
-				addTo(pe, "version", supportedPocketProtocols[pocket.protocols[$-1]][0]);
+				addTo(pe, "version", supportedBedrockProtocols[bedrock.protocols[$-1]][0]);
 			}
 			if(java) {
 				addTo(pc, "game_id", "MINECRAFT");
@@ -209,8 +209,8 @@ class Queries : Thread {
 			add("map", "world");
 			add("numplayers", to!string(this.server.onlinePlayers));
 			add("maxplayers", to!string(this.server.maxPlayers));
-			if(pocket) {
-				addTo(pe, "hostport", to!string(pocket.port));
+			if(bedrock) {
+				addTo(pe, "hostport", to!string(bedrock.port));
 				addTo(pe, "hostip", this.pocketIp);
 			}
 			if(java) {
@@ -226,7 +226,7 @@ class Queries : Thread {
 				}
 			}
 			players ~= 0;
-			if(pocket) this._pocket_long_query = cast(shared)(pe ~ players);
+			if(bedrock) this._pocket_long_query = cast(shared)(pe ~ players);
 			if(java) this._java_long_query = cast(shared)(pc ~ players);
 		}
 	}

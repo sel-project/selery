@@ -60,7 +60,7 @@ import selery.network.hncom;
 import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.java : JavaPlayer;
-import selery.player.pocket : PocketPlayer, PocketPlayerImpl;
+import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.plugin : Plugin;
 import selery.server : Server;
 import selery.util.ip : publicAddresses;
@@ -314,7 +314,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			if(type == __JAVA__) {
 				set(config.hub.java);
 			} else if(type == __POCKET__) {
-				set(config.hub.pocket);
+				set(config.hub.bedrock);
 			} else {
 				error_log(config.lang.translate("warning.invalidGame", [to!string(type), Software.name]));
 			}
@@ -334,7 +334,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		}
 
 		check("Minecraft: Java Edition", config.hub.java.protocols, supportedJavaProtocols.keys);
-		check("Minecraft (Bedrock Engine)", config.hub.pocket.protocols, supportedPocketProtocols.keys);
+		check("Minecraft (Bedrock Engine)", config.hub.bedrock.protocols, supportedBedrockProtocols.keys);
 
 		this._config = cast(shared)config;
 
@@ -359,11 +359,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		Skin.ALEX = Skin("Standard_Alex", read_png_from_mem(cast(ubyte[])this.config.files.readAsset("skin/alex.png")).pixels);
 
 		// load creative inventories
-		foreach(immutable protocol ; SupportedPocketProtocols) {
+		foreach(immutable protocol ; SupportedBedrockProtocols) {
 			string[] failed;
-			if(this.config.hub.pocket.protocols.canFind(protocol)) {
-				if(!mixin("PocketPlayerImpl!" ~ protocol.to!string).loadCreativeInventory(this.config.files)) {
-					failed ~= supportedPocketProtocols[protocol];
+			if(this.config.hub.bedrock.protocols.canFind(protocol)) {
+				if(!mixin("BedrockPlayerImpl!" ~ protocol.to!string).loadCreativeInventory(this.config.files)) {
+					failed ~= supportedBedrockProtocols[protocol];
 				}
 			}
 			if(failed.length) {
@@ -390,7 +390,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			//TODO also try to use local address before using 127.0.0.1
 
 			JavaPlayer.updateResourcePacks(rp.java2, rp.java3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
-			PocketPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
+			BedrockPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
 
 		}
 
@@ -411,7 +411,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		HncomLogin.NodeInfo nodeInfo;
 		uint[][ubyte] games;
 		if(this.config.node.java) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.java.protocols;
-		if(this.config.node.pocket) nodeInfo.acceptedGames[__POCKET__] = cast(uint[])this.config.node.pocket.protocols;
+		if(this.config.node.bedrock) nodeInfo.acceptedGames[__POCKET__] = cast(uint[])this.config.node.bedrock.protocols;
 		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;

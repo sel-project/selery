@@ -35,7 +35,7 @@ public class ItemStorage {
 	private static ItemStorage instance;
 	
 	private Item function(ushort damage)[] indexes;
-	private Item function(ushort damage)[ushort][] java, pocket;
+	private Item function(ushort damage)[ushort][] java, bedrock;
 	private Item function(ushort damage)[string] strings;
 	
 	public this() {
@@ -56,7 +56,7 @@ public class ItemStorage {
 		} else {
 			this.indexes = instance.indexes.dup;
 			this.java = instance.java.dup;
-			this.pocket = instance.pocket.dup;
+			this.bedrock = instance.bedrock.dup;
 			this.strings = instance.strings.dup;
 		}
 	}
@@ -69,9 +69,9 @@ public class ItemStorage {
 			if(this.java.length < item.javaId) this.java.length = item.javaId + 1;
 			this.java[item.javaId][item.javaMeta] = f;
 		}
-		if(item.pocket) {
-			if(this.pocket.length < item.pocketId) this.pocket.length = item.pocketId + 1;
-			this.pocket[item.pocketId][item.pocketMeta] = f;
+		if(item.bedrock) {
+			if(this.bedrock.length < item.bedrockId) this.bedrock.length = item.bedrockId + 1;
+			this.bedrock[item.bedrockId][item.bedrockMeta] = f;
 		}
 		this.strings[item.name] = f;
 	}
@@ -91,9 +91,9 @@ public class ItemStorage {
 		return dam ? (*dam)(damage) : null;
 	}
 	
-	public Item fromPocket(ushort id, ushort damage=0) {
-		if(this.pocket.length < id) return null;
-		auto data = this.pocket[id];
+	public Item fromBedrock(ushort id, ushort damage=0) {
+		if(this.bedrock.length < id) return null;
+		auto data = this.bedrock[id];
 		auto dam = damage in data;
 		return dam ? (*dam)(damage) : null;
 	}

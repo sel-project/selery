@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 25;
+enum size_t __GENERATOR__ = 26;
 
 void main(string[] args) {
 

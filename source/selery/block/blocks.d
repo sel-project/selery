@@ -35,7 +35,7 @@ public class BlockStorage {
 	private static BlockStorage instance;
 	
 	private Block[] sel;
-	private Block*[][256] java, pocket;
+	private Block*[][256] java, bedrock;
 	
 	public this() {
 		if(instance is null) {
@@ -48,7 +48,7 @@ public class BlockStorage {
 		} else {
 			this.sel = instance.sel.dup;
 			this.java = instance.java.dup;
-			this.pocket = instance.pocket.dup;
+			this.bedrock = instance.bedrock.dup;
 		}
 	}
 	
@@ -61,9 +61,9 @@ public class BlockStorage {
 				if(this.java[block.javaId].length <= block.javaMeta) this.java[block.javaId].length = block.javaMeta + 1;
 				this.java[block.javaId][block.javaMeta] = pointer;
 			}
-			if(block.pocket) {
-				if(this.pocket[block.pocketId].length <= block.pocketMeta) this.pocket[block.pocketId].length = block.pocketMeta + 1;
-				this.pocket[block.pocketId][block.pocketMeta] = pointer;
+			if(block.bedrock) {
+				if(this.bedrock[block.bedrockId].length <= block.bedrockMeta) this.bedrock[block.bedrockId].length = block.bedrockMeta + 1;
+				this.bedrock[block.bedrockId][block.bedrockMeta] = pointer;
 			}
 		}
 	}
@@ -114,16 +114,16 @@ public class BlockStorage {
 	}
 
 	/**
-	 * Gets a block with the id used in Minecraft: Pocket Edition.
+	 * Gets a block with the id used in Minecraft.
 	 * Example:
 	 * ---
-	 * auto block = blocks.fromPocket(33, 2);
+	 * auto block = blocks.fromBedrock(33, 2);
 	 * assert(block && block.name == "piston facing north");
-	 * assert(blocks.fromPocket(255) is null); // structure block
+	 * assert(blocks.fromBedrock(255) is null); // structure block
 	 * ---
 	 */
-	public @safe Block* fromPocket(ubyte id, ubyte meta=0) {
-		auto data = this.pocket[id];
+	public @safe Block* fromBedrock(ubyte id, ubyte meta=0) {
+		auto data = this.bedrock[id];
 		if(data.length > meta) return data[meta];
 		else return null;
 	}

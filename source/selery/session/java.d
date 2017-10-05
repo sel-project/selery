@@ -68,7 +68,7 @@ shared static this() {
 		mixin("import Clientbound = sul.protocol.java" ~ protocol.to!string ~ ".clientbound;");
 		mixin("import Serverbound = sul.protocol.java" ~ protocol.to!string ~ ".serverbound;");
 		_create_keep_alive[protocol] = (uint id) pure { return new Clientbound.KeepAlive(id).encode(); };
-		_handle_keep_alive[protocol] = (ubyte[] buffer) pure { return Serverbound.KeepAlive.fromBuffer(buffer).id; };
+		_handle_keep_alive[protocol] = (ubyte[] buffer) pure { return Serverbound.KeepAlive.fromBuffer(buffer).id.to!uint; };
 		_keep_alive_id[protocol] = Serverbound.KeepAlive.ID;
 		_create_disconnect[protocol] = (string json) pure { return new Clientbound.Disconnect(json).encode(); };
 		_handle_client_settings[protocol] = (ubyte[] buffer) pure { with(Serverbound.ClientSettings.fromBuffer(buffer)){ return ClientSettings(language, viewDistance); } };

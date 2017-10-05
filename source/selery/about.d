@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 1;
 
 	/// ditto
-	enum uint build = 65;
+	enum uint build = 69;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -157,8 +157,8 @@ enum supportedJavaProtocols = cast(string[][uint])[
 ];
 
 /// ditto
-enum supportedPocketProtocols = cast(string[][uint])[
-	137: ["1.2.0", "1.2.1"],
+enum supportedBedrockProtocols = cast(string[][uint])[
+	137: ["1.2.0", "1.2.1", "1.2.2"],
 ];
 
 /**
@@ -167,7 +167,7 @@ enum supportedPocketProtocols = cast(string[][uint])[
 alias SupportedJavaProtocols = ProtocolsTuple!(supportedJavaProtocols);
 
 /// ditto
-alias SupportedPocketProtocols = ProtocolsTuple!(supportedPocketProtocols);
+alias SupportedBedrockProtocols = ProtocolsTuple!(supportedBedrockProtocols);
 
 alias ProtocolsTuple(string[][uint] protocols) = ProtocolsImpl!(protocols.keys);
 
@@ -187,7 +187,7 @@ private template ProtocolsImpl(uint[] protocols, E...) {
 enum latestJavaProtocols = latest(supportedJavaProtocols);
 
 /// ditto
-enum latestPocketProtocols = latest(supportedPocketProtocols);
+enum latestBedrockProtocols = latest(supportedBedrockProtocols);
 
 private uint[] latest(string[][uint] protocols) {
 	uint[] keys = protocols.keys;
@@ -207,7 +207,7 @@ private uint[] latest(string[][uint] protocols) {
 enum newestJavaProtocol = latestJavaProtocols[$-1];
 
 /// ditto
-enum newestPocketProtocol = latestPocketProtocols[$-1];
+enum newestBedrockProtocol = latestBedrockProtocols[$-1];
 
 uint[] validateProtocols(ref uint[] protocols, uint[] accepted, uint[] default_) {
 	uint[] ret;
@@ -239,7 +239,7 @@ version(Main) {
 
 	void main(string[] args) {
 
-		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols.keys), "pocket": JSONValue(supportedPocketProtocols.keys)]));
+		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols.keys), "bedrock": JSONValue(supportedBedrockProtocols.keys)]));
 
 	}
 

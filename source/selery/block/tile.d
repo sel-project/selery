@@ -470,7 +470,7 @@ class FlowerPot : Tile {
 	public @property Item item(Item item) {
 		if(item !is null) {
 			item.clear(); // remove enchantments and custom name
-			this.pocket_compound = new Compound(new Named!Short("item", item.pocketId), new Named!Int("mData", item.pocketMeta));
+			this.pocket_compound = new Compound(new Named!Short("item", item.bedrockId), new Named!Int("mData", item.bedrockMeta));
 			this.java_compound = new Compound(new Named!String("Item", (){ auto ret=item.javaId in javaItems; return ret ? "minecraft:"~(*ret) : ""; }()), new Named!Int("Data", item.javaMeta));
 		} else {
 			this.pocket_compound = null;
@@ -527,7 +527,7 @@ class FlowerPot : Tile {
 			auto id = "item" in compound;
 			auto meta = "mData" in compound;
 			if(id && cast(Short)*id) {
-				this.item = this.world.items.fromPocket(cast(Short)*id, meta && cast(Int)*meta ? cast(ushort)cast(Int)*meta : 0);
+				this.item = this.world.items.fromBedrock(cast(Short)*id, meta && cast(Int)*meta ? cast(ushort)cast(Int)*meta : 0);
 			}
 		}
 	}

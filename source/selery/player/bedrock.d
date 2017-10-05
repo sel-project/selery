@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.player.pocket;
+module selery.player.bedrock;
 
 import std.algorithm : min, sort, canFind;
 import std.base64 : Base64;
@@ -56,7 +56,7 @@ import selery.world.world : Gamemode, Difficulty, Dimension, World;
 
 import sul.utils.var : varuint;
 
-abstract class PocketPlayer : Player {
+abstract class BedrockPlayer : Player {
 
 	protected static Stream stream, networkStream;
 
@@ -186,13 +186,13 @@ abstract class PocketPlayer : Player {
 
 // send function are overwritten with static ifs
 // handle functions are created for every version using static ifs
-class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtocols.keys.canFind(__protocol)) {
+class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProtocols.keys.canFind(__protocol)) {
 
-	mixin("import Types = sul.protocol.pocket" ~ __protocol.to!string ~ ".types;");
-	mixin("import Play = sul.protocol.pocket" ~ __protocol.to!string ~ ".play;");
+	mixin("import Types = sul.protocol.bedrock" ~ __protocol.to!string ~ ".types;");
+	mixin("import Play = sul.protocol.bedrock" ~ __protocol.to!string ~ ".play;");
 
-	mixin("import sul.attributes.pocket" ~ __protocol.to!string ~ " : Attributes;");
-	mixin("import sul.metadata.pocket" ~ __protocol.to!string ~ " : Metadata;");
+	mixin("import sul.attributes.bedrock" ~ __protocol.to!string ~ " : Attributes;");
+	mixin("import sul.metadata.bedrock" ~ __protocol.to!string ~ " : Metadata;");
 
 	private static __gshared ubyte[] creative_inventory;
 
@@ -237,7 +237,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 			if(!slot.empty && slot.item.pocketCompound !is null) {
 				stream.writeTag(slot.item.pocketCompound);
 			}
-			return Types.Slot(slot.item.pocketId, slot.item.pocketMeta << 8 | slot.count, stream.buffer);
+			return Types.Slot(slot.item.bedrockId, slot.item.bedrockMeta << 8 | slot.count, stream.buffer);
 		}
 	}
 
@@ -245,12 +245,12 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		if(slot.id <= 0) {
 			return Slot(null);
 		} else {
-			auto item = this.world.items.fromPocket(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
+			auto item = this.world.items.fromBedrock(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
 			if(slot.nbt.length) {
 				stream.buffer = slot.nbt;
 				//TODO verify that this is right
 				auto tag = stream.readTag();
-				if(cast(Compound)tag) item.parsePocketCompound(cast(Compound)tag);
+				if(cast(Compound)tag) item.parseBedrockCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.metaAndCount & 255);
 		}
@@ -288,7 +288,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	}
 
 	public static Metadata metadataOf(SelMetadata metadata) {
-		mixin("return metadata.pocket" ~ __protocol.to!string ~ ";");
+		mixin("return metadata.bedrock" ~ __protocol.to!string ~ ";");
 	}
 
 	private bool has_creative_inventory = false;
@@ -475,8 +475,8 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 							auto ptr = s[x, y, z];
 							if(ptr) {
 								Block block = *ptr;
-								section.blockIds[x << 8 | z << 4 | y] = block.pocketId != 0 ? block.pocketId : ubyte(248);
-								if(block.pocketMeta != 0) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.pocketMeta << (y % 2 == 1 ? 4 : 0));
+								section.blockIds[x << 8 | z << 4 | y] = block.bedrockId != 0 ? block.bedrockId : ubyte(248);
+								if(block.bedrockMeta != 0) section.blockMetas[x << 7 | z << 3 | y >> 1] |= to!ubyte(block.bedrockMeta << (y % 2 == 1 ? 4 : 0));
 							}
 						}
 					}
@@ -607,7 +607,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	public override void sendSpawnEntity(Entity entity) {
 		if(cast(Player)entity) this.sendAddPlayer(cast(Player)entity);
 		else if(cast(ItemEntity)entity) this.sendAddItemEntity(cast(ItemEntity)entity);
-		else if(entity.pocket) this.sendAddEntity(entity);
+		else if(entity.bedrock) this.sendAddEntity(entity);
 	}
 
 	public override void sendDespawnEntity(Entity entity) {
@@ -623,7 +623,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 	}
 	
 	protected void sendAddEntity(Entity entity) {
-		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.pocketId, (cast(Vector3!float)entity.position).tuple, (cast(Vector3!float)entity.motion).tuple, entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
+		this.sendPacket(new Play.AddEntity(entity.id, entity.id, entity.bedrockId, (cast(Vector3!float)entity.position).tuple, (cast(Vector3!float)entity.motion).tuple, entity.pitch, entity.yaw, new Types.Attribute[0], metadataOf(entity.metadata), typeof(Play.AddEntity.links).init));
 	}
 
 	public override @trusted void healthUpdated() {
@@ -643,13 +643,13 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 		];
 		this.sendPacket(new Play.UpdateAttributes(this.id, attributes));
 	}
-	
+
 	protected override void onEffectAdded(Effect effect, bool modified) {
-		if(effect.pocket) this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.pocket.id, effect.level, true, cast(int)effect.duration));
+		if(effect.bedrock) this.sendPacket(new Play.MobEffect(this.id, modified ? Play.MobEffect.MODIFY : Play.MobEffect.ADD, effect.bedrock.id, effect.level, true, cast(int)effect.duration));
 	}
 
 	protected override void onEffectRemoved(Effect effect) {
-		if(effect.pocket) this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.pocket.id, effect.level));
+		if(effect.bedrock) this.sendPacket(new Play.MobEffect(this.id, Play.MobEffect.REMOVE, effect.bedrock.id, effect.level));
 	}
 	
 	public override void recalculateSpeed() {
@@ -751,7 +751,7 @@ class PocketPlayerImpl(uint __protocol) : PocketPlayer if(supportedPocketProtoco
 
 	public override void sendBlocks(PlacedBlock[] blocks) {
 		foreach(PlacedBlock block ; blocks) {
-			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.pocket.id, 176 | block.pocket.meta));
+			this.sendPacket(new Play.UpdateBlock(toBlockPosition(block.position), block.bedrock.id, 176 | block.bedrock.meta));
 		}
 		this.broken_by_this.length = 0;
 	}

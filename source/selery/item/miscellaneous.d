@@ -116,8 +116,8 @@ class MapItem(sul.items.Item si) : SimpleItem!(si) {
 		return this.m_map_id = mapId;
 	}
 
-	public override void parsePocketCompound(Compound compound) {
-		super.parsePocketCompound(compound);
+	public override void parseBedrockCompound(Compound compound) {
+		super.parseBedrockCompound(compound);
 		compound = compound.get!Compound("", compound);
 		if(compound.has!String("map_uuid")) {
 			try {

@@ -276,11 +276,11 @@ class HubServer {
 			motd = motd.replace("\\n", "\n");
 			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
 		}
-		if(config.hub.pocket) with(config.hub.pocket) {
+		if(config.hub.bedrock) with(config.hub.bedrock) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace(";", "");
 			motd ~= Text.reset;
-			validateProtocols(protocols, supportedPocketProtocols.keys, latestPocketProtocols);
+			validateProtocols(protocols, supportedBedrockProtocols.keys, latestBedrockProtocols);
 		}
 		// languages
 		string[] accepted;

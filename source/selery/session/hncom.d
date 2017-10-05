@@ -171,7 +171,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 		with(cast()server.config.hub) {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, java.port);
-			if(pocket) games[__POCKET__] = Login.HubInfo.GameInfo(pocket.motd, pocket.protocols, pocket.onlineMode, pocket.port);
+			if(bedrock) games[__POCKET__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, bedrock.port);
 			this.sendHubInfo(Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
 		}
 		auto info = this.receiveNodeInfo(receiver);
@@ -497,7 +497,7 @@ abstract class AbstractNode : Session, Handler!serverbound {
 		with(cast()this.server.config.hub) {
 			string[ubyte] motds;
 			if(java) motds[__JAVA__] = java.motd;
-			if(pocket) motds[__POCKET__] = pocket.motd;
+			if(bedrock) motds[__POCKET__] = bedrock.motd;
 			this.send(Status.Reload(displayName, motds, language, acceptedLanguages, cast()*this.additionalJson).encode());
 		}
 	}

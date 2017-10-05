@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.session.pocket;
+module selery.session.bedrock;
 
 import core.atomic : atomicOp;
 import core.sync.condition : Condition;
@@ -56,7 +56,7 @@ import Control = sul.protocol.raknet8.control;
 import Unconnected = sul.protocol.raknet8.unconnected;
 import Encapsulated = sul.protocol.raknet8.encapsulated;
 
-mixin("import sul.protocol.pocket" ~ newestPocketProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;"); //TODO disconnect packet may change between different protocols
+mixin("import sul.protocol.bedrock" ~ newestBedrockProtocol.to!string ~ ".play : Login, PlayStatus, Disconnect;"); //TODO disconnect packet may change between different protocols
 
 private __gshared pure ubyte[] function(string)[uint] _create_disconnect;
 private __gshared pure uint function(ubyte[])[uint] _handle_request_chunk_radius;
@@ -64,8 +64,8 @@ private __gshared uint[uint] _request_chunk_radius_id;
 
 shared static this() {
 
-	foreach(protocol ; SupportedPocketProtocols) {
-		mixin("import sul.protocol.pocket" ~ protocol.to!string ~ ".play : Disconnect, RequestChunkRadius;");
+	foreach(protocol ; SupportedBedrockProtocols) {
+		mixin("import sul.protocol.bedrock" ~ protocol.to!string ~ ".play : Disconnect, RequestChunkRadius;");
 		_create_disconnect[protocol] = (string message) pure { return new Disconnect(false, message).encode(); };
 		_handle_request_chunk_radius[protocol] = (ubyte[] buffer) pure { return RequestChunkRadius.fromBuffer(buffer).radius; };
 		_request_chunk_radius_id[protocol] = RequestChunkRadius.ID;
@@ -91,7 +91,7 @@ enum ubyte[16] magic = [0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0x
 	return ret;
 }
 
-class PocketHandler : UnconnectedHandler {
+class BedrockHandler : UnconnectedHandler {
 	
 	private shared string* socialJson;
 	
@@ -101,13 +101,13 @@ class PocketHandler : UnconnectedHandler {
 	
 	private shared ubyte[]* shortQuery, longQuery;
 
-	private shared PocketSession[session_t] sessions;
+	private shared BedrockSession[session_t] sessions;
 	
 	private __gshared Mutex mutex;
 	private __gshared Condition condition;
 	
 	public this(shared HubServer server, shared string* socialJson, shared int[session_t]* querySessions, shared ubyte[]* shortQuery, shared ubyte[]* longQuery) {
-		with(server.config.hub.pocket) super(server, createSockets!UdpSocket(server, "pocket", addresses, port, -1), POCKET_BUFFER_SIZE);
+		with(server.config.hub.bedrock) super(server, createSockets!UdpSocket(server, "bedrock", addresses, port, -1), POCKET_BUFFER_SIZE);
 		this.socialJson = socialJson;
 		this.querySessions = querySessions;
 		this.shortQuery = shortQuery;
@@ -124,7 +124,7 @@ class PocketHandler : UnconnectedHandler {
 	
 	protected override void onReceived(Socket socket, Address address, ubyte[] payload) {
 		session_t code = Session.code(address);
-		shared PocketSession* session = code in this.sessions;
+		shared BedrockSession* session = code in this.sessions;
 		if(session) {
 			(*session).handle(payload);
 		} else {
@@ -142,7 +142,7 @@ class PocketHandler : UnconnectedHandler {
 					auto ocr = Unconnected.OpenConnectionRequest2.fromBuffer(payload);
 					if(ocr.mtuLength < POCKET_BUFFER_SIZE && ocr.mtuLength > 500) {
 						this.sendTo(socket, new Unconnected.OpenConnectionReply2(magic, this.server.id, raknetAddress(address), ocr.mtuLength, false).encode(), address);
-						this.sessions[code] = new shared PocketSession(this.server, code, this, socket, address, ocr.mtuLength);
+						this.sessions[code] = new shared BedrockSession(this.server, code, this, socket, address, ocr.mtuLength);
 					}
 					break;
 				case 253:
@@ -182,18 +182,18 @@ class PocketHandler : UnconnectedHandler {
 	}
 	
 	private void timeout() {
-		Thread.getThis().name = "pocketHandler" ~ dirSeparator ~ "timeout";
+		Thread.getThis().name = "bedrockHandler" ~ dirSeparator ~ "timeout";
 		while(true) {
 			Thread.sleep(dur!"seconds"(1));
-			foreach(shared PocketSession session ; this.sessions) {
+			foreach(shared BedrockSession session ; this.sessions) {
 				session.checkTimeout();
 			}
 		}
 	}
 	
-	private shared PocketSession[] toDecompress;
+	private shared BedrockSession[] toDecompress;
 	
-	public shared void decompress(shared PocketSession session) {
+	public shared void decompress(shared BedrockSession session) {
 		this.toDecompress ~= session;
 		synchronized(this.mutex) {
 			this.condition.notify();
@@ -201,10 +201,10 @@ class PocketHandler : UnconnectedHandler {
 	}
 	
 	private void decompression() {
-		Thread.getThis().name = "pocketHandler" ~ dirSeparator ~ "decompression";
+		Thread.getThis().name = "bedrockHandler" ~ dirSeparator ~ "decompression";
 		while(true) {
 			if(this.toDecompress.length) {
-				shared PocketSession session = this.toDecompress[0];
+				shared BedrockSession session = this.toDecompress[0];
 				this.toDecompress = this.toDecompress[1..$];
 				session.decompressQueue();
 			} else {
@@ -215,19 +215,19 @@ class PocketHandler : UnconnectedHandler {
 		}
 	}
 	
-	public shared void removeSession(shared PocketSession session) {
+	public shared void removeSession(shared BedrockSession session) {
 		this.sessions.remove(session.code);
 		delete session;
 	}
 
 	public override shared void reload() {
-		with(this.server.config.hub.pocket) {
+		with(this.server.config.hub.bedrock) {
 			this.status = [
 				std.array.join([
 					"MCPE",
 					motd,
 					to!string(protocols[$-1]),
-					supportedPocketProtocols[protocols[$-1]][0],
+					supportedBedrockProtocols[protocols[$-1]][0],
 					""
 				], ";"),
 				std.array.join([
@@ -243,11 +243,11 @@ class PocketHandler : UnconnectedHandler {
 	
 }
 
-final class PocketSession : PlayerSession {
+final class BedrockSession : PlayerSession {
 
 	public immutable session_t code;
 
-	private shared PocketHandler handler;
+	private shared BedrockHandler handler;
 	private shared Socket socket;
 
 	private shared size_t timeoutTicks = 0;
@@ -287,7 +287,7 @@ final class PocketSession : PlayerSession {
 	private shared ubyte[][] decompressionQueue;
 	private shared Thread decompressionThread;
 
-	public shared this(shared HubServer server, session_t code, PocketHandler handler, Socket socket, Address address, ushort mtu) {
+	public shared this(shared HubServer server, session_t code, BedrockHandler handler, Socket socket, Address address, ushort mtu) {
 		super(server);
 		this.code = code;
 		this.handler = cast(shared)handler;
@@ -580,11 +580,11 @@ final class PocketSession : PlayerSession {
 		bool accepted = false;
 		//this.edu = login.vers == Login.EDUCATION;
 		this.n_protocol = login.protocol;
-		auto protocols = this.server.config.hub.pocket.protocols;
+		auto protocols = this.server.config.hub.bedrock.protocols;
 		if(this.n_protocol > protocols[$-1]) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_SERVER));
 		else if(!protocols.canFind(this.n_protocol)) this.encapsulateUncompressed(new PlayStatus(PlayStatus.OUTDATED_CLIENT));
 		else {
-			this.n_version = supportedPocketProtocols[this.n_protocol][0];
+			this.n_version = supportedBedrockProtocols[this.n_protocol][0];
 			this.functionHandler = &this.handleFail;
 			this.acceptSplit = false;
 			// kick if the server is edu and the client is not
@@ -663,7 +663,7 @@ final class PocketSession : PlayerSession {
 								foreach(num ; spl) to!ubyte(num);
 								// verify that the client's version exists
 								immutable playerVersion = spl.join(".");
-								foreach(v ; supportedPocketProtocols[this.protocol]) {
+								foreach(v ; supportedBedrockProtocols[this.protocol]) {
 									if(v.startsWith(playerVersion) || playerVersion.startsWith(v)) {
 										this.n_version = playerVersion;
 										break;

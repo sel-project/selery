@@ -21,8 +21,8 @@ bool cond(string condition, bool is_node)(inout Config config, bool match) {
 		static if(is_node) return config.node.java.enabled == match;
 		else return config.hub.java.enabled == match;
 	} else static if(condition == "pocket_enabled") {
-		static if(is_node) return config.node.pocket.enabled == match;
-		else return config.hub.pocket.enabled == match;
+		static if(is_node) return config.node.bedrock.enabled == match;
+		else return config.hub.bedrock.enabled == match;
 	} else {
 		return condImpl!condition(config, match);
 	}
@@ -32,7 +32,7 @@ bool condImpl(string condition)(inout Config config, bool match) {
 	static if(condition == "java_onlineMode") {
 		return config.hub.java.onlineMode == match;
 	} else static if(condition == "pocket_onlineMode") {
-		return config.hub.pocket.onlineMode == match;
+		return config.hub.bedrock.onlineMode == match;
 	} else {
 		static assert(0, "\"" ~ condition ~ "\" is not a valid condition");
 	}

@@ -118,13 +118,13 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"java.addresses"(java.addresses);
 					set!"java.port"(java.port);
 					set!"java.accepted-protocols"(java.protocols);
-					set!"pocket.enabled"(pocket.enabled);
-					set!"pocket.motd"(pocket.motd);
-					//set!"pocket.online-mode"(pocket.onlineMode);
-					set!"pocket.addresses"(pocket.addresses);
-					set!"pocket.port"(pocket.port);
-					set!"pocket.accepted-protocols"(pocket.protocols);
-					set!"pocket.allow-vanilla-players"(allowVanillaPlayers);
+					set!"bedrock.enabled"(bedrock.enabled);
+					set!"bedrock.motd"(bedrock.motd);
+					//set!"bedrock.online-mode"(bedrock.onlineMode);
+					set!"bedrock.addresses"(bedrock.addresses);
+					set!"bedrock.port"(bedrock.port);
+					set!"bedrock.accepted-protocols"(bedrock.protocols);
+					set!"bedrock.allow-vanilla-players"(allowVanillaPlayers);
 					set!"whitelist"(whitelist);
 					set!"blacklist"(blacklist);
 					set!"query"(query);
@@ -161,8 +161,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				
 					set!"java.enabled"(java.enabled);
 					set!"java.accepted-protocols"(java.protocols);
-					set!"pocket.enabled"(pocket.enabled);
-					set!"pocket.accepted-protocols"(pocket.protocols);
+					set!"bedrock.enabled"(bedrock.enabled);
+					set!"bedrock.accepted-protocols"(bedrock.protocols);
 					set!"max-players"(maxPlayers);
 					set!"world.gamemode"(gamemode);
 					set!"world.difficulty"(difficulty);
@@ -225,8 +225,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					file ~= "port = " ~ to!string(port) ~ newline;
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 				}
-				if(isHub) with(this.hub.pocket) {
-					file ~= newline ~ "[pocket]" ~ newline;
+				if(isHub) with(this.hub.bedrock) {
+					file ~= newline ~ "[bedrock]" ~ newline;
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
 					file ~= "online-mode = false" ~ newline;
@@ -240,8 +240,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 				}
-				if(type == ConfigType.node) with(this.node.pocket) {
-					file ~= newline ~ "[pocket]" ~ newline;
+				if(type == ConfigType.node) with(this.node.bedrock) {
+					file ~= newline ~ "[bedrock]" ~ newline;
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 				}

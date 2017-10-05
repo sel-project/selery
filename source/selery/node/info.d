@@ -116,7 +116,7 @@ final class PlayerInfo {
 		} else {
 			if(this.edu) this.gameEdition = GAME_EDU;
 			else this.gameEdition = GAME_POCKET;
-			this.gameVersion = verifyVersion(this.gameVersion, supportedPocketProtocols[this.protocol]);
+			this.gameVersion = verifyVersion(this.gameVersion, supportedBedrockProtocols[this.protocol]);
 		}
 		this.game = this.gameEdition ~ " " ~ this.gameVersion;
 	}

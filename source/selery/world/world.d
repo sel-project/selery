@@ -29,6 +29,7 @@ import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
 import sel.hncom.about;
+alias __BEDROCK__ = __POCKET__; // remove when hncom is updated
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock, Update, Remove, blockInto;
@@ -55,7 +56,7 @@ import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
 import selery.player.java : JavaPlayerImpl;
 import selery.player.player : Player, isPlayer;
-import selery.player.pocket : PocketPlayerImpl;
+import selery.player.bedrock : BedrockPlayerImpl;
 import selery.plugin : Plugin, loadPluginAttributes;
 import selery.util.color : Color;
 import selery.util.random : Random;
@@ -1095,7 +1096,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		Player player = (){
 			final switch(info.type) {
-				foreach(type ; TypeTuple!("Pocket", "Java")) {
+				foreach(type ; TypeTuple!("Bedrock", "Java")) {
 					case mixin("__" ~ toUpper(type) ~ "__"): {
 						final switch(info.protocol) {
 							foreach(protocol ; mixin("Supported" ~ type ~ "Protocols")) {

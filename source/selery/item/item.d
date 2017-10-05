@@ -106,14 +106,14 @@ class Item {
 							}
 							auto name = "name" in e;
 							auto java = "java" in e;
-							auto pocket = "pocket" in e;
+							auto bedrock = "bedrock" in e;
 							try {
 								if(name && name.type == std.json.JSON_TYPE.STRING) {
 									this.addEnchantment(Enchantment.fromString(name.str, l));
 								} else if(java && java.type == std.json.JSON_TYPE.INTEGER) {
 									this.addEnchantment(Enchantment.fromJava(cast(ubyte)java.integer, l));
-								} else if(pocket && pocket.type == std.json.JSON_TYPE.INTEGER) {
-									this.addEnchantment(Enchantment.fromPocket(cast(ubyte)pocket.integer, l));
+								} else if(bedrock && bedrock.type == std.json.JSON_TYPE.INTEGER) {
+									this.addEnchantment(Enchantment.fromBedrock(cast(ubyte)bedrock.integer, l));
 								}
 							} catch(EnchantmentException) {}
 						}
@@ -154,18 +154,18 @@ class Item {
 	}
 
 	/**
-	 * Indicates whether the item exists in Minecraft: Pocket Edition.
+	 * Indicates whether the item exists in Minecraft.
 	 */
-	public pure nothrow @property @safe @nogc bool pocket() {
-		return this.data.pocket.exists;
+	public pure nothrow @property @safe @nogc bool bedrock() {
+		return this.data.bedrock.exists;
 	}
 
-	public pure nothrow @property @safe @nogc ushort pocketId() {
-		return this.data.pocket.id;
+	public pure nothrow @property @safe @nogc ushort bedrockId() {
+		return this.data.bedrock.id;
 	}
 
-	public pure nothrow @property @safe @nogc ushort pocketMeta() {
-		return this.data.pocket.meta;
+	public pure nothrow @property @safe @nogc ushort bedrockMeta() {
+		return this.data.bedrock.meta;
 	}
 
 	/**
@@ -464,9 +464,9 @@ class Item {
 	}
 
 	/// ditto
-	public @safe void parsePocketCompound(Compound compound) {
+	public @safe void parseBedrockCompound(Compound compound) {
 		this.clear();
-		this.parseCompound(compound, &Enchantment.fromPocket);
+		this.parseCompound(compound, &Enchantment.fromBedrock);
 	}
 
 	private @trusted void parseCompound(Compound compound, Enchantment function(ubyte, ubyte) @safe get) {
@@ -609,7 +609,7 @@ class Item {
 				}
 			}
 			if(ench.java) modify(this.m_pc_tag, ench.java.id);
-			if(ench.pocket) modify(this.m_pe_tag, ench.pocket.id);
+			if(ench.bedrock) modify(this.m_pe_tag, ench.bedrock.id);
 		} else {
 			// add
 			this.enchantments[ench.id] = ench;
@@ -620,7 +620,7 @@ class Item {
 				else compound.get!(ListOf!Compound)("ench", null) ~= ec;
 			}
 			if(ench.java) add(this.m_pc_tag, ench.java.id);
-			if(ench.pocket) add(this.m_pe_tag, ench.pocket.id);
+			if(ench.bedrock) add(this.m_pe_tag, ench.bedrock.id);
 		}
 	}
 
@@ -685,7 +685,7 @@ class Item {
 				}
 			}
 			if(ench.java) remove(this.m_pc_tag, ench.java.id);
-			if(ench.pocket) remove(this.m_pe_tag, ench.pocket.id);
+			if(ench.bedrock) remove(this.m_pe_tag, ench.bedrock.id);
 		}
 	}
 
@@ -736,12 +736,12 @@ class Item {
 		if(cast(Item)o) {
 			Item i = cast(Item)o;
 			return this.javaId == i.javaId &&
-					this.pocketId == i.pocketId &&
-					this.javaMeta == i.javaMeta &&
-					this.pocketMeta == i.pocketMeta &&
-					this.customName == i.customName &&
-					this.lore == i.lore &&
-					this.enchantments == i.enchantments;
+				this.bedrockId == i.bedrockId &&
+				this.javaMeta == i.javaMeta &&
+				this.bedrockMeta == i.bedrockMeta &&
+				this.customName == i.customName &&
+				this.lore == i.lore &&
+				this.enchantments == i.enchantments;
 		}
 		return false;
 	}

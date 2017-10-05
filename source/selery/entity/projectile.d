@@ -506,7 +506,7 @@ class FallingBlock : Projectile {
 		this.terminal_velocity = TERMINAL_VELOCITY;
 		this.setSize(.98, .98);
 		this.block = block;
-		this.metadata.set!"variant"(block.pocketId | block.pocketMeta << 8);
+		this.metadata.set!"variant"(block.bedrockId | block.bedrockMeta << 8);
 		this.n_data = block.javaId | block.javaMeta << 12;
 	}
 

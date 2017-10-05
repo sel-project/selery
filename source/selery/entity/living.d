@@ -330,8 +330,8 @@ public class Living : Entity {
 				mixin("this.metadata.java" ~ p.to!string ~ ".potionColor = c;");
 			}
 			c |= 0xFF000000;
-			foreach(p ; SupportedPocketProtocols) {
-				mixin("this.metadata.pocket" ~ p.to!string ~ ".potionColor = c;");
+			foreach(p ; SupportedBedrockProtocols) {
+				mixin("this.metadata.bedrock" ~ p.to!string ~ ".potionColor = c;");
 			}
 		}
 		return color;

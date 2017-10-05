@@ -32,7 +32,7 @@ import selery.session.hncom : HncomHandler, LiteNode;
 import selery.session.http : HttpHandler;
 import selery.session.java : JavaHandler, JavaQueryHandler;
 import selery.session.panel : PanelHandler;
-import selery.session.pocket : PocketHandler;
+import selery.session.bedrock : BedrockHandler;
 import selery.session.rcon : RconHandler;
 import selery.util.query : Queries;
 import selery.util.thread : SafeThread;
@@ -78,8 +78,8 @@ class Handler {
 				new SafeThread(server.config.lang, { new shared LiteNode(server, &this.additionalJson); }).start();
 			}
 
-			if(pocket) {
-				this.startThread!PocketHandler(server, &this.socialJson, this.queries.querySessions, this.queries.pocketShortQuery, this.queries.pocketLongQuery);
+			if(bedrock) {
+				this.startThread!BedrockHandler(server, &this.socialJson, this.queries.querySessions, this.queries.pocketShortQuery, this.queries.pocketLongQuery);
 			}
 
 			if(java) {

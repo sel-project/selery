@@ -62,7 +62,7 @@ class Config {
 		
 		Game java = Game(true, "", false, ["0.0.0.0"], ushort(25565), latestJavaProtocols);
 
-		Game pocket = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestPocketProtocols);
+		Game bedrock = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestBedrockProtocols);
 		
 		bool allowVanillaPlayers = false;
 
@@ -131,7 +131,7 @@ class Config {
 			}
 			this.language = bestLanguage(this.language, this.acceptedLanguages);
 
-			this.displayName = this.java.motd = this.pocket.motd = (){
+			this.displayName = this.java.motd = this.bedrock.motd = (){
 				switch(language[0..language.indexOf("_")]) {
 					case "es": return "Un Servidor de Minecraft";
 					case "it": return "Un Server di Minecraft";
@@ -161,7 +161,7 @@ class Config {
 
 		Game java = Game(true, latestJavaProtocols);
 
-		Game pocket = Game(true, latestPocketProtocols);
+		Game bedrock = Game(true, latestBedrockProtocols);
 
 		uint maxPlayers = 20;
 

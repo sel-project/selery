@@ -95,7 +95,7 @@ class HttpHandler : HandlerThread {
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
 			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "stable": JSONValue(stable)]);
-			if(config.pocket) protocols["pocket"] = JSONValue(config.pocket.protocols);
+			if(config.bedrock) protocols["bedrock"] = JSONValue(config.bedrock.protocols);
 			if(config.java) protocols["java"] = JSONValue(config.java.protocols);
 			json["software"] = JSONValue(software);
 			json["protocols"] = JSONValue(protocols);
@@ -116,7 +116,7 @@ class HttpHandler : HandlerThread {
 		index = index.replace("{DISPLAY_NAME}", config.hub.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);
 		index = index.replace("{PC}", config.hub.java ? ("<p>Minecraft&nbsp;Java&nbsp;Edition: {IP}:" ~ to!string(config.hub.java.port) ~ "</p>") : "");
-		index = index.replace("{PE}", config.hub.pocket ? ("<p>Minecraft" ~ (config.hub.edu ? "&nbsp;Education&nbsp;Edition" : "") ~ ": {IP}:" ~ to!string(config.hub.pocket.port) ~ "</p>") : "");
+		index = index.replace("{PE}", config.hub.bedrock ? ("<p>Minecraft&nbsp;" ~ (config.hub.edu ? "Education&nbsp;Edition" : "(Bedrock&nbsp;Engine)") ~ ": {IP}:" ~ to!string(config.hub.bedrock.port) ~ "</p>") : "");
 		if(config.hub.serverIp.length) index = index.replace("{IP}", config.hub.serverIp);
 		index = index.replace("{WEBSITE}", this.website);
 		this.index.uncompressed = index;
