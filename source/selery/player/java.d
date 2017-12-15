@@ -32,6 +32,7 @@ import sel.nbt.tags;
 import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.tile : Tile;
+import selery.config : Gamemode, Difficulty, Dimension;
 import selery.effect : Effect;
 import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
@@ -50,19 +51,13 @@ import selery.player.player;
 import selery.util.util : array_index;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.world : Gamemode, Difficulty, Dimension, World;
+import selery.world.world : World;
 
 import sul.utils.var : varuint;
 
 abstract class JavaPlayer : Player {
 
-	protected static Stream stream;
-
 	protected static string resourcePack, resourcePackPort, resourcePack2Hash, resourcePack3Hash;
-
-	public static this() {
-		stream = new ClassicStream!(Endian.bigEndian)();
-	}
 	
 	public static ulong ulongPosition(BlockPosition position) {
 		return (to!long(position.x & 0x3FFFFFF) << 38) | (to!long(position.y & 0xFFF) << 26) | (position.z & 0x3FFFFFF);
@@ -162,7 +157,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		} else {
 			auto ret = Types.Slot(slot.item.javaId, slot.count, slot.item.javaMeta, [NBT_TYPE.END]);
 			if(slot.item.javaCompound !is null) {
-				stream.buffer.length = 0;
+				auto stream = new ClassicStream!(Endian.bigEndian)();
 				stream.writeTag(cast(Tag)slot.item.javaCompound);
 				ret.nbt = stream.buffer;
 			}
@@ -176,8 +171,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 		} else {
 			auto item = this.world.items.fromJava(slot.id, slot.damage);
 			if(slot.nbt.length) {
-				stream.buffer = slot.nbt;
-				auto tag = stream.readTag();
+				auto tag = new ClassicStream!(Endian.bigEndian)(slot.nbt).readTag();
 				if(cast(Compound)tag) item.parseJavaCompound(cast(Compound)tag);
 			}
 			return Slot(item, slot.count);
@@ -437,7 +431,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 
 		auto packet = new Clientbound.ChunkData(chunk.position.tuple, true, sections, buffer);
 
-		stream.buffer.length = 0;
+		auto stream = new ClassicStream!(Endian.bigEndian)();
 		foreach(tile ; chunk.tiles) {
 			if(tile.javaCompound !is null) {
 				packet.tilesCount++;
@@ -655,7 +649,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.key
 	}
 	
 	public override void sendTile(Tile tile, bool translatable) {
-		stream.buffer.length = 0;
+		auto stream = new ClassicStream!(Endian.bigEndian)();
 		auto packet = new Clientbound.UpdateBlockEntity(ulongPosition(tile.position), tile.action);
 		if(tile.javaCompound !is null) {
 			auto compound = tile.javaCompound.dup;

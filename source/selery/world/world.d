@@ -20,7 +20,8 @@ import core.thread : Thread;
 import std.algorithm : sort, min, canFind;
 static import std.concurrency;
 import std.conv : to;
-import std.datetime : StopWatch, dur;
+import std.datetime : dur;
+import std.datetime.stopwatch : StopWatch;
 import std.math : sin, cos, PI, pow;
 import std.random : unpredictableSeed;
 import std.string : replace, toLower, toUpper, join;
@@ -35,6 +36,7 @@ import selery.about;
 import selery.block.block : Block, PlacedBlock, Update, Remove, blockInto;
 import selery.block.blocks : BlockStorage, Blocks;
 import selery.block.tile : Tile;
+import selery.config : Gamemode, Difficulty, Dimension;
 import selery.command.command : Command;
 import selery.command.util : WorldCommandSender;
 import selery.config : Config;
@@ -69,32 +71,6 @@ import selery.world.plugin : loadWorld;
 import selery.world.thread;
 
 static import sul.blocks;
-
-enum Gamemode : ubyte {
-	
-	survival = 0, s = 0,
-	creative = 1, c = 1,
-	adventure = 2, a = 2,
-	spectator = 3, sp = 3,
-	
-}
-
-enum Difficulty : ubyte {
-	
-	peaceful = 0, p = 0,
-	easy = 1, e = 0,
-	normal = 2, n = 0,
-	hard = 3, h = 0,
-	
-}
-
-enum Dimension : ubyte {
-	
-	overworld = 0,
-	nether = 1,
-	end = 2,
-	
-}
 
 final class WorldGroup {
 
@@ -788,6 +764,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 
 		StopWatch timer;
+		ulong duration;
 
 		while(!this._stopped) {
 
@@ -807,8 +784,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			// sleep until next tick
 			timer.stop();
-			if(timer.peek.usecs < 50_000) {
-				Thread.sleep(dur!"usecs"(50_000 - timer.peek.usecs));
+			timer.peek.split!"usecs"(duration);
+			if(duration < 50_000) {
+				Thread.sleep(dur!"usecs"(50_000 - duration));
 			} else {
 				//TODO server is less than 20 tps
 			}

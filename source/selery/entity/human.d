@@ -17,6 +17,7 @@ module selery.entity.human;
 import std.math : isNaN, sin, cos, PI;
 
 import selery.about;
+import selery.config : Difficulty;
 import selery.effect : Effect, Effects;
 import selery.enchantment : Enchantments;
 import selery.entity.entity : Entities, Rotation;
@@ -29,7 +30,7 @@ import selery.item.slot : Slot;
 import selery.math.vector : BlockPosition, EntityPosition, entityPosition;
 import selery.player.player : Player;
 import selery.util.util : call;
-import selery.world.world : Difficulty, World;
+import selery.world.world : World;
 
 class Human : Living, Collector, Shooter, PotionThrower {
 

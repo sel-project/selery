@@ -15,11 +15,6 @@
 /// DDOC_EXCLUDE
 module selery.entity;
 
-// import all the entities classes
+//TODO import all the entities classes
 
 public import selery.entity.entity : Entity, Entities, Rotation;
-
-public import selery.entity.human : Human;
-public import selery.entity.noai : ItemEntity;
-public import selery.entity.noai : Lightning;
-public import selery.entity.noai : Painting;

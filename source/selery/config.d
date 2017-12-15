@@ -165,9 +165,9 @@ class Config {
 
 		uint maxPlayers = 20;
 
-		uint gamemode = 0;
+		uint gamemode = Gamemode.survival;
 
-		uint difficulty = 2;
+		uint difficulty = Difficulty.normal;
 
 		bool depleteHunger = true;
 		
@@ -235,6 +235,32 @@ class Config {
 
 	public void reload() {}
 
+}
+
+enum Gamemode : ubyte {
+	
+	survival = 0, s = 0,
+	creative = 1, c = 1,
+	adventure = 2, a = 2,
+	spectator = 3, sp = 3,
+	
+}
+
+enum Difficulty : ubyte {
+	
+	peaceful = 0, p = 0,
+	easy = 1, e = 0,
+	normal = 2, n = 0,
+	hard = 3, h = 0,
+	
+}
+
+enum Dimension : ubyte {
+	
+	overworld = 0,
+	nether = 1,
+	end = 2,
+	
 }
 
 public @property string randomPassword() {

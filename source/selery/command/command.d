@@ -17,8 +17,9 @@ module selery.command.command;
 import std.algorithm : all;
 import std.conv : ConvException, to;
 static import std.math;
+import std.meta : staticIndexOf, Reverse;
 import std.string : toLower, startsWith;
-import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, hasUDA, getUDAs, staticIndexOf, Reverse, isIntegral, isFloatingPoint;
+import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, hasUDA, getUDAs, isIntegral, isFloatingPoint;
 
 import selery.command.args : StringReader, CommandArg;
 import selery.command.util : PocketType, CommandSender, WorldCommandSender, Ranged, isRanged, Target, Position;

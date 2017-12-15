@@ -22,7 +22,8 @@ import core.thread : Thread;
 import std.algorithm : canFind;
 import std.bitmanip : read;
 import std.conv : to;
-import std.datetime : dur, StopWatch;
+import std.datetime : dur;
+import std.datetime.stopwatch : StopWatch;
 import std.json;
 import std.path : dirSeparator;
 import std.random : uniform;
@@ -143,7 +144,8 @@ class JavaHandler : HandlerThread {
 			}
 			watch.stop();
 			if(this.sessions.sessions.length || this.newConnections.length) {
-				auto time = watch.peek().usecs;
+				ulong time;
+				watch.peek.split!"usecs"(time);
 				if(time < tps) {
 					Thread.sleep(dur!"usecs"(tps - time));
 				}

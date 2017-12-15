@@ -134,20 +134,20 @@ class Map {
 
 	}
 
-	public static @safe MapColor closestColor(Color color) {
+	public static MapColor closestColor(Color color) {
 		if(color.a != 255) return Colors.TRANSPARENT.light;
 		uint difference = uint.max;
 		MapColor ret;
 		foreach(MapColors mc ; [EnumMembers!Colors]) {
 			if(mc[0].id == 0) continue;
-			foreach(MapColor c ; mc) {
+			foreach(const MapColor c ; mc) {
 				uint d = 0;
 				d += abs(to!int(c.r) - color.r);
 				d += abs(to!int(c.g) - color.g);
 				d += abs(to!int(c.b) - color.b);
 				if(d < difference) {
 					difference = d;
-					ret = c;
+					ret = cast()c;
 				}
 			}
 		}
@@ -160,7 +160,7 @@ class CustomMap : Map {
 
 	private ubyte[] image_data;
 
-	public @safe this(World world, ushort id, ubyte scale, ubyte[] image_data) {
+	public this(World world, ushort id, ubyte scale, ubyte[] image_data) {
 		assert(image_data.length == 128 * 128 * 4, "Invalid image data length");
 		super(world, id, scale);
 		this.image_data = image_data;

@@ -22,9 +22,10 @@ import std.algorithm : reverse, canFind;
 import std.array : join, split;
 import std.conv : to, ConvException;
 static import std.math;
+import std.meta : staticIndexOf;
 import std.range.primitives : ElementType;
 import std.string : replace;
-import std.traits : IntegralTypeOf, staticIndexOf, isNumeric, isArray, CommonType, isFloatingPointTrait = isFloatingPoint, isImplicitlyConvertible;
+import std.traits : IntegralTypeOf, isNumeric, isArray, CommonType, isFloatingPointTrait = isFloatingPoint, isImplicitlyConvertible;
 import std.typecons : isTuple;
 import std.typetuple : TypeTuple;
 

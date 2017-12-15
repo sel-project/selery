@@ -16,6 +16,7 @@ docs
 /builder/views
 /crash
 /plugins
+/_plugins
 /resources
 /worlds
 /*.toml

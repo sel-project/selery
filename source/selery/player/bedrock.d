@@ -32,6 +32,7 @@ import sel.nbt.tags;
 import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.tile : Tile;
+import selery.config : Gamemode, Difficulty, Dimension;
 import selery.command.args : CommandArg;
 import selery.command.command : Command, Position, Target;
 import selery.command.util : PocketType;
@@ -52,23 +53,16 @@ import selery.node.info : PlayerInfo;
 import selery.player.player;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.world : Gamemode, Difficulty, Dimension, World;
+import selery.world.world : World;
 
 import sul.utils.var : varuint;
 
 abstract class BedrockPlayer : Player {
 
-	protected static Stream stream, networkStream;
-
 	protected static ubyte[][] resourcePackChunks;
 	protected static size_t resourcePackSize;
 	protected static string resourcePackId;
 	protected static string resourcePackHash;
-
-	public static this() {
-		stream = new ClassicStream!(Endian.littleEndian)();
-		networkStream = new NetworkStream!(Endian.littleEndian)();
-	}
 
 	public static void updateResourcePacks(UUID uuid, void[] rp) {
 		for(size_t i=0; i<rp.length; i+=4096) {
@@ -233,7 +227,7 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		if(slot.empty) {
 			return Types.Slot(0);
 		} else {
-			stream.buffer.length = 0;
+			auto stream = new ClassicStream!(Endian.littleEndian)();
 			if(!slot.empty && slot.item.pocketCompound !is null) {
 				stream.writeTag(slot.item.pocketCompound);
 			}
@@ -247,7 +241,7 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		} else {
 			auto item = this.world.items.fromBedrock(slot.id & ushort.max, (slot.metaAndCount >> 8) & ushort.max);
 			if(slot.nbt.length) {
-				stream.buffer = slot.nbt;
+				auto stream = new ClassicStream!(Endian.littleEndian)(slot.nbt);
 				//TODO verify that this is right
 				auto tag = stream.readTag();
 				if(cast(Compound)tag) item.parseBedrockCompound(cast(Compound)tag);
@@ -499,7 +493,7 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		}
 		//TODO extra data
 
-		networkStream.buffer.length = 0;
+		auto stream = new NetworkStream!(Endian.littleEndian)();
 		foreach(tile ; chunk.tiles) {
 			if(tile.pocketCompound !is null) {
 				auto compound = tile.pocketCompound.dup;
@@ -507,10 +501,10 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 				compound["x"] = new Int(tile.position.x);
 				compound["y"] = new Int(tile.position.y);
 				compound["z"] = new Int(tile.position.z);
-				networkStream.writeTag(compound);
+				stream.writeTag(compound);
 			}
 		}
-		data.blockEntities = networkStream.buffer;
+		data.blockEntities = stream.buffer;
 
 		this.sendPacket(new Play.FullChunkData(chunk.position.tuple, data));
 
@@ -763,9 +757,9 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		}
 		auto packet = new Play.BlockEntityData(toBlockPosition(tile.position));
 		if(tile.pocketCompound !is null) {
-			networkStream.buffer.length = 0;
-			networkStream.writeTag(tile.pocketCompound);
-			packet.nbt = networkStream.buffer;
+			auto stream = new NetworkStream!(Endian.littleEndian)();
+			stream.writeTag(tile.pocketCompound);
+			packet.nbt = stream.buffer;
 		} else {
 			packet.nbt ~= NBT_TYPE.END;
 		}

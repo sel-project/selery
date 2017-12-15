@@ -6,7 +6,7 @@ copyright "Copyright (c) 2017 SEL"
 targetType "library"
 targetPath "libs"
 
-dependency "imageformats" version="~>6.1.1"
+dependency "imageformats" version="~>6.1.2"
 dependency "resusage" version="~>0.2.7"
 dependency "sel-hncom" version="~>4.0.0"
 //dependency "sel-math" version="~>0.0.1"

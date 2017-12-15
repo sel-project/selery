@@ -21,9 +21,10 @@ import std.conv : to;
 import std.datetime : dur;
 import std.traits : isAbstractClass, Parameters;
 
+import selery.config : Difficulty, Gamemode;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
-import selery.world.world : Gamemode, Difficulty, World;
+import selery.world.world : World;
 
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
 
@@ -35,8 +36,6 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 
 		//TODO register default events
 		//TODO register specific events
-
-		//World.startWorld(server, info, world, null);
 
 		World.startWorld(server, info, world, null);
 		world.startMainWorldLoop();

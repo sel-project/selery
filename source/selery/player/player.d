@@ -29,6 +29,7 @@ import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.blocks : Blocks;
 import selery.block.tile : Tile, Container;
+import selery.config : Gamemode, Difficulty, Dimension;
 import selery.command.args : CommandArg;
 import selery.command.command : Command, WorldCommandSender;
 import selery.command.execute : executeCommand;
@@ -54,7 +55,7 @@ import selery.util.node : Node;
 import selery.util.util : milliseconds, call;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
-import selery.world.world : Gamemode, Difficulty, Dimension, World;
+import selery.world.world : World;
 
 import HncomPlayer = sel.hncom.player;
 

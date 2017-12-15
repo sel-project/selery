@@ -1,9 +1,8 @@
 language: d
 
 d:
-  - dmd-2.075.0
-  - dmd-2.073.2
-  - ldc-1.3.0
+  - dmd-2.077.1
+  - ldc-1.6.0
 
 os:
   - linux
@@ -12,8 +11,6 @@ os:
 matrix:
   allow_failures:
     - os: osx
-      d: dmd-2.073.2
-    - d: dmd-2.075.0
 
 script:
   - travis_wait 60 dub build --compiler=$DC --build=release

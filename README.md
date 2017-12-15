@@ -22,8 +22,6 @@ SEL is based on the [hub-node communication protocol](https://sel-utils.github.i
 
 ## Create a server
 
-:warning: does not work with DMD >=2.074
-
 :warning: doesn't compile using 32-bit DMD
 
 :warning: doesn't work using DMD in release mode
