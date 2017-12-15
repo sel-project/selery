@@ -1028,6 +1028,10 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 			this.callCommand(command);
 		}
 	}
+
+	protected void handleCommandRequestPacket(string command, uint type, Types.McpeUuid uuid, string requestId, uint playerId, bool internal) {
+		this.handleCommandRequestPacket(command, type, requestId, playerId);
+	}
 	
 	enum string stringof = "PocketPlayer!" ~ to!string(__protocol);
 

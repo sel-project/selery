@@ -30,7 +30,6 @@ import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
 import sel.hncom.about;
-alias __BEDROCK__ = __POCKET__; // remove when hncom is updated
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock, Update, Remove, blockInto;

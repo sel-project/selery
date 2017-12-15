@@ -21,7 +21,7 @@ import std.socket : Address;
 import std.string : toLower, startsWith;
 import std.uuid : UUID;
 
-import sel.hncom.about : __JAVA__, __POCKET__;
+import sel.hncom.about : __BEDROCK__, __JAVA__;
 import sel.hncom.player : Add;
 
 import selery.about;
@@ -33,9 +33,9 @@ import selery.player.player : InputMode, DeviceOS;
  */
 final class PlayerInfo {
 
-	enum GAME_JAVA = "Minecraft: Java Edition";
-	enum GAME_POCKET = "Minecraft";
+	enum GAME_BEDROCK = "Minecraft";
 	enum GAME_EDU = "Minecraft: Education Edition";
+	enum GAME_JAVA = "Minecraft: Java Edition";
 
 	/**
 	 * Player's id assigned by the hub and unique for the player's session.
@@ -95,7 +95,7 @@ final class PlayerInfo {
 		this.usedAddress = usedAddress;
 		this.language = language;
 		if(data.type == JSON_TYPE.OBJECT) {
-			if(type == __POCKET__) {
+			if(type == __BEDROCK__) {
 				this.edu = "edu" in data && data["edu"].type == JSON_TYPE.TRUE;
 				auto gameVersion = "GameVersion" in data;
 				if(gameVersion && gameVersion.type == JSON_TYPE.STRING) this.gameVersion = gameVersion.str;
@@ -115,7 +115,7 @@ final class PlayerInfo {
 			this.gameVersion = supportedJavaProtocols[this.protocol][0];
 		} else {
 			if(this.edu) this.gameEdition = GAME_EDU;
-			else this.gameEdition = GAME_POCKET;
+			else this.gameEdition = GAME_BEDROCK;
 			this.gameVersion = verifyVersion(this.gameVersion, supportedBedrockProtocols[this.protocol]);
 		}
 		this.game = this.gameEdition ~ " " ~ this.gameVersion;

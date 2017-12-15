@@ -314,7 +314,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 			if(type == __JAVA__) {
 				set(config.hub.java);
-			} else if(type == __POCKET__) {
+			} else if(type == __BEDROCK__) {
 				set(config.hub.bedrock);
 			} else {
 				error_log(config.lang.translate("warning.invalidGame", [to!string(type), Software.name]));
@@ -411,8 +411,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomLogin.NodeInfo nodeInfo;
 		uint[][ubyte] games;
+		if(this.config.node.bedrock) nodeInfo.acceptedGames[__BEDROCK__] = cast(uint[])this.config.node.bedrock.protocols;
 		if(this.config.node.java) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.java.protocols;
-		if(this.config.node.bedrock) nodeInfo.acceptedGames[__POCKET__] = cast(uint[])this.config.node.bedrock.protocols;
 		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;

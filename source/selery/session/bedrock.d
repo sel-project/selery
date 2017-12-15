@@ -298,7 +298,7 @@ final class BedrockSession : PlayerSession {
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(ubyte) type() {
-		return __POCKET__;
+		return __BEDROCK__;
 	}
 
 	public override shared nothrow @property @safe @nogc immutable(uint) latency() {
