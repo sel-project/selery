@@ -47,7 +47,7 @@ Before creating any pull request verify that your code has the following require
 Example of code:
 ```d
 /*
- * Copyright (c) 2016-2017 SEL
+ * Copyright (c) 2016-2018 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by

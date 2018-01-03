@@ -4,7 +4,7 @@ dependency "toml" version="~>0.4.0-rc.3"
 dependency "toml:json" version="~>0.4.0-rc.3"
 +/
 /*
- * Copyright (c) 2017 SEL
+ * Copyright (c) 2017-2018 SEL
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
