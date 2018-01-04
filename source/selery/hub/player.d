@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.session.player;
+module selery.hub.player;
 
 import core.atomic : atomicOp;
 
@@ -24,10 +24,11 @@ import std.socket : Address;
 import std.string : toLower;
 import std.uuid : UUID;
 
+import sel.server.client : Client;
+
 import selery.about;
 import selery.hub.server : HubServer;
-import selery.network.session : Session;
-import selery.session.hncom : AbstractNode;
+import selery.hub.handler.hncom : AbstractNode;
 
 import HncomPlayer = sel.hncom.player;
 
@@ -50,10 +51,13 @@ class World {
 /**
  * Session for players.
  */
-abstract class PlayerSession : Session {
+class PlayerSession {
+
+	private shared HubServer server;
+	private shared Client client;
 	
-	protected shared AbstractNode n_node;
-	protected shared uint last_node;
+	private shared AbstractNode n_node;
+	private shared uint last_node;
 	
 	private shared uint expected;
 	private shared ubyte[][size_t] unordered_payloads;
@@ -80,9 +84,15 @@ abstract class PlayerSession : Session {
 	protected shared string n_language;
 	protected shared Skin n_skin = null;
 	
-	public shared this(shared HubServer server) {
-		super(server);
+	public shared this(shared HubServer server, shared Client client) {
+		this.server = server;
+		this.client = client;
 		this.n_language = server.config.hub.language;
+		this.client = client;
+	}
+
+	public final shared nothrow @property @safe @nogc uint id() {
+		return this.client.id;
 	}
 	
 	/**

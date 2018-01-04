@@ -1,7 +1,7 @@
 /+ dub.sdl:
 name "selery-init"
-dependency "toml" version="~>0.4.0-rc.3"
-dependency "toml:json" version="~>0.4.0-rc.3"
+dependency "toml" version="~>0.4.0-rc.4"
+dependency "toml:json" version="~>0.4.0-rc.4"
 +/
 /*
  * Copyright (c) 2017-2018 SEL
@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 26;
+enum size_t __GENERATOR__ = 27;
 
 void main(string[] args) {
 
@@ -316,8 +316,8 @@ void main(string[] args) {
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
-		"toml": ["version": "~>0.4.0-rc.3"],
-		"toml:json": ["version": "~>0.4.0-rc.3"],
+		"toml": ["version": "~>0.4.0-rc.4"],
+		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
 	builder["subPackages"] = new JSONValue[0];
 	

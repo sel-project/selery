@@ -20,12 +20,13 @@
  * 
  * Source: $(HTTP www.github.com/sel-project/sel-server/blob/master/hub/sel/network/rcon.d, sel/network/rcon.d)
  */
-module selery.session.hncom;
+module selery.hub.handler.hncom;
 
 import core.thread : Thread;
 
 import std.algorithm : canFind;
 import std.bitmanip : nativeToLittleEndian;
+import std.concurrency : spawn;
 import std.conv : to;
 import std.datetime : dur;
 import std.json : JSONValue;
@@ -38,15 +39,15 @@ import std.zlib;
 
 import sel.hncom.about;
 import sel.hncom.handler : Handler = HncomHandler;
+import sel.server.query : Query;
+import sel.server.util;
 
 import selery.about;
 import selery.constants;
 import selery.hub.server : HubServer, List;
 import selery.lang : translate;
-import selery.network.handler : HandlerThread;
 import selery.network.session : Session;
-import selery.network.socket;
-import selery.session.player : WorldSession = World, PlayerSession, Skin;
+import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
 
@@ -55,41 +56,50 @@ import Login = sel.hncom.login;
 import Status = sel.hncom.status;
 import Player = sel.hncom.player;
 
-class HncomHandler : HandlerThread {
+class HncomHandler {
+
+	private shared HubServer server;
 	
 	private shared JSONValue* additionalJson;
 
 	private shared Address address;
-
-	version(Posix) private shared string unixSocketAddress;
 	
-	public this(shared HubServer server, shared JSONValue* additionalJson) {
-		string ip = "::";
-		string[] nodes = cast(string[])server.config.hub.acceptedNodes;
-		if(nodes.length) {
-			if(nodes.length == 1) {
-				if(nodes[0] == "::1") ip = "::1";
-				else if(nodes[0].startsWith("127.0.")) ip = "127.0.0.1";
-				else if(nodes[0].startsWith("192.168.") && !nodes[0].canFind('-') && (!nodes[0].canFind('*') || nodes[0].indexOf("*") < nodes[0].lastIndexOf("."))) ip = nodes[0][0..nodes[0].lastIndexOf(".")] ~ ".255";
-			}
-			if(ip == "::") {
-				ip = "0.0.0.0";
-				foreach(range ; server.config.hub.acceptedNodes) {
-					if(range.canFind(':')) {
-						ip = "::";
-						break;
-					}
-				}
-			}
-		}
-		Socket socket = new BlockingSocket!TcpSocket(ip, server.config.hub.hncomPort, 8);
-		this.address = cast(shared)socket.localAddress;
-		super(server, [cast(shared)socket]);
+	public shared this(shared HubServer server, shared JSONValue* additionalJson) {
+		this.server = server;
 		this.additionalJson = additionalJson;
 	}
+
+	public shared void start(inout(string)[] accepted, ushort port) {
+		bool v4, v6, public_;
+		foreach(address ; accepted) {
+			switch(address) {
+				case "127.0.0.1":
+					v4 = true;
+					break;
+				case "::1":
+					v6 = true;
+					break;
+				default:
+					if(address.canFind(":")) v6 = true;
+					else v4 = true;
+					public_ = true;
+					break;
+			}
+		}
+		Address address = getAddress(public_ ? (v4 ? "0.0.0.0" : "::") : (v4 ? "127.0.0.1" : "::1"), port)[0];
+		Socket socket = new TcpSocket(v4 && v6 ? AddressFamily.INET | AddressFamily.INET6 : address.addressFamily);
+		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+		socket.setOption(SocketOptionLevel.IPV6, SocketOption.IPV6_V6ONLY, !v4 || !v6);
+		socket.blocking = true;
+		socket.bind(address);
+		socket.listen(8);
+		this.address = cast(shared)address;
+		spawn(&this.acceptClients, cast(shared)socket);
+	}
 	
-	protected override void listen(shared Socket sharedSocket) {
-		Socket socket = cast()sharedSocket;
+	private shared void acceptClients(shared Socket _socket) {
+		debug Thread.getThis().name = "hncom_server@" ~ (cast()_socket).localAddress.toString();
+		Socket socket = cast()_socket;
 		while(true) {
 			Socket client = socket.accept();
 			Address address;
@@ -111,21 +121,6 @@ class HncomHandler : HandlerThread {
 
 	public shared pure nothrow @property @safe @nogc shared(Address) localAddress() {
 		return this.address;
-	}
-	
-	public override shared void shutdown() {
-		foreach(shared Socket sharedSocket ; this.sharedSockets) {
-			Socket socket = cast()sharedSocket;
-			socket.close();
-			version(Posix) {
-				if(this.unixSocketAddress.length) {
-					//TODO close the socket without exceptions
-					import core.stdc.stdio : remove;
-					import std.internal.cstring : tempCString;
-					remove(this.unixSocketAddress.tempCString());
-				}
-			}
-		}
 	}
 	
 }
@@ -170,8 +165,8 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	protected shared void exchageInfo(Receiver!(uint, Endian.littleEndian) receiver) {
 		with(cast()server.config.hub) {
 			Login.HubInfo.GameInfo[ubyte] games;
-			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, bedrock.port);
-			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, java.port);
+			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
+			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
 			this.sendHubInfo(Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
 		}
 		auto info = this.receiveNodeInfo(receiver);
@@ -600,7 +595,6 @@ class ClassicNode : AbstractNode {
 		ubyte[] buffer = new ubyte[256];
 		auto recv = socket.receive(buffer);
 		if(recv > 0) {
-			this.server.traffic.receive(recv);
 			receiver.add(buffer[0..recv]);
 		}
 		if(receiver.has) {
@@ -645,7 +639,6 @@ class ClassicNode : AbstractNode {
 			} else {
 				auto recv = socket.receive(buffer);
 				if(recv > 0) {
-					this.server.traffic.receive(recv);
 					receiver.add(buffer[0..recv]);
 				} else {
 					return Login.NodeInfo.init;
@@ -662,7 +655,6 @@ class ClassicNode : AbstractNode {
 		while(true) {
 			auto recv = socket.receive(buffer);
 			if(recv <= 0) break; // closed
-			this.server.traffic.receive(recv);
 			// stack up
 			receiver.add(buffer[0..recv]);
 			while(receiver.has) {
@@ -684,7 +676,6 @@ class ClassicNode : AbstractNode {
 			if(sent <= 0 || sent == buffer.length) break;
 			buffer = buffer[sent..$];
 		}
-		this.server.traffic.send(length);
 		return length;
 	}
 	

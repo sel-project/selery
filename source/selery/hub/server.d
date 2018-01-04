@@ -41,17 +41,21 @@ import imageformats : ImageIOException, read_png_header_from_mem;
 
 import sel.hncom.login : HubInfo, NodeInfo;
 import sel.hncom.status : RemoteCommand;
+import sel.server.client : Client;
+import sel.server.query : Query;
+import sel.server.util : ServerInfo, PlayerHandler = Handler;
 
 import selery.about;
 import selery.config : Config;
 import selery.format : Text;
+import selery.lang : Translation;
 import selery.log : log, warning_log, raw_log;
 import selery.network.handler : Handler;
 import selery.plugin : Plugin;
-import selery.session.hncom : AbstractNode;
-import selery.session.player : PlayerSession;
-import selery.session.rcon : RconSession;
-import selery.util.analytics : GoogleAnalytics;
+import selery.server : Server;
+import selery.hub.handler.hncom : AbstractNode;
+import selery.hub.player : PlayerSession;
+import selery.hub.handler.rcon : RconClient;
 import selery.util.block : Blocks;
 import selery.util.ip : localAddresses, publicAddresses;
 import selery.util.thread;
@@ -104,7 +108,7 @@ struct Icon {
 
 }
 
-class HubServer {
+class HubServer : PlayerHandler, Server {
 
 	public immutable bool lite;
 
@@ -116,10 +120,12 @@ class HubServer {
 	private shared Config _config;
 	private shared const(AddressRange)[] _accepted_nodes;
 	private shared Icon _icon;
+	private shared ServerInfo _info;
+	private shared Query _query;
 
-	private shared uint n_max = 0;
+	private shared Plugin[] _plugins;
 
-	private shared Traffic n_traffic;
+	private shared uint n_max = 0; //TODO replace with _info.max
 
 	private shared uint n_upload, n_download;
 
@@ -134,11 +140,9 @@ class HubServer {
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
-	private shared RconSession[immutable(uint)] rcons;
+	private shared RconClient[immutable(uint)] rcons;
 	
 	private shared PlayerSession[immutable(uint)] n_players;
-
-	private shared GoogleAnalytics analytics;
 
 	public shared this(bool lite, Config config, Plugin[] plugins=[], string[] args=[]) {
 
@@ -149,6 +153,12 @@ class HubServer {
 		debug Thread.getThis().name = "HubServer";
 
 		this.lite = lite;
+
+		this._info = new shared ServerInfo();
+		if(config.hub.query) {
+			this._query = new shared Query(this._info);
+			this._query.software = Software.name ~ " " ~ Software.displayVersion;
+		}
 
 		this.n_whitelist = List(this, "whitelist");
 		this.n_blacklist = List(this, "blacklist");
@@ -175,7 +185,9 @@ class HubServer {
 		foreach(plugin ; plugins) {
 			//TODO does this save?
 			if(plugin.languages !is null) config.lang.add(plugin.languages); // absolute path
+			//TODO add to query
 		}
+		//TODO save to _plugins
 
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
@@ -199,7 +211,7 @@ class HubServer {
 		
 		this.blocks = new Blocks();
 
-		this.handler = new shared Handler(this);
+		this.handler = new shared Handler(this, this._info, this._query);
 
 		// listen for commands
 		auto reader = new Thread({
@@ -243,18 +255,6 @@ class HubServer {
 					node.updatePlayers(last_online, last_max);
 				}
 			}
-			auto sent = cast(uint)(this.n_traffic.sent.to!float / 5f);
-			auto recv = cast(uint)(this.n_traffic.received.to!float / 5f);
-			this.n_upload = sent;
-			this.n_download = recv;
-			this.n_traffic.reset();
-			if(this.analytics !is null) {
-				if(++next_analytics == 12) {
-					next_analytics = 0;
-					this.analytics.updatePlayers(this.players);
-				}
-				this.analytics.sendRequests();
-			}
 			Thread.sleep(dur!"msecs"(5000));
 			this.blocks.remove(5);
 		}
@@ -274,6 +274,7 @@ class HubServer {
 		if(config.hub.java) with(config.hub.java) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace("\\n", "\n");
+			this._info.motd = motd; //TODO differentiate from bedrock
 			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
 		}
 		if(config.hub.bedrock) with(config.hub.bedrock) {
@@ -321,6 +322,7 @@ class HubServer {
 			}
 		}
 		this._icon = cast(shared)icon;
+		this._info.favicon = this._icon.base64data;
 		// save new config
 		this._config = cast(shared)config;
 	}
@@ -355,19 +357,20 @@ class HubServer {
 	/**
 	 * Gets the server's configuration.
 	 */
-	public shared nothrow @property @trusted @nogc const(Config) config() {
+	public override shared nothrow @property @trusted @nogc const(Config) config() {
 		return cast()this._config;
+	}
+
+	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
+		return cast(const(Plugin)[])this._plugins;
+	}
+
+	public final shared nothrow @property @safe @nogc shared(ServerInfo) info() {
+		return this._info;
 	}
 
 	public shared nothrow @property @trusted @nogc const(Icon) icon() {
 		return cast()this._icon;
-	}
-
-	/**
-	 * Gets the server's traffic tracker.
-	 */
-	public shared nothrow @property @safe @nogc ref shared(Traffic) traffic() {
-		return this.n_traffic;
 	}
 
 	/// ditto
@@ -446,9 +449,9 @@ class HubServer {
 	/**
 	 * Gets the plugin used by the connected nodes.
 	 */
-	public shared @property string[] plugins() {
+	/*public shared @property string[] plugins() {
 		return this.n_plugins.keys;
-	}
+	}*/
 
 	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=-1) {
 		// console, external console, rcon
@@ -475,7 +478,7 @@ class HubServer {
 							this.command("Use 'usage <node>'", commandId);
 						}
 					} else {
-						this.command("Upload: " ~ to!string(this.n_upload.to!float / 1000) ~ " kB/s, Download: " ~ to!string(this.n_download.to!float / 1000) ~ " kb/s", commandId);
+						//TODO usage for every connected node
 					}
 					break;
 				default:
@@ -533,7 +536,7 @@ class HubServer {
 		// check if it's an IPv4-mapped in IPv6
 		if(cast(Internet6Address)address) {
 			auto v6 = cast(Internet6Address)address;
-			ubyte[] bytes = v6.addr;
+			ubyte[16] bytes = v6.addr;
 			if(bytes[10] == 255 && bytes[11] == 255) { // ::ffff:127.0.0.1
 				address = new InternetAddress(to!string(bytes[12]) ~ "." ~ to!string(bytes[13]) ~ "." ~ to!string(bytes[14]) ~ "." ~ to!string(bytes[15]), v6.port);
 			}
@@ -599,6 +602,7 @@ class HubServer {
 				atomicOp!"+="(this.n_plugins[str], 1);
 			} else {
 				this.n_plugins[str] = 1;
+				//TODO add to _query.plugins
 			}
 		}
 		// notify other nodes
@@ -630,6 +634,7 @@ class HubServer {
 				atomicOp!"-="(*ptr, 1);
 				if(*ptr == 0) {
 					this.n_plugins.remove(str);
+					//TODO remove from _query.plugins
 				}
 			}
 		}
@@ -639,24 +644,32 @@ class HubServer {
 		}
 	}
 
-	public synchronized shared void add(shared RconSession rcon) {
+	public override shared void onClientJoin(shared Client client) {
+		log(client.username, " joined");
+	}
+
+	public override shared void onClientLeft(shared Client client) {
+		log(client.username, " left");
+	}
+
+	public override shared void onClientPacket(shared Client client, ubyte[] packet) {}
+
+	public synchronized shared void add(shared RconClient rcon) {
 		log(Text.green, "+ ", Text.white, rcon.toString());
 		this.rcons[rcon.id] = rcon;
 	}
 
-	public synchronized shared void remove(shared RconSession rcon) {
+	public synchronized shared void remove(shared RconClient rcon) {
 		log(Text.red, "- ", Text.white, rcon.toString());
 		this.rcons.remove(rcon.id);
 	}
 
 	public synchronized shared void add(shared PlayerSession player) {
 		this.n_players[player.id] = player;
-		if(this.analytics !is null) this.analytics.addPlayer(player);
 	}
 
 	public synchronized shared void remove(shared PlayerSession player) {
 		this.n_players.remove(player.id);
-		if(this.analytics !is null) this.analytics.removePlayer(player);
 	}
 
 	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {
@@ -671,31 +684,12 @@ class HubServer {
 		return null;
 	}
 
-}
-
-struct Traffic {
-
-	size_t sent, received;
-
-	pure nothrow @safe @nogc void send(size_t amount) {
-		this.sent += amount;
+	protected override void sendMessageImpl(string message) {
+		log(message);
 	}
-
-	pure nothrow @safe @nogc void receive(size_t amount) {
-		this.received += amount;
-	}
-
-	shared nothrow @nogc void send(size_t amount) {
-		atomicOp!"+="(this.sent, amount);
-	}
-
-	shared nothrow @nogc void receive(size_t amount) {
-		atomicOp!"+="(this.received, amount);
-	}
-
-	shared nothrow @safe @nogc void reset() {
-		this.sent = 0;
-		this.received = 0;
+	
+	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
+		log(join(cast(string[])formats, ""), (cast(shared)this).config.lang.translate(message, args));
 	}
 
 }

@@ -29,7 +29,7 @@ import selery.hub.server : HubServer;
 import selery.network.hncom : TidAddress;
 import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
-import selery.session.hncom : LiteNode;
+import selery.hub.handler.hncom : LiteNode;
 import selery.util.util : UnloggedException;
 
 import pluginloader;

@@ -25,24 +25,24 @@
  * using websockets.
  * 
  */
-module selery.session.rcon;
+module selery.hub.handler.rcon;
 
 import core.atomic : atomicOp;
 import core.thread : Thread;
 
 import std.bitmanip : write, peek, nativeToLittleEndian;
+import std.concurrency : spawn;
 import std.conv : to;
 import std.datetime : dur;
 import std.socket;
 import std.system : Endian;
 
 import sel.hncom.status : RemoteCommand;
+import sel.server.query : Query;
+import sel.server.util;
 
 import selery.about;
-import selery.constants;
 import selery.hub.server : HubServer;
-import selery.network.handler : HandlerThread;
-import selery.network.session : Session;
 import selery.util.thread : SafeThread;
 
 /**
@@ -50,25 +50,42 @@ import selery.util.thread : SafeThread;
  * TCP socket and starts new sessions in another thread, if
  * the address of the client is not blocked by the server.
  */
-final class RconHandler : HandlerThread {
+final class RconHandler : GenericServer {
+
+	private shared HubServer server;
 	
-	public this(shared HubServer server) {
-		with(server.config.hub) super(server, createSockets!TcpSocket(server, "rcon", rconAddresses, rconPort, RCON_BACKLOG));
+	public shared this(shared HubServer server) {
+		super(server.info);
+		this.server = server;
 	}
-	
-	protected override void listen(shared Socket sharedSocket) {
-		Socket socket = cast()sharedSocket;
+
+	protected override shared void startImpl(Address address, shared Query query) {
+		Socket socket = new TcpSocket(address.addressFamily);
+		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+		socket.blocking = true;
+		socket.bind(address);
+		socket.listen(8);
+		spawn(&this.acceptClients, cast(shared)socket);
+	}
+
+	private shared void acceptClients(shared Socket _socket) {
+		debug Thread.getThis().name = "rcon_server@" ~ (cast()_socket).localAddress.toString();
+		Socket socket = cast()_socket;
 		while(true) {
 			Socket client = socket.accept();
 			if(!this.server.isBlocked(client.remoteAddress)) {
-				new SafeThread(this.server.config.lang, {
-					shared RconSession session = new shared RconSession(this.server, client);
+				new SafeThread(this.server.lang, {
+					shared RconClient session = new shared RconClient(this.server, client);
 					delete session;
 				}).start();
 			} else {
 				client.close();
 			}
 		}
+	}
+
+	public override shared pure nothrow @property @safe @nogc ushort defaultPort() {
+		return ushort(25575);
 	}
 
 }
@@ -91,20 +108,26 @@ final class RconHandler : HandlerThread {
  * remote socket has been closed or a packet with the wrong
  * format is received.
  */
-final class RconSession : Session {
+final class RconClient {
 
+	private static shared uint _id;
 	private static shared int commandsCount = 1;
-	
+
+	public immutable uint id;
+
+	private shared HubServer server;
+
 	private shared Socket socket;
 	private immutable string remoteAddress;
 
 	private shared int[int] commandTable;
 	
 	public shared this(shared HubServer server, Socket socket) {
-		super(server);
+		this.id = atomicOp!"+="(_id, 1);
+		this.server = server;
 		this.socket = cast(shared)socket;
 		this.remoteAddress = socket.remoteAddress.to!string;
-		if(Thread.getThis().name == "") Thread.getThis().name = "rconSession#" ~ to!string(this.id);
+		debug Thread.getThis().name = "rcon_client#" ~ to!string(this.id) ~ "@" ~ this.remoteAddress;
 		// wait for the login or disconnect
 		ubyte[] payload = new ubyte[14 + server.config.hub.rconPassword.length];
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(1));
@@ -125,7 +148,7 @@ final class RconSession : Session {
 	}
 
 	/**
-	 * Waits for a command packet and let the server parses
+	 * Waits for a command packet and let the server parse
 	 * it if it is longer than 0 bytes.
 	 */
 	protected shared void loop() {
@@ -133,11 +156,10 @@ final class RconSession : Session {
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // it was changed because the first packet couldn't be sent instantly
 		// the session doesn't timeout
 		// socket.blocking = true;
-		ubyte[] buffer = new ubyte[RCON_CONNECTED_BUFFER_LENGTH];
+		ubyte[] buffer = new ubyte[1446];
 		while(true) {
 			auto recv = socket.receive(buffer);
 			if(recv < 14 || buffer[8] != 2) return; // connection closed, invalid packet format or invalid packet id
-			this.server.traffic.receive(recv);
 			if(recv >= 15 && peek!(int, Endian.littleEndian)(buffer, 8) == 2) {
 				// only handle commands that are at least 1-character long
 				this.commandTable[commandsCount] = peek!(int, Endian.littleEndian)(buffer, 4);
@@ -154,9 +176,8 @@ final class RconSession : Session {
 		return this.send(request_id ~ nativeToLittleEndian(id) ~ payload ~ cast(ubyte[])[0, 0]);
 	}
 	
-	public override shared ptrdiff_t send(const(void)[] data) {
+	public shared ptrdiff_t send(const(void)[] data) {
 		data = nativeToLittleEndian(data.length.to!uint) ~ data;
-		this.server.traffic.send(data.length);
 		return (cast()this.socket).send(data);
 	}
 

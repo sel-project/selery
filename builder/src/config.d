@@ -15,11 +15,12 @@
 module config;
 
 import std.ascii : newline;
-import std.conv : to;
+import std.conv : to, ConvException;
 import std.file : exists, read, write, tempDir, mkdirRecurse;
 import std.json : JSONValue;
 import std.path : dirSeparator, buildNormalizedPath;
-import std.string : replace, split, join, toLower, toUpper, endsWith;
+import std.socket : Address;
+import std.string : replace, split, join, toLower, toUpper, startsWith, endsWith;
 import std.traits : isArray, isAssociativeArray;
 import std.typetuple : TypeTuple;
 import std.uuid : UUID, parseUUID;
@@ -94,6 +95,16 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 						return parseUUID(get!string(target));
 					} else static if(is(T == JSONValue)) {
 						return toJSON(target);
+					} else static if(is(T == Config.Hub.Address)) {
+						Config.Hub.Address address;
+						auto s = target.str.split(":");
+						if(s.length >= 2) {
+							try {
+								address.port = to!ushort(s[$-1]);
+							} catch(ConvException) {}
+							address.ip = s[0..$-1].join(":");
+						}
+						return address;
 					} else {
 						static assert(0);
 					}
@@ -112,19 +123,17 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"display-name"(displayName);
 					set!"edu"(edu);
 					set!"realm"(realm);
-					set!"java.enabled"(java.enabled);
-					set!"java.motd"(java.motd);
-					//set!"java.online-mode"(java.onlineMode);
-					set!"java.addresses"(java.addresses);
-					set!"java.port"(java.port);
-					set!"java.accepted-protocols"(java.protocols);
 					set!"bedrock.enabled"(bedrock.enabled);
 					set!"bedrock.motd"(bedrock.motd);
 					//set!"bedrock.online-mode"(bedrock.onlineMode);
 					set!"bedrock.addresses"(bedrock.addresses);
-					set!"bedrock.port"(bedrock.port);
 					set!"bedrock.accepted-protocols"(bedrock.protocols);
 					set!"bedrock.allow-vanilla-players"(allowVanillaPlayers);
+					set!"java.enabled"(java.enabled);
+					set!"java.motd"(java.motd);
+					//set!"java.online-mode"(java.onlineMode);
+					set!"java.addresses"(java.addresses);
+					set!"java.accepted-protocols"(java.protocols);
 					set!"whitelist"(whitelist);
 					set!"blacklist"(blacklist);
 					set!"query"(query);
@@ -132,22 +141,15 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set!"accepted-languages"(acceptedLanguages);
 					set!"server-ip"(serverIp);
 					set!"favicon"(favicon);
-					set!"panel.enabled"(panel);
-					//set!"panel.users"(panelUsers); //TODO
-					set!"panel.addresses"(panelAddresses);
-					set!"panel.port"(panelPort);
 					set!"rcon.enabled"(rcon);
 					set!"rcon.password"(rconPassword);
 					set!"rcon.addresses"(rconAddresses);
-					set!"rcon.port"(rconPort);
-					set!"web.enabled"(web);
-					set!"web.addresses"(webAddresses);
-					set!"web.port"(webPort);
+					set!"web-view.enabled"(webView);
+					set!"web-view.addresses"(webViewAddresses);
 					set!"hncom.accepted-addresses"(acceptedNodes);
 					set!"hncom.password"(hncomPassword);
 					set!"hncom.max"(maxNodes);
 					set!"hncom.port"(hncomPort);
-					set!"google-analytics"(googleAnalytics);
 					set!"social"(social);
 					
 					// unlimited nodes
@@ -159,10 +161,10 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				
 				if(isNode) with(this.node = new Config.Node()) {
 				
-					set!"java.enabled"(java.enabled);
-					set!"java.accepted-protocols"(java.protocols);
 					set!"bedrock.enabled"(bedrock.enabled);
 					set!"bedrock.accepted-protocols"(bedrock.protocols);
+					set!"java.enabled"(java.enabled);
+					set!"java.accepted-protocols"(java.protocols);
 					set!"max-players"(maxPlayers);
 					set!"world.gamemode"(gamemode);
 					set!"world.difficulty"(difficulty);
@@ -214,26 +216,23 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				if(isHub) file ~= "accepted-languages = " ~ to!string(this.hub.acceptedLanguages) ~ newline;
 				if(isHub) file ~= "server-ip = \"" ~ this.hub.serverIp ~ "\"" ~ newline;
 				if(isHub && !this.hub.edu) file ~= "favicon = \"" ~ this.hub.favicon ~ "\"" ~ newline;
-				//if(isHub) file ~= "google-analytics = \"" ~ this.hub.googleAnalytics ~ "\"" ~ newline;
 				if(isHub && !this.hub.realm) file ~= "social = {}" ~ newline; //TODO
-				if(isHub && !this.hub.edu) with(this.hub.java) {
-					file ~= newline ~ "[java]" ~ newline;
-					file ~= "enabled = " ~ to!string(enabled) ~ newline;
-					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
-					file ~= "online-mode = false" ~ newline;
-					file ~= "addresses = " ~ to!string(addresses) ~ newline;
-					file ~= "port = " ~ to!string(port) ~ newline;
-					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-				}
 				if(isHub) with(this.hub.bedrock) {
 					file ~= newline ~ "[bedrock]" ~ newline;
 					file ~= "enabled = " ~ to!string(enabled) ~ newline;
 					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
 					file ~= "online-mode = false" ~ newline;
-					file ~= "addresses = " ~ to!string(addresses) ~ newline;
-					file ~= "port = " ~ to!string(port) ~ newline;
+					file ~= "addresses = " ~ addressString(addresses) ~ newline;
 					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 					if(this.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(this.hub.allowVanillaPlayers);
+				}
+				if(isHub && !this.hub.edu) with(this.hub.java) {
+					file ~= newline ~ "[java]" ~ newline;
+					file ~= "enabled = " ~ to!string(enabled) ~ newline;
+					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
+					file ~= "online-mode = false" ~ newline;
+					file ~= "addresses = " ~ addressString(addresses) ~ newline;
+					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
 				}
 				if(type == ConfigType.node) with(this.node.java) {
 					file ~= newline ~ "[java]" ~ newline;
@@ -266,24 +265,16 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 						file ~= command ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
 					}
 				}
-				if(isHub) with(this.hub) {
-					file ~= newline ~ "[panel]" ~ newline;
-					file ~= "enabled = " ~ to!string(panel) ~ newline;
-					file ~= "addresses = " ~ to!string(panelAddresses) ~ newline;
-					foreach(user, password; panelUsers) file ~= "[[panel.users]]" ~ newline ~ "user = \"" ~ user ~ "\"" ~ newline ~ "password = \"" ~ password ~ "\"" ~ newline;
-				}
-				if(isHub) with(this.hub) {
+				if(isHub && !this.hub.realm) with(this.hub) {
 					file ~= newline ~ "[rcon]" ~ newline;
 					file ~= "enabled = " ~ to!string(rcon) ~ newline;
 					file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
-					file ~= "addresses = " ~ to!string(rconAddresses) ~ newline;
-					file ~= "port = " ~ to!string(rconPort) ~ newline;
+					file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
 				}
 				if(isHub && !this.hub.realm) with(this.hub) {
-					file ~= newline ~ "[web]" ~ newline;
-					file ~= "enabled = " ~ to!string(web) ~ newline;
-					file ~= "addresses = " ~ to!string(webAddresses) ~ newline;
-					file ~= "port = " ~ to!string(webPort) ~ newline;
+					file ~= newline ~ "[web-view]" ~ newline;
+					file ~= "enabled = " ~ to!string(webView) ~ newline;
+					file ~= "addresses = " ~ addressString(webViewAddresses) ~ newline;
 				}
 				if(type == ConfigType.hub) with(this.hub) {
 					file ~= newline ~ "[hncom]" ~ newline;
@@ -312,4 +303,12 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	
 	return config;
 
+}
+
+string addressString(Config.Hub.Address[] addresses) {
+	string[] ret;
+	foreach(address ; addresses) {
+		ret ~= address.toString();
+	}
+	return to!string(ret);
 }

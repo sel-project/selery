@@ -87,13 +87,13 @@ const struct Software {
 	enum ubyte major = 0;
 	
 	/// ditto
-	enum ubyte minor = 0;
+	enum ubyte minor = 1;
 	
 	/// ditto
-	enum ubyte patch = 1;
+	enum ubyte patch = 0;
 
 	/// ditto
-	enum uint build = 77;
+	enum uint build = 2;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -129,8 +129,6 @@ const struct Software {
 	 * compatibility with plugins.
 	 */
 	enum ubyte api = 5;
-	
-	enum ubyte remotePanel = 1;
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
@@ -162,7 +160,7 @@ enum supportedBedrockProtocols = cast(string[][uint])[
 	137: ["1.2.0", "1.2.1", "1.2.2", "1.2.3"],
 	141: ["1.2.5"],
 	150: ["1.2.6"],
-	160: ["1.2.7"],
+	160: ["1.2.7", "1.2.8"],
 ];
 
 /**

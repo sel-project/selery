@@ -58,7 +58,6 @@ import selery.format : Text, writeln;
 import selery.lang : Lang, Translation, Message, Messageable;
 import selery.log;
 import selery.network.hncom;
-import selery.network.http : serveResourcePacks;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.java : JavaPlayer;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
@@ -67,7 +66,7 @@ import selery.server : Server;
 import selery.util.ip : publicAddresses;
 import selery.util.memory : Memory;
 import selery.util.node : Node;
-import selery.util.resourcepack : createResourcePacks;
+import selery.util.resourcepack : createResourcePacks, serveResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
 import selery.world.thread;
@@ -310,7 +309,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 				game.protocols = info.protocols;
 				game.motd = info.motd;
 				game.onlineMode = info.onlineMode;
-				game.port = info.port;
 			}
 			if(type == __JAVA__) {
 				set(config.hub.java);

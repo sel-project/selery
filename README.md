@@ -9,7 +9,10 @@
 The server is still in development and some features are not supported yet.
 
 Supported Minecraft (Bedrock Engine) versions:
-- [1.2.0](https://minecraft.gamepedia.com/Bedrock_Edition_1.2), [1.2.1](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.1) and [1.2.2](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.2)
+- [1.2.7](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.7) and [1.2.8](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.8)
+- [1.2.6](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.6)
+- [1.2.5](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.5)
+- [1.2.0](https://minecraft.gamepedia.com/Bedrock_Edition_1.2), [1.2.1](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.1), [1.2.2](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.2) and [1.2.3](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.3)
 
 Supported Minecraft: Java Edition versions:
 - [1.12](https://minecraft.gamepedia.com/1.12), [1.12.1](https://minecraft.gamepedia.com/1.12.1) and [1.12.2](https://minecraft.gamepedia.com/1.12.2)
@@ -36,3 +39,15 @@ cd ..
 ```
 
 If you're on Windows you must compile using a 64-bit architecture (for example `dub build -a x86_64`)
+
+## Libraries
+
+- [imageformats](https://code.dlang.org/packages/imageformats) to convert PNG images to binary (like skins and server's icon)
+- [resusage](https://code.dlang.org/packages/resusage) to control the usage of CPU and RAM
+- [sel-hncom](https://code.dlang.org/packages/sel-hncom) to connect the hub and node
+- [sel-math](https://code.dlang.org/packages/sel-math) (not yet implemented)
+- [sel-nbt](https://code.dlang.org/packages/sel-nbt) to manage, encode and decode [Named Binary Tag](https://minecraft.gamepedia.com/NBT_format)s
+- [sel-net](https://code.dlang.org/packages/sel-net) (not yet implemented)
+- [sel-server](https://code.dlang.org/packages/sel-server) to manage the network-related stuff of the Minecraft games
+- [sel-utils](https://code.dlang.org/packages/sel-utils) to encoded and decode the packets used by Minecraft, metadata and IDs
+- [toml](https://code.dlang.org/packages/toml) to read and write the server's configuration files

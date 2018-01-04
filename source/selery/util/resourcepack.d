@@ -15,13 +15,18 @@
 module selery.util.resourcepack;
 
 import std.algorithm : canFind;
+import std.concurrency : Tid, send;
 import std.conv : to;
 import std.file : read, dirEntries, SpanMode, isFile;
 import std.json : JSONValue;
+import std.random : uniform;
 import std.regex : ctRegex, replaceAll;
-import std.string : replace, join;
+import std.socket;
+import std.string : replace, join, indexOf, startsWith;
 import std.uuid : UUID;
 import std.zip;
+
+import sel.net.http : StatusCodes, Response;
 
 import selery.about : Software;
 import selery.node.server : NodeServer;
@@ -74,4 +79,40 @@ private ArchiveMember create(string name, ubyte[] data) {
 	ret.expandedData(data);
 	ret.compressionMethod = CompressionMethod.deflate;
 	return ret;
+}
+
+void serveResourcePacks(Tid server, string pack2, string pack3) {
+	
+	auto port = uniform(ushort(999), ushort.max);
+	
+	auto socket = new TcpSocket();
+	socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+	socket.bind(new InternetAddress("0.0.0.0", port));
+	socket.listen(16);
+	socket.blocking = true;
+	
+	send(server, port);
+	
+	char[] buffer = new char[6];
+	
+	const(void)[] response2 = Response(StatusCodes.ok, ["Content-Type": "application/zip", "Server": Software.display], pack2).toString();
+	const(void)[] response3 = Response(StatusCodes.ok, ["Content-Type": "application/zip", "Server": Software.display], pack3).toString();
+	
+	while(true) {
+		
+		//TODO create a non-blocking handler
+		
+		auto client = socket.accept();
+		
+		auto r = client.receive(buffer);
+		if(r == 6) { // length of the buffer
+			if(buffer[0..5] == "GET /") {
+				if(buffer[5] == '2') client.send(response2);
+				else if(buffer[5] == '3') client.send(response3);
+				else client.close();
+			}
+		}
+		
+	}
+	
 }

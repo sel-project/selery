@@ -15,6 +15,7 @@
 module selery.config;
 
 import std.algorithm : canFind;
+import std.conv : to;
 import std.json : JSONValue;
 import std.random : uniform;
 import std.socket : getAddress;
@@ -43,13 +44,23 @@ class Config {
 
 	static class Hub {
 
+		static struct Address {
+
+			string ip;
+			ushort port;
+
+			inout string toString() {
+				return (this.ip.canFind(":") ? "[" ~ this.ip ~ "]" : this.ip) ~ ":" ~ this.port.to!string;
+			}
+
+		}
+
 		static struct Game {
 			
 			bool enabled;
 			string motd;
 			bool onlineMode;
-			string[] addresses;
-			ushort port;
+			Address[] addresses;
 			uint[] protocols;
 			
 			alias enabled this;
@@ -60,9 +71,9 @@ class Config {
 
 		string displayName;
 		
-		Game java = Game(true, "", false, ["0.0.0.0"], ushort(25565), latestJavaProtocols);
-
-		Game bedrock = Game(true, "", false, ["0.0.0.0"], ushort(19132), latestBedrockProtocols);
+		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], latestBedrockProtocols);
+		
+		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], latestJavaProtocols);
 		
 		bool allowVanillaPlayers = false;
 
@@ -84,25 +95,17 @@ class Config {
 		
 		string[string] panelUsers;
 		
-		string[] panelAddresses = ["0.0.0.0"];
-		
-		ushort panelPort = 19134;
+		Address[] panelAddresses = [Address("0.0.0.0", 19134)];
 		
 		bool rcon = false;
 		
 		string rconPassword;
 		
-		string[] rconAddresses = ["0.0.0.0"];
+		Address[] rconAddresses = [Address("0.0.0.0", 25575)];
 		
-		ushort rconPort = 25575;
+		bool webView = false;
 		
-		bool web = false;
-		
-		string[] webAddresses = ["0.0.0.0", "::"];
-		
-		ushort webPort = 80;
-		
-		string googleAnalytics;
+		Address[] webViewAddresses = [Address("0.0.0.0", 80), Address("::", 80)];
 		
 		JSONValue social;
 		

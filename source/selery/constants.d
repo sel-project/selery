@@ -12,7 +12,7 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.constants;
+deprecated module selery.constants;
 
 //TODO move this module to a configuration file
 
