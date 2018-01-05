@@ -30,7 +30,7 @@ artifacts:
     name: node
   - path: selery-default.exe
     name: default
-  - path: selery-portable-%selery%.exe
+  - path: selery-%seleryversion%.exe
     name: portable
 
 install:
@@ -65,9 +65,10 @@ install:
             }
         }
   - ps: SetUpDCompiler
+  - powershell -Command Invoke-WebRequest https://github.com/electron/rcedit/releases/download/v1.0.0/rcedit-x64.exe -OutFile rcedit.exe
   - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.3.0-windows-x86.zip -OutFile dub.zip
   - 7z x dub.zip -odub > nul
-  - set PATH=%CD%\%binpath%;%CD%\dub;%PATH%
+  - set PATH=%CD%;%CD%\%binpath%;%CD%\dub;%PATH%
   - dub --version
 
 before_build:
@@ -91,16 +92,23 @@ before_build:
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
   - mkdir plugins
-#  - git clone https://github.com/sel-plugins/commands.git plugins\commands
 
 build_script:
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - cd builder
   - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
   - selery-init --version > version.txt
-  - set /p selery=<version.txt
+  - selery-init --full-version > fullversion.txt
+  - set /p seleryversion=<version.txt
+  - set /p seleryfullversion=<fullversion.txt
   - selery-init portable
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - rcedit selery-%seleryversion%.exe --set-version-string ProductName Selery
+  - rcedit selery-%seleryversion%.exe --set-version-string FileDescription "Selery %seleryversion%"
+  - rcedit selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%
+  - rcedit selery-%seleryversion%.exe --set-file-version %seleryfullversion%
+  - rcedit selery-%seleryversion%.exe --set-product-version %seleryversion%
+  - rcedit selery-%seleryversion%.exe --set-icon assets/icon.ico
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node
@@ -110,6 +118,6 @@ build_script:
   - cd ..
 
 test_script:
-#  - selery-hub --about
-#  - selery-node --about
-#  - selery-default --about
+  - selery-hub --about
+  - selery-node --about
+  - selery-default --about

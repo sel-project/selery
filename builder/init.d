@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 27;
+enum size_t __GENERATOR__ = 29;
 
 void main(string[] args) {
 
@@ -54,7 +54,11 @@ void main(string[] args) {
 	foreach(arg ; args) {
 		if(arg == "--version") {
 			import std.stdio : write;
-			return write(software["fullVersion"].str);
+			return write(software["displayVersion"].str);
+		}
+		if(arg == "--full-version") {
+			import std.stdio : write;
+			return write(software["displayVersion"].str ~ "." ~ to!string(software["version"]["build"].integer));
 		}
 	}
 
@@ -310,7 +314,7 @@ void main(string[] args) {
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
 	builder["targetPath"] = "..";
-	builder["targetName"] = "selery-" ~ type ~ (type == "portable" ? "-" ~ software["fullVersion"].str : "");
+	builder["targetName"] = "selery-" ~ (type == "portable" ? software["displayVersion"].str : type);
 	builder["targetType"] = "executable";
 	builder["sourceFiles"] = ["main/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
