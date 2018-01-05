@@ -22,9 +22,9 @@ import std.traits : hasUDA, getUDAs;
 import std.typetuple : TypeTuple;
 
 import selery.about : Software;
-import selery.config : Config, Gamemode, Difficulty, Dimension;
 import selery.command.command : Command;
 import selery.command.util : CommandSender, WorldCommandSender, PocketType, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
+import selery.config : Config, Gamemode, Difficulty, Dimension;
 import selery.format : Text;
 import selery.lang : Translation, Message;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;

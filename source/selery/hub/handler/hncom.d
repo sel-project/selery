@@ -45,9 +45,9 @@ import sel.server.query : Query;
 import sel.server.util;
 
 import selery.about;
+import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.hub.server : HubServer, List;
 import selery.lang : translate;
-import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
 

@@ -24,12 +24,12 @@ import std.string : indexOf, lastIndexOf, replace;
 
 import selery.config : Config;
 import selery.crash : logCrash;
+import selery.hub.handler.hncom : LiteNode;
 import selery.hub.plugin : HubPlugin, HubPluginOf = PluginOf;
 import selery.hub.server : HubServer;
 import selery.node.handler : TidAddress;
 import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
-import selery.hub.handler.hncom : LiteNode;
 import selery.util.util : UnloggedException;
 
 import pluginloader;

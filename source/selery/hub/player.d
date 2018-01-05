@@ -27,8 +27,8 @@ import std.uuid : UUID;
 import sel.server.client : Client;
 
 import selery.about;
-import selery.hub.server : HubServer;
 import selery.hub.handler.hncom : AbstractNode;
+import selery.hub.server : HubServer;
 
 import HncomPlayer = sel.hncom.player;
 
