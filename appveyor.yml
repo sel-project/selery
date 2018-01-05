@@ -103,12 +103,12 @@ build_script:
   - set /p seleryfullversion=<fullversion.txt
   - selery-init portable
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - rcedit selery-%seleryversion%.exe --set-version-string ProductName Selery
-  - rcedit selery-%seleryversion%.exe --set-version-string FileDescription "Selery %seleryversion%"
-  - rcedit selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%
-  - rcedit selery-%seleryversion%.exe --set-file-version %seleryfullversion%
-  - rcedit selery-%seleryversion%.exe --set-product-version %seleryversion%
-  - rcedit selery-%seleryversion%.exe --set-icon assets/icon.ico
+  - rcedit ..\selery-%seleryversion%.exe --set-version-string ProductName Selery
+  - rcedit ..\selery-%seleryversion%.exe --set-version-string FileDescription "Selery %seleryversion%"
+  - rcedit ..\selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%
+  - rcedit ..\selery-%seleryversion%.exe --set-file-version %seleryfullversion%
+  - rcedit ..\selery-%seleryversion%.exe --set-product-version %seleryversion%
+  - rcedit ..\selery-%seleryversion%.exe --set-icon ..\assets\icon.ico
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node
