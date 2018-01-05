@@ -50,7 +50,7 @@ import selery.config : Config;
 import selery.format : Text;
 import selery.lang : Translation;
 import selery.log : log, warning_log, raw_log;
-import selery.network.handler : Handler;
+import selery.hub.handler.handler : Handler;
 import selery.plugin : Plugin;
 import selery.server : Server;
 import selery.hub.handler.hncom : AbstractNode;
@@ -150,7 +150,7 @@ class HubServer : PlayerHandler, Server {
 		assert(config.lang !is null);
 		assert(config.hub !is null);
 
-		debug Thread.getThis().name = "HubServer";
+		debug Thread.getThis().name = "hub_server";
 
 		this.lite = lite;
 
@@ -171,7 +171,7 @@ class HubServer : PlayerHandler, Server {
 		
 		version(Windows) {
 			import std.process : executeShell;
-			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.name ~ " " ~ Software.fullVersion);
+			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.simpleDisplay);
 		}
 		
 		this.load(config);
@@ -271,17 +271,19 @@ class HubServer : PlayerHandler, Server {
 	 */
 	private shared void load(ref Config config) {
 		// MOTDs and protocols
-		if(config.hub.java) with(config.hub.java) {
-			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
-			motd = motd.replace("\\n", "\n");
-			this._info.motd = motd; //TODO differentiate from bedrock
-			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
-		}
+		this._info.motd.raw = config.hub.displayName;
 		if(config.hub.bedrock) with(config.hub.bedrock) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace(";", "");
 			motd ~= Text.reset;
+			this._info.motd.bedrock = motd;
 			validateProtocols(protocols, supportedBedrockProtocols.keys, latestBedrockProtocols);
+		}
+		if(config.hub.java) with(config.hub.java) {
+			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
+			motd = motd.replace("\\n", "\n");
+			this._info.motd.java = motd;
+			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
 		}
 		// languages
 		string[] accepted;

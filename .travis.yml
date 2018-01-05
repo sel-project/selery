@@ -1,8 +1,8 @@
 language: d
 
 d:
-  - dmd-2.077.1
-  - ldc-1.6.0
+  - dmd
+  - ldc
 
 os:
   - linux
@@ -13,17 +13,17 @@ matrix:
     - os: osx
 
 script:
-  - travis_wait 60 dub build --compiler=$DC --build=release
+  - travis_wait 30 dub build --compiler=$DC --build=release
   - cd builder
   - dub build --single --compiler=$DC --build=release init.d
   - ./selery-init hub
-  - dub build --compiler=$DC --build=release
+  - travis_wait 30 dub build --compiler=$DC --build=release
   - ./selery-init node
-  - dub build --compiler=$DC --build=release
+  - travis_wait 30 dub build --compiler=$DC --build=release
   - ./selery-init default
-  - dub build --compiler=$DC --build=release
+  - travis_wait 30 dub build --compiler=$DC --build=release
   - ./selery-init portable
-  - dub build --compiler=$DC --build=release
+  - travis_wait 30 dub build --compiler=$DC --build=release
   - cd ..
   
 after_success:

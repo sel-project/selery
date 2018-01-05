@@ -12,14 +12,11 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.network.handler;
+module selery.hub.handler.handler;
 
-import core.thread : Thread;
-
-import std.conv : to, ConvException;
 import std.json : JSONValue;
-import std.socket;
-import std.string; //TODO selective imports
+import std.socket : SocketException;
+import std.string : toLower, indexOf, strip, split, join;
 
 import sel.server.bedrock : BedrockServerImpl;
 import sel.server.query : Query;
@@ -28,12 +25,11 @@ import sel.server.util : ServerInfo, GenericServer;
 
 import selery.about;
 import selery.config : Config;
-import selery.constants;
 import selery.format : Text;
 import selery.hub.server : HubServer;
 import selery.log : log, error_log;
-import selery.network.session;
 import selery.hub.handler.hncom : HncomHandler, LiteNode;
+import selery.hub.handler.webadmin : WebAdminHandler;
 import selery.hub.handler.webview : WebViewHandler;
 import selery.hub.handler.rcon : RconHandler;
 import selery.util.thread : SafeThread;
@@ -108,6 +104,10 @@ class Handler {
 				auto s = new shared WebViewHandler(server, &this.socialJson);
 				startGenericServer(s, "web_view", webViewAddresses);
 				this.reloadables ~= s;
+			}
+
+			if(webAdmin) {
+				auto s = new shared WebAdminHandler(server);
 			}
 
 		}

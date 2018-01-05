@@ -55,6 +55,7 @@ class PlayerSession {
 
 	private shared HubServer server;
 	private shared Client client;
+	private immutable ubyte _type;
 	
 	private shared AbstractNode n_node;
 	private shared uint last_node;
@@ -84,11 +85,12 @@ class PlayerSession {
 	protected shared string n_language;
 	protected shared Skin n_skin = null;
 	
-	public shared this(shared HubServer server, shared Client client) {
+	public shared this(shared HubServer server, shared Client client, ubyte type) {
 		this.server = server;
 		this.client = client;
 		this.n_language = server.config.hub.language;
 		this.client = client;
+		this._type = type;
 	}
 
 	public final shared nothrow @property @safe @nogc uint id() {
@@ -97,17 +99,21 @@ class PlayerSession {
 	
 	/**
 	 * Gets the game type as an unsigned byte identifier.
-	 * The types are indicated in module common.sel and will
-	 * likely never change.
+	 * The types are indicated in module sel.hncom.about in the
+	 * sel-hncom library.
 	 * Example:
 	 * ---
-	 * if(session.type == PE) {
-	 *    log(session, " is on Pocket Edition");
+	 * import sel.hncom.about;
+	 * 
+	 * if(player.type == __JAVA__) {
+	 *    log(player.username, " is on Java Edition");
 	 * }
 	 * ---
 	 */
-	public abstract shared nothrow @property @safe @nogc ubyte type();
-	
+	public final shared nothrow @property @safe @nogc ubyte type() {
+		return this._type;
+	}
+
 	/**
 	 * Gets the protocol number used by the client.
 	 * It may be 0 if the packet with the protocol number didn't
@@ -412,7 +418,9 @@ class PlayerSession {
 	 * Sends an encoded packet to client that has been created
 	 * and encoded by the node.
 	 */
-	public abstract shared void sendFromNode(ubyte[] payload);
+	public abstract shared void sendFromNode(ubyte[] payload) {
+		this.client.directSend(payload);
+	}
 	
 	/**
 	 * Function called when the player tries to connect to

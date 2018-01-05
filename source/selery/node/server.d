@@ -57,7 +57,7 @@ import selery.event.world.world : WorldEvent;
 import selery.format : Text, writeln;
 import selery.lang : Lang, Translation, Message, Messageable;
 import selery.log;
-import selery.network.hncom;
+import selery.node.handler;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.java : JavaPlayer;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
@@ -162,7 +162,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		assert(config.node !is null);
 
-		debug Thread.getThis().name = "NodeServer";
+		debug Thread.getThis().name = "node_server";
 
 		this.lite = cast(TidAddress)hub !is null;
 
@@ -293,7 +293,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		config.files.writeTemp("lang", config.hub.language);
 
 		version(Windows) {
-			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.name ~ " " ~ Software.fullVersion);
+			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.simpleDisplay);
 		}
 
 		// reload languages

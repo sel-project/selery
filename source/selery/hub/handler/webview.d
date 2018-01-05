@@ -34,7 +34,7 @@ import sel.server.util;
 
 import selery.about;
 import selery.hub.server : HubServer;
-import selery.network.handler : Reloadable;
+import selery.hub.handler.handler : Reloadable;
 import selery.util.thread : SafeThread;
 import selery.util.util : seconds;
 

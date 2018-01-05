@@ -26,7 +26,7 @@ import selery.config : Config;
 import selery.crash : logCrash;
 import selery.hub.plugin : HubPlugin, HubPluginOf = PluginOf;
 import selery.hub.server : HubServer;
-import selery.network.hncom : TidAddress;
+import selery.node.handler : TidAddress;
 import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
 import selery.hub.handler.hncom : LiteNode;

@@ -9,7 +9,7 @@ configuration:
 environment:
   matrix:
     - DC: dmd
-      DVersion: 2.077.1
+      DVersion: 2.078.0
     - DC: ldc
       DVersion: 1.6.0
 

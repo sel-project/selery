@@ -22,10 +22,10 @@
  */
 module selery.hub.handler.hncom;
 
+import core.atomic : atomicOp;
 import core.thread : Thread;
 
 import std.algorithm : canFind;
-import std.bitmanip : nativeToLittleEndian;
 import std.concurrency : spawn;
 import std.conv : to;
 import std.datetime : dur;
@@ -39,14 +39,14 @@ import std.zlib;
 
 import sel.hncom.about;
 import sel.hncom.handler : Handler = HncomHandler;
+import sel.net.modifiers : LengthPrefixedStream;
+import sel.net.stream : TcpStream;
 import sel.server.query : Query;
 import sel.server.util;
 
 import selery.about;
-import selery.constants;
 import selery.hub.server : HubServer, List;
 import selery.lang : translate;
-import selery.network.session : Session;
 import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
@@ -55,6 +55,8 @@ import Util = sel.hncom.util;
 import Login = sel.hncom.login;
 import Status = sel.hncom.status;
 import Player = sel.hncom.player;
+
+alias HncomStream = LengthPrefixedStream!(uint, Endian.littleEndian);
 
 class HncomHandler {
 
@@ -128,17 +130,16 @@ class HncomHandler {
 /**
  * Session of a node. It's executed in a dedicated thread.
  */
-abstract class AbstractNode : Session, Handler!serverbound {
-	
-	/+public static Types.Skin hncomSkin(Skin skin) {
-		if(skin is null) {
-			return Types.Skin.init;
-		} else {
-			return Types.Skin(skin.name, skin.data);
-		}
-	}+/
+abstract class AbstractNode : Handler!serverbound {
 
+	private static shared uint _id;
+
+	public immutable uint id;
+	
+	private shared HubServer server;
 	private shared JSONValue* additionalJson;
+
+	protected HncomStream stream;
 	
 	private shared bool n_main;
 	private shared string n_name;
@@ -158,40 +159,41 @@ abstract class AbstractNode : Session, Handler!serverbound {
 	private shared float n_cpu;
 	
 	public shared this(shared HubServer server, shared JSONValue* additionalJson) {
-		super(server);
+		this.id = atomicOp!"+="(_id, 1);
+		this.server = server;
 		this.additionalJson = additionalJson;
 	}
 
-	protected shared void exchageInfo(Receiver!(uint, Endian.littleEndian) receiver) {
+	protected shared void exchageInfo(HncomStream stream) {
 		with(cast()server.config.hub) {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
+			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
 		}
-		auto info = this.receiveNodeInfo(receiver);
+		auto info = this.receiveNodeInfo(stream);
 		this.n_max = info.max;
 		this.accepted = cast(shared uint[][ubyte])info.acceptedGames;
 		this.plugins = cast(shared)info.plugins;
-		foreach(node ; server.nodesList) this.send(node.addPacket.encode());
+		foreach(node ; server.nodesList) stream.send(node.addPacket.encode());
 		server.add(this);
-		this.loop(receiver);
+		this.loop(stream);
 		server.remove(this);
 		this.onClosed();
 	}
 
-	protected abstract shared void sendHubInfo(Login.HubInfo packet);
+	protected abstract shared void sendHubInfo(HncomStream stream, Login.HubInfo packet);
 
-	protected abstract shared Login.NodeInfo receiveNodeInfo(Receiver!(uint, Endian.littleEndian) receiver);
+	protected abstract shared Login.NodeInfo receiveNodeInfo(HncomStream stream);
 
-	protected abstract shared void loop(Receiver!(uint, Endian.littleEndian) receiver);
+	protected abstract shared void loop(HncomStream stream);
 
-	public override abstract shared ptrdiff_t send(const(void)[] buffer);
+	protected abstract void send(ubyte[] buffer);
 
-	protected final ptrdiff_t send(const(void)[] buffer) {
-		return (cast(shared)this).send(buffer);
+	protected shared void send(ubyte[] buffer) {
+		return (cast()this).send(buffer);
 	}
-	
+
 	/**
 	 * Gets the name of the node. The name is different for every node
 	 * connected to hub and it should be used other nodes with
@@ -587,96 +589,59 @@ class ClassicNode : AbstractNode {
 
 	public shared this(shared HubServer server, Socket socket, shared JSONValue* additionalJson) {
 		super(server, additionalJson);
-		if(Thread.getThis().name == "") Thread.getThis().name = "nodeSession#" ~ to!string(this.id);
 		this.socket = cast(shared)socket;
 		this.remoteAddress = socket.remoteAddress.toString();
+		debug Thread.getThis().name = "hncom_client#" ~ to!string(this.id);
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
-		auto receiver = new Receiver!(uint, Endian.littleEndian)();
-		ubyte[] buffer = new ubyte[256];
-		auto recv = socket.receive(buffer);
-		if(recv > 0) {
-			receiver.add(buffer[0..recv]);
-		}
-		if(receiver.has) {
-			ubyte[] payload = receiver.next;
-			if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
-				immutable password = server.config.hub.hncomPassword;
-				auto request = Login.ConnectionRequest.fromBuffer(payload[1..$]);
-				this.n_name = request.name.idup;
-				this.n_main = request.main;
-				Login.ConnectionResponse response;
-				if(request.protocol > __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_HUB;
-				else if(request.protocol < __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_NODE;
-				else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
-				else if(password.length && password != request.password) response.status = Login.ConnectionResponse.WRONG_PASSWORD;
-				else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
-				else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
-				else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
-				else if(["reload", "stop"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
-				this.send(response.encode());
-				if(response.status == Login.ConnectionResponse.OK) {
-					this.exchageInfo(receiver);
-				}
+		socket.blocking = true;
+		auto stream = new HncomStream(new TcpStream(socket, 4096));
+		this.stream = cast(shared)stream;
+		auto payload = stream.receive();
+		if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
+			immutable password = server.config.hub.hncomPassword;
+			auto request = Login.ConnectionRequest.fromBuffer(payload[1..$]);
+			this.n_name = request.name.idup;
+			this.n_main = request.main;
+			Login.ConnectionResponse response;
+			if(request.protocol > __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_HUB;
+			else if(request.protocol < __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_NODE;
+			else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
+			else if(password.length && password != request.password) response.status = Login.ConnectionResponse.WRONG_PASSWORD;
+			else if(!this.n_name.length || this.n_name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
+			else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
+			else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
+			else if(["reload", "stop"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+			stream.send(response.encode());
+			if(response.status == Login.ConnectionResponse.OK) {
+				this.exchageInfo(stream);
 			}
 		}
 		socket.close();
 	}
 
-	protected override shared void sendHubInfo(Login.HubInfo packet) {
-		this.send(packet.encode());
+	protected override shared void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
+		stream.send(packet.encode());
 	}
 
-	protected override shared Login.NodeInfo receiveNodeInfo(Receiver!(uint, Endian.littleEndian) receiver) {
-		Socket socket = cast()this.socket;
-		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generate worlds
-		ubyte[] buffer = new ubyte[512];
-		while(true) {
-			if(receiver.has) {
-				ubyte[] payload = receiver.next;
-				if(payload.length && payload[0] == Login.NodeInfo.ID) {
-					return Login.NodeInfo.fromBuffer(payload[1..$]);
-				}
-			} else {
-				auto recv = socket.receive(buffer);
-				if(recv > 0) {
-					receiver.add(buffer[0..recv]);
-				} else {
-					return Login.NodeInfo.init;
-				}
-			}
-		}
+	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {
+		stream.stream.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generate worlds
+		auto payload = stream.receive();
+		if(payload.length && payload[0] == Login.NodeInfo.ID) return Login.NodeInfo.fromBuffer(payload[1..$]);
+		else return Login.NodeInfo.init;
 	}
 
-	protected override shared void loop(Receiver!(uint, Endian.littleEndian) receiver) {
+	protected override shared void loop(HncomStream stream) {
 		auto _this = cast()this;
-		Socket socket = cast()this.socket;
-		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // blocking without timeout
-		ubyte[] buffer = new ubyte[NODE_BUFFER_SIZE];
+		stream.stream.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // blocking without timeout
 		while(true) {
-			auto recv = socket.receive(buffer);
-			if(recv <= 0) break; // closed
-			// stack up
-			receiver.add(buffer[0..recv]);
-			while(receiver.has) {
-				if(receiver.length == 0) {
-					// connection is interrupted when the data length is 0!
-					return;
-				}
-				_this.handleHncom(receiver.next);
-			}
+			auto payload = stream.receive();
+			if(payload.length) _this.handleHncom(payload);
+			else break; // connection closed or error
 		}
 	}
 
-	public override shared ptrdiff_t send(const(void)[] buffer) {
-		buffer = nativeToLittleEndian(buffer.length.to!uint) ~ buffer;
-		immutable length = buffer.length;
-		Socket socket = cast()this.socket;
-		while(true) {
-			immutable sent = socket.send(buffer);
-			if(sent <= 0 || sent == buffer.length) break;
-			buffer = buffer[sent..$];
-		}
-		return length;
+	protected override void send(ubyte[] payload) {
+		this.stream.send(payload);
 	}
 	
 	public override shared inout string toString() {
@@ -703,15 +668,15 @@ class LiteNode : AbstractNode {
 		this.exchageInfo(null);
 	}
 
-	protected override shared void sendHubInfo(Login.HubInfo packet) {
+	protected override shared void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
 		std.concurrency.send(cast()this.node, cast(shared)packet);
 	}
 
-	protected override shared Login.NodeInfo receiveNodeInfo(Receiver!(uint, Endian.littleEndian) receiver) {
+	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {
 		return cast()std.concurrency.receiveOnly!(shared Login.NodeInfo)();
 	}
 
-	protected override shared void loop(Receiver!(uint, Endian.littleEndian) receiver) {
+	protected override shared void loop(HncomStream stream) {
 		auto _this = cast()this;
 		while(true) {
 			ubyte[] payload = std.concurrency.receiveOnly!(immutable(ubyte)[])().dup;
@@ -722,10 +687,13 @@ class LiteNode : AbstractNode {
 			}
 		}
 	}
-
-	public override shared ptrdiff_t send(const(void)[] buffer) {
+	
+	protected override void send(ubyte[] buffer) {
+		std.concurrency.send(this.node, buffer.idup);
+	}
+	
+	protected override shared void send(ubyte[] buffer) {
 		std.concurrency.send(cast()this.node, buffer.idup);
-		return buffer.length;
 	}
 	
 	public override shared inout string toString() {

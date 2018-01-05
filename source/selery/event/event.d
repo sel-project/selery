@@ -15,19 +15,24 @@
 module selery.event.event;
 
 import std.algorithm : sort, canFind;
-import std.base64 : Base64Impl, Base64;
 import std.conv : to;
+import std.string : indexOf;
 import std.typetuple : TypeTuple;
 import std.traits : isAbstractClass, BaseClassesTuple, InterfacesTuple, Parameters;
 
 import selery.util.tuple : Tuple;
 
-alias size_t class_t;
+alias class_t = size_t;
 
-private @safe class_t hash(T)() if(is(T == class) || is(T == interface)) {
+private enum dictionary = " abcdefghijklmonpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.".dup;
+
+private enum hash(T) = hashImpl(T.mangleof);
+
+//TODO find out whether this is slow during CT
+private class_t hashImpl(string mangle) {
 	size_t result = 1;
-	foreach(ubyte data ; Base64Impl!('.', '_', Base64.NoPadding).decode(T.mangleof)) {
-		result ^= (result >> 8) ^ ~(size_t.max / data);
+	foreach(c ; mangle) {
+		result ^= (result >> 8) ^ ~(size_t.max / dictionary.indexOf(c)); 
 	}
 	return result;
 }

@@ -12,17 +12,21 @@
  * See the GNU Lesser General Public License for more details.
  * 
  */
-module selery.network.hncom;
+module selery.node.handler;
 
 debug import core.thread : Thread;
 
-import std.bitmanip : read, nativeToLittleEndian;
 static import std.concurrency;
 import std.conv : to;
 import std.datetime : dur, msecs;
 import std.socket;
 import std.system : Endian;
 import std.variant : Variant;
+
+import sel.net.modifiers : LengthPrefixedStream;
+import sel.net.stream : TcpStream;
+
+alias HncomStream = LengthPrefixedStream!(uint, Endian.littleEndian);
 
 abstract class Handler {
 	
@@ -47,7 +51,7 @@ abstract class Handler {
 	 * when a new packet arrives.
 	 */
 	public shared void receiveLoop(std.concurrency.Tid server) {
-		debug Thread.getThis().name = "Network";
+		debug Thread.getThis().name = "hncom_client";
 		while(true) {
 			std.concurrency.send(server, this.receive.idup);
 		}
@@ -67,71 +71,32 @@ abstract class Handler {
 
 class SocketHandler : Handler {
 
-	private Socket socket;
+	private HncomStream stream;
 	
 	private ubyte[] n_next;
 	private size_t n_next_length = 0;
 	
 	public shared this(Address address) {
 		super();
-		version(Posix) {
-			Socket socket = new Socket(address.addressFamily, SocketType.STREAM, cast(UnixAddress)address ? cast(ProtocolType)0 : ProtocolType.TCP);
-		} else {
-			Socket socket = new TcpSocket(address.addressFamily);
-		}
+		Socket socket = new TcpSocket(address.addressFamily);
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
 		//socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"seconds"(5));
-		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(2));
+		//socket.setOption(SocketOptionLevel.SOCKET, SocketOption.SNDTIMEO, dur!"seconds"(2));
 		socket.blocking = true;
 		socket.connect(address);
-		this.socket = cast(shared)socket;
+		this.stream = cast(shared)new HncomStream(new TcpStream(socket, 8192));
 	}
 
 	public override shared ubyte[] receive() {
-		return this.next();
-	}
-
-	private shared ubyte[] next() {
-		ubyte[] buffer = cast(ubyte[])this.n_next;
-		if(this.n_next_length == 0) {
-			if(!this.addNext(4, buffer)) return new ubyte[0]; // closed
-			this.n_next_length = read!(uint, Endian.littleEndian)(buffer);
-		}
-		if(this.n_next_length == 0 || !this.addNext(this.n_next_length, buffer)) return new ubyte[0]; // closed
-		ubyte[] ret = buffer[0..this.n_next_length];
-		this.n_next = cast(shared)buffer[this.n_next_length..$];
-		this.n_next_length = 0;
-		return ret;
-	}
-	
-	private shared bool addNext(size_t amount, ref ubyte[] next) {
-		ubyte[] buffer = new ubyte[4096];
-		while(next.length < amount) {
-			ptrdiff_t recv = (cast()this.socket).receive(buffer);
-			if(recv > 0) {
-				next ~= buffer[0..recv];
-			} else {
-				return false;
-			}
-		}
-		return true;
+		return (cast()this.stream).receive();
 	}
 
 	public shared synchronized override ptrdiff_t send(ubyte[] buffer) {
-		return this.sendBuffer(nativeToLittleEndian(buffer.length.to!uint) ~ buffer);
-	}
-
-	private shared size_t sendBuffer(ubyte[] buffer) {
-		size_t length = 0;
-		ptrdiff_t sent;
-		do {
-			if((sent = (cast()this.socket).send(buffer[length..$])) <= 0) break; // connection closed or another error
-		} while((length += sent) < buffer.length);
-		return length;
+		return (cast()this.stream).send(buffer);
 	}
 
 	public shared override void close() {
-		(cast()this.socket).close();
+		(cast()this.stream.stream.socket).close();
 	}
 
 }

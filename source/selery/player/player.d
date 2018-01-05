@@ -48,7 +48,7 @@ import selery.item.slot : Slot;
 import selery.lang : Translation;
 import selery.log;
 import selery.math.vector;
-import selery.network.hncom : Handler;
+import selery.node.handler : Handler;
 import selery.node.server : NodeServer;
 import selery.node.info : PlayerInfo;
 import selery.util.node : Node;

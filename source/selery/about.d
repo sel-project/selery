@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 0;
 
 	/// ditto
-	enum uint build = 2;
+	enum uint build = 5;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -123,12 +123,14 @@ const struct Software {
 	 * and the version in the format name/version (for example `Selery/0.0.1`).
 	 */
 	enum string display = name ~ "/" ~ displayVersion;
+
+	enum string simpleDisplay = name ~ " " ~ to!string(major) ~ "." ~ to!string(minor) ~ (patch != 0 ? "." ~ to!string(patch) : "");
 	
 	/**
 	 * Version of the api used by the software. It's used to check the
 	 * compatibility with plugins.
 	 */
-	enum ubyte api = 5;
+	enum ubyte api = 1;
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;

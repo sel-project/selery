@@ -68,7 +68,10 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	
 			if(exists(filename)) {
 				
-				auto document = parseTOML(cast(string)read(filename));
+				TOMLDocument document;
+
+				try document = parseTOML(cast(string)read(filename));
+				catch(TOMLException) {}
 				
 				T get(T)(TOMLValue target) {
 					static if(is(T == string)) {
@@ -94,7 +97,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					} else static if(is(T == UUID)) {
 						return parseUUID(get!string(target));
 					} else static if(is(T == JSONValue)) {
-						return toJSON(target);
+						return toJSON(target); //TODO handle conversion errors
 					} else static if(is(T == Config.Hub.Address)) {
 						Config.Hub.Address address;
 						auto s = target.str.split(":");
@@ -103,6 +106,8 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 								address.port = to!ushort(s[$-1]);
 							} catch(ConvException) {}
 							address.ip = s[0..$-1].join(":");
+							if(address.ip.startsWith("[")) address.ip = address.ip[1..$];
+							if(address.ip.endsWith("]")) address.ip = address.ip[0..$-1];
 						}
 						return address;
 					} else {
@@ -110,83 +115,96 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					}
 				}
 				
-				void set(string jv, T)(ref T value) {
+				TOMLValue getValue(TOMLValue[string] table, const(string)[] keys) {
+					auto value = keys[0] in table;
+					if(value) {
+						if(keys.length == 1) return *value;
+						else return getValue((*value).table, keys[1..$]); // throws exception if not a table
+					} else {
+						throw new TOMLException("");
+					}
+				}
+				
+				void set(T)(ref T value, const(string)[] keys...) {
 					try {
-						mixin("value = get!T(document" ~ replace(to!string(jv.split(".")), ",", "][") ~ ");");
-					} catch(Throwable) {}
+						value = get!T(getValue(document.table, keys));
+					} catch(TOMLException) {}
 				}
 
-				set!"uuid"(this.uuid);
+				set(this.uuid, "uuid");
 				
 				if(isHub) with(this.hub = new Config.Hub()) {
 				
-					set!"display-name"(displayName);
-					set!"edu"(edu);
-					set!"realm"(realm);
-					set!"bedrock.enabled"(bedrock.enabled);
-					set!"bedrock.motd"(bedrock.motd);
+					set(displayName, "display-name");
+					set(edu, "edu");
+					set(realm, "realm");
+					set(bedrock.enabled, "bedrock", "enabled");
+					set(bedrock.motd, "bedrock", "motd");
 					//set!"bedrock.online-mode"(bedrock.onlineMode);
-					set!"bedrock.addresses"(bedrock.addresses);
-					set!"bedrock.accepted-protocols"(bedrock.protocols);
-					set!"bedrock.allow-vanilla-players"(allowVanillaPlayers);
-					set!"java.enabled"(java.enabled);
-					set!"java.motd"(java.motd);
+					set(bedrock.addresses, "bedrock", "addresses");
+					set(bedrock.protocols, "bedrock", "protocols");
+					set(allowVanillaPlayers, "bedrock", "allow-vanilla-players");
+					set(java.enabled, "java", "enabled");
+					set(java.motd, "java", "motd");
 					//set!"java.online-mode"(java.onlineMode);
-					set!"java.addresses"(java.addresses);
-					set!"java.accepted-protocols"(java.protocols);
-					set!"whitelist"(whitelist);
-					set!"blacklist"(blacklist);
-					set!"query"(query);
-					set!"language"(language);
-					set!"accepted-languages"(acceptedLanguages);
-					set!"server-ip"(serverIp);
-					set!"favicon"(favicon);
-					set!"rcon.enabled"(rcon);
-					set!"rcon.password"(rconPassword);
-					set!"rcon.addresses"(rconAddresses);
-					set!"web-view.enabled"(webView);
-					set!"web-view.addresses"(webViewAddresses);
-					set!"hncom.accepted-addresses"(acceptedNodes);
-					set!"hncom.password"(hncomPassword);
-					set!"hncom.max"(maxNodes);
-					set!"hncom.port"(hncomPort);
-					set!"social"(social);
+					set(java.addresses, "java", "addresses");
+					set(java.protocols, "java", "accepted-protocols");
+					set(whitelist, "whitelist");
+					set(blacklist, "blacklist");
+					set(query, "query");
+					set(language, "language");
+					set(acceptedLanguages, "accepted-languages");
+					set(serverIp, "server-ip");
+					set(favicon, "favicon");
+					set(rcon, "rcon", "enabled");
+					set(rconPassword, "rcon", "password");
+					set(rconAddresses, "rcon", "addresses");
+					set(webView, "web-view", "enabled");
+					set(webViewAddresses, "web-view", "addresses");
+					set(webAdmin, "web-admin", "enabled");
+					set(webAdminAddresses, "web-admin", "addresses");
+					set(webAdminPassword, "web-admin", "password");
+					set(acceptedNodes, "hncom", "accepted-addresses");
+					set(hncomPassword, "hncom", "password");
+					set(maxNodes, "hncom", "node-limit");
+					set(hncomPort, "hncom", "port");
+					set(social, "social");
 					
 					// unlimited nodes
 					string unlimited;
-					set!"hncom.max"(unlimited);
+					set(unlimited, "hncom", "node-limit");
 					if(unlimited.toLower() == "unlimited") maxNodes = 0;
 					
 				}
 				
 				if(isNode) with(this.node = new Config.Node()) {
 				
-					set!"bedrock.enabled"(bedrock.enabled);
-					set!"bedrock.accepted-protocols"(bedrock.protocols);
-					set!"java.enabled"(java.enabled);
-					set!"java.accepted-protocols"(java.protocols);
-					set!"max-players"(maxPlayers);
-					set!"world.gamemode"(gamemode);
-					set!"world.difficulty"(difficulty);
-					set!"world.deplete-hunger"(depleteHunger);
-					set!"world.do-daylight-cycle"(doDaylightCycle);
-					set!"world.do-entity-drops"(doEntityDrops);
-					set!"world.do-fire-tick"(doFireTick);
-					set!"world.do-scheduled-ticks"(doScheduledTicks);
-					set!"world.do-weather-cycle"(doWeatherCycle);
-					set!"natural-regeneration"(naturalRegeneration);
-					set!"world.pvp"(pvp);
-					set!"world.random-tick-speed"(randomTickSpeed);
-					set!"view-distance"(viewDistance);
+					set(bedrock.enabled, "bedrock", "enabled");
+					set(bedrock.protocols, "bedrock", "accepted-protocols");
+					set(java.enabled, "java", "enabled");
+					set(java.protocols, "java", "accepted-protocols");
+					set(maxPlayers, "max-players");
+					set(gamemode, "world", "gamemode");
+					set(difficulty, "world", "difficulty");
+					set(depleteHunger, "world", "deplete-hunger");
+					set(doDaylightCycle, "world", "do-daylight-cycle");
+					set(doEntityDrops, "world", "do-entity-drops");
+					set(doFireTick, "world", "do-fire-tick");
+					set(doScheduledTicks, "world", "do-scheduled-ticks");
+					set(doWeatherCycle, "world", "do-weather-cycle");
+					set(naturalRegeneration, "natural-regeneration");
+					set(pvp, "world", "pvp");
+					set(randomTickSpeed, "world", "random-tick-speed");
+					set(viewDistance, "view-distance");
 					
 					// commands
 					foreach(command ; Commands) {
-						set!("commands." ~ command)(mixin(command ~ "Command"));
+						set(mixin(command ~ "Command"), "commands", command);
 					}
 					
 					// unlimited players
 					string unlimited;
-					set!"max-players"(unlimited);
+					set(unlimited, "max-players");
 					if(unlimited.toLower() == "unlimited") maxPlayers = 0;
 					
 				}
@@ -276,11 +294,17 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					file ~= "enabled = " ~ to!string(webView) ~ newline;
 					file ~= "addresses = " ~ addressString(webViewAddresses) ~ newline;
 				}
+				if(isHub) with(this.hub) {
+					file ~= newline ~ "[web-admin]" ~ newline;
+					file ~= "enabled = " ~ to!string(webAdmin) ~ newline;
+					file ~= "addresses = " ~ addressString(webAdminAddresses) ~ newline;
+					file ~= "password = \"" ~ webAdminPassword ~ "\"" ~ newline;
+				}
 				if(type == ConfigType.hub) with(this.hub) {
 					file ~= newline ~ "[hncom]" ~ newline;
 					file ~= "accepted-addresses = " ~ to!string(acceptedNodes) ~ newline;
 					file ~= "password = \"" ~ hncomPassword ~ "\"" ~ newline;
-					file ~= "max = " ~ (maxNodes == 0 ? "\"unlimited\"" : to!string(maxNodes)) ~ newline;
+					file ~= "node-limit = " ~ (maxNodes == 0 ? "\"unlimited\"" : to!string(maxNodes)) ~ newline;
 					file ~= "port = " ~ to!string(hncomPort);
 					file ~= newline;
 				}

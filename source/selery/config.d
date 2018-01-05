@@ -91,12 +91,6 @@ class Config {
 		
 		string favicon = "favicon.png";
 		
-		bool panel = false;
-		
-		string[string] panelUsers;
-		
-		Address[] panelAddresses = [Address("0.0.0.0", 19134)];
-		
 		bool rcon = false;
 		
 		string rconPassword;
@@ -106,6 +100,12 @@ class Config {
 		bool webView = false;
 		
 		Address[] webViewAddresses = [Address("0.0.0.0", 80), Address("::", 80)];
+
+		bool webAdmin = true;
+
+		Address[] webAdminAddresses = [Address("127.0.0.1:19134")];
+
+		string webAdminPassword = "";
 		
 		JSONValue social;
 		
@@ -143,7 +143,6 @@ class Config {
 				}
 			}();
 
-			this.panelUsers["admin"] = randomPassword();
 			this.rconPassword = randomPassword();
 
 			this.acceptedNodes ~= getAddress("localhost")[0].toAddrString();
