@@ -105,7 +105,7 @@ build_script:
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - rcedit ..\selery-%seleryversion%.exe --set-version-string ProductName Selery
   - rcedit ..\selery-%seleryversion%.exe --set-version-string FileDescription "Selery %seleryversion%"
-  - rcedit ..\selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%
+  - rcedit ..\selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%.exe
   - rcedit ..\selery-%seleryversion%.exe --set-file-version %seleryfullversion%
   - rcedit ..\selery-%seleryversion%.exe --set-product-version %seleryversion%
   - rcedit ..\selery-%seleryversion%.exe --set-icon ..\assets\icon.ico

@@ -135,14 +135,14 @@ class HubServer : PlayerHandler, Server {
 	private shared Handler handler;
 	private shared Blocks blocks;
 
-	private shared AbstractNode[immutable(uint)] nodes;
+	private shared AbstractNode[uint] nodes;
 	private shared AbstractNode[] main_nodes;
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
-	private shared RconClient[immutable(uint)] rcons;
+	private shared RconClient[uint] rcons;
 	
-	private shared PlayerSession[immutable(uint)] n_players;
+	private shared PlayerSession[uint] _players;
 
 	public shared this(bool lite, Config config, Plugin[] plugins=[], string[] args=[]) {
 
@@ -404,9 +404,9 @@ class HubServer : PlayerHandler, Server {
 	 */
 	public shared nothrow @property @safe @nogc const uint onlinePlayers() {
 		version(X86_64) {
-			return cast(uint)this.n_players.length;
+			return cast(uint)this._players.length;
 		} else {
-			return this.n_players.length;
+			return this._players.length;
 		}
 	}
 
@@ -445,7 +445,7 @@ class HubServer : PlayerHandler, Server {
 	 * Gets the online players.
 	 */
 	public shared @property shared(PlayerSession[]) players() {
-		return this.n_players.values;
+		return this._players.values;
 	}
 
 	/**
@@ -647,14 +647,35 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public override shared void onClientJoin(shared Client client) {
-		log(client.username, " joined");
+		log("creating client");
+		auto player = new shared PlayerSession(this, client);
+		log("created");
+		if(player.firstConnect()) this._players[player.id] = player;
+		log("connected");
 	}
 
 	public override shared void onClientLeft(shared Client client) {
-		log(client.username, " left");
+		auto player = client.id in this._players;
+		if(player) {
+			this._players.remove(client.id);
+			//TODO notify the connected node
+		}
 	}
 
-	public override shared void onClientPacket(shared Client client, ubyte[] packet) {}
+	public override shared void onClientPacket(shared Client client, ubyte[] packet) {
+		auto player = client.id in this._players;
+		if(player) {
+			(*player).sendToNode(packet);
+		}
+	}
+
+	public shared void onBedrockClientRequestChunkRadius(shared Client client, uint viewDistance) {
+		//TODO select player and update if changed (the node will send the confirmation back)
+	}
+
+	public shared void onJavaClientClientSettings(shared Client client, string language, ubyte viewDistance, uint chatMode, bool chatColors, ubyte skinParts, uint mainHand) {
+		//TODO select player and update if changed
+	}
 
 	public synchronized shared void add(shared RconClient rcon) {
 		log(Text.green, "+ ", Text.white, rcon.toString());
@@ -667,15 +688,15 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void add(shared PlayerSession player) {
-		this.n_players[player.id] = player;
+		this._players[player.id] = player;
 	}
 
 	public synchronized shared void remove(shared PlayerSession player) {
-		this.n_players.remove(player.id);
+		this._players.remove(player.id);
 	}
 
 	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {
-		auto ptr = id in this.n_players;
+		auto ptr = id in this._players;
 		return ptr ? *ptr : null;
 	}
 

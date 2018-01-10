@@ -24,7 +24,7 @@ import std.socket : Address;
 import std.string : toLower;
 import std.uuid : UUID;
 
-import sel.server.client : Client;
+import sel.server.client : InputMode, Client;
 
 import selery.about;
 import selery.hub.handler.hncom : AbstractNode;
@@ -55,42 +55,32 @@ class PlayerSession {
 
 	private shared HubServer server;
 	private shared Client client;
-	private immutable ubyte _type;
 	
-	private shared AbstractNode n_node;
-	private shared uint last_node;
+	private shared AbstractNode _node; // shouldn't be null
+	private shared uint last_node = -1;
 	
 	private shared uint expected;
 	private shared ubyte[][size_t] unordered_payloads;
 	
-	protected shared uint n_protocol;
-
-	protected shared string n_game_name;
-	protected shared string n_version;
-	
-	protected shared UUID n_uuid;
-	
-	protected shared string n_username;
-	protected shared string m_display_name;
+	protected immutable string lower_username;
+	protected shared string _display_name;
 
 	protected shared ubyte _permission_level;
+	protected shared ubyte _permissions;
 
-	protected shared World m_world;
-	protected shared ubyte n_dimension;
-	protected shared uint m_view_distance;
+	protected shared World _world;
+	protected shared ubyte _dimension;
+	protected shared ubyte _view_distance;
+
+	protected shared string _language;
+	protected shared Skin _skin = null;
 	
-	protected shared Address n_address;
-	protected shared string n_server_address;
-	protected shared ushort n_server_port;
-	protected shared string n_language;
-	protected shared Skin n_skin = null;
-	
-	public shared this(shared HubServer server, shared Client client, ubyte type) {
+	public shared this(shared HubServer server, shared Client client) {
 		this.server = server;
 		this.client = client;
-		this.n_language = server.config.hub.language;
-		this.client = client;
-		this._type = type;
+		this.lower_username = this._display_name = username;
+		this._language = client.language.length ? client.language : server.config.hub.language;
+		if(client.skinName.length) this._skin = cast(shared)new Skin(client.skinName, client.skinData, client.skinGeometryName, client.skinGeometryData, client.skinCape);
 	}
 
 	public final shared nothrow @property @safe @nogc uint id() {
@@ -99,19 +89,19 @@ class PlayerSession {
 	
 	/**
 	 * Gets the game type as an unsigned byte identifier.
-	 * The types are indicated in module sel.hncom.about in the
-	 * sel-hncom library.
+	 * The types are indicated in module sel.server.client, in the
+	 * Client's class.
 	 * Example:
 	 * ---
 	 * import sel.hncom.about;
 	 * 
-	 * if(player.type == __JAVA__) {
+	 * if(player.type == Client.JAVA) {
 	 *    log(player.username, " is on Java Edition");
 	 * }
 	 * ---
 	 */
 	public final shared nothrow @property @safe @nogc ubyte type() {
-		return this._type;
+		return this.client.type;
 	}
 
 	/**
@@ -120,18 +110,18 @@ class PlayerSession {
 	 * come yet.
 	 */
 	public final shared nothrow @property @safe @nogc uint protocol() {
-		return this.n_protocol;
+		return this.client.protocol;
 	}
 
 	/**
 	 * Gets the client's game name.
 	 * Examples:
 	 * "Minecraft"
-	 * "Minecraft: Pocket Edition"
-	 * "Minecraft: Gear VR Edition"
+	 * "Minecraft: Java Edition"
+	 * "Minecraft: Education Edition"
 	 */
 	public final shared nothrow @property @safe @nogc string gameName() {
-		return this.n_game_name;
+		return this.client.gameName;
 	}
 
 	/**
@@ -139,12 +129,12 @@ class PlayerSession {
 	 * from the protocol number or given by the client.
 	 * Example:
 	 * ---
-	 * if(player.type == PC)
+	 * if(player.type == Client.JAVA)
 	 *    assert(supportedMinecraftProtocols[player.protocol].canFind(player.gameVersion));
 	 * ---
 	 */
 	public final shared nothrow @property @safe @nogc string gameVersion() {
-		return this.n_version;
+		return this.client.gameVersion;
 	}
 	
 	/**
@@ -155,7 +145,7 @@ class PlayerSession {
 	 * "Minecraft: Education Edition 1.1.5"
 	 */
 	public final shared nothrow @property @safe string game() {
-		return this.gameName ~ " " ~ this.gameVersion;
+		return this.client.game;
 	}
 	
 	/**
@@ -165,7 +155,7 @@ class PlayerSession {
 	 * and its uses are very limited.
 	 */
 	public final shared nothrow @property @safe @nogc UUID uuid() {
-		return cast()this.n_uuid;
+		return this.client.uuid;
 	}
 	
 	/**
@@ -188,7 +178,7 @@ class PlayerSession {
 	 * It doesn't change during the life of the session.
 	 */
 	public final shared nothrow @property @safe @nogc string username() {
-		return this.n_username;
+		return this.client.username;
 	}
 	
 	/**
@@ -199,7 +189,7 @@ class PlayerSession {
 	 * ---
 	 */
 	public final shared @property @safe string iusername() {
-		return this.n_username.toLower;
+		return this.lower_username;
 	}
 	
 	/**
@@ -209,45 +199,62 @@ class PlayerSession {
 	 * It's usually displayed in the nametag and in the players list.
 	 */
 	public final shared nothrow @property @safe @nogc string displayName() {
-		return this.m_display_name;
+		return this._display_name;
 	}
 
-	public final shared nothrow @property @safe @nogc string displayName(string displayName) {
-		return this.m_display_name = displayName;
+	/// ditto
+	public final shared @property string displayName(string displayName) {
+		this._node.sendDisplayNameUpdate(this, displayName);
+		return this._display_name = displayName;
 	}
 
 	public final shared nothrow @property @safe @nogc ubyte permissionLevel() {
 		return this._permission_level;
 	}
 
-	public final shared nothrow @property @safe @nogc ubyte permissionLevel(ubyte permissionLevel) {
+	public final shared @property ubyte permissionLevel(ubyte permissionLevel) {
+		this._node.sendPermissionLevelUpdate(this, permissionLevel);
 		return this._permission_level = permissionLevel;
 	}
+
+	public final shared nothrow @property @safe @nogc ubyte permissions() {
+		return this._permissions;
+	}
+
+	//TODO set permissions
 
 	/**
 	 * Gets the player's world, which is updated by the node every
 	 * time the client changes dimension.
 	 */
 	public final shared nothrow @property @safe @nogc shared(World) world() {
-		return this.m_world;
+		return this._world;
 	}
 	
 	public final shared nothrow @property @safe @nogc shared(World) world(shared World world) {
-		this.n_dimension = world.dimension;
-		return this.m_world = world;
+		this._dimension = world.dimension;
+		return this._world = world;
 	}
 
 	/// ditto
 	public final shared nothrow @property @safe @nogc byte dimension() {
-		return this.n_dimension;
+		return this._dimension;
 	}
 
-	public final shared nothrow @property @safe @nogc uint viewDistance() {
-		return this.m_view_distance;
+	public final shared nothrow @property @safe @nogc ubyte viewDistance() {
+		return this._view_distance;
 	}
 
-	public final shared nothrow @property @safe @nogc uint viewDistance(uint viewDistance) {
-		return this.m_view_distance = viewDistance;
+	public final shared @property ubyte viewDistance(ubyte viewDistance) {
+		this._node.sendViewDistanceUpdate(this, viewDistance);
+		return this._view_distance = viewDistance;
+	}
+
+	/**
+	 * Gets the player's input mode.
+	 */
+	public final shared nothrow @property @safe @nogc InputMode inputMode() {
+		return this.client.inputMode;
 	}
 
 	/**
@@ -261,22 +268,22 @@ class PlayerSession {
 	 * ---
 	 */
 	public final shared nothrow @property @trusted @nogc Address address() {
-		return cast()this.n_address;
+		return this.client.address;
 	}
 
 	/**
-	 * Address used by the client to connect to the server.
+	 * IP used by the client to connect to the server.
 	 * It's a string and can either be a numerical ip or a full url.
 	 */
-	public final shared nothrow @property @safe @nogc string serverAddress() {
-		return this.n_server_address;
+	public final shared nothrow @property @safe @nogc string serverIp() {
+		return this.client.serverIp;
 	}
 
 	/**
 	 * Port used by the client to connect to the server.
 	 */
 	public final shared nothrow @property @safe @nogc ushort serverPort() {
-		return this.n_server_port;
+		return this.client.serverPort;
 	}
 	
 	/**
@@ -284,7 +291,9 @@ class PlayerSession {
 	 * Not being calculated using an ICMP protocol the value may not be
 	 * completely accurate.
 	 */
-	public abstract shared nothrow @property @safe @nogc uint latency();
+	public shared nothrow @property @safe @nogc uint latency() {
+		return 0; //TODO
+	}
 	
 	/**
 	 * Gets the player's latency.
@@ -295,18 +304,19 @@ class PlayerSession {
 	 * will always be 0.
 	 */
 	public shared nothrow @property @safe @nogc float packetLoss() {
-		return 0f;
+		return 0f; //TODO
 	}
 	
 	/**
 	 * Gets/sets the player's language, indicated as code_COUNTRY.
 	 */
 	public final shared nothrow @property @safe @nogc string language() {
-		return this.n_language;
+		return this._language;
 	}
 
-	public final shared nothrow @property @safe @nogc string language(string language) {
-		return this.n_language = language;
+	public final shared @property string language(string language) {
+		this._node.sendLanguageUpdate(this, language);
+		return this._language = language;
 	}
 	
 	/**
@@ -314,10 +324,12 @@ class PlayerSession {
 	 * If the player has no skin the object will be null.
 	 */
 	public final shared nothrow @property @trusted @nogc Skin skin() {
-		return cast()this.n_skin;
+		return cast()this._skin;
 	}
 
-	public abstract shared JSONValue hncomAddData();
+	public shared JSONValue hncomAddData() {
+		return this.client.gameData;
+	}
 	
 	/**
 	 * Tries to connect the player to a node.
@@ -334,7 +346,7 @@ class PlayerSession {
 		}
 		foreach(node ; nodes) {
 			if(node.accepts(this.type, this.protocol)) {
-				this.n_node = node;
+				this._node = node;
 				this.last_node = node.id;
 				this.expected = 0;
 				this.unordered_payloads.clear();
@@ -344,7 +356,7 @@ class PlayerSession {
 		}
 		if(onFail == HncomPlayer.Transfer.AUTO) {
 			return this.connect(reason);
-		} else if(onFail == HncomPlayer.Transfer.RECONNECT) {
+		} else if(onFail == HncomPlayer.Transfer.RECONNECT && this.last_node != -1) {
 			return this.connect(reason, this.last_node);
 		} else {
 			this.endOfStream();
@@ -357,10 +369,8 @@ class PlayerSession {
 	 * and, if it successfully connects to a node, add the player
 	 * to the server.
 	 */
-	protected shared void firstConnect() {
-		if(this.connect(HncomPlayer.Add.FIRST_JOIN)) {
-			this.server.add(this);
-		}
+	public shared bool firstConnect() {
+		return this.connect(HncomPlayer.Add.FIRST_JOIN);
 	}
 	
 	/**
@@ -368,9 +378,7 @@ class PlayerSession {
 	 * transferred by the hub to a node.
 	 */
 	public shared void transfer(uint node) {
-		if(this.n_node !is null) {
-			this.n_node.onPlayerTransferred(this);
-		}
+		this._node.onPlayerTransferred(this);
 		this.connect(HncomPlayer.Add.TRANSFERRED, node);
 	}
 	
@@ -378,22 +386,25 @@ class PlayerSession {
 	 * Sends the latency to the connected node.
 	 */
 	protected shared void sendLatency() {
-		if(this.n_node !is null) {
-			this.n_node.sendLatencyUpdate(this);
-		}
+		this._node.sendLatencyUpdate(this);
 	}
 	
 	/**
 	 * Sends the packet loss to the connected node.
 	 */
 	protected shared void sendPacketLoss() {
-		if(this.n_node !is null) {
-			this.n_node.sendPacketLossUpdate(this);
-		}
+		this._node.sendPacketLossUpdate(this);
+	}
+
+	/**
+	 *  Forwards a game packet to the node.
+	 */
+	public shared void sendToNode(ubyte[] payload) {
+		this._node.sendTo(this, payload);
 	}
 	
 	/**
-	 * Sends a packet from the node and mantain the order.
+	 * Sends a packet from the node and mantains the order.
 	 */
 	public final shared void sendOrderedFromNode(uint order, ubyte[] payload) {
 		if(order == this.expected) {
@@ -418,7 +429,7 @@ class PlayerSession {
 	 * Sends an encoded packet to client that has been created
 	 * and encoded by the node.
 	 */
-	public abstract shared void sendFromNode(ubyte[] payload) {
+	public shared void sendFromNode(ubyte[] payload) {
 		this.client.directSend(payload);
 	}
 	
@@ -427,7 +438,9 @@ class PlayerSession {
 	 * a node that doesn't exist, either because the name is
 	 * wrong or because there aren't available ones.
 	 */
-	protected abstract shared void endOfStream();
+	protected shared void endOfStream() {
+		this.kick("disconnect.endOfStream", true, []);
+	};
 	
 	/**
 	 * Function called when the player is kicked (by the
@@ -435,15 +448,15 @@ class PlayerSession {
 	 * The function should send a disconnection message
 	 * and close the session.
 	 */
-	public abstract shared void kick(string reason, bool translation, string[] params);
+	public shared void kick(string reason, bool translation, string[] params) {
+		this.client.disconnect(reason, translation, params);
+	}
 	
 	/**
 	 * Function called when the client times out.
 	 */
 	protected shared void onTimedOut() {
-		if(this.n_node !is null) {
-			this.n_node.onPlayerTimedOut(this);
-		}
+		this._node.onPlayerTimedOut(this);
 		this.close();
 	}
 	
@@ -453,9 +466,7 @@ class PlayerSession {
 	 * game's interface.
 	 */
 	protected shared void onClosedByClient() {
-		if(this.n_node !is null) {
-			this.n_node.onPlayerLeft(this);
-		}
+		this._node.onPlayerLeft(this);
 		this.close();
 	}
 	
@@ -464,9 +475,7 @@ class PlayerSession {
 	 * the hub (not from the node).
 	 */
 	public shared void onKicked(string reason) {
-		if(this.n_node !is null) {
-			this.n_node.onPlayerKicked(this);
-		}
+		this._node.onPlayerKicked(this);
 		this.kick(reason, false, []);
 	}
 	
@@ -484,15 +493,15 @@ class PlayerSession {
 class Skin {
 	
 	public immutable string name;
-	public ubyte[] data;
+	public immutable(ubyte)[] data;
 	public string geometryName;
-	public ubyte[] geometryData;
-	public ubyte[] cape;
+	public immutable(ubyte)[] geometryData;
+	public immutable(ubyte)[] cape;
 
 	public ubyte[192] face;
 	public string faceBase64;
 	
-	public this(string name, ubyte[] data, string geometryName, ubyte[] geometryData, ubyte[] cape) {
+	public this(string name, immutable(ubyte)[] data, string geometryName, immutable(ubyte)[] geometryData, immutable(ubyte)[] cape) {
 		this.name = name;
 		this.data = data;
 		this.geometryName = geometryName;

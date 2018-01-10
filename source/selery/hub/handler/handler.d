@@ -108,6 +108,7 @@ class Handler {
 
 			if(webAdmin) {
 				auto s = new shared WebAdminHandler(server);
+				startGenericServer(s, "web_admin", webAdminAddresses);
 			}
 
 		}

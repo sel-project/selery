@@ -130,7 +130,7 @@ class WebViewHandler : GenericServer, Reloadable {
 		try { this.website = config.hub.social["website"].str; } catch(JSONException) {}
 		
 		// index
-		string index = cast(string)config.files.readAsset("index.html");
+		string index = cast(string)config.files.readAsset("webview/index.html");
 		index = index.replace("{DEFAULT_LANG}", config.hub.language[0..2]);
 		index = index.replace("{DISPLAY_NAME}", config.hub.displayName);
 		index = index.replace("{SOFTWARE}", Software.display);

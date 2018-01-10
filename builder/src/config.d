@@ -62,7 +62,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	immutable isHub = type == ConfigType.server || type == ConfigType.hub;
 	immutable isNode = type == ConfigType.server || type == ConfigType.node;
 
-	auto config = new class Config {
+	auto config = new class Config {	
 	
 		public override void reload() {
 	
@@ -164,6 +164,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set(webAdmin, "web-admin", "enabled");
 					set(webAdminAddresses, "web-admin", "addresses");
 					set(webAdminPassword, "web-admin", "password");
+					set(webAdminMaxClients, "web-admin", "max-clients");
 					set(acceptedNodes, "hncom", "accepted-addresses");
 					set(hncomPassword, "hncom", "password");
 					set(maxNodes, "hncom", "node-limit");
@@ -213,103 +214,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			
 			if(!exists(filename) || isHub && (_edu != 0 || _realm != 0)) {
 			
-				if(isHub) {
-					this.hub = new Config.Hub();
-					if(_edu != 0) this.hub.edu = _edu == 2;
-					if(_realm != 0) this.hub.realm = _realm == 2;
-				}
-				if(isNode) {
-					this.node = new Config.Node();
-				}
-			
-				string file = "# " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration file" ~ newline ~ newline;
-				
-				file ~= "uuid = \"" ~ this.uuid.toString().toUpper() ~ "\"" ~ newline;
-				if(isHub) file ~= "display-name = \"" ~ this.hub.displayName ~ "\"" ~ newline;
-				if(isNode) file ~= "max-players = " ~ (this.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(this.node.maxPlayers)) ~ newline;
-				if(isHub) file ~= "whitelist = " ~ to!string(this.hub.whitelist) ~ newline;
-				if(isHub) file ~= "blacklist = " ~ to!string(this.hub.blacklist) ~ newline;
-				if(isHub && !this.hub.realm) file ~= "query = " ~ to!string(this.hub.query) ~ newline;
-				if(isHub) file ~= "language = \"" ~ this.hub.language ~ "\"" ~ newline;
-				if(isHub) file ~= "accepted-languages = " ~ to!string(this.hub.acceptedLanguages) ~ newline;
-				if(isHub) file ~= "server-ip = \"" ~ this.hub.serverIp ~ "\"" ~ newline;
-				if(isHub && !this.hub.edu) file ~= "favicon = \"" ~ this.hub.favicon ~ "\"" ~ newline;
-				if(isHub && !this.hub.realm) file ~= "social = {}" ~ newline; //TODO
-				if(isHub) with(this.hub.bedrock) {
-					file ~= newline ~ "[bedrock]" ~ newline;
-					file ~= "enabled = " ~ to!string(enabled) ~ newline;
-					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
-					file ~= "online-mode = false" ~ newline;
-					file ~= "addresses = " ~ addressString(addresses) ~ newline;
-					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-					if(this.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(this.hub.allowVanillaPlayers);
-				}
-				if(isHub && !this.hub.edu) with(this.hub.java) {
-					file ~= newline ~ "[java]" ~ newline;
-					file ~= "enabled = " ~ to!string(enabled) ~ newline;
-					file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
-					file ~= "online-mode = false" ~ newline;
-					file ~= "addresses = " ~ addressString(addresses) ~ newline;
-					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-				}
-				if(type == ConfigType.node) with(this.node.java) {
-					file ~= newline ~ "[java]" ~ newline;
-					file ~= "enabled = " ~ to!string(enabled) ~ newline;
-					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-				}
-				if(type == ConfigType.node) with(this.node.bedrock) {
-					file ~= newline ~ "[bedrock]" ~ newline;
-					file ~= "enabled = " ~ to!string(enabled) ~ newline;
-					file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-				}
-				if(isNode) with(this.node) {
-					file ~= newline ~ "[world]" ~ newline;
-					file ~= "gamemode = " ~ to!string(gamemode) ~ newline;
-					file ~= "difficulty = " ~ to!string(difficulty) ~ newline;
-					file ~= "deplete-hunger = " ~ to!string(depleteHunger) ~ newline;
-					file ~= "do-daylight-cycle = " ~ to!string(doDaylightCycle) ~ newline;
-					file ~= "do-entity-drops = " ~ to!string(doEntityDrops) ~ newline;
-					file ~= "do-fire-tick = " ~ to!string(doFireTick) ~ newline;
-					file ~= "do-scheduled-ticks = " ~ to!string(doScheduledTicks) ~ newline;
-					file ~= "do-weather-cycle = " ~ to!string(doWeatherCycle) ~ newline;
-					file ~= "natural-regeneration = " ~ to!string(naturalRegeneration) ~ newline;
-					file ~= "pvp = " ~ to!string(pvp) ~ newline;
-					file ~= "random-tick-speed = " ~ to!string(randomTickSpeed) ~ newline;
-					file ~= "view-distance = " ~ to!string(viewDistance) ~ newline;
-				}
-				if(isNode) with(this.node) {
-					file ~= newline ~ "[commands]" ~ newline;
-					foreach(command ; Commands) {
-						file ~= command ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
-					}
-				}
-				if(isHub && !this.hub.realm) with(this.hub) {
-					file ~= newline ~ "[rcon]" ~ newline;
-					file ~= "enabled = " ~ to!string(rcon) ~ newline;
-					file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
-					file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
-				}
-				if(isHub && !this.hub.realm) with(this.hub) {
-					file ~= newline ~ "[web-view]" ~ newline;
-					file ~= "enabled = " ~ to!string(webView) ~ newline;
-					file ~= "addresses = " ~ addressString(webViewAddresses) ~ newline;
-				}
-				if(isHub) with(this.hub) {
-					file ~= newline ~ "[web-admin]" ~ newline;
-					file ~= "enabled = " ~ to!string(webAdmin) ~ newline;
-					file ~= "addresses = " ~ addressString(webAdminAddresses) ~ newline;
-					file ~= "password = \"" ~ webAdminPassword ~ "\"" ~ newline;
-				}
-				if(type == ConfigType.hub) with(this.hub) {
-					file ~= newline ~ "[hncom]" ~ newline;
-					file ~= "accepted-addresses = " ~ to!string(acceptedNodes) ~ newline;
-					file ~= "password = \"" ~ hncomPassword ~ "\"" ~ newline;
-					file ~= "node-limit = " ~ (maxNodes == 0 ? "\"unlimited\"" : to!string(maxNodes)) ~ newline;
-					file ~= "port = " ~ to!string(hncomPort);
-					file ~= newline;
-				}
-				
-				write(filename, file);
+				this.save();
 			
 			}
 			
@@ -318,6 +223,109 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			
 			this.files = new Files("assets", temp);
 			this.lang = new Lang(this.files);
+		
+		}
+		
+		public override void save() {
+		
+			if(isHub) {
+				this.hub = new Config.Hub();
+				if(_edu != 0) this.hub.edu = _edu == 2;
+				if(_realm != 0) this.hub.realm = _realm == 2;
+			}
+			if(isNode) {
+				this.node = new Config.Node();
+			}
+		
+			string file = "# " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration file" ~ newline ~ newline;
+			
+			file ~= "uuid = \"" ~ this.uuid.toString().toUpper() ~ "\"" ~ newline;
+			if(isHub) file ~= "display-name = \"" ~ this.hub.displayName ~ "\"" ~ newline;
+			if(isNode) file ~= "max-players = " ~ (this.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(this.node.maxPlayers)) ~ newline;
+			if(isHub) file ~= "whitelist = " ~ to!string(this.hub.whitelist) ~ newline;
+			if(isHub) file ~= "blacklist = " ~ to!string(this.hub.blacklist) ~ newline;
+			if(isHub && !this.hub.realm) file ~= "query = " ~ to!string(this.hub.query) ~ newline;
+			if(isHub) file ~= "language = \"" ~ this.hub.language ~ "\"" ~ newline;
+			if(isHub) file ~= "accepted-languages = " ~ to!string(this.hub.acceptedLanguages) ~ newline;
+			if(isHub) file ~= "server-ip = \"" ~ this.hub.serverIp ~ "\"" ~ newline;
+			if(isHub && !this.hub.edu) file ~= "favicon = \"" ~ this.hub.favicon ~ "\"" ~ newline;
+			if(isHub && !this.hub.realm) file ~= "social = {}" ~ newline; //TODO
+			if(isHub) with(this.hub.bedrock) {
+				file ~= newline ~ "[bedrock]" ~ newline;
+				file ~= "enabled = " ~ to!string(enabled) ~ newline;
+				file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
+				file ~= "online-mode = false" ~ newline;
+				file ~= "addresses = " ~ addressString(addresses) ~ newline;
+				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+				if(this.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(this.hub.allowVanillaPlayers);
+			}
+			if(isHub && !this.hub.edu) with(this.hub.java) {
+				file ~= newline ~ "[java]" ~ newline;
+				file ~= "enabled = " ~ to!string(enabled) ~ newline;
+				file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
+				file ~= "online-mode = false" ~ newline;
+				file ~= "addresses = " ~ addressString(addresses) ~ newline;
+				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+			}
+			if(type == ConfigType.node) with(this.node.java) {
+				file ~= newline ~ "[java]" ~ newline;
+				file ~= "enabled = " ~ to!string(enabled) ~ newline;
+				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+			}
+			if(type == ConfigType.node) with(this.node.bedrock) {
+				file ~= newline ~ "[bedrock]" ~ newline;
+				file ~= "enabled = " ~ to!string(enabled) ~ newline;
+				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+			}
+			if(isNode) with(this.node) {
+				file ~= newline ~ "[world]" ~ newline;
+				file ~= "gamemode = " ~ to!string(gamemode) ~ newline;
+				file ~= "difficulty = " ~ to!string(difficulty) ~ newline;
+				file ~= "deplete-hunger = " ~ to!string(depleteHunger) ~ newline;
+				file ~= "do-daylight-cycle = " ~ to!string(doDaylightCycle) ~ newline;
+				file ~= "do-entity-drops = " ~ to!string(doEntityDrops) ~ newline;
+				file ~= "do-fire-tick = " ~ to!string(doFireTick) ~ newline;
+				file ~= "do-scheduled-ticks = " ~ to!string(doScheduledTicks) ~ newline;
+				file ~= "do-weather-cycle = " ~ to!string(doWeatherCycle) ~ newline;
+				file ~= "natural-regeneration = " ~ to!string(naturalRegeneration) ~ newline;
+				file ~= "pvp = " ~ to!string(pvp) ~ newline;
+				file ~= "random-tick-speed = " ~ to!string(randomTickSpeed) ~ newline;
+				file ~= "view-distance = " ~ to!string(viewDistance) ~ newline;
+			}
+			if(isNode) with(this.node) {
+				file ~= newline ~ "[commands]" ~ newline;
+				foreach(command ; Commands) {
+					file ~= command ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
+				}
+			}
+			if(isHub && !this.hub.realm) with(this.hub) {
+				file ~= newline ~ "[rcon]" ~ newline;
+				file ~= "enabled = " ~ to!string(rcon) ~ newline;
+				file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
+				file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
+			}
+			if(isHub && !this.hub.realm) with(this.hub) {
+				file ~= newline ~ "[web-view]" ~ newline;
+				file ~= "enabled = " ~ to!string(webView) ~ newline;
+				file ~= "addresses = " ~ addressString(webViewAddresses) ~ newline;
+			}
+			if(isHub) with(this.hub) {
+				file ~= newline ~ "[web-admin]" ~ newline;
+				file ~= "enabled = " ~ to!string(webAdmin) ~ newline;
+				file ~= "addresses = " ~ addressString(webAdminAddresses) ~ newline;
+				file ~= "password = \"" ~ webAdminPassword ~ "\"" ~ newline;
+				file ~= "max-clients = " ~ to!string(webAdminMaxClients) ~ newline;
+			}
+			if(type == ConfigType.hub) with(this.hub) {
+				file ~= newline ~ "[hncom]" ~ newline;
+				file ~= "accepted-addresses = " ~ to!string(acceptedNodes) ~ newline;
+				file ~= "password = \"" ~ hncomPassword ~ "\"" ~ newline;
+				file ~= "node-limit = " ~ (maxNodes == 0 ? "\"unlimited\"" : to!string(maxNodes)) ~ newline;
+				file ~= "port = " ~ to!string(hncomPort);
+				file ~= newline;
+			}
+			
+			write(filename, file);
 		
 		}
 		

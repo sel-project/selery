@@ -1084,6 +1084,18 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		(cast(shared)this).removePlayer(packet.hubId, packet.reason);
 	}
 
+	protected override void handlePlayerUpdateDisplayName(HncomPlayer.UpdateDisplayName packet) {
+		//TODO
+	}
+
+	protected override void handlePlayerUpdatePermissionLevel(HncomPlayer.UpdatePermissionLevel packet) {
+		//TODO
+	}
+
+	protected override void handlePlayerUpdatePermissions(HncomPlayer.UpdatePermissions packet) {
+		//TODO
+	}
+
 	protected override void handlePlayerUpdateViewDistance(HncomPlayer.UpdateViewDistance packet) {
 		//TODO
 	}

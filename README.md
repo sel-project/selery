@@ -43,11 +43,10 @@ If you're on Windows you must compile using a 64-bit architecture (for example `
 ## Libraries
 
 - [imageformats](https://code.dlang.org/packages/imageformats) to convert PNG images to binary (like skins and server's icon)
-- [resusage](https://code.dlang.org/packages/resusage) to control the usage of CPU and RAM
-- [sel-hncom](https://code.dlang.org/packages/sel-hncom) to connect the hub and node
-- [sel-math](https://code.dlang.org/packages/sel-math) (not yet implemented)
+- [resusage](https://code.dlang.org/packages/resusage) to monitor the usage of CPU and RAM
+- [sel-hncom](https://code.dlang.org/packages/sel-hncom) to connect the hub (network functionalities) and the node(s) (gameplay-related functionalities)
 - [sel-nbt](https://code.dlang.org/packages/sel-nbt) to manage, encode and decode [Named Binary Tag](https://minecraft.gamepedia.com/NBT_format)s
 - [sel-net](https://code.dlang.org/packages/sel-net) (not yet implemented)
 - [sel-server](https://code.dlang.org/packages/sel-server) to manage the network-related stuff of the Minecraft games
-- [sel-utils](https://code.dlang.org/packages/sel-utils) to encoded and decode the packets used by Minecraft, metadata and IDs
+- [sel-utils](https://code.dlang.org/packages/sel-utils) to encode and decode the packets used by Minecraft, metadata and IDs
 - [toml](https://code.dlang.org/packages/toml) to read and write the server's configuration files

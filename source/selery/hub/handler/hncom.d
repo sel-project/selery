@@ -424,6 +424,10 @@ abstract class AbstractNode : Handler!serverbound {
 		}
 	}
 
+	protected override void handlePlayerUpdatePermissions(Player.UpdatePermissions packet) {
+		//TODO
+	}
+
 	protected override void handlePlayerGamePacket(Player.GamePacket packet) {
 		//TODO compress if needed and send
 	}
@@ -504,7 +508,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverAddress, player.serverPort), Player.Add.Skin(player.skin.name, player.skin.data, player.skin.cape, player.skin.geometryName, player.skin.geometryData), player.language, player.hncomAddData()).encode());
+		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.permissions, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
 	}
 	
 	/**
@@ -546,6 +550,26 @@ abstract class AbstractNode : Handler!serverbound {
 		if(this.players.remove(player.id)) {
 			this.send(Player.Remove(player.id, reason).encode());
 		}
+	}
+
+	public shared void sendDisplayNameUpdate(shared PlayerSession player, string displayName) {
+		this.send(Player.UpdateDisplayName(player.id, displayName).encode());
+	}
+
+	public shared void sendPermissionLevelUpdate(shared PlayerSession player, ubyte permissionLevel) {
+		this.send(Player.UpdatePermissionLevel(player.id, permissionLevel).encode());
+	}
+
+	public shared void sendPermissionsUpdate(shared PlayerSession player, ubyte updated, ubyte permissions) {
+		this.send(Player.UpdatePermissions(player.id, updated, permissions).encode());
+	}
+
+	public shared void sendViewDistanceUpdate(shared PlayerSession player, uint viewDistance) {
+		this.send(Player.UpdateViewDistance(player.id, viewDistance).encode());
+	}
+
+	public shared void sendLanguageUpdate(shared PlayerSession player, string language) {
+		this.send(Player.UpdateLanguage(player.id, language).encode());
 	}
 	
 	/**

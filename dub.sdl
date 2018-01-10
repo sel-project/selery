@@ -8,15 +8,15 @@ targetPath "libs"
 
 dependency "imageformats" version="~>6.1.2"
 dependency "resusage" version="~>0.2.7"
-dependency "sel-hncom" version="~>5.0.0"
-//dependency "sel-math" version="~>0.0.1"
+dependency "sel-hncom" version="~>6.0.0"
 dependency "sel-nbt" version="~>2.0.6"
 dependency "sel-net" version="~>0.1.2"
-dependency "sel-server" version="~>0.2.0"
+dependency "sel-server" version="~>0.2.1"
 dependency "sel-utils" version="==1.4.1"
 
+//dependency "sel-hncom" path="../sel-hncom"
 //dependency "sel-server" path="../sel-server"
 
 // remove comments for a faster complilation using DMD's release mode
-versions "NoBlocks"
-versions "NoItems"
+//versions "NoBlocks"
+//versions "NoItems"

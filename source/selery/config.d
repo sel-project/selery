@@ -103,9 +103,11 @@ class Config {
 
 		bool webAdmin = true;
 
-		Address[] webAdminAddresses = [Address("127.0.0.1:19134")];
+		Address[] webAdminAddresses = [Address("127.0.0.1", 19134)];
 
 		string webAdminPassword = "";
+
+		uint webAdminMaxClients = 1;
 		
 		JSONValue social;
 		
@@ -236,6 +238,8 @@ class Config {
 	}
 
 	public void reload() {}
+
+	public void save() {}
 
 }
 

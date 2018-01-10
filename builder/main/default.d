@@ -49,6 +49,10 @@ void main(string[] args) {
 
 	start(ConfigType.server, type, args, (Config config){
 	
+		//TODO only portable
+		import std.process : executeShell;
+		//executeShell("start http://127.0.0.1:19134/");
+	
 		static if(type == "portable") {
 		
 			import std.zip;
