@@ -1,0 +1,34 @@
+doctype html
+html
+	head
+		title= config.displayName
+		meta(charset='UTF-8')
+		meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
+		link(rel='icon', type='image/png', href='/icon.png')
+		link(rel='stylesheet', type='text/css', href='//db.onlinewebfonts.com/c/bf3f245b7cd53caea0cb07d265a64adc?family=Minecraftia')
+		style!= import("view.css")
+		script!= import("view.js")
+		script!= import("format.js")
+	body
+		header
+			div.title= config.displayName
+			div.subtitle= Software.display
+			div#player_name
+		section.icons
+			img#icon(src='/icon.png')
+			div#player_pic(style='display:none')
+		section
+			span#status ...
+		div#server
+			section
+				- immutable ip = config.serverIp.length ? config.serverIp : host;
+				- if(config.bedrock)
+					p #{!config.edu ? "Minecraft" : "Minecraft: Education Edition"}: #{ip}:#{config.bedrock.addresses[0].port.to!string}
+				- if(config.java)
+					p Minecraft: Java Edition: #{ip}:#{config.bedrock.addresses[0].port.to!string}
+			section
+				p#players
+				p#players_list
+		div#player(style='display:none')
+			section
+				p#version

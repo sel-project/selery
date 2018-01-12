@@ -1,0 +1,48 @@
+
+body {
+	background: url(http://i.imgur.com/dlwRr20.png) center center;
+	font-family: 'Minecraftia', Monospace;
+	text-align: center;
+	color: white;
+	font-size: 16px;
+}
+
+header, section {
+	margin: 12px;
+}
+
+section p {
+	display: block;
+	margin: 4px 0;
+}
+
+.title {
+	font-size: 24px;
+}
+
+section.icons {
+	margin: 16px;
+}
+
+section.icons img {
+	margin: 0 4px;
+}
+
+#icon {
+	width: 64px;
+	height: 64px;
+}
+
+a {
+	text-decoration: none;
+	color: white;
+}
+
+#players_list {
+	margin-top: 8px;
+}
+
+#player_name {
+	margin-top: 16px;
+	font-size: 24px;
+}

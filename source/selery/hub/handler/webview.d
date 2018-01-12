@@ -35,14 +35,14 @@ import sel.server.util;
 import selery.about;
 import selery.hub.handler.handler : Reloadable;
 import selery.hub.server : HubServer;
+import selery.util.diet;
 import selery.util.thread : SafeThread;
 import selery.util.util : seconds;
 
 class WebViewHandler : GenericServer, Reloadable {
 
 	private shared HubServer server;
-	
-	private shared WebResource index;
+
 	private shared WebResource icon;
 	private shared string info;
 	private shared WebResource status;
@@ -126,21 +126,6 @@ class WebViewHandler : GenericServer, Reloadable {
 		
 		const config = this.server.config;
 		
-		this.website = "";
-		try { this.website = config.hub.social["website"].str; } catch(JSONException) {}
-		
-		// index
-		string index = cast(string)config.files.readAsset("webview/index.html");
-		index = index.replace("{DEFAULT_LANG}", config.hub.language[0..2]);
-		index = index.replace("{DISPLAY_NAME}", config.hub.displayName);
-		index = index.replace("{SOFTWARE}", Software.display);
-		index = index.replace("{PC}", config.hub.java ? ("<p>Minecraft&nbsp;Java&nbsp;Edition: {IP}:" ~ to!string(config.hub.java.addresses[0].port) ~ "</p>") : "");
-		index = index.replace("{PE}", config.hub.bedrock ? ("<p>Minecraft&nbsp;" ~ (config.hub.edu ? "Education&nbsp;Edition" : "(Bedrock&nbsp;Engine)") ~ ": {IP}:" ~ to!string(config.hub.bedrock.addresses[0].port) ~ "</p>") : "");
-		if(config.hub.serverIp.length) index = index.replace("{IP}", config.hub.serverIp);
-		index = index.replace("{WEBSITE}", this.website);
-		this.index.uncompressed = index;
-		this.index.compress();
-		
 		// icon.png
 		this.icon = WebResource.init;
 		this.iconRedirect = null;
@@ -163,10 +148,13 @@ class WebViewHandler : GenericServer, Reloadable {
 		ubyte[] status = nativeToLittleEndian(this.server.onlinePlayers) ~ nativeToLittleEndian(this.server.maxPlayers);
 		{
 			//TODO add an option to disable showing players
+			immutable show_skin = (this.server.onlinePlayers <= 32);
 			foreach(player ; this.server.players) {
+				immutable skin = (show_skin && player.skin !is null) << 15;
 				status ~= nativeToLittleEndian(player.id);
-				status ~= nativeToLittleEndian(player.displayName.length.to!ushort);
+				status ~= nativeToLittleEndian(to!ushort(player.displayName.length | skin));
 				status ~= cast(ubyte[])player.displayName;
+				if(skin) status ~= player.skin.face;
 			}
 		}
 		this.status.uncompressed = cast(string)status;
@@ -183,8 +171,9 @@ class WebViewHandler : GenericServer, Reloadable {
 		if(request.method != "GET") return Response.error(StatusCodes.methodNotAllowed, ["Allow": "GET"]);
 		switch(decode(request.path[1..$])) {
 			case "":
-				auto response = Response(StatusCodes.ok, ["Content-Type": "text/html"]);
-				return this.returnWebResource(this.index, request, response);
+				const config = this.server.config.hub;
+				immutable host = request.headers["host"];
+				return Response(StatusCodes.ok, ["Content-Type": "text/html"], compileDietFile!("view.dt", config, host));
 			case "info.json":
 				return Response(StatusCodes.ok, ["Content-Type": "application/json; charset=utf-8"], this.info);
 			case "social.json":
@@ -219,16 +208,16 @@ class WebViewHandler : GenericServer, Reloadable {
 					return Response.error(StatusCodes.notFound);
 				}
 			default:
-				if(request.path.startsWith("/player/") && request.path.endsWith(".json")) {
+				if(request.path.startsWith("/player_") && request.path.endsWith(".json")) {
 					try {
 						auto player = this.server.playerFromId(to!uint(request.path[8..$-5]));
 						if(player !is null) {
 							JSONValue[string] json;
-							json["name"] = JSONValue(player.username);
-							json["display"] = JSONValue(player.displayName);
-							json["version"] = JSONValue(player.game);
-							if(player.skin !is null) json["picture"] = JSONValue(player.skin.faceBase64);
-							json["world"] = JSONValue(["name": JSONValue(player.world.name), "dimension": JSONValue(player.dimension)]);
+							json["name"] = player.username;
+							json["display"] = player.displayName;
+							json["version"] = player.game;
+							if(player.skin !is null) json["skin"] = player.skin.faceBase64;
+							if(player.world !is null) json["world"] = ["name": JSONValue(player.world.name), "dimension": JSONValue(player.dimension)];
 							return Response(StatusCodes.ok, ["Content-Type": "application/json; charset=utf-8"], JSONValue(json).toString());
 						}
 					} catch(Exception) {}

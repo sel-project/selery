@@ -58,7 +58,7 @@ web.login.failed = Autenticazione fallita
 web.login.wrongPassword = Password errata
 web.login.limitReached = Il server non accetta più connessioni al pannello di amministrazione
 web.login.networkError = Impossibile contattare il server. Magari è andato offline?
-web.login.unknownError = È stato riscontrato un errore sconosciuto:
+web.login.unknownError = È stato riscontrato un errore sconosciuto
 web.login.goBack = Indietro
 web.admin.title = {0} - pannello di amministrazione
 

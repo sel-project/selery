@@ -79,7 +79,7 @@ void main(string[] args) {
 
 		// get all files in assets
 		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
-			if(file.isFile && file.indexOf(".git") == -1 && !file.endsWith(".dt") && !file.endsWith(".ico")) {
+			if(file.isFile && file.indexOf(".git") == -1 && !file.endsWith(".dt") && !file.endsWith(".ico")) { //TODO exclude stuff used in diet-ng
 				auto member = new ArchiveMember();
 				member.name = file[10..$].replace("\\", "/");
 				member.expandedData(cast(ubyte[])read(file));

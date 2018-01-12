@@ -169,7 +169,7 @@ abstract class AbstractNode : Handler!serverbound {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, cast()*this.additionalJson));
+			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, webAdmin, cast()*this.additionalJson));
 		}
 		auto info = this.receiveNodeInfo(stream);
 		this.n_max = info.max;
@@ -424,10 +424,6 @@ abstract class AbstractNode : Handler!serverbound {
 		}
 	}
 
-	protected override void handlePlayerUpdatePermissions(Player.UpdatePermissions packet) {
-		//TODO
-	}
-
 	protected override void handlePlayerGamePacket(Player.GamePacket packet) {
 		//TODO compress if needed and send
 	}
@@ -508,7 +504,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.permissions, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
+		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
 	}
 	
 	/**
@@ -558,10 +554,6 @@ abstract class AbstractNode : Handler!serverbound {
 
 	public shared void sendPermissionLevelUpdate(shared PlayerSession player, ubyte permissionLevel) {
 		this.send(Player.UpdatePermissionLevel(player.id, permissionLevel).encode());
-	}
-
-	public shared void sendPermissionsUpdate(shared PlayerSession player, ubyte updated, ubyte permissions) {
-		this.send(Player.UpdatePermissions(player.id, updated, permissions).encode());
 	}
 
 	public shared void sendViewDistanceUpdate(shared PlayerSession player, uint viewDistance) {

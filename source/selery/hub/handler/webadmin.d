@@ -16,7 +16,6 @@ module selery.hub.handler.webadmin;
 
 import core.thread : Thread;
 
-import std.array : Appender;
 import std.concurrency : spawn;
 import std.datetime : dur;
 import std.json;
@@ -24,26 +23,19 @@ import std.random : uniform;
 import std.socket : Socket, TcpSocket, Address, SocketOption, SocketOptionLevel;
 import std.string : startsWith, split, replace;
 
-import diet.html : compileHTMLDietFile;
-
 import sel.net.http : StatusCodes, Request, Response;
 import sel.server.query : Query;
 import sel.server.util : GenericServer;
 
 import selery.about : Software;
 import selery.hub.server : HubServer;
-
-private string compileDietFile(string filename, E...)() {
-	Appender!string appender;
-	appender.compileHTMLDietFile!(filename, Software, E);
-	return appender.data;
-}
+import selery.util.diet;
 
 class WebAdminHandler : GenericServer {
 
 	private shared HubServer server;
 
-	private shared string style, script, bg, lock_locked, lock_unlocked;
+	private shared string style, bg, lock_locked, lock_unlocked;
 
 	private shared string[string] sessions;
 
@@ -51,11 +43,10 @@ class WebAdminHandler : GenericServer {
 		super(server.info);
 		this.server = server;
 		with(server.config.files) {
-			this.style = cast(string)readAsset("webadmin/style.css");
-			this.script = cast(string)readAsset("webadmin/script.js");
-			this.bg = cast(string)readAsset("webadmin/res/bg32.png");
-			this.lock_locked = cast(string)readAsset("webadmin/res/lock_locked.png");
-			this.lock_unlocked = cast(string)readAsset("webadmin/res/lock_unlocked.png");
+			this.style = cast(string)readAsset("web/styles/main.css");
+			this.bg = cast(string)readAsset("web/res/bg32.png");
+			this.lock_locked = cast(string)readAsset("web/res/lock_locked.png");
+			this.lock_unlocked = cast(string)readAsset("web/res/lock_unlocked.png");
 		}
 	}
 
@@ -211,7 +202,6 @@ class WebAdminHandler : GenericServer {
 		}
 		switch(request.path) {
 			case "/style.css": return Response(StatusCodes.ok, ["Content-Type": "text/css"], this.style);
-			case "/script.js": return Response(StatusCodes.ok, ["Content-Type": "application/javascript"], this.script);
 			case "/res/bg32.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.bg);
 			case "/res/lock_locked.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.lock_locked);
 			case "/res/lock_unlocked.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.lock_unlocked);

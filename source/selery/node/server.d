@@ -1039,7 +1039,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	protected override void handleStatusUpdateListByIp(HncomStatus.UpdateListByIp packet) {}
 
-	protected override void handleStatusPanelCredentials(HncomStatus.PanelCredentials packet) {
+	protected override void handleStatusWebAdminCredentials(HncomStatus.WebAdminCredentials packet) {
 		//TODO start http server for panel
 	}
 
@@ -1089,10 +1089,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	protected override void handlePlayerUpdatePermissionLevel(HncomPlayer.UpdatePermissionLevel packet) {
-		//TODO
-	}
-
-	protected override void handlePlayerUpdatePermissions(HncomPlayer.UpdatePermissions packet) {
 		//TODO
 	}
 

@@ -58,7 +58,7 @@ web.login.failed = Authentication failed
 web.login.wrongPassword = Wrong password
 web.login.limitReached = The server does not allow more connections to the administration panel
 web.login.networkError = Could not reach the server. Maybe it went offline?
-web.login.unknownError = An unknown error has occured:
+web.login.unknownError = An unknown error has occured
 web.login.goBack = Go Back
 web.admin.title = {0} administration panel
 

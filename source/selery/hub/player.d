@@ -66,7 +66,6 @@ class PlayerSession {
 	protected shared string _display_name;
 
 	protected shared ubyte _permission_level;
-	protected shared ubyte _permissions;
 
 	protected shared World _world;
 	protected shared ubyte _dimension;
@@ -216,12 +215,6 @@ class PlayerSession {
 		this._node.sendPermissionLevelUpdate(this, permissionLevel);
 		return this._permission_level = permissionLevel;
 	}
-
-	public final shared nothrow @property @safe @nogc ubyte permissions() {
-		return this._permissions;
-	}
-
-	//TODO set permissions
 
 	/**
 	 * Gets the player's world, which is updated by the node every

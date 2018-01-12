@@ -3,6 +3,8 @@ body {
 	font-family: 'Minecraftia', Monospace;
 	color: white;
 	font-size: 16px;
+	user-select: none;
+	-moz-user-select: none;
 }
 
 p.title {
@@ -72,7 +74,7 @@ input.inner_input, .inner_input > input {
 	border: 2px solid black;
 }
 
-.outer_button:not(.disabled) {
+.outer_button:not(.disabled):not(.selected) {
 	cursor: pointer;
 }
 
@@ -81,10 +83,22 @@ input.inner_input, .inner_input > input {
 	border: 2px solid #F7F7F7;
 	border-bottom-color: #656465;
 	border-right-color: #656465;
-	padding-top: 14px;
-	padding-bottom: 16px;
+	padding: 14px 12px 16px 12px;
 	font-size: 16px;
 	color: #4C4C4C;
+}
+
+.outer_button.selected > .inner_button {
+	background: #8B8B8B;
+	border-top-color: #5B5A5B;
+	border-left-color: #5B5A5B;
+	border-bottom-color: #DFDFDF;
+	border-right-color: #DFDFDF;
+}
+
+.outer_button.disabled > .inner_button {
+	background: #757575;
+	border-color: #757575;
 }
 
 .outer_button:not(.disabled):hover {
@@ -100,7 +114,9 @@ input.inner_input, .inner_input > input {
 	color: white;
 }
 
-.outer_button.disabled > .inner_button {
-	background: #757575;
-	border-color: #757575;
+.outer_button.selected:not(.disabled):hover > .inner_button {
+	border-top-color: #037300;
+	border-left-color: #037300;
+	border-bottom-color: #37D61E;
+	border-right-color: #37D61E;
 }

@@ -1,0 +1,24 @@
+doctype html
+html
+	head
+		title #{translate("web.admin.title", Software.name)}
+		meta(charset='UTF-8')
+		meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
+		link(rel='icon', type='image/png', href='//i.imgur.com/uxvZbau.png')
+		link(rel='stylesheet', type='text/css', href='//db.onlinewebfonts.com/c/bf3f245b7cd53caea0cb07d265a64adc?family=Minecraftia')
+		link(rel='stylesheet', type='text/css', href='style.css')
+		style!= importStyle!"admin.css"
+		script!= import("admin.js")
+		script!= import("format.js")
+	body
+		div.outer_container(style='position:absolute;top:8px;right:8px;bottom:8px;left:8px')
+			div.outer_button.main_button.selected
+				div.inner_button #{translate("menu.settings")}
+			div.outer_button.main_button
+				div.inner_button #{translate("playscreen.worlds")}
+			div.outer_button.main_button
+				div.inner_button #{translate("realmsSettingsScreen.playersSectionTitle")}
+			div.inner_container(style='position:absolute;top:78px;right:8px;bottom:8px;left:8px')
+				div#settings
+				div#worlds
+				div#players
