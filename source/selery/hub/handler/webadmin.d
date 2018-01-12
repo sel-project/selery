@@ -16,12 +16,15 @@ module selery.hub.handler.webadmin;
 
 import core.thread : Thread;
 
+import std.array : Appender;
 import std.concurrency : spawn;
 import std.datetime : dur;
 import std.json;
 import std.random : uniform;
 import std.socket : Socket, TcpSocket, Address, SocketOption, SocketOptionLevel;
-import std.string : startsWith;
+import std.string : startsWith, split, replace;
+
+import diet.html : compileHTMLDietFile;
 
 import sel.net.http : StatusCodes, Request, Response;
 import sel.server.query : Query;
@@ -30,11 +33,17 @@ import sel.server.util : GenericServer;
 import selery.about : Software;
 import selery.hub.server : HubServer;
 
+private string compileDietFile(string filename, E...)() {
+	Appender!string appender;
+	appender.compileHTMLDietFile!(filename, Software, E);
+	return appender.data;
+}
+
 class WebAdminHandler : GenericServer {
 
 	private shared HubServer server;
 
-	private shared string login, admin;
+	private shared string style, script, bg, lock_locked, lock_unlocked;
 
 	private shared string[string] sessions;
 
@@ -42,8 +51,11 @@ class WebAdminHandler : GenericServer {
 		super(server.info);
 		this.server = server;
 		with(server.config.files) {
-			this.login = cast(string)readAsset("webadmin/login.html");
-			this.admin = cast(string)readAsset("webadmin/admin.html");
+			this.style = cast(string)readAsset("webadmin/style.css");
+			this.script = cast(string)readAsset("webadmin/script.js");
+			this.bg = cast(string)readAsset("webadmin/res/bg32.png");
+			this.lock_locked = cast(string)readAsset("webadmin/res/lock_locked.png");
+			this.lock_unlocked = cast(string)readAsset("webadmin/res/lock_unlocked.png");
 		}
 	}
 
@@ -77,6 +89,23 @@ class WebAdminHandler : GenericServer {
 		socket.close();
 	}
 
+	private shared string getClientLanguage(Request request) {
+		auto lang = "accept-language" in request.headers;
+		if(lang) {
+			foreach(l1 ; split(*lang, ";")) {
+				foreach(l2 ; split(l1, ",")) {
+					if(l2.length == 5) {
+						immutable language = l2.replace("-", "_");
+						foreach(supported ; this.server.config.hub.acceptedLanguages) {
+							if(supported == language) return language;
+						}
+					}
+				}
+			}
+		}
+		return this.server.config.hub.language;
+	}
+
 	private shared Response handle(Address address, Request request) {
 		if(request.path == "/") {
 			bool auth = false;
@@ -85,94 +114,108 @@ class WebAdminHandler : GenericServer {
 				auto ip = (*cookie)[4..$] in this.sessions;
 				if(ip && *ip == address.toAddrString()) auth = true;
 			}
-			if(!auth) {
-				// send login page or create a session
-				if(this.server.config.hub.webAdminPassword.length) {
-					// password is required, send login form
-					return Response(StatusCodes.ok, this.login);
-				} else {
-					immutable key = this.addClient(address);
-					if(key.length) return Response(StatusCodes.ok, ["Set-Cookie": "key=" ~ key], this.admin);
-					else return Response(StatusCodes.ok, "Limit reached");
-				}
-			} else {
-				if(request.method == Request.POST) {
-					// authenticated client trying to do stuff
-					try {
-						JSONValue[string] response;
-						void parseResponse(JSONValue json) {
-							auto action = "action" in json.object;
-							if(action) {
-								switch((*action).str) {
-									case "multi":
-										// {"action": "multi", "data": [ ... ]}
-										auto data = "data" in json.object;
-										if(data) {
-											JSONValue[string] ret;
-											foreach(element ; (*data).array) {
-												parseResponse(element);
-											}
+			if(auth && request.method == Request.POST) {
+				// authenticated client trying to do stuff
+				try {
+					JSONValue[string] response;
+					void parseResponse(JSONValue json) {
+						auto action = "action" in json.object;
+						if(action) {
+							switch((*action).str) {
+								case "multi":
+									// {"action": "multi", "data": [ ... ]}
+									auto data = "data" in json.object;
+									if(data) {
+										JSONValue[string] ret;
+										foreach(element ; (*data).array) {
+											parseResponse(element);
 										}
-										break;
-									case "get_info":
-										with(this.server.info) {
-											response["motd"] = motd.raw;
-											response["online"] = online;
-											response["max"] = max;
-											response["favicon"] = favicon;
-										}
-										break;
-									case "get_players":
-										JSONValue[] players;
-										foreach(player ; this.server.players) {
-											JSONValue[string] ret;
-											ret["id"] = player.id;
-											ret["type"] = player.type;
-											ret["name"] = player.username;
-											ret["display_name"] = player.displayName;
-											ret["game"] = player.game;
-											players ~= JSONValue(ret);
-										}
-										response["players"] = players;
-										break;
-									case "get_player_permissions":
-
-										break;
-									case "get_nodes":
-										// also send worlds
-										break;
-									case "set_max":
-										// of one node
-										break;
-									case "player_kick":
-
-										break;
-									default:
-										break;
-								}
+									}
+									break;
+								case "get_info":
+									with(this.server.info) {
+										response["motd"] = motd.raw;
+										response["online"] = online;
+										response["max"] = max;
+										response["favicon"] = favicon;
+									}
+									break;
+								case "get_players":
+									JSONValue[] players;
+									foreach(player ; this.server.players) {
+										JSONValue[string] ret;
+										ret["id"] = player.id;
+										ret["type"] = player.type;
+										ret["name"] = player.username;
+										ret["display_name"] = player.displayName;
+										ret["game"] = player.game;
+										players ~= JSONValue(ret);
+									}
+									response["players"] = players;
+									break;
+								case "get_player_permissions":
+									
+									break;
+								case "get_nodes":
+									// also send worlds
+									break;
+								case "set_max":
+									// of one node
+									break;
+								case "player_kick":
+									
+									break;
+								default:
+									break;
 							}
 						}
-						parseResponse(parseJSON(request.data));
-						if(response.length) return Response(StatusCodes.ok, ["Content-Type": "application/json"], JSONValue(response).toString());
-					} catch(JSONException) {}
-					return Response(StatusCodes.badRequest);
+					}
+					parseResponse(parseJSON(request.data));
+					if(response.length) return Response(StatusCodes.ok, ["Content-Type": "application/json"], JSONValue(response).toString());
+				} catch(JSONException) {}
+				return Response(StatusCodes.badRequest);
+			} else {
+				// send login page or create a session
+				immutable lang = this.getClientLanguage(request);
+				string translate(string text, string[] params...) {
+					return this.server.config.lang.translate(text, lang, params);
+				}
+				if(auth) {
+					// just logged in, needs the admin panel
+					return Response(StatusCodes.ok, compileDietFile!("admin.dt", translate));
+				} else if(this.server.config.hub.webAdminPassword.length) {
+					// password is required, send login form
+					return Response(StatusCodes.ok, compileDietFile!("login.dt", translate));
 				} else {
-					// check credentials and send homepage
-					return Response(StatusCodes.ok, this.admin);
+					// not logged in, but password is not required
+					immutable key = this.addClient(address);
+					if(key.length) return Response(StatusCodes.ok, ["Set-Cookie": "key=" ~ key], compileDietFile!("admin.dt", translate));
+					else return Response(StatusCodes.ok, "Limit reached");
 				}
 			}
 		} else if(request.path == "/login" && request.method == Request.POST) {
 			// authentication attemp
-			immutable password = this.server.config.hub.webAdminPassword;
-			if(request.data == this.server.config.hub.webAdminPassword) {
+			string password;
+			try password = parseJSON(request.data).object.get("password", JSONValue.init).str;
+			catch(JSONException) {}
+			JSONValue[string] result;
+			if(password == this.server.config.hub.webAdminPassword) { //TODO fix sel-net's parser
 				immutable key = this.addClient(address);
-				if(key.length) return Response(StatusCodes.ok, key);
-				else return Response(StatusCodes.ok, "limit reached");
+				if(key.length) result["key"] = key;
+				else result["error"] = "limit";
 			} else {
-				return Response(StatusCodes.ok, "Wrong password");
+				result["error"] = "wrong_password";
 			}
-		} else if(request.path == "/style.css") {
-			//TODO send stylesheet
+			result["success"] = !!("key" in result);
+			return Response(StatusCodes.ok, ["Content-Type": "application/json"], JSONValue(result).toString());
+		}
+		switch(request.path) {
+			case "/style.css": return Response(StatusCodes.ok, ["Content-Type": "text/css"], this.style);
+			case "/script.js": return Response(StatusCodes.ok, ["Content-Type": "application/javascript"], this.script);
+			case "/res/bg32.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.bg);
+			case "/res/lock_locked.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.lock_locked);
+			case "/res/lock_unlocked.png": return Response(StatusCodes.ok, ["Content-Type": "image/png"], this.lock_unlocked);
+			default: break;
 		}
 		return Response.error(StatusCodes.notFound);
 	}

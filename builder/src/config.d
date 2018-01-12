@@ -121,7 +121,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 						if(keys.length == 1) return *value;
 						else return getValue((*value).table, keys[1..$]); // throws exception if not a table
 					} else {
-						throw new TOMLException("");
+						throw new TOMLException(keys[0] ~ " not in table");
 					}
 				}
 				
@@ -142,7 +142,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set(bedrock.motd, "bedrock", "motd");
 					//set!"bedrock.online-mode"(bedrock.onlineMode);
 					set(bedrock.addresses, "bedrock", "addresses");
-					set(bedrock.protocols, "bedrock", "protocols");
+					set(bedrock.protocols, "bedrock", "accepted-protocols");
 					set(allowVanillaPlayers, "bedrock", "allow-vanilla-players");
 					set(java.enabled, "java", "enabled");
 					set(java.motd, "java", "motd");

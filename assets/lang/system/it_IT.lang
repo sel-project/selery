@@ -50,6 +50,18 @@ handler.listening = Handler {0} in ascolto su {1}
 handler.error.bind = Handler {0} non può ascoltare su {1}: {2}
 handler.error.address = Handler {0} non può risolvere l'indirizzo {1}
 
+web.login.title = Entra nel pannello di amministrazione
+web.login.password = Password
+web.login.login = Entra
+web.login.loading = Autenticazione in corso
+web.login.failed = Autenticazione fallita
+web.login.wrongPassword = Password errata
+web.login.limitReached = Il server non accetta più connessioni al pannello di amministrazione
+web.login.networkError = Impossibile contattare il server. Magari è andato offline?
+web.login.unknownError = È stato riscontrato un errore sconosciuto:
+web.login.goBack = Indietro
+web.admin.title = {0} - pannello di amministrazione
+
 commands.about.description = Mostra informazioni sul software del server e i plugin installati.
 commands.about.software = Software: {0}
 commands.about.plugins = Plugin installati ({0}):

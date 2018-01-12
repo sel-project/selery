@@ -1,0 +1,106 @@
+body {
+	background: url(res/bg32.png) center center;
+	font-family: 'Minecraftia', Monospace;
+	color: white;
+	font-size: 16px;
+}
+
+p.title {
+	margin: 0 4px 10px 4px;
+	text-align: left;
+}
+
+.outer_container {
+	background: #C6C6C6;
+	padding: 8px;
+	outline: 2px solid black;
+	border-top: 4px solid white;
+	border-left: 4px solid white;
+	border-bottom: 4px solid #555555;
+	border-right: 4px solid #555555;
+	color: #4C4C4C;
+}
+
+.inner_container {
+	background: #78797C;
+	padding: 8px;
+	border-top: 2px solid #393939;
+	border-left: 2px solid #393939;
+	border-bottom: 2px solid white;
+	border-right: 2px solid white;
+	color: white;
+}
+
+.outer_input {
+	border: 2px solid black;
+}
+
+.outer_input:not(.disabled):hover {
+	border-color: white;
+}
+
+input {
+	border: 0px;
+	background: transparent;
+}
+
+input:focus {
+	outline: none;
+}
+
+.inner_input {
+	background: #5E5E5E;
+	border: 0px;
+	border-top: 2px solid #464446;
+	border-bottom: 2px solid #B2B2B2;
+	padding-top: 12px;
+	padding-bottom: 18px;
+}
+
+input.inner_input, .inner_input > input {
+	font-family: 'Minecraftia', Monospace;
+	font-size: 16px;
+	color: white;
+}
+
+.inner_input:not(.disabled):hover {
+	
+}
+
+.outer_button {
+	display: inline-block;
+	border: 2px solid black;
+}
+
+.outer_button:not(.disabled) {
+	cursor: pointer;
+}
+
+.inner_button {
+	background: #C6C6C6;
+	border: 2px solid #F7F7F7;
+	border-bottom-color: #656465;
+	border-right-color: #656465;
+	padding-top: 14px;
+	padding-bottom: 16px;
+	font-size: 16px;
+	color: #4C4C4C;
+}
+
+.outer_button:not(.disabled):hover {
+	border-color: white;
+}
+
+.outer_button:not(.disabled):hover > .inner_button {
+	background: #43A01C;
+	border-top-color: #37D61E;
+	border-left-color: #37D61E;
+	border-bottom-color: #037300;
+	border-right-color: #037300;
+	color: white;
+}
+
+.outer_button.disabled > .inner_button {
+	background: #757575;
+	border-color: #757575;
+}

@@ -162,7 +162,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		assert(config.node !is null);
 
-		debug Thread.getThis().name = "node_server";
+		debug Thread.getThis().name = "node";
 
 		this.lite = cast(TidAddress)hub !is null;
 
@@ -177,7 +177,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		
 		this.n_hub_address = cast(shared)hub;
 
-		config.hub = new Config.Hub();
+		if(config.hub is null) config.hub = new Config.Hub();
 
 		// load language from the last execution (or default language)
 		if(config.files.hasTemp("lang")) {
