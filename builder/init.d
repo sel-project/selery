@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 29;
+enum size_t __GENERATOR__ = 30;
 
 void main(string[] args) {
 
@@ -79,10 +79,12 @@ void main(string[] args) {
 
 		// get all files in assets
 		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
-			if(file.isFile && file.indexOf(".git") == -1 && !file.endsWith(".dt") && !file.endsWith(".ico")) { //TODO exclude stuff used in diet-ng
+			immutable name = file[10..$].replace("\\", "/");
+			if(file.isFile && !name.startsWith(".") && !name.endsWith(".ico") && (!name.startsWith("web/") || name.endsWith("/main.css") || name.indexOf("/res/") != -1)) {
+				auto data = read(file);
 				auto member = new ArchiveMember();
-				member.name = file[10..$].replace("\\", "/");
-				member.expandedData(cast(ubyte[])read(file));
+				member.name = name;
+				member.expandedData(cast(ubyte[])(file.endsWith(".json") ? parseJSON(cast(string)data).toString() : data));
 				member.compressionMethod = CompressionMethod.deflate;
 				zip.addMember(member);
 			}
