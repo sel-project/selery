@@ -3,27 +3,35 @@ language: d
 d:
   - dmd
   - ldc
+  
+env:
+  - CONFIG=debug
+  - CONFIG=release
 
 os:
   - linux
   - osx
 
 matrix:
+  exclude:
+    - d: dmd
+      CONFIG: release
   allow_failures:
     - os: osx
+      d: dmd
 
 script:
-  - travis_wait 30 dub build --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=$CONFIG
   - cd builder
-  - dub build --single --compiler=$DC --build=release init.d
+  - dub build --single --compiler=$DC --build=$CONFIG init.d
   - ./selery-init hub
-  - travis_wait 30 dub build --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=$CONFIG
   - ./selery-init node
-  - travis_wait 30 dub build --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=$CONFIG
   - ./selery-init default
-  - travis_wait 30 dub build --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=$CONFIG
   - ./selery-init portable
-  - travis_wait 30 dub build --compiler=$DC --build=release
+  - dub build --compiler=$DC --build=$CONFIG
   - cd ..
   
 after_success:

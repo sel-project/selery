@@ -17,6 +17,8 @@ matrix:
   exclude:
     - DC: dmd
       platform: x86
+    - DC: dmd
+      configuration: release
 
 skip_tags: true
 branches:
