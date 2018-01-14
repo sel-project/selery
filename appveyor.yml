@@ -41,23 +41,11 @@ deploy:
     tag: v$(selery_version)
     auth_token:
       secure: OegMV8gj7uvLdmniJIDyHosCOqZVFv2xQXewFe28/4HzQEHegqszB5sSQ3tmg3lz
-    artifact: selery-$(selery_version)-windows-x86.exe
+    artifact: selery-$(selery_version)-windows-%platform%.exe
     force_update: true
     on:
       DC: ldc2
       configuration: release
-      platform: x86
-      selery_build: 0
-  - provider: GitHub
-    tag: v$(selery_version)
-    auth_token:
-      secure: OegMV8gj7uvLdmniJIDyHosCOqZVFv2xQXewFe28/4HzQEHegqszB5sSQ3tmg3lz
-    artifact: selery-$(selery_version)-windows-x64.exe
-    force_update: true
-    on:
-      DC: ldc2
-      configuration: release
-      platform: x64
       selery_build: 0
 
 install:
@@ -83,10 +71,10 @@ install:
             elseif($env:DC -eq "ldc"){
               $env:toolchain = "msvc";
               $version = $env:DVersion;
-              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-win$($env:Dmodel)-msvc.zip" -OutFile "c:\ldc.zip";
+              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-x$($env:Dmodel).7z" -OutFile "c:\ldc.7z";
               echo "finished.";
               pushd c:\\;
-              7z x ldc.zip > $null;
+              7z x ldc.7z > $null;
               mv ldc2-$($version)-win$($env:DModel)-msvc ldc2;
               popd;
             }
