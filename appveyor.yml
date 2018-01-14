@@ -11,7 +11,7 @@ environment:
     - DC: dmd
       DVersion: 2.078.0
     - DC: ldc
-      DVersion: 1.6.0
+      DVersion: 1.7.0
 
 matrix:
   exclude:
@@ -32,7 +32,7 @@ artifacts:
     name: node
   - path: selery-default.exe
     name: default
-  - path: selery-%seleryversion%.exe
+  - path: selery-%seleryversion%-windows-%platform%.exe
     name: portable
 
 install:
@@ -111,6 +111,7 @@ build_script:
   - rcedit ..\selery-%seleryversion%.exe --set-file-version %seleryfullversion%
   - rcedit ..\selery-%seleryversion%.exe --set-product-version %seleryversion%
   - rcedit ..\selery-%seleryversion%.exe --set-icon ..\assets\icon.ico
+  - move ..\selery-%seleryversion%.exe ..\selery-%seleryversion%-windows-%platform%.exe
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node
