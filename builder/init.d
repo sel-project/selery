@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 30;
+enum size_t __GENERATOR__ = 31;
 
 void main(string[] args) {
 
@@ -52,13 +52,11 @@ void main(string[] args) {
 	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output)["software"];
 	
 	foreach(arg ; args) {
-		if(arg == "--version") {
-			import std.stdio : write;
-			return write(software["displayVersion"].str);
-		}
-		if(arg == "--full-version") {
-			import std.stdio : write;
-			return write(software["displayVersion"].str ~ "." ~ to!string(software["version"]["build"].integer));
+		if(arg == "--generate-files") {
+			write("version.txt", software["displayVersion"].str);
+			write("full_version.txt", software["displayVersion"].str ~ "." ~ to!string(software["version"]["build"].integer));
+			write("build.txt", software["version"]["build"].integer.to!string);
+			return;
 		}
 	}
 
@@ -103,7 +101,7 @@ void main(string[] args) {
 
 	bool loadPlugin(string path) {
 		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["selery.toml", "selery.json"]) {
+		foreach(pack ; ["plugin.toml", "plugin.json"]) {
 			if(exists(path ~ pack)) {
 				if(pack.endsWith(".toml")) {
 					auto toml = parseTOML(cast(string)read(path ~ pack));
@@ -353,9 +351,11 @@ void main(string[] args) {
 				auto dptr = "dependencies" in value.toml;
 				if(dptr && dptr.type == TOML_TYPE.TABLE) {
 					foreach(name, d; dptr.table) {
-						//if(name.startsWith("dub:")) {
-							sub["dependencies"][name/*[4..$]*/] = toJSON(d);
-						//}
+						if(name.startsWith("dub:")) {
+							sub["dependencies"][name[4..$]] = toJSON(d);
+						} else {
+							//TODO depends on another plugin
+						}
 					}
 				}
 				builder["subPackages"].array ~= JSONValue(sub);

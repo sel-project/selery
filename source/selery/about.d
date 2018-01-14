@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 0;
 
 	/// ditto
-	enum uint build = 20;
+	enum uint build = 0;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -137,8 +137,7 @@ const struct Software {
 		foreach(member ; TypeTuple!("name", "website", "stable", "displayVersion", "fullVersion", "codename", "display", "api")) {
 			ret[member] = JSONValue(mixin(member));
 		}
-		ret["version"] = ["major": major, "minor": minor, "patch": patch];
-		if(!stable) ret["version"]["build"] = build;
+		ret["version"] = ["major": major, "minor": minor, "patch": patch, "build": build];
 		return JSONValue(ret);
 	}
 	

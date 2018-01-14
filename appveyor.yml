@@ -21,6 +21,7 @@ matrix:
       configuration: release
 
 skip_tags: true
+
 branches:
   only:
     - master
@@ -32,8 +33,32 @@ artifacts:
     name: node
   - path: selery-default.exe
     name: default
-  - path: selery-%seleryversion%-windows-%platform%.exe
+  - path: selery-%selery_version%-windows-%platform%.exe
     name: portable
+
+deploy:
+  - provider: GitHub
+    tag: v$(selery_version)
+    auth_token:
+      secure: OegMV8gj7uvLdmniJIDyHosCOqZVFv2xQXewFe28/4HzQEHegqszB5sSQ3tmg3lz
+    artifact: selery-$(selery_version)-windows-x86.exe
+    force_update: true
+    on:
+      DC: ldc2
+      configuration: release
+      platform: x86
+      selery_build: 0
+  - provider: GitHub
+    tag: v$(selery_version)
+    auth_token:
+      secure: OegMV8gj7uvLdmniJIDyHosCOqZVFv2xQXewFe28/4HzQEHegqszB5sSQ3tmg3lz
+    artifact: selery-$(selery_version)-windows-x64.exe
+    force_update: true
+    on:
+      DC: ldc2
+      configuration: release
+      platform: x64
+      selery_build: 0
 
 install:
   - ps: function SetUpDCompiler
@@ -99,19 +124,19 @@ build_script:
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - cd builder
   - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
-  - selery-init --version > version.txt
-  - selery-init --full-version > fullversion.txt
-  - set /p seleryversion=<version.txt
-  - set /p seleryfullversion=<fullversion.txt
+  - selery-init --generate-files
+  - set /p selery_version=<version.txt
+  - set /p selery_full_version=<full_version.txt
+  - set /p selery_build=<build.txt
   - selery-init portable
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - rcedit ..\selery-%seleryversion%.exe --set-version-string ProductName Selery
-  - rcedit ..\selery-%seleryversion%.exe --set-version-string FileDescription "Selery %seleryversion%"
-  - rcedit ..\selery-%seleryversion%.exe --set-version-string OriginalFileName selery-%seleryversion%.exe
-  - rcedit ..\selery-%seleryversion%.exe --set-file-version %seleryfullversion%
-  - rcedit ..\selery-%seleryversion%.exe --set-product-version %seleryversion%
-  - rcedit ..\selery-%seleryversion%.exe --set-icon ..\assets\icon.ico
-  - move ..\selery-%seleryversion%.exe ..\selery-%seleryversion%-windows-%platform%.exe
+  - rcedit ..\selery-%selery_version%.exe --set-version-string ProductName Selery
+  - rcedit ..\selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
+  - rcedit ..\selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
+  - rcedit ..\selery-%selery_version%.exe --set-file-version %selery_full_version%
+  - rcedit ..\selery-%selery_version%.exe --set-product-version %selery_version%
+  - rcedit ..\selery-%selery_version%.exe --set-icon ..\assets\icon.ico
+  - move ..\selery-%selery_version%.exe ..\selery-%selery_version%-windows-%platform%.exe
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node
