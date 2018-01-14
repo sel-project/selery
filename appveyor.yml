@@ -75,7 +75,7 @@ install:
               echo "finished.";
               pushd c:\\;
               7z x ldc.7z > $null;
-              mv ldc2-$($version)-win$($env:DModel)-msvc ldc2;
+              mv ldc2-$($version)-windows-x$($env:Dmodel) ldc2;
               popd;
             }
         }
