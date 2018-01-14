@@ -62,7 +62,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	immutable isHub = type == ConfigType.server || type == ConfigType.hub;
 	immutable isNode = type == ConfigType.server || type == ConfigType.node;
 
-	auto config = new class Config {	
+	auto config = new class Config {
 	
 		public override void reload() {
 	
@@ -134,6 +134,9 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				set(this.uuid, "uuid");
 				
 				if(isHub) with(this.hub = new Config.Hub()) {
+				
+					// override default
+					webAdmin = type == ConfigType.server;
 				
 					set(displayName, "display-name");
 					set(edu, "edu");

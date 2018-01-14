@@ -93,7 +93,7 @@ const struct Software {
 	enum ubyte patch = 0;
 
 	/// ditto
-	enum uint build = 0;
+	enum uint build = 24;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];

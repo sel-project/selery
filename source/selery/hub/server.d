@@ -58,6 +58,7 @@ import selery.plugin : Plugin;
 import selery.server : Server;
 import selery.util.block : Blocks;
 import selery.util.ip : localAddresses, publicAddresses;
+import selery.util.portable : startWebAdmin;
 import selery.util.thread;
 import selery.util.util : milliseconds;
 
@@ -239,6 +240,21 @@ class HubServer : PlayerHandler, Server {
 		}*/
 
 		//TODO load plugins
+
+		// open web admin GUI
+		if(config.hub.webAdmin) {
+			import std.process : Pid;
+			Pid pid = null;
+			foreach(address ; config.hub.webAdminAddresses) {
+				if(address.ip == "127.0.0.1" || address.ip == "::1") {
+					pid = startWebAdmin(address.port);
+					break;
+				}
+			}
+			if(pid is null && config.hub.webAdminAddresses.length) {
+				pid = startWebAdmin(config.hub.webAdminAddresses[0].port);
+			}
+		}
 
 		this.started = milliseconds;
 

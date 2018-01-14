@@ -11,14 +11,16 @@ html
 		script!= import("admin.js")
 		script!= import("format.js")
 	body
-		div.outer_container(style='position:absolute;top:8px;right:8px;bottom:8px;left:8px')
-			div.outer_button.main_button.selected
-				div.inner_button #{translate("menu.settings")}
-			div.outer_button.main_button
-				div.inner_button #{translate("playscreen.worlds")}
-			div.outer_button.main_button
-				div.inner_button #{translate("realmsSettingsScreen.playersSectionTitle")}
-			div.inner_container(style='position:absolute;top:78px;right:8px;bottom:8px;left:8px')
+		div.outer_container(style='position:absolute;top:60px;right:10px;bottom:10px;left:10px')
+			div.inner_container(style='position:absolute;top:8px;right:8px;bottom:8px;left:8px')
 				div#settings
 				div#worlds
 				div#players
+		div.outer_tab.selected
+			div.inner_tab #{translate("menu.settings")}
+		div.outer_tab
+			div.inner_tab #{translate("playscreen.worlds")}
+		div.outer_tab
+			div.inner_tab #{translate("realmsSettingsScreen.playersSectionTitle")}
+		div#closed
+			The connection with the server was lost

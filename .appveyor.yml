@@ -22,10 +22,6 @@ matrix:
 
 skip_tags: true
 
-branches:
-  only:
-    - master
-
 artifacts:
   - path: selery-hub.exe
     name: hub
@@ -33,15 +29,16 @@ artifacts:
     name: node
   - path: selery-default.exe
     name: default
-  - path: selery-%selery_version%-windows-%platform%.exe
+  - path: selery-%selery_version%-windows-%lower_platform%.exe
     name: portable
 
 deploy:
   - provider: GitHub
     tag: v$(selery_version)
+    release: Selery $(selery_version)
     auth_token:
-      secure: OegMV8gj7uvLdmniJIDyHosCOqZVFv2xQXewFe28/4HzQEHegqszB5sSQ3tmg3lz
-    artifact: selery-$(selery_version)-windows-%platform%.exe
+      secure: ioKlisLYTQCnQTUDVHlgLw24mtQ2/uMlCOt4BPvioprrpHYROYCP1lR/oFER/EIB
+    artifact: selery-%selery_version%-windows-%lower_platform%.exe
     force_update: true
     on:
       DC: ldc2
@@ -53,11 +50,11 @@ install:
         {
             if($env:platform -eq "x86"){
               $env:DConf = "m32";
-              $env:Dmodel = "32";
+              $env:lower_platform = "x86";
             }
             elseif($env:platform -eq "x64"){
               $env:DConf = "m64";
-              $env:Dmodel = "64";
+              $env:lower_platform = "64";
             }
             if($env:DC -eq "dmd"){
               $env:toolchain = "msvc";
@@ -71,11 +68,11 @@ install:
             elseif($env:DC -eq "ldc"){
               $env:toolchain = "msvc";
               $version = $env:DVersion;
-              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-x$($env:Dmodel).7z" -OutFile "c:\ldc.7z";
+              Invoke-WebRequest "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-$($env:lower_platform).7z" -OutFile "c:\ldc.7z";
               echo "finished.";
               pushd c:\\;
               7z x ldc.7z > $null;
-              mv ldc2-$($version)-windows-x$($env:Dmodel) ldc2;
+              mv ldc2-$($version)-windows-$($env:lower_platform) ldc2;
               popd;
             }
         }
@@ -90,12 +87,10 @@ before_build:
   - ps: if($env:platform -eq "x86"){
             $env:compilersetupargs = "x86";
             $env:Darch = "x86";
-            $env:Dmodel = "32";
           }
         elseif($env:platform -eq "x64"){
             $env:compilersetupargs = "amd64";
             $env:Darch = "x86_64";
-            $env:Dmodel = "64";
         }
   - ps : if($env:DC -eq "dmd"){
            $env:PATH += ";C:\dmd2\windows\bin;";
@@ -124,7 +119,7 @@ build_script:
   - rcedit ..\selery-%selery_version%.exe --set-file-version %selery_full_version%
   - rcedit ..\selery-%selery_version%.exe --set-product-version %selery_version%
   - rcedit ..\selery-%selery_version%.exe --set-icon ..\assets\icon.ico
-  - move ..\selery-%selery_version%.exe ..\selery-%selery_version%-windows-%platform%.exe
+  - move ..\selery-%selery_version%.exe ..\selery-%selery_version%-windows-%lower_platform%.exe
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node

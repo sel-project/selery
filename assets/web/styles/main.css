@@ -78,7 +78,7 @@ input.inner_input, .inner_input > input {
 	cursor: pointer;
 }
 
-.inner_button {
+.outer_button > .inner_button {
 	background: #C6C6C6;
 	border: 2px solid #F7F7F7;
 	border-bottom-color: #656465;
@@ -119,4 +119,34 @@ input.inner_input, .inner_input > input {
 	border-left-color: #037300;
 	border-bottom-color: #37D61E;
 	border-right-color: #37D61E;
+}
+
+.outer_tab {
+	display: inline-block;
+	position: relative;
+	border: 2px solid black;
+	border-bottom-width: 0px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	z-index: -1;
+}
+
+.outer_tab.selected {
+	z-index: 1;
+}
+
+.outer_tab > .inner_tab {
+	background: #8B8B8B;
+	border: 4px solid white;
+	border-right-color: #555555;
+	border-bottom-width: 0px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	padding: 10px 16px 16px 16px;
+	font-size: 16px;
+	color: white;
+}
+
+.outer_tab.selected > .inner_tab {
+	background: #C6C6C6;
 }

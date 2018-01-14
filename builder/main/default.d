@@ -85,9 +85,6 @@ void main(string[] args) {
 			};
 			
 			config.lang = new Lang(config.files);
-			
-			import std.process : executeShell;
-			executeShell("start http://127.0.0.1:19134/");
 		
 		}
 
