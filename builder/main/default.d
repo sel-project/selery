@@ -32,61 +32,13 @@ import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
 import selery.node.server : NodeServer;
 import selery.util.util : UnloggedException;
 
+import config : ConfigType;
 import pluginloader;
 import starter;
 
 void main(string[] args) {
 
-	static if(__traits(compiles, import("portable.zip"))) {
-
-		enum type = "portable";
-
-	} else {
-
-		enum type = "default";
-		
-	}
-
-	start(ConfigType.server, type, args, (Config config){
-	
-		static if(type == "portable") {
-		
-			import std.zip;
-			
-			import selery.files : Files;
-			import selery.lang : Lang;
-			
-			auto portable = new ZipArchive(cast(void[])import("portable.zip"));
-			
-			//TODO config.files is overwritten on reload
-			
-			config.files = new class Files {
-			
-				public this() {
-					super("", config.files.temp);
-				}
-				
-				public override inout bool hasAsset(string file) {
-					return !!(convert(file) in portable.directory);
-				}
-				
-				public override inout void[] readAsset(string file) {
-					auto member = portable.directory[convert(file)];
-					if(member.expandedData.length != member.expandedSize) portable.expand(member);
-					return cast(void[])member.expandedData;
-				}
-				
-				private static string convert(string file) {
-					version(Windows) file = file.replace("\\", "/");
-					while(file[$-1] == '/') file = file[0..$-1];
-					return file;
-				}
-			
-			};
-			
-			config.lang = new Lang(config.files);
-		
-		}
+	start(ConfigType.default_, args, (Config config){
 
 		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, HubPlugin, false)(config), args); }).start();
 

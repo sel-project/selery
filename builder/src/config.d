@@ -24,20 +24,23 @@ import std.string : replace, split, join, toLower, toUpper, startsWith, endsWith
 import std.traits : isArray, isAssociativeArray;
 import std.typetuple : TypeTuple;
 import std.uuid : UUID, parseUUID;
+import std.zip : ZipArchive;
 
 import selery.about;
 import selery.config : Config;
-import selery.files : Files;
+import selery.files : Files, CompressedFiles;
 import selery.lang : Lang;
 
 import toml;
 import toml.json;
 
-enum ConfigType {
+enum bool portable = __traits(compiles, import("portable.zip"));
 
-	server, // default
-	hub,
-	node
+enum ConfigType : string {
+
+	default_ = "default",
+	hub = "hub",
+	node = "node"
 
 }
 
@@ -53,16 +56,37 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 
 	immutable filename = (){
 		final switch(type) with(ConfigType) {
-			case server: return "selery.toml";
+			case default_: return "selery.toml";
 			case hub: return "selery.hub.toml";
 			case node: return "selery.node.toml";
 		}
 	}();
 	
-	immutable isHub = type == ConfigType.server || type == ConfigType.hub;
-	immutable isNode = type == ConfigType.server || type == ConfigType.node;
+	immutable isHub = type == ConfigType.default_ || type == ConfigType.hub;
+	immutable isNode = type == ConfigType.default_ || type == ConfigType.node;
 
 	auto config = new class Config {
+	
+		public override void load() {
+		
+			this.reload();
+		
+			immutable temp = buildNormalizedPath(tempDir() ~ dirSeparator ~ "selery" ~ dirSeparator ~ this.uuid.toString().toUpper());
+			mkdirRecurse(temp);
+			
+			static if(portable) {
+				
+				this.files = new CompressedFiles(new ZipArchive(cast(void[])import("portable.zip")), temp);
+				
+			} else {
+	
+				this.files = new Files("assets", temp);
+				
+			}
+			
+			this.lang = new Lang(this.files);
+		
+		}
 	
 		public override void reload() {
 	
@@ -136,7 +160,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				if(isHub) with(this.hub = new Config.Hub()) {
 				
 					// override default
-					webAdmin = type == ConfigType.server;
+					webAdmin = type == ConfigType.default_;
 				
 					set(displayName, "display-name");
 					set(edu, "edu");
@@ -220,12 +244,6 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				this.save();
 			
 			}
-			
-			immutable temp = buildNormalizedPath(tempDir() ~ dirSeparator ~ "selery" ~ dirSeparator ~ this.uuid.toString().toUpper());
-			mkdirRecurse(temp);
-			
-			this.files = new Files("assets", temp);
-			this.lang = new Lang(this.files);
 		
 		}
 		
@@ -334,7 +352,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 		
 	};
 	
-	config.reload();
+	config.load();
 	
 	return config;
 

@@ -328,8 +328,6 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {
-		import selery.log;
-		log("adding world");
 		auto world = new shared WorldSession(packet.worldId, packet.name, packet.dimension);
 		if(packet.parent != -1) {
 			auto parent = packet.parent in this._worlds;

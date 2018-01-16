@@ -25,12 +25,13 @@ import selery.node.plugin : NodePlugin, PluginOf;
 import selery.node.server : NodeServer;
 import selery.util.util : UnloggedException;
 
+import config : ConfigType;
 import pluginloader;
 import starter;
 
 void main(string[] args) {
 
-	start(ConfigType.node, "node", args, (Config config){
+	start(ConfigType.node, args, (Config config){
 
 		T find(T)(T def, string opt0, string opt1=null) {
 			foreach(i, arg; args) {

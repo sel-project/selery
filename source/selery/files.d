@@ -16,7 +16,8 @@ module selery.files;
 
 import std.file : exists, isFile, read, write;
 import std.path : dirSeparator;
-import std.string : endsWith;
+import std.string : endsWith, replace;
+import std.zip : ZipArchive;
 
 /**
  * File manager for assets and temp files.
@@ -70,4 +71,31 @@ class Files {
 		return write(this.temp ~ file, buffer);
 	}
 	
+}
+
+class CompressedFiles : Files {
+
+	private ZipArchive archive;
+
+	public this(ZipArchive archive, string temp) {
+		super("", temp);
+		this.archive = archive;
+	}
+
+	public override inout bool hasAsset(string file) {
+		return !!(convert(file) in (cast()this.archive).directory);
+	}
+	
+	public override inout void[] readAsset(string file) {
+		auto member = (cast()this.archive).directory[convert(file)];
+		if(member.expandedData.length != member.expandedSize) (cast()this.archive).expand(member);
+		return cast(void[])member.expandedData;
+	}
+	
+	private static string convert(string file) {
+		version(Windows) file = file.replace("\\", "/");
+		while(file[$-1] == '/') file = file[0..$-1];
+		return file;
+	}
+
 }

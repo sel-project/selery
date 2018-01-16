@@ -25,16 +25,15 @@ import selery.config : Config;
 
 import config;
 
-public import config : ConfigType;
-
-void start(ConfigType type, const string type_str, ref string[] args, void delegate(Config) startFunction) {
+void start(ConfigType type, ref string[] args, void delegate(Config) startFunction) {
 
 	if(args.canFind("--about") || args.canFind("-a")) {
 
 		import std.system : endian;
 
 		JSONValue[string] json;
-		json["type"] = type_str;
+		json["type"] = cast(string)type;
+		json["portable"] = portable;
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];

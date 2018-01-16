@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 32;
+enum size_t __GENERATOR__ = 34;
 
 void main(string[] args) {
 
@@ -51,32 +51,49 @@ void main(string[] args) {
 	
 	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output)["software"];
 	
-	foreach(arg ; args) {
-		if(arg == "--generate-files") {
-			write("version.txt", software["displayVersion"].str);
-			write("build.txt", software["stable"].type == JSON_TYPE.TRUE ? "0" : "1");
-			string[] notes;
-			string history = cast(string)read("../doc/history.md");
-			immutable v = "### " ~ software["displayVersion"].str;
-			immutable start = history.indexOf(v) + v.length;
-			immutable end = history[start..$].indexOf("##");
-			write("notes.txt", history[start..(end==-1?$:end)].strip);
-			return;
-		}
-	}
-
+	bool portable = false;
 	string type = "default";
 	
-	if(args.length > 1) type = args[1].toLower();
+	bool plugins = true;
 	
-	if(!["default", "hub", "node", "portable"].canFind(type)) {
-		writeln("Invalid type: ", type);
-		return;
+	foreach(arg ; args) {
+		switch(arg.toLower()) {
+			case "--generate-files":
+				write("version.txt", software["displayVersion"].str);
+				write("build.txt", software["stable"].type == JSON_TYPE.TRUE ? "0" : "1");
+				string[] notes;
+				string history = cast(string)read("../doc/history.md");
+				immutable v = "### " ~ software["displayVersion"].str;
+				immutable start = history.indexOf(v) + v.length;
+				immutable end = history[start..$].indexOf("##");
+				write("notes.txt", history[start..(end==-1?$:end)].strip);
+				return;
+			case "--no-plugins":
+				plugins = false;
+				break;
+			case "--portable":
+				portable = true;
+				break;
+			case "default":
+			case "classic":
+			case "allinone":
+			case "all-in-one":
+				type = "default";
+				break;
+			case "hub":
+				type = "hub";
+				break;
+			case "node":
+				type = "node";
+				break;
+			default:
+				break;
+		}		
 	}
 
 	writeln("Loading plugins for " ~ software["name"].str ~ " " ~ software["fullVersion"].str ~ " configuration \"" ~ type ~ "\"");
 
-	if(type == "portable") {
+	if(portable) {
 
 		auto zip = new ZipArchive();
 
@@ -320,9 +337,9 @@ void main(string[] args) {
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
 	builder["targetPath"] = "..";
-	builder["targetName"] = "selery-" ~ (type == "portable" ? software["displayVersion"].str : type);
+	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ software["displayVersion"].str : "");
 	builder["targetType"] = "executable";
-	builder["sourceFiles"] = ["main/" ~ (type == "portable" ? "default" : type) ~ ".d", ".selery/builder.d"];
+	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],

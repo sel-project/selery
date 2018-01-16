@@ -23,23 +23,23 @@ matrix:
 skip_tags: true
 
 artifacts:
-  - path: selery-hub.exe
+  - path: selery-hub-%selery_version%-windows-%lower_platform%.exe
     name: hub
-  - path: selery-node.exe
+  - path: selery-node-%selery_version%-windows-%lower_platform%.exe
     name: node
-  - path: selery-default.exe
-    name: default
   - path: selery-%selery_version%-windows-%lower_platform%.exe
-    name: portable
+    name: default
+  - path: selery-%selery_version%-windows-%lower_platform%.zip
+    name: zip
 
 deploy:
   - provider: GitHub
     tag: v$(selery_version)
     release: Selery $(selery_version)
-    description: $(release_notes)
+    description: "$(release_notes)"
     auth_token:
       secure: ioKlisLYTQCnQTUDVHlgLw24mtQ2/uMlCOt4BPvioprrpHYROYCP1lR/oFER/EIB
-    artifact: selery-%selery_version%-windows-%lower_platform%.exe
+    artifact: selery-%selery_version%-windows-%lower_platform%.zip
     force_update: true
     on:
       DC: ldc2
@@ -112,24 +112,49 @@ build_script:
   - set /p selery_version=<version.txt
   - set /p selery_build=<build.txt
   - set /p release_notes=<notes.txt
-  - selery-init portable
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - rcedit ..\selery-%selery_version%.exe --set-version-string ProductName Selery
-  - rcedit ..\selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
-  - rcedit ..\selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
-  - rcedit ..\selery-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
-  - rcedit ..\selery-%selery_version%.exe --set-product-version %selery_version%
-  - rcedit ..\selery-%selery_version%.exe --set-icon ..\assets\icon.ico
-  - move ..\selery-%selery_version%.exe ..\selery-%selery_version%-windows-%lower_platform%.exe
   - selery-init hub
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init node
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - selery-init default
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - selery-init hub --portable
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - selery-init node --portable
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - selery-init default --portable
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - cd ..
+
+after_build:  
+  - rcedit selery-hub-%selery_version%.exe --set-version-string ProductName Selery's hub
+  - rcedit selery-hub-%selery_version%.exe --set-version-string FileDescription "Selery's hub %selery_version%"
+  - rcedit selery-hub-%selery_version%.exe --set-version-string OriginalFileName selery-hub-%selery_version%.exe
+  - rcedit selery-hub-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-hub-%selery_version%.exe --set-product-version %selery_version%
+  - rcedit selery-hub-%selery_version%.exe --set-icon ..\assets\icon.ico
+  
+  - rcedit selery-node-%selery_version%.exe --set-version-string ProductName Selery's node
+  - rcedit selery-node-%selery_version%.exe --set-version-string FileDescription "Selery's node %selery_version%"
+  - rcedit selery-node-%selery_version%.exe --set-version-string OriginalFileName selery-node-%selery_version%.exe
+  - rcedit selery-node-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-node-%selery_version%.exe --set-product-version %selery_version%
+  - rcedit selery-node-%selery_version%.exe --set-icon ..\assets\icon.ico
+  
+  - rcedit selery-%selery_version%.exe --set-version-string ProductName Selery
+  - rcedit selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
+  - rcedit selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
+  - rcedit selery-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-%selery_version%.exe --set-product-version %selery_version%
+  - rcedit selery-%selery_version%.exe --set-icon ..\assets\icon.ico
+  
+  - 7z a selery-%selery_version%-windows-%lower_platform%.zip selery-hub-%selery_version%.exe selery-node-%selery_version%.exe selery-%selery_version%.exe
+  
+  - mv selery-hub-%selery_version%.exe selery-hub-%selery-version%-windows-%lower_platform%.exe
+  - mv selery-node-%selery_version%.exe selery-node-%selery-version%-windows-%lower_platform%.exe
+  - mv selery-%selery_version%.exe selery-%selery-version%-windows-%lower_platform%.exe
 
 test_script:
   - selery-hub --about
   - selery-node --about
-  - selery-default --about
+  - selery --about

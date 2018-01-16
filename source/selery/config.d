@@ -237,8 +237,19 @@ class Config {
 
 	}
 
+	/**
+	 * Loads the configuration for the first time.
+	 */
+	public void load() {}
+
+	/**
+	 * Reloads the configuration.
+	 */
 	public void reload() {}
 
+	/**
+	 * Saves the configuration.
+	 */
 	public void save() {}
 
 }

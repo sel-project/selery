@@ -18,12 +18,13 @@ import selery.config : Config;
 import selery.hub.plugin : HubPlugin, PluginOf;
 import selery.hub.server : HubServer;
 
+import config : ConfigType;
 import pluginloader;
 import starter;
 
 void main(string[] args) {
 
-	start(ConfigType.hub, "hub", args, (Config config){
+	start(ConfigType.hub, args, (Config config){
 
 		new shared HubServer(false, config, loadPlugins!(PluginOf, HubPlugin, false)(config), args);
 
