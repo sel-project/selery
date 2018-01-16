@@ -23,7 +23,7 @@ matrix:
 deploy:
   provider: releases
   api_key: $API_KEY
-  file: selery-$SELERY_VERSION-$OS-x86_64.zip
+  file: "selery-${SELERY_VERSION}-${OS}-x86_64.zip"
   skip_cleanup: true
   on:
     tags: true
@@ -35,7 +35,7 @@ script:
   - cd builder
   - dub build --single --compiler=$DC --build=$CONFIG init.d
   - ./selery-init --generate-files
-  - selery_version=$(<version.txt)
+  - SELERY_VERSION=$(<version.txt)
   - ./selery-init hub
   - dub build --compiler=$DC --build=$CONFIG
   - ./selery-init node
@@ -51,7 +51,7 @@ script:
   - cd ..
   
 after_success:
-  - zip -r selery-$SELERY_VERSION-$OS-x86_64.zip selery-hub-$SELERY_VERSION selery-node-$SELERY_VERSION selery-$SELERY_VERSION
+  - zip -r "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about

@@ -127,21 +127,21 @@ build_script:
   - cd ..
 
 after_build:  
-  - rcedit selery-hub-%selery_version%.exe --set-version-string ProductName Selery's hub
+  - rcedit selery-hub-%selery_version%.exe --set-version-string ProductName "Selery's hub"
   - rcedit selery-hub-%selery_version%.exe --set-version-string FileDescription "Selery's hub %selery_version%"
   - rcedit selery-hub-%selery_version%.exe --set-version-string OriginalFileName selery-hub-%selery_version%.exe
   - rcedit selery-hub-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
   - rcedit selery-hub-%selery_version%.exe --set-product-version %selery_version%
   - rcedit selery-hub-%selery_version%.exe --set-icon ..\assets\icon.ico
   
-  - rcedit selery-node-%selery_version%.exe --set-version-string ProductName Selery's node
+  - rcedit selery-node-%selery_version%.exe --set-version-string ProductName "Selery's node"
   - rcedit selery-node-%selery_version%.exe --set-version-string FileDescription "Selery's node %selery_version%"
   - rcedit selery-node-%selery_version%.exe --set-version-string OriginalFileName selery-node-%selery_version%.exe
   - rcedit selery-node-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
   - rcedit selery-node-%selery_version%.exe --set-product-version %selery_version%
   - rcedit selery-node-%selery_version%.exe --set-icon ..\assets\icon.ico
   
-  - rcedit selery-%selery_version%.exe --set-version-string ProductName Selery
+  - rcedit selery-%selery_version%.exe --set-version-string ProductName "Selery"
   - rcedit selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
   - rcedit selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
   - rcedit selery-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
