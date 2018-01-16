@@ -91,9 +91,6 @@ const struct Software {
 	
 	/// ditto
 	enum ubyte patch = 0;
-
-	/// ditto
-	enum uint build = 24;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
@@ -103,7 +100,7 @@ const struct Software {
 	 * Unstable versions are not fully tested and may fail to compile
 	 * on some systems.
 	 */
-	enum bool stable = build == 0;
+	enum bool stable = true;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the
@@ -116,7 +113,7 @@ const struct Software {
 	 * Full version of the software prefixed with a `v` and suffixed
 	 * with a build version if the version is not stable.
 	 */
-	enum string fullVersion = "v" ~ displayVersion ~ (!stable ? "-build." ~ to!string(build) : "");
+	enum string fullVersion = "v" ~ displayVersion ~ (!stable ? "-unstable" : "");
 	
 	/**
 	 * Display name of the software that contains both the software name
@@ -137,7 +134,7 @@ const struct Software {
 		foreach(member ; TypeTuple!("name", "website", "stable", "displayVersion", "fullVersion", "codename", "display", "api")) {
 			ret[member] = JSONValue(mixin(member));
 		}
-		ret["version"] = ["major": major, "minor": minor, "patch": patch, "build": build];
+		ret["version"] = ["major": major, "minor": minor, "patch": patch];
 		return JSONValue(ret);
 	}
 	

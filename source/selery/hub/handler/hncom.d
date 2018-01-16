@@ -150,7 +150,7 @@ abstract class AbstractNode : Handler!serverbound {
 	public shared Login.NodeInfo.Plugin[] plugins;
 	
 	private shared PlayerSession[immutable(uint)] players;
-	private shared WorldSession[immutable(uint)] worlds;
+	private shared WorldSession[immutable(uint)] _worlds;
 	
 	private uint n_latency;
 	
@@ -239,6 +239,13 @@ abstract class AbstractNode : Handler!serverbound {
 	public shared nothrow @property @safe @nogc const bool full() {
 		return this.max != Login.NodeInfo.UNLIMITED && this.online >= this.max;
 	}
+
+	/**
+	 * Gets the list of worlds loaded on the node.
+	 */
+	public shared nothrow @property shared(WorldSession)[] worlds() {
+		return this._worlds.values;
+	}
 	
 	/**
 	 * Gets the node's latency (it may not be precise).
@@ -291,7 +298,7 @@ abstract class AbstractNode : Handler!serverbound {
 	protected override void handleStatusLog(Status.Log packet) {
 		string name = packet.logger;
 		if(packet.worldId != -1) {
-			auto world = packet.worldId in this.worlds;
+			auto world = packet.worldId in this._worlds;
 			if(world) name = world.name;
 		}
 		this.server.message((cast(shared)this).name, packet.timestamp, name, packet.message, packet.commandId);
@@ -321,16 +328,18 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {
+		import selery.log;
+		log("adding world");
 		auto world = new shared WorldSession(packet.worldId, packet.name, packet.dimension);
 		if(packet.parent != -1) {
-			auto parent = packet.parent in this.worlds;
+			auto parent = packet.parent in this._worlds;
 			if(parent) world.parent = *parent;
 		}
-		this.worlds[packet.worldId] = world;
+		this._worlds[packet.worldId] = world;
 	}
 
 	protected override void handleStatusRemoveWorld(Status.RemoveWorld packet) {
-		this.worlds.remove(packet.worldId);
+		this._worlds.remove(packet.worldId);
 	}
 
 	protected override void handleStatusUpdateListByUUID(Status.UpdateListByUUID packet) {}
@@ -411,7 +420,7 @@ abstract class AbstractNode : Handler!serverbound {
 
 	protected override void handlePlayerUpdateWorld(Player.UpdateWorld packet) {
 		auto player = packet.hubId in this.players;
-		auto world = packet.worldId in this.worlds;
+		auto world = packet.worldId in this._worlds;
 		if(player && world) {
 			(*player).world = *world;
 		}

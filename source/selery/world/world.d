@@ -30,6 +30,7 @@ import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
 import sel.hncom.about;
+import sel.hncom.status : AddWorld, RemoveWorld;
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock, Update, Remove, blockInto;
@@ -53,6 +54,7 @@ import selery.item.slot : Slot;
 import selery.lang : Messageable, Translation, Message;
 import selery.log;
 import selery.math.vector;
+import selery.node.handler : Handler;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
 import selery.player.bedrock : BedrockPlayerImpl;
@@ -270,7 +272,10 @@ private shared uint world_count = 0;
  */
 class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player"), Messageable {
 
-	public static void startWorld(T:World)(shared NodeServer server, shared WorldInfo info, T world, World parent) {
+	public static void startWorld(T:World)(shared NodeServer server, shared WorldInfo info, T world, World parent, bool default_=false) {
+		// send world info to the hub
+		Handler.sharedInstance.send(AddWorld(world.id, world.name, world.dimension, default_, parent is null ? -1 : parent.id).encode());
+		// update variables and start
 		world.info = info;
 		world.n_server = server;
 		world.setListener(cast()server.globalListener);

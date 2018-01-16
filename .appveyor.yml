@@ -36,6 +36,7 @@ deploy:
   - provider: GitHub
     tag: v$(selery_version)
     release: Selery $(selery_version)
+    description: $(release_notes)
     auth_token:
       secure: ioKlisLYTQCnQTUDVHlgLw24mtQ2/uMlCOt4BPvioprrpHYROYCP1lR/oFER/EIB
     artifact: selery-%selery_version%-windows-%lower_platform%.exe
@@ -54,7 +55,7 @@ install:
             }
             elseif($env:platform -eq "x64"){
               $env:DConf = "m64";
-              $env:lower_platform = "64";
+              $env:lower_platform = "x64";
             }
             if($env:DC -eq "dmd"){
               $env:toolchain = "msvc";
@@ -109,14 +110,14 @@ build_script:
   - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
   - selery-init --generate-files
   - set /p selery_version=<version.txt
-  - set /p selery_full_version=<full_version.txt
   - set /p selery_build=<build.txt
+  - set /p release_notes=<notes.txt
   - selery-init portable
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - rcedit ..\selery-%selery_version%.exe --set-version-string ProductName Selery
   - rcedit ..\selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
   - rcedit ..\selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
-  - rcedit ..\selery-%selery_version%.exe --set-file-version %selery_full_version%
+  - rcedit ..\selery-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
   - rcedit ..\selery-%selery_version%.exe --set-product-version %selery_version%
   - rcedit ..\selery-%selery_version%.exe --set-icon ..\assets\icon.ico
   - move ..\selery-%selery_version%.exe ..\selery-%selery_version%-windows-%lower_platform%.exe

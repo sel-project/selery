@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 31;
+enum size_t __GENERATOR__ = 32;
 
 void main(string[] args) {
 
@@ -54,8 +54,13 @@ void main(string[] args) {
 	foreach(arg ; args) {
 		if(arg == "--generate-files") {
 			write("version.txt", software["displayVersion"].str);
-			write("full_version.txt", software["displayVersion"].str ~ "." ~ to!string(software["version"]["build"].integer));
-			write("build.txt", software["version"]["build"].integer.to!string);
+			write("build.txt", software["stable"].type == JSON_TYPE.TRUE ? "0" : "1");
+			string[] notes;
+			string history = cast(string)read("../doc/history.md");
+			immutable v = "### " ~ software["displayVersion"].str;
+			immutable start = history.indexOf(v) + v.length;
+			immutable end = history[start..$].indexOf("##");
+			write("notes.txt", history[start..(end==-1?$:end)].strip);
 			return;
 		}
 	}
@@ -79,6 +84,7 @@ void main(string[] args) {
 		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
 			immutable name = file[10..$].replace("\\", "/");
 			if(file.isFile && !name.startsWith(".") && !name.endsWith(".ico") && (!name.startsWith("web/") || name.endsWith("/main.css") || name.indexOf("/res/") != -1)) {
+				//TODO optimise .lang files by removing empty lines, windows endings and comments
 				auto data = read(file);
 				auto member = new ArchiveMember();
 				member.name = name;

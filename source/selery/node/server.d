@@ -859,8 +859,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
 		shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1));
 		this._worlds[world.id] = world;
-		if(this._default_world_id == 0) this._default_world_id = world.id;
-		world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, args);
+		bool default_ = this._default_world_id == 0;
+		if(default_) this._default_world_id = world.id;
+		world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, default_, args);
 		return world;
 	}
 

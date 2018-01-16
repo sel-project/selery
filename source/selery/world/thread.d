@@ -26,7 +26,7 @@ import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
 import selery.world.world : World;
 
-void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
+void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, bool default_, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
 
 	Thread.getThis().name = "World#" ~ to!string(info.id);
 
@@ -37,7 +37,7 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 		//TODO register default events
 		//TODO register specific events
 
-		World.startWorld(server, info, world, null);
+		World.startWorld(server, info, world, null, default_);
 		world.startMainWorldLoop();
 
 	} catch(Throwable t) {
