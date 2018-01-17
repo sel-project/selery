@@ -42,6 +42,7 @@ import resusage.cpu;
 
 import sel.hncom.about;
 import sel.hncom.handler : HncomHandler;
+import sel.server.bedrock : bedrockSupportedProtocols;
 
 import selery.world.world : World; // do not move this import down
 
@@ -332,8 +333,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 
-		check("Minecraft: Java Edition", config.hub.java.protocols, supportedJavaProtocols.keys);
-		check("Minecraft (Bedrock Engine)", config.hub.bedrock.protocols, supportedBedrockProtocols.keys);
+		check("Minecraft: Java Edition", config.hub.java.protocols, supportedJavaProtocols);
+		check("Minecraft (Bedrock Engine)", config.hub.bedrock.protocols, supportedBedrockProtocols);
 
 		this._config = cast(shared)config;
 
@@ -358,11 +359,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		Skin.ALEX = Skin("Standard_Alex", read_png_from_mem(cast(ubyte[])this.config.files.readAsset("skin/alex.png")).pixels);
 
 		// load creative inventories
-		foreach(immutable protocol ; SupportedBedrockProtocols) {
+		foreach(protocol ; SupportedBedrockProtocols) {
 			string[] failed;
 			if(this.config.hub.bedrock.protocols.canFind(protocol)) {
 				if(!mixin("BedrockPlayerImpl!" ~ protocol.to!string).loadCreativeInventory(this.config.files)) {
-					failed ~= supportedBedrockProtocols[protocol];
+					failed ~= bedrockSupportedProtocols[protocol];
 				}
 			}
 			if(failed.length) {
@@ -1055,7 +1056,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
 		}
 
-		shared PlayerInfo player = cast(shared)new PlayerInfo(packet.hubId, packet.type, packet.protocol, packet.username, packet.displayName, packet.uuid, packet.clientAddress, packet.serverAddress, packet.language, packet.gameData);
+		shared PlayerInfo player = cast(shared)new PlayerInfo(packet);
 		player.skin = skin;
 
 		// add to the lists

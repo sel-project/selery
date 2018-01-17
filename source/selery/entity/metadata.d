@@ -21,7 +21,7 @@ import std.typetuple : TypeTuple;
 import selery.about;
 
 // still named "minecraft" in sel-utils
-mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["bedrock":supportedBedrockProtocols.keys,"java":supportedJavaProtocols.keys]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
+mixin("alias Games = TypeTuple!(" ~ (){ string[] ret;foreach(g,pr;["bedrock":supportedBedrockProtocols,"java":supportedJavaProtocols]){foreach(p;pr){ret~="\""~g~p.to!string~"\"";}}return ret.join(","); }() ~ ");");
 
 mixin((){
 	string ret;

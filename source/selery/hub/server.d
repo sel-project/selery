@@ -293,13 +293,13 @@ class HubServer : PlayerHandler, Server {
 			motd = motd.replace(";", "");
 			motd ~= Text.reset;
 			this._info.motd.bedrock = motd;
-			validateProtocols(protocols, supportedBedrockProtocols.keys, latestBedrockProtocols);
+			validateProtocols(protocols, supportedBedrockProtocols, supportedBedrockProtocols);
 		}
 		if(config.hub.java) with(config.hub.java) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace("\\n", "\n");
 			this._info.motd.java = motd;
-			validateProtocols(protocols, supportedJavaProtocols.keys, latestJavaProtocols);
+			validateProtocols(protocols, supportedJavaProtocols, supportedJavaProtocols);
 		}
 		// languages
 		string[] accepted;

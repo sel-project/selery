@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 34;
+enum size_t __GENERATOR__ = 35;
 
 void main(string[] args) {
 
@@ -66,7 +66,7 @@ void main(string[] args) {
 				immutable v = "### " ~ software["displayVersion"].str;
 				immutable start = history.indexOf(v) + v.length;
 				immutable end = history[start..$].indexOf("##");
-				write("notes.txt", history[start..(end==-1?$:end)].strip);
+				write("notes.txt", history[start..(end==-1?$:end)].strip.replace("\n", "\\n"));
 				return;
 			case "--no-plugins":
 				plugins = false;
@@ -211,7 +211,7 @@ void main(string[] args) {
 		}
 	}
 
-	if(!args.canFind("--no-plugins")) {
+	if(plugins) {
 
 		// load plugins in plugins folder
 		if(exists("../plugins")) {

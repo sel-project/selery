@@ -74,58 +74,44 @@ final class PlayerInfo {
 
 	public bool edu = false;
 
-	public InputMode inputMode = InputMode.keyboard;
+	public InputMode inputMode;
 	public DeviceOS deviceOs = DeviceOS.unknown;
 	public string deviceModel;
 	public long xuid;
 
 	public shared WorldInfo world;
 
-	public this(uint hubId, ubyte type, uint protocol, string name, string displayName, UUID uuid, Address address, Add.ServerAddress usedAddress, string language, JSONValue data) {
-		this.hubId = hubId;
-		this.type = type;
-		this.protocol = protocol;
-		this.name = name;
-		this.lname = name.toLower();
-		this.displayName = displayName;
-		this.uuid = uuid;
-		this.address = address;
-		this.ip = address.toAddrString();
-		this.port = to!ushort(address.toPortString());
-		this.usedAddress = usedAddress;
-		this.language = language;
-		if(data.type == JSON_TYPE.OBJECT) {
+	public this(Add add) {
+		this.hubId = add.hubId;
+		this.type = add.type;
+		this.protocol = add.protocol;
+		this.name = add.username;
+		this.lname = add.username.toLower();
+		this.displayName = add.displayName;
+		this.uuid = add.uuid;
+		this.address = add.clientAddress;
+		this.ip = add.clientAddress.toAddrString();
+		this.port = to!ushort(add.clientAddress.toPortString());
+		this.usedAddress = add.serverAddress;
+		this.language = add.language;
+		this.inputMode = cast(InputMode)add.inputMode;
+		this.gameVersion = add.version_;
+		if(add.gameData.type == JSON_TYPE.OBJECT) {
 			if(type == __BEDROCK__) {
-				this.edu = "edu" in data && data["edu"].type == JSON_TYPE.TRUE;
-				auto gameVersion = "GameVersion" in data;
-				if(gameVersion && gameVersion.type == JSON_TYPE.STRING) this.gameVersion = gameVersion.str;
-				auto deviceOs = "DeviceOS" in data;
+				this.edu = "edu" in add.gameData && add.gameData["edu"].type == JSON_TYPE.TRUE;
+				auto deviceOs = "DeviceOS" in add.gameData;
 				if(deviceOs && deviceOs.type == JSON_TYPE.INTEGER && deviceOs.integer <= 9) this.deviceOs = cast(DeviceOS)deviceOs.integer;
-				auto deviceModel = "DeviceModel" in data;
+				auto deviceModel = "DeviceModel" in add.gameData;
 				if(deviceModel && deviceModel.type == JSON_TYPE.STRING) this.deviceModel = deviceModel.str;
-				auto inputMode = "CurrentInputMode" in data;
-				if(inputMode && inputMode.type == JSON_TYPE.INTEGER) {
-					if(inputMode.integer == 0) this.inputMode = InputMode.controller;
-					else if(inputMode.integer == 2) this.inputMode = InputMode.touch;
-				}
 			}
 		}
 		if(type == __JAVA__) {
 			this.gameEdition = GAME_JAVA;
-			this.gameVersion = supportedJavaProtocols[this.protocol][0];
 		} else {
 			if(this.edu) this.gameEdition = GAME_EDU;
 			else this.gameEdition = GAME_BEDROCK;
-			this.gameVersion = verifyVersion(this.gameVersion, supportedBedrockProtocols[this.protocol]);
 		}
 		this.game = this.gameEdition ~ " " ~ this.gameVersion;
-	}
-	
-	private static string verifyVersion(string given, string[] accepted) {
-		foreach(acc ; accepted) {
-			if(acc.startsWith(given) || given.startsWith(acc)) return given;
-		}
-		return accepted[0];
 	}
 
 }

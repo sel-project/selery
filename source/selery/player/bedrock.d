@@ -180,7 +180,7 @@ abstract class BedrockPlayer : Player {
 
 // send function are overwritten with static ifs
 // handle functions are created for every version using static ifs
-class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProtocols.keys.canFind(__protocol)) {
+class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProtocols.canFind(__protocol)) {
 
 	mixin("import Types = sul.protocol.bedrock" ~ __protocol.to!string ~ ".types;");
 	mixin("import Play = sul.protocol.bedrock" ~ __protocol.to!string ~ ".play;");

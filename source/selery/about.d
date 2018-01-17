@@ -143,33 +143,18 @@ const struct Software {
 /**
  * Protocols supported by the software.
  */
-enum supportedJavaProtocols = cast(string[][uint])[
-	210: ["1.10", "1.10.1", "1.10.2"],
-	315: ["1.11"],
-	316: ["1.11.1", "1.11.2"],
-	335: ["1.12"],
-	338: ["1.12.1"],
-	340: ["1.12.2"],
-	//351: ["1.13"],
-];
+enum uint[] supportedJavaProtocols = [210, 315, 316, 335, 338, 340];
 
 /// ditto
-enum supportedBedrockProtocols = cast(string[][uint])[
-	137: ["1.2.0", "1.2.1", "1.2.2", "1.2.3"],
-	141: ["1.2.5"],
-	150: ["1.2.6"],
-	160: ["1.2.7", "1.2.8"],
-];
+enum uint[] supportedBedrockProtocols = [137, 141, 150, 160];
 
 /**
  * Tuples with the supported protocols.
  */
-alias SupportedJavaProtocols = ProtocolsTuple!(supportedJavaProtocols);
+alias SupportedJavaProtocols = ProtocolsImpl!(supportedJavaProtocols);
 
 /// ditto
-alias SupportedBedrockProtocols = ProtocolsTuple!(supportedBedrockProtocols);
-
-alias ProtocolsTuple(string[][uint] protocols) = ProtocolsImpl!(protocols.keys);
+alias SupportedBedrockProtocols = ProtocolsImpl!(supportedBedrockProtocols);
 
 private template ProtocolsImpl(uint[] protocols, E...) {
 	static if(protocols.length) {
@@ -180,34 +165,12 @@ private template ProtocolsImpl(uint[] protocols, E...) {
 }
 
 /**
- * Array with the protocols for the latest game version.
- * For example 315 and 316 if the latest Minecraft version
- * is 1.11.
+ * Newest protocol released.
  */
-enum latestJavaProtocols = latest(supportedJavaProtocols);
+enum newestJavaProtocol = supportedJavaProtocols[$-1];
 
 /// ditto
-enum latestBedrockProtocols = latest(supportedBedrockProtocols);
-
-private uint[] latest(string[][uint] protocols) {
-	uint[] keys = protocols.keys;
-	if(keys.length == 1) return [keys[0]];
-	sort!"a > b"(keys);
-	string start = protocols[keys[0]][0].split(".")[0..2].join(".");
-	size_t i = 1;
-	while(i < keys.length && protocols[keys[i]][0].startsWith(start)) i++;
-	keys = keys[0..i];
-	reverse(keys);
-	return keys;
-}
-
-/**
- * Latest protocol released.
- */
-enum newestJavaProtocol = latestJavaProtocols[$-1];
-
-/// ditto
-enum newestBedrockProtocol = latestBedrockProtocols[$-1];
+enum newestBedrockProtocol = supportedBedrockProtocols[$-1];
 
 uint[] validateProtocols(ref uint[] protocols, uint[] accepted, uint[] default_) {
 	uint[] ret;
@@ -239,7 +202,7 @@ version(Main) {
 
 	void main(string[] args) {
 
-		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols.keys), "bedrock": JSONValue(supportedBedrockProtocols.keys)]));
+		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols), "bedrock": JSONValue(supportedBedrockProtocols)]));
 
 	}
 

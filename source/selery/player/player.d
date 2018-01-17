@@ -1355,9 +1355,9 @@ private void startCompressionImpl(T)(uint hubId) {
 
 enum InputMode : ubyte {
 
-	keyboard = 1,
-	controller = 0,
-	touch = 2,
+	keyboard = HncomPlayer.Add.KEYBOARD,
+	touch = HncomPlayer.Add.TOUCH,
+	controller = HncomPlayer.Add.CONTROLLER,
 
 }
 

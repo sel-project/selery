@@ -3,14 +3,14 @@ language: d
 d:
   - dmd
   - ldc
-  
-env:
-  - CONFIG=debug
-  - CONFIG=release
 
 os:
   - linux
   - osx
+  
+env:
+  - CONFIG=debug
+  - CONFIG=release
 
 matrix:
   exclude:
@@ -28,7 +28,7 @@ deploy:
   on:
     tags: true
     d: ldc
-    env: CONFIG=release
+    condition: $CONFIG=release
 
 script:
   - dub build --compiler=$DC --build=$CONFIG
@@ -51,7 +51,7 @@ script:
   - cd ..
   
 after_success:
-  - zip -r "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
+  - zip "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about

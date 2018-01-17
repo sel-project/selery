@@ -41,7 +41,7 @@ import selery.world.world : World;
 
 static import sul.blocks;
 
-mixin("import sul.protocol.java" ~ latestJavaProtocols[$-1].to!string ~ ".clientbound : UpdateBlockEntity;");
+mixin("import sul.protocol.java" ~ newestJavaProtocol.to!string ~ ".clientbound : UpdateBlockEntity;");
 
 /**
  * A special block that contains additional data.

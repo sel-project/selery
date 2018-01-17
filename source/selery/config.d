@@ -71,9 +71,9 @@ class Config {
 
 		string displayName;
 		
-		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], latestBedrockProtocols);
+		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], supportedBedrockProtocols);
 		
-		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], latestJavaProtocols);
+		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], supportedJavaProtocols);
 		
 		bool allowVanillaPlayers = false;
 
@@ -163,9 +163,9 @@ class Config {
 
 		}
 
-		Game java = Game(true, latestJavaProtocols);
+		Game java = Game(true, supportedJavaProtocols);
 
-		Game bedrock = Game(true, latestBedrockProtocols);
+		Game bedrock = Game(true, supportedBedrockProtocols);
 
 		uint maxPlayers = 20;
 
