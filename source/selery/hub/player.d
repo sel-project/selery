@@ -478,7 +478,7 @@ class PlayerSession {
 	 * server (if registered to it).
 	 */
 	protected shared void close() {
-		this.server.remove(this);
+		//TODO is this method still necessary?
 	}
 	
 }

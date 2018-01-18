@@ -60,7 +60,13 @@ web.login.limitReached = The server does not allow more connections to the admin
 web.login.networkError = Could not reach the server. Maybe it went offline?
 web.login.unknownError = An unknown error has occured
 web.login.goBack = Go Back
-web.admin.title = {0} administration panel
+web.admin.title.connecting = Connecting to the administration panel
+web.admin.title.error = An error has occured
+web.admin.networkError = Cannot establish a connection with the server.
+web.admin.interrupted = The connection with the server has been interrupted.
+web.admin.interrupted.todo = What do you want to do?
+web.admin.retry = Reconnect
+web.admin.close = Close window
 
 commands.about.description = Shows information about the server's software and plugins.
 commands.about.software = Software: {0}

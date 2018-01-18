@@ -14,6 +14,7 @@
  */
 module selery.hub.handler.webadmin;
 
+import core.atomic : atomicOp;
 import core.thread : Thread;
 
 import std.concurrency : spawn;
@@ -23,6 +24,7 @@ import std.random : uniform;
 import std.socket : Socket, TcpSocket, Address, SocketOption, SocketOptionLevel;
 import std.string : startsWith, split, replace;
 
+import sel.hncom.status : RemoteCommand;
 import sel.net.http : StatusCodes, Request, Response;
 import sel.net.stream : TcpStream;
 import sel.net.websocket : authWebSocketClient, WebSocketServerStream;
@@ -45,6 +47,7 @@ class WebAdminHandler : GenericServer {
 	public shared this(shared HubServer server) {
 		super(server.info);
 		this.server = server;
+		// prepare static resources
 		with(server.config.files) {
 			this.style = cast(string)readAsset("web/styles/main.css");
 			this.bg = cast(string)readAsset("web/res/bg32.png");
@@ -93,9 +96,24 @@ class WebAdminHandler : GenericServer {
 						client.sendAddWorld(world);
 					}
 				}
+				//TODO send players
+				this.server.add(client);
+				auto address = socket.remoteAddress;
 				while(true) {
-					client.receive();
+					try {
+						JSONValue[string] json = parseJSON(cast(string)client.receive()).object;
+						switch(json.get("id", JSONValue.init).str) {
+							case "command":
+								this.server.handleCommand(json.get("command", JSONValue.init).str, RemoteCommand.REMOTE_PANEL, address, cast(uint)json.get("command_id", JSONValue.init).integer);
+								break;
+							default:
+								break;
+						}
+					} catch(JSONException) {
+						break;
+					}
 				}
+				this.server.remove(client);
 			}
 		}
 		socket.close();
@@ -196,10 +214,18 @@ class WebAdminHandler : GenericServer {
 
 class WebAdminClient {
 
+	private static shared uint _id = 0;
+
+	public immutable uint id;
+
 	private WebSocketServerStream stream;
 
+	private immutable string to_string;
+
 	public this(Socket socket) {
+		this.id = atomicOp!"+="(_id, 1);
 		this.stream = new WebSocketServerStream(new TcpStream(socket));
+		this.to_string = "WebAdmin@" ~ socket.remoteAddress.toString();
 	}
 
 	public void send(string packet, JSONValue[string] data) {
@@ -232,8 +258,16 @@ class WebAdminClient {
 
 	public void sendRemovePlayer(shared PlayerSession player) {}
 
+	public void sendLog(string log, int commandId) {
+		this.send("log", ["log": JSONValue(log), "command_id": JSONValue(commandId)]);
+	}
+
 	public ubyte[] receive() {
 		return this.stream.receive();
+	}
+
+	public override string toString() {
+		return this.to_string;
 	}
 
 }

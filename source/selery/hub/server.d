@@ -51,6 +51,7 @@ import selery.format : Text;
 import selery.hub.handler.handler : Handler;
 import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
+import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
 import selery.lang : Translation;
 import selery.log : log, warning_log, raw_log;
@@ -141,6 +142,7 @@ class HubServer : PlayerHandler, Server {
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
+	private shared WebAdminClient[uint] webAdmins;
 	private shared RconClient[uint] rcons;
 	
 	private shared PlayerSession[uint] _players;
@@ -524,6 +526,9 @@ class HubServer : PlayerHandler, Server {
 			raw_log("[", logger, "] ", message);
 		}
 		if(id != -1) {
+			foreach(webAdmin ; this.webAdmins) {
+				(cast()webAdmin).sendLog(message, commandId);
+			}
 			foreach(rcon ; this.rcons) {
 				rcon.consoleMessage(message, commandId);
 			}
@@ -606,7 +611,7 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void add(shared AbstractNode node) {
-		if(!this.lite) log(Text.green, "+ ", Text.white, node.toString());
+		if(!this.lite) log(Text.green, "+ ", Text.reset, node.toString());
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
 		// update players
@@ -630,7 +635,7 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void remove(shared AbstractNode node) {
-		log(Text.red, "- ", Text.white, node.toString());
+		log(Text.red, "- ", Text.reset, node.toString());
 		this.nodes.remove(node.id);
 		this.nodesNames.remove(node.name);
 		// update players
@@ -663,11 +668,8 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public override shared void onClientJoin(shared Client client) {
-		log("creating client");
 		auto player = new shared PlayerSession(this, client);
-		log("created");
 		if(player.firstConnect()) this._players[player.id] = player;
-		log("connected");
 	}
 
 	public override shared void onClientLeft(shared Client client) {
@@ -693,22 +695,26 @@ class HubServer : PlayerHandler, Server {
 		//TODO select player and update if changed
 	}
 
+	public synchronized shared void add(WebAdminClient webAdmin) {
+		log(Text.green, "+ ", Text.reset, webAdmin.toString());
+		this.webAdmins[webAdmin.id] = cast(shared)webAdmin;
+	}
+
+	public synchronized shared void remove(WebAdminClient webAdmin) {
+		if(this.webAdmins.remove(webAdmin.id)) {
+			log(Text.red, "- ", Text.reset, webAdmin.toString());
+		}
+	}
+
 	public synchronized shared void add(shared RconClient rcon) {
-		log(Text.green, "+ ", Text.white, rcon.toString());
+		log(Text.green, "+ ", Text.reset, rcon.toString());
 		this.rcons[rcon.id] = rcon;
 	}
 
 	public synchronized shared void remove(shared RconClient rcon) {
-		log(Text.red, "- ", Text.white, rcon.toString());
-		this.rcons.remove(rcon.id);
-	}
-
-	public synchronized shared void add(shared PlayerSession player) {
-		this._players[player.id] = player;
-	}
-
-	public synchronized shared void remove(shared PlayerSession player) {
-		this._players.remove(player.id);
+		if(this.rcons.remove(rcon.id)) {
+			log(Text.red, "- ", Text.reset, rcon.toString());
+		}
 	}
 
 	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {

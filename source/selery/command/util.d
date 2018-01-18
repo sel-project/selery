@@ -319,6 +319,7 @@ struct Target {
 	 * "@e[type=player]" = true
 	 * "@r" = true
 	 * "@r[type=creeper]" = false
+	 * ---
 	 */
 	public bool player = true;
 

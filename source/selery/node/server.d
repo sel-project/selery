@@ -1133,6 +1133,7 @@ final class ServerCommandSender : CommandSender {
 
 	enum Origin : ubyte {
 
+		//TODO update from sel-hncom 8
 		prompt = 0,
 		hub = HncomStatus.RemoteCommand.HUB,
 		externalConsole = HncomStatus.RemoteCommand.EXTERNAL_CONSOLE,

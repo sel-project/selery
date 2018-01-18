@@ -60,7 +60,13 @@ web.login.limitReached = Il server non accetta più connessioni al pannello di a
 web.login.networkError = Impossibile contattare il server. Magari è andato offline?
 web.login.unknownError = È stato riscontrato un errore sconosciuto
 web.login.goBack = Indietro
-web.admin.title = {0} - pannello di amministrazione
+web.admin.title.connecting = Connessione al pannello di amministrazione in corso
+web.admin.title.error = È stato riscontrato un errore
+web.admin.networkError = Impossibile stabilire una connession con il server.
+web.admin.interrupted = La connessione con il server è stata interrotta.
+web.admin.interrupted.todo = Cosa si desidera fare?
+web.admin.retry = Riconnetti
+web.admin.close = Chiudi
 
 commands.about.description = Mostra informazioni sul software del server e i plugin installati.
 commands.about.software = Software: {0}

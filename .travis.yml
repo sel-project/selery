@@ -28,7 +28,7 @@ deploy:
   on:
     tags: true
     d: ldc
-    condition: $CONFIG=release
+    condition: "$CONFIG = release"
 
 script:
   - dub build --compiler=$DC --build=$CONFIG
@@ -49,7 +49,7 @@ script:
   - ./selery-init default --portable
   - dub build --compiler=$DC --build=$CONFIG
   - cd ..
-  
+
 after_success:
   - zip "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
   - ./selery-hub --about

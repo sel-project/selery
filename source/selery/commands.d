@@ -28,7 +28,7 @@ import selery.config : Config, Gamemode, Difficulty, Dimension;
 import selery.format : Text;
 import selery.lang : Translation, Message;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
-//import selery.player.java : JavaPlayer;
+import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode;
 import selery.util.messages : Messages;
 import selery.world.world : Time;
@@ -273,7 +273,7 @@ final class Commands {
 		sender.sendMessage(Messages.gamerule.success, rule, value.value);
 	}
 
-	/*@vanilla help0(JavaPlayer sender, int page=1) {
+	@vanilla help0(JavaPlayer sender, int page=1) {
 		// pocket players have the help command client-side
 		Command[] commands;
 		foreach(name, command; sender.availableCommands) {
@@ -287,7 +287,7 @@ final class Commands {
 			sender.sendMessage(command.name, " - ", command.description); //FIXME description may be a translatable string
 		}
 		sender.sendMessage(Text.green, Messages.help.footer);
-	}*/
+	}
 	
 	@vanilla help1(ServerCommandSender sender) {
 		Command[] commands;

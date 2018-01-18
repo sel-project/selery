@@ -2,6 +2,78 @@
 	margin-right: 8px;
 }
 
-#closed {
+#main, #alert {
 	display: none;
+}
+
+#main > .outer_container {
+	position: absolute;
+	top: 60px;
+	right: 10px;
+	bottom: 10px;
+	left: 10px;
+}
+
+#main > .outer_container > .inner_container {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	bottom: 8px;
+	left: 8px;
+}
+
+#settings, #worlds, #players {
+	display: none;
+}
+
+#console {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: black;
+}
+
+#console_messages {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	bottom: 44px;
+	left: 8px;
+	overflow-y: scroll;
+}
+
+p.console_message {
+	margin: 4px;
+}
+
+#console_input {
+	position: absolute;
+	bottom: 8px;
+	right: 8px;
+	left: 8px;
+}
+
+input#console_input_text {
+	font-family: 'Minecraftia';
+	font-size: 16px;
+	color: white;
+	width: 100%;
+}
+
+.tab_button:not(.selected) {
+	cursor: pointer;
+}
+
+#alert {
+	text-align: center;
+}
+
+#alert .outer_button {
+	margin-top: 8px
+}
+
+#close {
+	margin-left: 8px;
 }
