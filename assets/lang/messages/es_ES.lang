@@ -165,6 +165,7 @@ commands.time.set = Establecer la hora en {0}
 commands.time.stop = Hora {0}
 commands.title.description = Controla los títulos de la pantalla.
 commands.title.success = El comando /title se ha ejecutado correctamente
+commands.toggledownfall.description = Activa o desactiva el tiempo atmosférico.
 commands.tp.description = Teletransporta entidades (jugadores, criaturas, etc.).
 commands.tp.notSameDimension = No puedes teletransportarse porque los jugadores no están en la misma dimensión
 commands.tp.outOfWorld = No se pueden teletransportar entidades fuera del mundo

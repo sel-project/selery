@@ -165,6 +165,7 @@ commands.time.set = Set the time to {0}
 commands.time.stop = Time {0}
 commands.title.description = Controls screen titles.
 commands.title.success = Title command successfully executed
+commands.toggledownfall.description = Toggles the weather.
 commands.tp.description = Teleports entities (players, mobs, etc.).
 commands.tp.notSameDimension = Unable to teleport because players are not in the same dimension
 commands.tp.outOfWorld = Cannot teleport entities outside of the world
