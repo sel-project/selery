@@ -161,19 +161,18 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				
 					// override default
 					webAdmin = type == ConfigType.default_;
+					webAdminOpen = portable;
 				
 					set(displayName, "display-name");
 					set(edu, "edu");
 					set(realm, "realm");
 					set(bedrock.enabled, "bedrock", "enabled");
 					set(bedrock.motd, "bedrock", "motd");
-					//set!"bedrock.online-mode"(bedrock.onlineMode);
 					set(bedrock.addresses, "bedrock", "addresses");
 					set(bedrock.protocols, "bedrock", "accepted-protocols");
 					set(allowVanillaPlayers, "bedrock", "allow-vanilla-players");
 					set(java.enabled, "java", "enabled");
 					set(java.motd, "java", "motd");
-					//set!"java.online-mode"(java.onlineMode);
 					set(java.addresses, "java", "addresses");
 					set(java.protocols, "java", "accepted-protocols");
 					set(whitelist, "whitelist");
@@ -189,6 +188,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set(webView, "web-view", "enabled");
 					set(webViewAddresses, "web-view", "addresses");
 					set(webAdmin, "web-admin", "enabled");
+					set(webAdminOpen, "web-admin", "open-on-startup");
 					set(webAdminAddresses, "web-admin", "addresses");
 					set(webAdminPassword, "web-admin", "password");
 					set(webAdminMaxClients, "web-admin", "max-clients");
@@ -333,6 +333,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			if(isHub) with(this.hub) {
 				file ~= newline ~ "[web-admin]" ~ newline;
 				file ~= "enabled = " ~ to!string(webAdmin) ~ newline;
+				file ~= "open-on-startup = " ~ to!string(webAdminOpen) ~ newline;
 				file ~= "addresses = " ~ addressString(webAdminAddresses) ~ newline;
 				file ~= "password = \"" ~ webAdminPassword ~ "\"" ~ newline;
 				file ~= "max-clients = " ~ to!string(webAdminMaxClients) ~ newline;

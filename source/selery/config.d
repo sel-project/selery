@@ -101,7 +101,9 @@ class Config {
 		
 		Address[] webViewAddresses = [Address("0.0.0.0", 80), Address("::", 80)];
 
-		bool webAdmin = true;
+		bool webAdmin = false;
+
+		bool webAdminOpen;
 
 		Address[] webAdminAddresses = [Address("127.0.0.1", 19134)];
 

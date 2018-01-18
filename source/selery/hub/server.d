@@ -244,7 +244,7 @@ class HubServer : PlayerHandler, Server {
 		//TODO load plugins
 
 		// open web admin GUI
-		/*if(config.hub.webAdmin) {
+		if(config.hub.webAdminOpen) {
 			import std.process : Pid;
 			Pid pid = null;
 			foreach(address ; config.hub.webAdminAddresses) {
@@ -256,7 +256,7 @@ class HubServer : PlayerHandler, Server {
 			if(pid is null && config.hub.webAdminAddresses.length) {
 				pid = startWebAdmin(config.hub.webAdminAddresses[0].port);
 			}
-		}*/
+		}
 
 		this.started = milliseconds;
 
