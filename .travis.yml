@@ -6,7 +6,7 @@ d:
 
 os:
   - linux
-  - osx
+#  - osx
   
 env:
   - CONFIG=debug
@@ -27,7 +27,6 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    d: ldc
 
 script:
   - dub build --compiler=$DC --build=$CONFIG
@@ -50,7 +49,7 @@ script:
   - cd ..
 
 after_success:
-  - if [[ $CONFIG == "release" ]] ; then zip "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}" ; fi
+  - if [[ $CONFIG == "release" && $DC == "ldc2" ]] ; then zip "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}" ; fi
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about
