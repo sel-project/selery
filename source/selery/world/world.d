@@ -807,6 +807,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				&this.handleBroadcast,
 				&this.handleUpdateDifficulty,
 				&this.handleUpdatePlayerGamemode,
+				&this.handleUpdatePlayerPermissionLevel,
 				&this.handleClose,
 			)) {}
 	}
@@ -855,10 +856,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
-	private void handleUpdatePlayerOpStatus(UpdatePlayerOpStatus packet) {
+	private void handleUpdatePlayerPermissionLevel(UpdatePlayerPermissionLevel packet) {
 		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
-			(*player).op = packet.op;
+			(*player).permissionLevel = packet.permissionLevel;
 		}
 	}
 
@@ -1775,9 +1776,9 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden) {
 		command = command.toLower;
-		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, op, hidden);
+		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, permissionLevel, permissions, hidden);
 		auto ptr = command in this.commands;
 		(*ptr).add!func(del);
 	}

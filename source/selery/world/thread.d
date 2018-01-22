@@ -24,6 +24,7 @@ import std.traits : isAbstractClass, Parameters;
 import selery.config : Difficulty, Gamemode;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
+import selery.player.player : PermissionLevel;
 import selery.world.world : World;
 
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, bool default_, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
@@ -121,10 +122,10 @@ struct UpdatePlayerGamemode {
 }
 
 // server to world
-struct UpdatePlayerOpStatus {
+struct UpdatePlayerPermissionLevel {
 
 	uint playerId;
-	bool op;
+	PermissionLevel permissionLevel;
 
 }
 

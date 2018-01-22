@@ -89,8 +89,6 @@ abstract class Player : Human, WorldCommandSender {
 	
 	private Container n_container;
 
-	private bool m_op = false;
-
 	private ubyte m_gamemode;
 	
 	public bool updateInventoryToViewers = true;
@@ -505,17 +503,36 @@ abstract class Player : Human, WorldCommandSender {
 		return !this.creative;
 	}
 
-	public pure nothrow @property @safe @nogc bool operator() {
-		return this.m_op;
+	/**
+	 * Gets the player's permission level.
+	 */
+	public final pure nothrow @property @safe @nogc PermissionLevel permissionLevel() {
+		return this.info.permissionLevel;
 	}
 
-	public @property bool operator(bool operator) {
-		if(operator ^ this.m_op) {
-			this.m_op = operator;
-			this.sendOpStatus();
+	public @property PermissionLevel permissionLevel(PermissionLevel permissionLevel) {
+		if(this.permissionLevel != permissionLevel) {
+			this.info.permissionLevel = permissionLevel;
+			this.sendPermissionLevel(permissionLevel);
 			this.updateAvailableCommands();
+			Handler.sharedInstance.send(HncomPlayer.UpdatePermissionLevel(this.hubId, permissionLevel).encode());
 		}
-		return operator;
+		return permissionLevel;
+	}
+
+	/**
+	 * Indicates whether the player has a permission level higher or equals than 1 (operator).
+	 */
+	public pure nothrow @property @safe @nogc bool operator() {
+		return this.permissionLevel >= PermissionLevel.operator;
+	}
+
+	/**
+	 * If the player has a permission level or 0 (user), sets it to 1 (operator).
+	 */
+	public @property bool operator(bool operator) {
+		if(this.permissionLevel < PermissionLevel.operator) this.permissionLevel = PermissionLevel.operator;
+		return this.operator;
 	}
 
 	alias op = operator;
@@ -764,13 +781,13 @@ abstract class Player : Human, WorldCommandSender {
 	 * Adds a new command using a command-container class.
 	 */
 	public Command registerCommand(Command _command) {
-		auto command = new Command(_command.name, _command.description, _command.aliases.dup, _command.op, _command.hidden);
+		auto command = new Command(_command.name, _command.description, _command.aliases.dup, _command.permissionLevel, _command.permissions, _command.hidden);
 		foreach(overload ; _command.overloads) {
 			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
 		if(command.overloads.length) {
 			this._commands[command.name] = command;
-			if(!command.op || this.op) {
+			if(command.permissionLevel <= this.permissionLevel) { //TODO permissions
 				foreach(name ; command.aliases ~ command.name) {
 					this._available_commands[name] = command;
 				}
@@ -802,7 +819,7 @@ abstract class Player : Human, WorldCommandSender {
 	protected void updateAvailableCommands() {
 		this._available_commands.clear();
 		foreach(name, command; this._commands) {
-			if(name == command.name && (!command.op || this.op)) {
+			if(name == command.name && command.permissionLevel <= this.permissionLevel) { //TODO permissions
 				this._available_commands[name] = command;
 			}
 		}
@@ -861,8 +878,6 @@ abstract class Player : Human, WorldCommandSender {
 
 	protected abstract void sendResetTitles();
 
-	protected abstract void sendOpStatus();
-
 	public abstract void sendGamemode();
 
 	public abstract void sendOpenContainer(ubyte type, ushort slots, BlockPosition position);
@@ -910,6 +925,8 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void sendJoinPacket();
 
 	public abstract void sendResourcePack();
+	
+	public void sendPermissionLevel(PermissionLevel);
 	
 	public abstract void sendDifficulty(Difficulty);
 
@@ -1386,6 +1403,16 @@ enum DeviceOS : ubyte {
 
 }
 
+enum PermissionLevel : ubyte {
+
+	user,
+	operator,
+	host,
+	automation,
+	admin,
+
+}
+
 /**
  * Checks whether or not the given symbol is of a connected player class.
  * Returns:
@@ -1521,8 +1548,6 @@ class Puppet : Player {
 	protected override @safe @nogc void sendHideTitles() {}
 	
 	protected override @safe @nogc void sendResetTitles() {}
-
-	protected override @safe @nogc void sendOpStatus() {}
 	
 	public override @safe @nogc void sendGamemode() {}
 	
@@ -1563,6 +1588,8 @@ class Puppet : Player {
 	public override @safe @nogc void sendJoinPacket() {}
 
 	public override @safe @nogc void sendResourcePack() {}
+
+	public override void sendPermissionLevel(PermissionLevel permissionLevel) {}
 	
 	public override @safe @nogc void sendDifficulty(Difficulty difficulty) {}
 

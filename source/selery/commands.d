@@ -25,12 +25,13 @@ import selery.about : Software;
 import selery.command.command : Command;
 import selery.command.util : CommandSender, WorldCommandSender, PocketType, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
 import selery.config : Config, Gamemode, Difficulty, Dimension;
+import selery.entity.entity : Entity;
 import selery.lang : Translation, Translatable;
 import selery.log : Format;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode;
-import selery.plugin : Description;
+import selery.plugin : Description, permission;
 import selery.util.messages : Messages;
 import selery.world.world : Time;
 
@@ -134,9 +135,11 @@ final class Commands {
 			else enum description = Translatable("commands." ~ command ~ ".description");
 			static if(hasUDA!(C, aliases)) enum aliases = getUDAs!(C, aliases)[0].aliases;
 			else enum string[] aliases = [];
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description(description), aliases, hasUDA!(C, op), false);
+			static if(hasUDA!(C, permission)) enum permissions = getUDAs!(C, permission)[0].permissions;
+			else enum string[] permissions = [];
+			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description(description), aliases, hasUDA!(C, op), permissions, false);
 		} else {
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description.init, [], false, false);
+			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description.init, [], 0, [], false);
 		}
 		static if(__traits(hasMember, typeof(this), command ~ to!string(count + 1))) this.registerImpl!(command, count + 1)(server);
 	}
@@ -492,6 +495,18 @@ final class Commands {
 		else sender.world.weather.start();
 		sender.sendMessage(Translation(Messages.toggledownfall.success));
 	}
+
+	@vanilla @op @permission("minecraft:teleport") tp0(Player sender, Entity destination) {
+		this.tp2(sender, [sender], destination);
+	}
+
+	@vanilla tp1(Player sender, Position destination) {
+		this.tp3(sender, [sender], destination);
+	}
+
+	@vanilla tp2(WorldCommandSender sender, Entity[] victim, Entity destination) {}
+
+	@vanilla tp3(WorldCommandSender sender, Entity[] victim, Position destination) {}
 
 	@op transfer0(WorldCommandSender sender, Player[] target, string node) {
 		//TODO transfer to another node

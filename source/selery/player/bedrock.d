@@ -451,10 +451,6 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		//this.sendAddList([this]);
 	}
 
-	protected override void sendOpStatus() {
-		this.sendSettingsPacket();
-	}
-
 	public override void sendGamemode() {
 		this.sendPacket(new Play.SetPlayerGameType(this.gamemode == 3 ? 1 : this.gamemode));
 		if(this.creative) {
@@ -724,6 +720,10 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 	}
 
 	public override void sendResourcePack() {}
+
+	public override void sendPermissionLevel(PermissionLevel) {
+		this.sendSettingsPacket();
+	}
 	
 	public override void sendDifficulty(Difficulty difficulty) {
 		this.sendPacket(new Play.SetDifficulty(difficulty));
@@ -760,7 +760,7 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		if(this.creative || this.spectator) flags |= Play.AdventureSettings.ALLOW_FLIGHT;
 		if(this.spectator) flags |= Play.AdventureSettings.NO_CLIP;
 		if(this.spectator) flags |= Play.AdventureSettings.FLYING;
-		this.sendPacket(new Play.AdventureSettings(flags, this.op ? Play.AdventureSettings.LEVEL_OPERATOR : Play.AdventureSettings.LEVEL_USER));
+		this.sendPacket(new Play.AdventureSettings(flags, this.permissionLevel));
 	}
 	
 	public override void sendRespawnPacket() {

@@ -947,8 +947,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Description description, string[] aliases, bool op, bool hidden) {
-		if(command !in this._commands) this._commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Description description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden) {
+		if(command !in this._commands) this._commands[command] = cast(shared)new Command(command, description, aliases, permissionLevel, permissions, hidden);
 		auto ptr = command in this._commands;
 		(cast()*ptr).add!func(del);
 		foreach(alias_ ; aliases) this._commands[alias_] = *ptr;

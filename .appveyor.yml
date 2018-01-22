@@ -126,7 +126,7 @@ build_script:
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - cd ..
 
-after_build:  
+after_build:
   - rcedit selery-hub-%selery_version%.exe --set-version-string ProductName "Selery's hub"
   - rcedit selery-hub-%selery_version%.exe --set-version-string FileDescription "Selery's hub %selery_version%"
   - rcedit selery-hub-%selery_version%.exe --set-version-string OriginalFileName selery-hub-%selery_version%.exe

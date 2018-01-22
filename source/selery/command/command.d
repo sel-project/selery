@@ -190,7 +190,7 @@ class Command {
 			switch(i) {
 				foreach(immutable j, T; Args) {
 					case j:
-						static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return PocketType.target;
+						static if(is(T == Target) || is(T == Entity) || is(T == Entity[]) || is(T == Player[]) || is(T == Player)) return PocketType.target;
 						else static if(is(T == Position)) return PocketType.blockpos;
 						else static if(is(T == bool)) return PocketType.boolean;
 						else static if(is(T == enum)) return PocketType.stringenum;
@@ -244,6 +244,8 @@ class Command {
 							cargs[i] = target.players[0];
 						} else static if(is(T == Player[])) {
 							cargs[i] = target.players;
+						} else static if(is(T == Entity)) {
+							cargs[i] = target.entities[0];
 						} else static if(is(T == Entity[])) {
 							cargs[i] = target.entities;
 						} else {
@@ -332,18 +334,20 @@ class Command {
 	immutable Description description;
 	immutable string[] aliases;
 
-	immutable bool op;
+	immutable ubyte permissionLevel;
+	string[] permissions;
 	immutable bool hidden;
 
 	Overload[] overloads;
 	
-	this(string name, Description description=Description.init, string[] aliases=[], bool op=false, bool hidden=false) {
+	this(string name, Description description=Description.init, string[] aliases=[], ubyte permissionLevel=0, string[] permissions=[], bool hidden=false) {
 		assert(checkCommandName(name));
 		assert(aliases.all!(a => checkCommandName(a))());
 		this.name = name;
 		this.description = description;
 		this.aliases = aliases.idup;
-		this.op = op;
+		this.permissionLevel = permissionLevel;
+		this.permissions = permissions;
 		this.hidden = hidden;
 	}
 
@@ -389,6 +393,6 @@ public bool areValidArgs(C:CommandSender, E...)() {
 
 private template areValidArgsImpl(C, T) {
 	static if(is(T == enum) || is(T == string) || is(T == bool) || isIntegral!T || isFloatingPoint!T || isRanged!T) enum areValidArgsImpl = true;
-	else static if(is(T == Target) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Position)) enum areValidArgsImpl = is(C : WorldCommandSender);
+	else static if(is(T == Target) || is(T == Entity) || is(T == Entity[]) || is(T == Player[]) || is(T == Player) || is(T == Position)) enum areValidArgsImpl = is(C : WorldCommandSender);
 	else enum areValidArgsImpl = false;
 }

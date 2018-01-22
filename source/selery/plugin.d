@@ -168,7 +168,10 @@ struct command {
 
 }
 
-enum op;
+struct permissionLevel { ubyte permissionLevel; }
+enum op = permissionLevel(1);
+struct permission { string[] permissions; this(string[] permissions...){ this.permissions = permissions; } }
+alias permissions = permission;
 enum hidden;
 
 void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritance, CommandBase, bool tasks, T, S)(T class_, Plugin plugin, S storage) {
@@ -214,7 +217,11 @@ void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritanc
 			// commands
 			static if(commands && hasUDA!(F, command) && Parameters!F.length >= 1 && is(Parameters!F[0] : CommandBase)) {
 				enum c = getUDAs!(F, command)[0];
-				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, hasUDA!(F, op), hasUDA!(F, hidden));
+				static if(hasUDA!(F, permissionLevel)) enum pl = getUDAs!(F, permissionLevel)[0].permissionLevel;
+				else enum ubyte pl = 0;
+				static if(hasUDA!(F, permission)) enum p = getUDAs!(F, permission).permissions;
+				else enum string[] p = [];
+				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, pl, p, hasUDA!(F, hidden));
 			}
 		}
 	}

@@ -332,10 +332,6 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.can
 			this.sendPacket(new Clientbound.EntityVelocity(entity.id, entity.velocity.tuple));
 		}
 	}
-
-	protected override void sendOpStatus() {
-		this.sendPacket(new Clientbound.EntityStatus(this.id, this.op ? Clientbound.EntityStatus.SET_OP_PERMISSION_LEVEL_1 : Clientbound.EntityStatus.SET_OP_PERMISSION_LEVEL_0));
-	}
 	
 	public override void sendGamemode() {
 		this.sendPacket(new Clientbound.ChangeGameState(Clientbound.ChangeGameState.CHANGE_GAMEMODE, this.gamemode));
@@ -603,6 +599,10 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.can
 			else if(this.connectedSameNetwork) url = this.ip; // not tested
 			this.sendPacket(new Clientbound.ResourcePackSend("http://" ~ url ~ resourcePackPort ~ "/" ~ v, mixin("resourcePack" ~ v ~ "Hash")));
 		}
+	}
+	
+	public override void sendPermissionLevel(PermissionLevel permissionLevel) {
+		this.sendPacket(new Clientbound.EntityStatus(this.id, cast(ubyte)(Clientbound.EntityStatus.SET_OP_PERMISSION_LEVEL_0 + permissionLevel)));
 	}
 
 	public override void sendDifficulty(Difficulty difficulty) {

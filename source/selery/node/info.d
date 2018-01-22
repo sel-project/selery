@@ -26,7 +26,7 @@ import sel.hncom.player : Add;
 
 import selery.about;
 import selery.entity.human : Skin;
-import selery.player.player : InputMode, DeviceOS;
+import selery.player.player : InputMode, DeviceOS, PermissionLevel;
 
 /**
  * Generic informations about a player in the server.
@@ -61,6 +61,8 @@ final class PlayerInfo {
 
 	public Skin skin;
 
+	public PermissionLevel permissionLevel;
+
 	public uint latency;
 	public float packetLoss;
 
@@ -85,6 +87,7 @@ final class PlayerInfo {
 		this.lname = add.username.toLower();
 		this.displayName = add.displayName;
 		this.uuid = add.uuid;
+		this.permissionLevel = cast(PermissionLevel)add.permissionLevel;
 		this.address = add.clientAddress;
 		this.ip = add.clientAddress.toAddrString();
 		this.port = to!ushort(add.clientAddress.toPortString());

@@ -109,10 +109,6 @@ class Config {
 		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], supportedJavaProtocols);
 		
 		bool allowVanillaPlayers = false;
-
-		bool whitelist = false;
-
-		bool blacklist = true;
 		
 		bool query = true;
 		
@@ -273,6 +269,8 @@ class Config {
 		bool timeCommand = true;
 
 		bool toggledownfallCommand = true;
+
+		bool tpCommand = true;
 
 		bool transferCommand = true;
 

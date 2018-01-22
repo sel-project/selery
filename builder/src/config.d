@@ -174,8 +174,6 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 					set(java.motd, "java", "motd");
 					set(java.addresses, "java", "addresses");
 					set(java.protocols, "java", "accepted-protocols");
-					set(whitelist, "whitelist");
-					set(blacklist, "blacklist");
 					set(query, "query");
 					set(language, "language");
 					set(acceptedLanguages, "accepted-languages");
@@ -265,8 +263,6 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 			file ~= "uuid = \"" ~ this.uuid.toString().toUpper() ~ "\"" ~ newline;
 			if(isHub) file ~= "display-name = \"" ~ this.hub.displayName ~ "\"" ~ newline;
 			if(isNode) file ~= "max-players = " ~ (this.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(this.node.maxPlayers)) ~ newline;
-			if(isHub) file ~= "whitelist = " ~ to!string(this.hub.whitelist) ~ newline;
-			if(isHub) file ~= "blacklist = " ~ to!string(this.hub.blacklist) ~ newline;
 			if(isHub && !this.hub.realm) file ~= "query = " ~ to!string(this.hub.query) ~ newline;
 			if(isHub) file ~= "language = \"" ~ this.hub.language ~ "\"" ~ newline;
 			if(isHub) file ~= "accepted-languages = " ~ to!string(this.hub.acceptedLanguages) ~ newline;
