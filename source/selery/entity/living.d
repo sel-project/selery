@@ -23,6 +23,7 @@ import selery.effect : Effect, Effects;
 import selery.entity.entity : Entity, Rotation;
 import selery.entity.metadata;
 import selery.event.world;
+import selery.log : Format;
 import selery.math.vector;
 import selery.player.player : Player;
 import selery.util.color : Color;
@@ -143,9 +144,8 @@ public class Living : Entity {
 		//update the viewers if dead
 		if(this.dead) {
 			auto death = this.callDeathEvent(event);
-			if(death.message.sel.length) {
-				import selery.format : Text;
-				this.world.broadcast(Text.yellow, death.message, death.args);
+			if(death.message.translatable.default_.length) {
+				this.world.broadcast(Format.yellow, death.message);
 			}
 			this.die();
 		} else if(cast(EntityAttackedByEntityEvent)event) {

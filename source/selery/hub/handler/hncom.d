@@ -46,7 +46,7 @@ import sel.server.util;
 
 import selery.about;
 import selery.hub.player : WorldSession = World, PlayerSession, Skin;
-import selery.hub.server : HubServer, List;
+import selery.hub.server : HubServer;
 import selery.lang : translate;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
@@ -296,12 +296,12 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusLog(Status.Log packet) {
-		string name = packet.logger;
+		string name;
 		if(packet.worldId != -1) {
 			auto world = packet.worldId in this._worlds;
 			if(world) name = world.name;
 		}
-		this.server.message((cast(shared)this).name, packet.timestamp, name, packet.message, packet.commandId);
+		this.server.handleLog((cast(shared)this).name, packet.message, packet.timestamp, packet.commandId, packet.worldId, name);
 	}
 
 	protected override void handleStatusSendMessage(Status.SendMessage packet) {
@@ -327,6 +327,11 @@ abstract class AbstractNode : Handler!serverbound {
 		this.n_cpu = packet.cpu;
 	}
 
+	protected override void handleStatusUpdateLanguageFiles(Status.UpdateLanguageFiles packet) {
+		//TODO add to config.lang
+		//TODO broadcast to connected web admin that match packet.language
+	}
+
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {
 		auto world = new shared WorldSession(packet.worldId, packet.name, packet.dimension);
 		if(packet.parent != -1) {
@@ -339,59 +344,6 @@ abstract class AbstractNode : Handler!serverbound {
 	protected override void handleStatusRemoveWorld(Status.RemoveWorld packet) {
 		this._worlds.remove(packet.worldId);
 	}
-
-	protected override void handleStatusUpdateListByUUID(Status.UpdateListByUUID packet) {}
-
-	protected override void handleStatusUpdateListByUsername(Status.UpdateListByUsername packet) {}
-
-	protected override void handleStatusUpdateListByIp(Status.UpdateListByIp packet) {}
-
-	/+private shared void handleUpdateList(Status.UpdateList packet) {
-		shared List list = (){
-			final switch(packet.list) {
-				case Status.UpdateList.WHITELIST:
-					return this.server.whitelist;
-				case Status.UpdateList.BLACKLIST:
-					return this.server.blacklist;
-			}
-		}();
-		List.Player player;
-		switch(packet.type) {
-			case Status.UpdateList.ByHubId.TYPE:
-				auto pk = packet.new ByHubId();
-				pk.decode();
-				auto ptr = pk.hubId in this.players;
-				if(ptr) {
-					/*static if(__onlineMode) player = new List.UniquePlayer((*ptr).game, (*ptr).uuid);
-					else*/ player = new List.NamedPlayer((*ptr).username);
-				}
-				break;
-			case Status.UpdateList.ByName.TYPE:
-				auto pk = packet.new ByName();
-				pk.decode();
-				player = new List.NamedPlayer(pk.username);
-				break;
-			case Status.UpdateList.ByUuid.TYPE:
-				auto data = packet.new ByUuid();
-				data.decode();
-				player = new List.UniquePlayer(data.game, data.uuid);
-				break;
-			default:
-				break;
-		}
-		if(player !is null) {
-			switch(packet.action) {
-				case Status.UpdateList.ADD:
-					list.add(player);
-					break;
-				case Status.UpdateList.REMOVE:
-					list.remove(player);
-					break;
-				default:
-					break;
-			}
-		}
-	}+/
 
 	protected override void handlePlayerKick(Player.Kick packet) {
 		auto player = packet.hubId in this.players;
@@ -457,6 +409,13 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 	
 	/**
+	 * Executes a remote command.
+	 */
+	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
+		this.send(Status.RemoteCommand(origin, address, command, commandId).encode());
+	}
+	
+	/**
 	 * Notifies the node that another node has connected
 	 * to the hub.
 	 */
@@ -488,30 +447,11 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 	
 	/**
-	 * Executes a remote command.
-	 */
-	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(Status.RemoteCommand(origin, address, command, commandId).encode());
-	}
-	
-	/**
-	 * Tells the node to reload its configurations.
-	 */
-	public shared void reload() {
-		with(cast()this.server.config.hub) {
-			string[ubyte] motds;
-			if(bedrock) motds[__BEDROCK__] = bedrock.motd;
-			if(java) motds[__JAVA__] = java.motd;
-			this.send(Status.Reload(displayName, motds, language, acceptedLanguages, cast()*this.additionalJson).encode());
-		}
-	}
-	
-	/**
 	 * Adds a player to the node.
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.gameVersion, player.uuid, player.username, player.displayName, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
+		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
 	}
 	
 	/**

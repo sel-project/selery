@@ -14,64 +14,247 @@
  */
 module selery.log;
 
+import std.algorithm : canFind;
 import std.conv : to;
-import std.string : startsWith, replace, join;
+import std.string : indexOf;
+import std.traits : EnumMembers;
 
-import selery.format : Text, writeln;
+import arsd.terminal : Terminal, Color, bright = Bright;
 
-private shared void delegate(string, string, int, int) logFunction;
+import selery.lang : LanguageManager, Translation, Translatable;
 
-shared static this() {
-	logFunction = (string logger, string message, int worldId, int outputId){
-		synchronized writeln("[" ~ logger ~ "] " ~ message);
-	};
+/**
+ * Formatting codes for Minecraft and the system's console.
+ */
+enum Format : string {
+	
+	black = "§0",
+	darkBlue = "§1",
+	darkGreen = "§2",
+	darkAqua = "§3",
+	darkRed = "§4",
+	darkPurple = "§5",
+	gold = "§6",
+	gray = "§7",
+	darkGray = "§8",
+	blue = "§9",
+	green = "§a",
+	aqua = "§b",
+	red = "§c",
+	lightPurple = "§d",
+	yellow = "§e",
+	white = "§f",
+	
+	obfuscated = "§k",
+	bold = "§l",
+	strikethrough = "§m",
+	underlined = "§n",
+	italic = "§o",
+	
+	reset = "§r"
+	
 }
 
-void setLogger(void delegate(string, string, int, int) func) {
-	logFunction = func;
-}
+/**
+ * Indicates a generic message. It can be a formatting code, a raw string
+ * or a translatable content.
+ */
+struct Message {
 
-void logImpl(E...)(string logger, int worldId, int outputId, E args) {
-	logFunction(logger, mixin(createMessage!E), worldId, outputId);
-}
+	enum : ubyte {
 
-private string createMessage(E...)() {
-	static if(E.length) {
-		string[] ret;
-		foreach(i, T; E) {
-			static if(is(T : string)) {
-				ret ~= "args[" ~ to!string(i) ~ "]";
+		FORMAT = 1,
+		TEXT = 2,
+		TRANSLATION = 3
+
+	}
+
+	ubyte type;
+
+	union {
+
+		Format format;
+		string text;
+		Translation translation;
+
+	}
+
+	this(Format format) {
+		this.type = FORMAT;
+		this.format = format;
+	}
+
+	this(string text) {
+		this.type = TEXT;
+		this.text = text;
+	}
+
+	this(Translation translation) {
+		this.type = TRANSLATION;
+		this.translation = translation;
+	}
+
+	/**
+	 * Converts data into an array of messages.
+	 */
+	static Message[] convert(E...)(E args) {
+		Message[] messages;
+		foreach(arg ; args) {
+			alias T  = typeof(arg);
+			static if(is(T == Message) || is(T == Message[])) {
+				messages ~= arg;
+			} else static if(is(T == Format) || is(T == Translation)) {
+				messages ~= Message(arg);
+			} else static if(is(T == Translatable)) {
+				messages ~= Message(Translation(arg));
 			} else {
-				ret ~= "to!string(args[" ~ to!string(i) ~ "])";
+				messages ~= Message(to!string(arg));
 			}
 		}
-		return ret.join("~");
-	} else {
-		return "\"\"";
+		return messages;
 	}
+
 }
 
-void log(string mod=__MODULE__, E...)(E args) {
-	static if(mod.startsWith("selery.")) {
-		enum m = mod[7..$].replace(".", "/");
-	} else {
-		enum m = "plugin/" ~ mod.replace(".", "/");
+class Logger {
+
+	public Terminal* terminal;
+	private const LanguageManager lang;
+
+	public this(Terminal* terminal, inout LanguageManager lang) {
+		this.terminal = terminal;
+		this.lang = cast(const)lang;
 	}
-	logImpl(m, -1, -1, args);
+	
+	public void log(E...)(E args) {
+		this.logMessage(Message.convert(args));
+	}
+	
+	public void logWarning(E...)(E args) {
+		this.log(Format.yellow, args);
+	}
+	
+	public void logError(E...)(E args) {
+		this.log(Format.red, args);
+	}
+
+	public void logMessage(Message[] messages) {
+		this.logImpl(messages);
+	}
+
+	protected void logImpl(Message[] messages) {
+		foreach(message ; messages) {
+			final switch(message.type) {
+				case Message.FORMAT:
+					this.applyFormat(message.format);
+					break;
+				case Message.TEXT:
+					this.writeText(message.text);
+					break;
+				case Message.TRANSLATION:
+					this.writeText(this.lang.translate(message.translation.translatable.default_, message.translation.parameters));
+					break;
+			}
+		}
+		// add new line, reset formatting and print unflushed data
+		this.terminal.writeln();
+		this.terminal.flush();
+		this.terminal.reset();
+	}
+
+	private void writeText(string text) {
+		immutable p = text.indexOf("§");
+		if(p != -1 && p < text.length - 2 && "0123456789abcdefklmnor".canFind(text[p+2])) {
+			this.terminal.write(text[0..p]);
+			this.applyFormat(this.getFormat(text[p+2]));
+			this.writeText(text[p+3..$]);
+		} else {
+			this.terminal.write(text);
+		}
+	}
+
+	private Format getFormat(char c) {
+		final switch(c) {
+			foreach(immutable member ; __traits(allMembers, Format)) {
+				case mixin("Format." ~ member)[$-1]: return mixin("Format." ~ member);
+			}
+		}
+	}
+
+	private void applyFormat(Format format) {
+		version(Windows) this.terminal.flush(); // print with current format, then update
+		final switch(format) {
+			case Format.black:
+				this.terminal.color(Color.black, Color.DEFAULT);
+				break;
+			case Format.darkBlue:
+				this.terminal.color(Color.blue, Color.DEFAULT);
+				break;
+			case Format.darkGreen:
+				this.terminal.color(Color.green, Color.DEFAULT);
+				break;
+			case Format.darkAqua:
+				this.terminal.color(Color.cyan, Color.DEFAULT);
+				break;
+			case Format.darkRed:
+				this.terminal.color(Color.red, Color.DEFAULT);
+				break;
+			case Format.darkPurple:
+				this.terminal.color(Color.magenta, Color.DEFAULT);
+				break;
+			case Format.gold:
+				this.terminal.color(Color.yellow, Color.DEFAULT);
+				break;
+			case Format.gray:
+				this.terminal.color(Color.white, Color.DEFAULT);
+				break;
+			case Format.darkGray:
+				this.terminal.color(Color.black | bright, Color.DEFAULT);
+				break;
+			case Format.blue:
+				this.terminal.color(Color.blue | bright, Color.DEFAULT);
+				break;
+			case Format.green:
+				this.terminal.color(Color.green | bright, Color.DEFAULT);
+				break;
+			case Format.aqua:
+				this.terminal.color(Color.cyan | bright, Color.DEFAULT);
+				break;
+			case Format.red:
+				this.terminal.color(Color.red | bright, Color.DEFAULT);
+				break;
+			case Format.lightPurple:
+				this.terminal.color(Color.magenta | bright, Color.DEFAULT);
+				break;
+			case Format.yellow:
+				this.terminal.color(Color.yellow | bright, Color.DEFAULT);
+				break;
+			case Format.white:
+				this.terminal.color(Color.white | bright, Color.DEFAULT);
+				break;
+			case Format.underlined:
+				this.terminal.underline(true);
+				break;
+			case Format.reset:
+				this.terminal.reset();
+				break;
+			case Format.obfuscated:
+			case Format.bold:
+			case Format.strikethrough:
+			case Format.italic:
+				// not supported
+				break;
+		}
+	}
+	
 }
 
-void warning_log(string mod=__MODULE__, E...)(E args) {
-	log!mod(cast(string)Text.yellow, args);
-}
+deprecated("Use Logger instead") void setLogger(void delegate(string, int, int) func) {}
 
-void error_log(string mod=__MODULE__, E...)(E args) {
-	log!mod(cast(string)Text.red, args);
-}
+deprecated("Use Logger.log instead") void log(E...)(E args) {}
 
-void debug_log(E...)(E args) {
-	writeln("[debug] " ~ Text.blue ~ mixin(createMessage!E));
-}
+deprecated("Use Logger.logWarning instead") void warning_log(E...)(E args) {}
 
-void raw_log(E...)(E args) {
-	writeln(mixin(createMessage!E));
-}
+deprecated("Use Logger.logError instead") void error_log(E...)(E args) {}
+
+deprecated("Use Logger.log instead") void raw_log(E...)(E args) {}

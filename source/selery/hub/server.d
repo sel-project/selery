@@ -20,6 +20,7 @@ import core.sys.posix.signal;
 import core.thread;
 
 import std.algorithm : sort, canFind;
+import std.array : Appender;
 import std.ascii : newline;
 import std.base64 : Base64;
 import std.bitmanip : nativeToBigEndian;
@@ -37,24 +38,25 @@ import std.typecons;
 import std.uuid : parseUUID, UUID;
 import std.utf : UTFException;
 
+import arsd.terminal : Terminal, ConsoleOutputType;
+
 import imageformats : ImageIOException, read_png_header_from_mem;
 
 import sel.hncom.login : HubInfo, NodeInfo;
-import sel.hncom.status : RemoteCommand;
+import sel.hncom.status : Log;
 import sel.server.client : Client;
 import sel.server.query : Query;
 import sel.server.util : ServerInfo, PlayerHandler = Handler;
 
 import selery.about;
 import selery.config : Config;
-import selery.format : Text;
 import selery.hub.handler.handler : Handler;
 import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
 import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
 import selery.lang : Translation;
-import selery.log : log, warning_log, raw_log;
+import selery.log : Format, Message, Logger;
 import selery.plugin : Plugin;
 import selery.server : Server;
 import selery.util.block : Blocks;
@@ -120,6 +122,7 @@ class HubServer : PlayerHandler, Server {
 	private immutable ulong started;
 
 	private shared Config _config;
+	private shared ServerLogger _logger;
 	private shared const(AddressRange)[] _accepted_nodes;
 	private shared Icon _icon;
 	private shared ServerInfo _info;
@@ -130,9 +133,6 @@ class HubServer : PlayerHandler, Server {
 	private shared uint n_max = 0; //TODO replace with _info.max
 
 	private shared uint n_upload, n_download;
-
-	private shared List n_whitelist;
-	private shared List n_blacklist;
 
 	private shared Handler handler;
 	private shared Blocks blocks;
@@ -163,26 +163,24 @@ class HubServer : PlayerHandler, Server {
 			this._query.software = Software.name ~ " " ~ Software.displayVersion;
 		}
 
-		this.n_whitelist = List(this, "whitelist");
-		this.n_blacklist = List(this, "blacklist");
-
 		AddressRange[] acceptedNodes;
 		foreach(node ; config.hub.acceptedNodes) {
 			acceptedNodes ~= AddressRange.parse(node);
 		}
 		this._accepted_nodes = cast(shared const)acceptedNodes;
+
+		Terminal terminal = Terminal(ConsoleOutputType.linear);
+
+		terminal.setTitle(config.hub.displayName ~ " | " ~ (!lite ? "hub | " : "") ~ Software.simpleDisplay);
 		
-		version(Windows) {
-			import std.process : executeShell;
-			executeShell("title " ~ config.hub.displayName ~ " ^| " ~ (!lite ? "hub ^| " : "") ~ Software.simpleDisplay);
-		}
+		this.load(config); //TODO collect error messages
+
+		this._logger = cast(shared)new ServerLogger(this, &terminal);
 		
-		this.load(config);
-		
-		log(config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.reset ~ " " ~ Text.white ~ Software.fullVersion ~ Text.reset ~ " " ~ Software.fullCodename]));
+		this.logger.log(Translation("startup.starting", [Format.green ~ Software.name ~ Format.reset ~ " " ~ Format.white ~ Software.fullVersion ~ Format.reset ~ " " ~ Software.fullCodename]));
 		
 		static if(!__supported) {
-			warning_log(config.lang.translate("startup.unsupported", [Software.name]));
+			this.logger.logWarning(Translation("startup.unsupported", [Software.name]));
 		}
 
 		foreach(plugin ; plugins) {
@@ -194,51 +192,22 @@ class HubServer : PlayerHandler, Server {
 
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
-
-		/*if(this.n_settings.whitelist) {
-			this.n_whitelist.load();
-			this.n_whitelist.save();
-		}
-
-		if(this.n_settings.blacklist) {
-			this.n_blacklist.load();
-			this.n_blacklist.save();
-		}*/
 		
 		auto pa = publicAddresses(config.files);
 		if(pa.v4.length || pa.v6.length) {
-			if(pa.v4.length) log("Public ip: ", pa.v4);
-			if(pa.v6.length) log("Public ipv6: ", pa.v6);
-			log();
+			if(pa.v4.length) this.logger.log("Public ip: ", pa.v4);
+			if(pa.v6.length) this.logger.log("Public ipv6: ", pa.v6);
 		}
 		
 		this.blocks = new Blocks();
 
 		this.handler = new shared Handler(this, this._info, this._query);
 
-		// listen for commands
-		auto reader = new Thread({
-			import std.stdio : readln;
-			while(true) {
-				try {
-					handleCommand(readln().strip);
-				} catch(UTFException e) {
-					log(Text.red, e.msg);
-				}
-			}
-		});
-		reader.name = "reader";
-		reader.start();
-
 		/*version(Windows) {
 			SetConsoleCtrlHandler(&sigHandler, true);
 		} else version(linux) {
 			sigset(SIGTERM, &extsig);
 			sigset(SIGINT, &extsig);
-		}*/
-
-		/*if(config.googleAnalytics.length) {
-			this.analytics = new shared GoogleAnalytics(this, config.googleAnalytics);
 		}*/
 
 		//TODO load plugins
@@ -260,7 +229,7 @@ class HubServer : PlayerHandler, Server {
 
 		this.started = milliseconds;
 
-		if(!this.lite) log(config.lang.translate("startup.started"));
+		if(!this.lite) this.logger.log(Translation("startup.started"));
 
 		int last_online, last_max = this.maxPlayers;
 		size_t next_analytics = 0;
@@ -273,8 +242,8 @@ class HubServer : PlayerHandler, Server {
 					node.updatePlayers(last_online, last_max);
 				}
 			}
-			Thread.sleep(dur!"msecs"(5000));
-			this.blocks.remove(5);
+			Thread.sleep(dur!"msecs"(1000));
+			this.blocks.remove(1);
 		}
 
 	}
@@ -293,7 +262,7 @@ class HubServer : PlayerHandler, Server {
 		if(config.hub.bedrock) with(config.hub.bedrock) {
 			motd = motd.replaceAll(ctRegex!"&([0-9a-zk-or])", "§$1");
 			motd = motd.replace(";", "");
-			motd ~= Text.reset;
+			motd ~= Format.reset;
 			this._info.motd.bedrock = motd;
 			validateProtocols(protocols, supportedBedrockProtocols, supportedBedrockProtocols);
 		}
@@ -308,7 +277,7 @@ class HubServer : PlayerHandler, Server {
 		foreach(lang ; config.hub.acceptedLanguages) {
 			if(Config.LANGUAGES.canFind(lang)) accepted ~= lang;
 		}
-		if(!Config.LANGUAGES.canFind(config.hub.language)) config.hub.language = "en_GB";
+		if(!Config.LANGUAGES.canFind(config.hub.language)) config.hub.language = "en_US";
 		if(!accepted.canFind(config.hub.language)) accepted ~= config.hub.language;
 		config.hub.acceptedLanguages = accepted;
 		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
@@ -323,7 +292,7 @@ class HubServer : PlayerHandler, Server {
 					static import std.net.curl;
 					std.net.curl.download(config.hub.favicon, config.files.temp ~ cached);
 				} catch(CurlException e) {
-					warning_log(config.lang.translate("warning.iconFailed", [config.hub.favicon, e.msg]));
+					this.logger.logWarning(Translation("warning.iconFailed", [config.hub.favicon, e.msg]));
 				}
 			}
 			if(config.files.hasTemp(cached)) {
@@ -337,7 +306,7 @@ class HubServer : PlayerHandler, Server {
 				if(header.width == 64 && header.height == 64) valid = true;
 			} catch(ImageIOException) {}
 			if(!valid) {
-				warning_log(config.lang.translate("warning.invalidIcon", [config.hub.favicon]));
+				this.logger.logWarning(Translation("warning.invalidIcon", [config.hub.favicon]));
 				icon = Icon.init;
 			}
 		}
@@ -351,7 +320,7 @@ class HubServer : PlayerHandler, Server {
 		this.handler.shutdown();
 		foreach(node ; this.nodes) node.onClosed(false);
 		import core.stdc.stdlib : exit;
-		log("Shutting down");
+		this.logger.log("Shutting down");
 		exit(0);
 	}
 
@@ -381,6 +350,10 @@ class HubServer : PlayerHandler, Server {
 		return cast()this._config;
 	}
 
+	public override shared @property Logger logger() {
+		return cast()this._logger;
+	}
+
 	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
 		return cast(const(Plugin)[])this._plugins;
 	}
@@ -401,20 +374,6 @@ class HubServer : PlayerHandler, Server {
 	/// ditto
 	public shared nothrow @property @safe @nogc const uint download() {
 		return this.n_download;
-	}
-
-	/**
-	 * Gets the server's whitelist.
-	 */
-	public shared nothrow @property @safe @nogc ref shared(List) whitelist() {
-		return this.n_whitelist;
-	}
-
-	/**
-	 * Gets the server's blacklist.
-	 */
-	public shared nothrow @property @safe @nogc ref shared(List) blacklist() {
-		return this.n_blacklist;
 	}
 
 	/**
@@ -467,76 +426,40 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	/**
-	 * Gets the plugin used by the connected nodes.
+	 * Handles a command.
 	 */
-	/*public shared @property string[] plugins() {
-		return this.n_plugins.keys;
-	}*/
-
-	public shared void handleCommand(string str, ubyte origin=RemoteCommand.HUB, Address source=null, int commandId=-1) {
-		// console, external console, rcon
-		string[] spl = str.split(" ");
-		if(spl.length) {
-			string cmd = spl[0].toLower.idup;
-			if(!cmd.length) return;
-			string[] args = spl[1..$];
-			switch(cmd) {
-				case "threads":
-					string[] names;
-					foreach(thread ; Thread.getAll()) {
-						names ~= thread.name;
-					}
-					sort(names);
-					this.command("Threads (" ~ to!string(names.length) ~ "): " ~ names.join(", "), commandId);
-					break;
-				case "usage":
-					if(args.length) {
-						auto node = this.nodeByName(args[0]);
-						if(node !is null) {
-							this.command(args[0] ~ ": " ~ to!string(node.tps) ~ " TPS", commandId);
-						} else {
-							this.command("Use 'usage <node>'", commandId);
-						}
-					} else {
-						//TODO usage for every connected node
-					}
-					break;
-				default:
-					shared AbstractNode node;
-					if(this.nodes.length == 1) {
-						node = this.nodes.values[0];
-						if(node.name != cmd) args = cmd ~ args;
-					} else {
-						node = this.nodeByName(cmd.idup);
-					}
-					if(node !is null) {
-						if(args.length) node.remoteCommand(args.join(" "), origin, source, commandId);
-					} else {
-						this.command("Node '" ~ cmd ~ "' is not connected", commandId);
-					}
-					break;
-			}
-		}
-	}
-
-	public shared void message(string node, ulong timestamp, string logger, string message, int commandId) {
-		if(node.length) {
-			raw_log("[", node, "][", logger, "] ", message);
+	public shared void handleCommand(string command, ubyte origin, Address sender, int commandId) {
+		shared AbstractNode recv;
+		if(this.lite) {
+			recv = this.nodes.values[0];
 		} else {
-			raw_log("[", logger, "] ", message);
-		}
-		if(id != -1) {
-			foreach(webAdmin ; this.webAdmins) {
-				(cast()webAdmin).sendLog(message, commandId);
+			string name = "";
+			immutable space = command.indexOf(" ");
+			if(space != -1) {
+				name = command[0..space];
+				command = command[space..$].strip;
+				if(command.length == 0) return;
 			}
-			foreach(rcon ; this.rcons) {
-				rcon.consoleMessage(message, commandId);
-			}
+			recv = this.nodeByName(name);
+			if(recv is null) return; //TODO print error message
 		}
+		recv.remoteCommand(command, origin, sender, commandId);
 	}
 
-	private shared void command(string message, int commandId) {
-		this.message("", milliseconds, "command", message, commandId);
+	/**
+	 * Handles a log.
+	 */
+	public shared void handleLog(string node, Log.Message[] messages, ulong timestamp, int commandId, int worldId, string worldName) {
+		Message[] log;
+		if(node.length) log ~= Message("[node/" ~ node ~ "]");
+		if(worldName.length) log ~= Message("[world/" ~ node ~ "]");
+		if(log.length) log ~= Message(" ");
+		// convert from Log.Message[] to Message[]
+		foreach(message ; messages) {
+			if(message.translation) log ~= Message(Translation(message.message, message.params));
+			else log ~= Message(message.message);
+		}
+		(cast()this._logger).logWith(log, commandId, worldId);
 	}
 
 	public shared nothrow @safe @nogc bool isBlocked(Address address) {
@@ -545,7 +468,7 @@ class HubServer : PlayerHandler, Server {
 
 	public shared bool block(Address address, size_t seconds) {
 		if(this.blocks.block(address, seconds)) {
-			log(this.config.lang.translate("warning.blocked", [to!string(address), to!string(seconds)]));
+			this.logger.log(Translation("warning.blocked", [to!string(address), to!string(seconds)]));
 			return true;
 		} else {
 			return false;
@@ -611,7 +534,7 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void add(shared AbstractNode node) {
-		if(!this.lite) log(Text.green, "+ ", Text.reset, node.toString());
+		if(!this.lite) this.logger.log(Format.green, "+ ", Format.reset, node.toString());
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
 		// update players
@@ -635,7 +558,7 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void remove(shared AbstractNode node) {
-		log(Text.red, "- ", Text.reset, node.toString());
+		this.logger.log(Format.red, "- ", Format.reset, node.toString());
 		this.nodes.remove(node.id);
 		this.nodesNames.remove(node.name);
 		// update players
@@ -696,24 +619,24 @@ class HubServer : PlayerHandler, Server {
 	}
 
 	public synchronized shared void add(WebAdminClient webAdmin) {
-		log(Text.green, "+ ", Text.reset, webAdmin.toString());
+		this.logger.log(Format.green, "+ ", Format.reset, webAdmin.toString());
 		this.webAdmins[webAdmin.id] = cast(shared)webAdmin;
 	}
 
 	public synchronized shared void remove(WebAdminClient webAdmin) {
 		if(this.webAdmins.remove(webAdmin.id)) {
-			log(Text.red, "- ", Text.reset, webAdmin.toString());
+			this.logger.log(Format.red, "- ", Format.reset, webAdmin.toString());
 		}
 	}
 
 	public synchronized shared void add(shared RconClient rcon) {
-		log(Text.green, "+ ", Text.reset, rcon.toString());
+		this.logger.log(Format.green, "+ ", Format.reset, rcon.toString());
 		this.rcons[rcon.id] = rcon;
 	}
 
 	public synchronized shared void remove(shared RconClient rcon) {
 		if(this.rcons.remove(rcon.id)) {
-			log(Text.red, "- ", Text.reset, rcon.toString());
+			this.logger.log(Format.red, "- ", Format.reset, rcon.toString());
 		}
 	}
 
@@ -729,157 +652,31 @@ class HubServer : PlayerHandler, Server {
 		return null;
 	}
 
-	protected override void sendMessageImpl(string message) {
-		log(message);
-	}
-	
-	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		log(join(cast(string[])formats, ""), (cast(shared)this).config.lang.translate(message, args));
-	}
-
 }
 
-struct List {
+private class ServerLogger : Logger {
 
 	private shared HubServer server;
 	
-	public immutable string name;
-
-	private shared Player[] players;
-
-	public this(shared HubServer server, string name) {
+	public this(shared HubServer server, Terminal* terminal) {
+		super(terminal, server.lang);
 		this.server = server;
-		this.name = name;
+	}
+	
+	protected override void logImpl(Message[] messages) {
+		this.logWith(messages, Log.NO_COMMAND, Log.NO_WORLD);
 	}
 
-	public shared bool contains(ubyte type, UUID uuid) {
-		foreach(player ; this.players) {
-			if(cast(UniquePlayer)player) {
-				auto u = cast(UniquePlayer)player;
-				if(u.game == type && u.uuid == uuid) return true;
-			}
+	public void logWith(Message[] messages, int commandId, int worldId) {
+		super.logImpl(messages);
+		foreach(rcon ; this.server.rcons) {
+			
 		}
-		return false;
-	}
-
-	public shared bool contains(string name) {
-		name = name.toLower;
-		foreach(player ; this.players) {
-			if(cast(NamedPlayer)player && (cast(NamedPlayer)player).username == name) return true;
-		}
-		return false;
-	}
-
-	public shared void add(Player player) {
-		this.players ~= cast(shared)player;
-		this.save();
-	}
-
-	public shared void remove(Player player) {
-		foreach(i, p; this.players) {
-			if(cast()p == player) {
-				this.players = this.players[0..i] ~ this.players[i+1..$];
-				break;
-			}
+		foreach(webAdmin ; this.server.webAdmins) {
+			(cast()webAdmin).sendLog(messages, commandId, worldId);
 		}
 	}
-
-	public shared void load() {
-		if(!exists(this.name ~ ".txt")) return;
-		foreach(string line ; (cast(string)read(this.name ~ ".txt")).split("\n")) {
-			line = line.strip;
-			if(line.length) {
-				Player player;
-				if(line.indexOf("@") > 0) {
-					player = new UniquePlayer();
-				} else {
-					player = new NamedPlayer();
-				}
-				player.fromString(line);
-				this.players ~= cast(shared)player;
-			}
-		}
-	}
-
-	public shared void save() {
-		string[] lines;
-		foreach(player ; this.players) {
-			lines ~= (cast()player).toString();
-		}
-		write(this.name ~ ".txt", lines.join(newline) ~ newline);
-	}
-
-	static class Player {
-
-		public abstract void fromString(string str);
-
-		public abstract override string toString();
-
-		public abstract override bool opEquals(Object o);
-
-	}
-
-	static class UniquePlayer : Player {
-
-		private ubyte game;
-		private UUID uuid;
-
-		public this() {}
-
-		public this(ubyte game, UUID uuid) {
-			this.game = game;
-			this.uuid = uuid;
-		}
-
-		public override void fromString(string str) {
-			string[] s = str.split("@");
-			this.game = to!ubyte(s[1].strip);
-			this.uuid = parseUUID(s[0].strip);
-		}
-
-		public override string toString() {
-			return this.uuid.toString() ~ "@" ~ to!string(this.game);
-		}
-
-		public override bool opEquals(Object o) {
-			if(cast(UniquePlayer)o) {
-				auto u = cast(UniquePlayer)o;
-				return this.game == u.game && this.uuid == u.uuid;
-			} else {
-				return false;
-			}
-		}
-
-	}
-
-	static class NamedPlayer : Player {
-
-		private string username;
-
-		public this() {}
-
-		public this(string username) {
-			this.username = username.toLower;
-		}
-
-		public override void fromString(string str) {
-			this.username = str.toLower;
-		}
-
-		public override string toString() {
-			return this.username.toLower;
-		}
-
-		public override bool opEquals(Object o) {
-			if(cast(NamedPlayer)o) {
-				return this.username == (cast(NamedPlayer)o).username;
-			} else {
-				return false;
-			}
-		}
-
-	}
-
+	
 }
 
 /**

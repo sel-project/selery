@@ -47,12 +47,11 @@ import selery.event.event : Event, EventListener;
 import selery.event.world.entity : EntityEvent;
 import selery.event.world.player : PlayerEvent, PlayerSpawnEvent, PlayerAfterSpawnEvent, PlayerDespawnEvent, PlayerAfterDespawnEvent;
 import selery.event.world.world : WorldEvent;
-import selery.format : Text;
 import selery.item.item : Item;
 import selery.item.items : ItemStorage, Items;
 import selery.item.slot : Slot;
-import selery.lang : Messageable, Translation, Message;
-import selery.log;
+import selery.lang : Translation;
+import selery.log : Format, Message;
 import selery.math.vector;
 import selery.node.handler : Handler;
 import selery.node.info : PlayerInfo, WorldInfo;
@@ -270,7 +269,7 @@ private shared uint world_count = 0;
 /**
  * Basic world.
  */
-class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player"), Messageable {
+class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player") {
 
 	public static void startWorld(T:World)(shared NodeServer server, shared WorldInfo info, T world, World parent, bool default_=false) {
 		// send world info to the hub
@@ -1012,19 +1011,25 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Broadcasts a message (raw or translatable) to every player in the world.
 	 */
 	public final void broadcast(E...)(E args) {
-		//TODO optimise this
-		foreach(player ; this.w_players) {
-			player.sendMessage(args);
-		}
-		this.sendMessage(args);
+		static if(E.length == 1 && is(E[0] == Message[])) this.broadcastImpl(args[0]);
+		else this.broadcastImpl(Message.convert(args));
 	}
 
-	protected override void sendMessageImpl(string message) {
-		logImpl(this.name, this.id, -1, message);
+	protected void broadcastImpl(Message[] message) {
+		foreach(player ; this.w_players) player.sendMessage(message);
+		this.logImpl(message);
 	}
 
-	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		logImpl(this.name, this.id, -1, join(cast(string[])formats, "") ~ this.server.config.lang.translate(translation, args));
+	/**
+	 * Logs a message into the server's console as this world but without
+	 * sending it to the players.
+	 */
+	public void log(E...)(E args) {
+		this.logImpl(Message.convert(args));
+	}
+
+	protected void logImpl(Message[] messages) {
+		this.server.logWorld(messages, this.id); //TODO that doesn't print the world's name in standalone nodes
 	}
 
 	/**
@@ -1117,9 +1122,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		// call the spawn event
 		auto event = this.callEventIfExists!PlayerSpawnEvent(player);
 
-		//TODO custom message
 		if(event is null || event.announce) {
-			this.broadcast(Text.yellow, Translation.MULTIPLAYER_JOINED, player.displayName);
+			this.broadcast(event.message);
 		}
 
 		// spawn to entities
@@ -1199,8 +1203,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			auto event = this.callEventIfExists!PlayerDespawnEvent(player);
 			if(event is null || event.announce) {
-				//TODO custom message
-				this.broadcast(Text.yellow, Translation.MULTIPLAYER_LEFT, player.displayName);
+				this.broadcast(event.message);
 			}
 			foreach(viewer ; player.viewers) {
 				viewer.hide(player);

@@ -25,13 +25,13 @@ import sel.server.util : ServerInfo, GenericServer;
 
 import selery.about;
 import selery.config : Config;
-import selery.format : Text;
 import selery.hub.handler.hncom : HncomHandler, LiteNode;
 import selery.hub.handler.rcon : RconHandler;
 import selery.hub.handler.webadmin : WebAdminHandler;
 import selery.hub.handler.webview : WebViewHandler;
 import selery.hub.server : HubServer;
-import selery.log : log, error_log;
+import selery.lang : Translation;
+import selery.log : Format;
 import selery.util.thread : SafeThread;
 
 /**
@@ -44,8 +44,6 @@ class Handler {
 
 	private shared JSONValue additionalJson;
 	private shared string socialJson; // already encoded
-
-	private shared Reloadable[] reloadables;
 
 	public shared this(shared HubServer server, shared ServerInfo info, shared Query _query) {
 
@@ -67,11 +65,11 @@ class Handler {
 			foreach(address ; addresses) {
 				try {
 					gs.start(address.ip, address.port, _query);
-					debug log(server.lang.translate("handler.listening", [Text.green ~ name ~ Text.reset, address.toString()]));
+					debug server.logger.log(Translation("handler.listening", [Format.green ~ name ~ Format.reset, address.toString()]));
 				} catch(SocketException e) {
-					error_log(server.lang.translate("handler.error.bind", [name, address.toString(), (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
+					server.logger.logError(Translation("handler.error.bind", [name, address.toString(), (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
 				} catch(Throwable t) {
-					error_log(server.lang.translate("handler.error.address", [name, address.toString()]));
+					server.logger.logError(Translation("handler.error.address", [name, address.toString()]));
 				}
 			}
 		}
@@ -103,7 +101,6 @@ class Handler {
 			if(webView) {
 				auto s = new shared WebViewHandler(server, &this.socialJson);
 				startGenericServer(s, "web_view", webViewAddresses);
-				this.reloadables ~= s;
 			}
 
 			if(webAdmin) {
@@ -113,20 +110,6 @@ class Handler {
 
 		}
 
-	}
-
-	/**
-	 * Reloads the resources that can be reloaded.
-	 * Those resources are the social json (always reloaded) and
-	 * the web's pages (index, icon and info) when the http handler
-	 * is running (when the server has been started with "web-enabled"
-	 * equals to true).
-	 */
-	public shared void reload() {
-		this.regenerateSocialJson();
-		foreach(reloadable ; this.reloadables) {
-			reloadable.reload();
-		}
 	}
 
 	/**
@@ -152,7 +135,7 @@ class Handler {
 
 }
 
-interface Reloadable {
+deprecated("Server is never reloaded") interface Reloadable {
 
 	public shared void reload();
 

@@ -17,23 +17,21 @@ module selery.node.server;
 import core.atomic : atomicOp;
 import core.thread : getpid, Thread;
 
-import std.algorithm : canFind, sort, clamp, min;
-import std.ascii : newline;
+import std.algorithm : canFind, min;
 import std.bitmanip : nativeToBigEndian;
 static import std.concurrency;
 import std.conv : to;
 import std.datetime : dur, Duration;
 import std.datetime.stopwatch : StopWatch;
 static import std.file;
-import std.json;
-import std.math : round, ceil;
+import std.json : JSON_TYPE, JSONValue, parseJSON;
 import std.process : executeShell;
-import std.socket : SocketException, Address, InternetAddress, Internet6Address;
-import std.string;
-import std.typetuple : TypeTuple;
+import std.socket : SocketException, Address;
+import std.string; //TODO selective imports
 import std.traits : Parameters;
 import std.uuid : UUID;
-import std.zlib : UnCompress;
+
+import arsd.terminal : Terminal, ConsoleOutputType;
 
 import imageformats.png : read_png_from_mem;
 
@@ -55,14 +53,13 @@ import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
 import selery.event.node;
 import selery.event.world.world : WorldEvent;
-import selery.format : Text, writeln;
-import selery.lang : Lang, Translation, Message, Messageable;
-import selery.log;
-import selery.node.handler;
+import selery.lang : LanguageManager, Translation;
+import selery.log : Format, Message, Logger;
+import selery.node.handler; //TODO selective imports
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.player.java : JavaPlayer;
-import selery.plugin : Plugin;
+import selery.plugin : Plugin, Description;
 import selery.server : Server;
 import selery.util.ip : publicAddresses;
 import selery.util.memory : Memory;
@@ -70,7 +67,7 @@ import selery.util.node : Node;
 import selery.util.resourcepack : createResourcePacks, serveResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
-import selery.world.thread;
+import selery.world.thread; //TODO selective imports
 
 import HncomLogin = sel.hncom.login;
 import HncomUtil = sel.hncom.util;
@@ -139,6 +136,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	public shared std.concurrency.Tid tid; //TODO make private
 
 	private shared Config _config;
+	private shared Logger _logger;
+	private shared ServerLogger serverlogger;
 
 	private shared size_t n_online;
 	private shared size_t n_max;
@@ -184,12 +183,15 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		if(config.files.hasTemp("lang")) {
 			config.hub.language = cast(string)config.files.readTemp("lang");
 		} else {
-			config.hub.language = "en_GB";
+			config.hub.language = "en_US";
 		}
 		//config.hub.acceptedLanguages = [config.hub.language];
 		config.lang.load(config.hub.language, [config.hub.language]);
 
 		this._config = cast(shared)config;
+
+		Terminal terminal = Terminal(ConsoleOutputType.linear);
+		this._logger = cast(shared)new Logger(&terminal, config.lang); // only writes in the console
 
 		if(lite) {
 
@@ -198,13 +200,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		} else {
 
-			log(config.lang.translate("startup.connecting", [to!string(hub), name]));
+			this.logger.log(Translation("startup.connecting", [to!string(hub), name]));
 
 			try {
 				this.handler = new shared SocketHandler(hub);
 				this.handler.send(HncomLogin.ConnectionRequest(password, name, main).encode());
 			} catch(SocketException e) {
-				error_log(config.lang.translate("warning.connectionError", [to!string(hub), e.msg]));
+				this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
 				return;
 			}
 
@@ -228,13 +230,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 							default: return "unknown";
 						}
 					}();
-					error_log(config.lang.translate("status." ~ reason));
+					this.logger.logError(Translation("status." ~ reason));
 					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-						error_log(config.lang.translate("warning.protocolRequired", [to!string(__PROTOCOL__), to!string(response.protocol)]));
+						this.logger.logError(Translation("warning.protocolRequired", [to!string(__PROTOCOL__), to!string(response.protocol)]));
 					}
 				}
 			} else {
-				error_log(config.lang.translate("warning.refused"));
+				this.logger.logError(Translation("warning.refused"));
 			}
 
 			this.handler.close();
@@ -249,7 +251,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
 			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer[1..$]));
 		} else {
-			error_log(this.config.lang.translate("warning.closed"));
+			this.logger.logError(Translation("warning.closed"));
 		}
 
 	}
@@ -294,7 +296,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		config.files.writeTemp("lang", config.hub.language);
 
 		version(Windows) {
-			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.simpleDisplay);
+			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.simpleDisplay); //TODO use Terminal
 		}
 
 		// reload languages
@@ -316,7 +318,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			} else if(type == __BEDROCK__) {
 				set(config.hub.bedrock);
 			} else {
-				error_log(config.lang.translate("warning.invalidGame", [to!string(type), Software.name]));
+				this.logger.logError(Translation("warning.invalidGame", [to!string(type), Software.name]));
 			}
 		}
 
@@ -328,7 +330,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		void check(string name, uint[] requested, uint[] supported) {
 			foreach(req ; requested) {
 				if(!supported.canFind(req)) {
-					warning_log(config.lang.translate("warning.invalidProtocol", [to!string(req), name]));
+					this.logger.logWarning(Translation("warning.invalidProtocol", [to!string(req), name]));
 				}
 			}
 		}
@@ -346,10 +348,10 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
-		if(!this.lite) log(this.config.lang.translate("startup.starting", [Text.green ~ Software.name ~ Text.white ~ " " ~ Software.fullVersion ~ Text.reset ~ " " ~ Software.fullCodename]));
+		if(!this.lite) this.logger.log(Translation("startup.starting", [Format.green ~ Software.name ~ Format.white ~ " " ~ Software.fullVersion ~ Format.reset ~ " " ~ Software.fullCodename]));
 
 		static if(!__supported) {
-			warning_log(this.config.lang.translate("startup.unsupported", [Software.name]));
+			this.logger.logWarning(Translation("startup.unsupported", [Software.name]));
 		}
 
 		this.globalListener = new EventListener!WorldEvent();
@@ -367,7 +369,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 				}
 			}
 			if(failed.length) {
-				warning_log(this.config.lang.translate("warning.creativeFailed", [failed.join(", ")]));
+				this.logger.logWarning(Translation("warning.creativeFailed", [failed.join(", ")]));
 			}
 		}
 
@@ -379,7 +381,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		}
 		if(textures.length) {
 			
-			log(this.config.lang.translate("startup.resourcePacks"));
+			this.logger.log(Translation("startup.resourcePacks"));
 
 			auto rp_uuid = this.nextUUID;
 			auto rp = createResourcePacks(this, rp_uuid, textures);
@@ -400,11 +402,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			auto plugin = cast()_plugin;
 			plugin.load(this);
 			auto args = [
-				Text.green ~ plugin.name ~ Text.reset,
-				Text.white ~ (plugin.authors.length ? plugin.authors.join(Text.reset ~ ", " ~ Text.white) : "?") ~ Text.reset,
-				Text.white ~ plugin.vers
+				Format.green ~ plugin.name ~ Format.reset,
+				Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
+				Format.white ~ plugin.vers
 			];
-			log(this.config.lang.translate("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
+			this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
 		}
 
 		// send node's informations to the hub and switch to a non-blocking connection
@@ -446,26 +448,21 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			sigset(SIGINT, &extsig);
 		}
 
-		log(this.config.lang.translate("startup.started"));
+		this.logger.log(Translation("startup.started"));
 
+		Terminal* terminal = (cast()this._logger).terminal;
+		assert(terminal);
 		if(this.lite) {
-			// only send the message to the hub that will also send it to the connected
-			// external consoles and rcon clients
-			setLogger((string logger, string message, int worldId, int outputId){
-				Handler.sharedInstance.send(new HncomStatus.Log(milliseconds, worldId, logger, message, outputId).encode());
-			});
+			this._logger = this.serverlogger = cast(shared)new LiteServerLogger(terminal, this.lang);
 		} else {
-			setLogger((string logger, string message, int worldId, int outputId){
-				Handler.sharedInstance.send(new HncomStatus.Log(milliseconds, worldId, logger, message, outputId).encode());
-				synchronized writeln("[" ~ logger ~ "] " ~ message);
-			});
+			this._logger = this.serverlogger = cast(shared)new NodeServerLogger(terminal, this.lang);
 		}
 
 		// start calculation of used resources
 		std.concurrency.spawn(&startResourceUsageThread, getpid);
 
 		// start command reader
-		if(!this.lite) std.concurrency.spawn(&startCommandReaderThread, cast()this.tid);
+		std.concurrency.spawn(&startCommandReaderThread, cast()this.tid);
 		
 		this.start();
 
@@ -507,7 +504,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 
-		log(this.config.lang.translate("startup.stopped"));
+		this.logger.log(Translation("startup.stopped"));
 
 		/*version(Windows) {
 			// perform suicide
@@ -574,6 +571,18 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	public override shared pure nothrow @property @trusted @nogc const(Config) config() {
 		return cast()this._config;
+	}
+
+	public override shared @property Logger logger() {
+		return cast()this._logger;
+	}
+
+	public shared void logCommand(Message[] messages, int commandId) {
+		(cast()this.serverlogger).logWith(messages, commandId);
+	}
+
+	public shared void logWorld(Message[] messages, int worldId) {
+		(cast()this.serverlogger).logWith(messages, HncomStatus.Log.NO_COMMAND, worldId);
 	}
 
 	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
@@ -809,6 +818,15 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
+	 * Updates langauge files (in config) and send the UpdateLanguageFiles packet to
+	 * the hub if needed.
+	 */
+	protected shared void updateLanguageFiles(string language, string[string] messages) {
+		if(!this.lite) {} //TODO update config.lang
+		this.handler.send(HncomStatus.UpdateLanguageFiles(language, messages).encode());
+	}
+
+	/**
 	 * Gets the server's default world.
 	 */
 	public shared pure nothrow @property const(WorldInfo) world() {
@@ -875,7 +893,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		auto world = id in this._worlds;
 		if(world) {
 			if((*world).id == this._default_world_id) {
-				warning_log(this.config.lang.translate("warning.removingDefaultWorld"));
+				this.logger.logWarning(Translation("warning.removingDefaultWorld"));
 			} else {
 				std.concurrency.send(cast()world.tid, Close());
 				return true;
@@ -897,6 +915,26 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
+	 * Selects players using a query.
+	 * Example:
+	 * ---
+	 * server.selectPlayers("Steve");
+	 * server.selectPlayers("@a");
+	 * ---
+	 */
+	public shared const(PlayerInfo)[] selectPlayers(string query) {
+		if(query == "@a") {
+			return this.players;
+		} else {
+			PlayerInfo[] players;
+			foreach(player ; this._players) {
+				if(player.name == query) players ~= cast()player;
+			}
+			return players;
+		}
+	}
+
+	/**
 	 * Broadcasts a message in every registered world and their children
 	 * calling the world's broadcast method.
 	 */
@@ -909,7 +947,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, bool op, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Description description, string[] aliases, bool op, bool hidden) {
 		if(command !in this._commands) this._commands[command] = cast(shared)new Command(command, description, aliases, op, hidden);
 		auto ptr = command in this._commands;
 		(cast()*ptr).add!func(del);
@@ -918,14 +956,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	public shared @property auto commands() {
 		return this._commands;
-	}
-
-	protected override void sendMessageImpl(string message) {
-		log(message);
-	}
-	
-	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		log(join(cast(string[])formats, ""), (cast(shared)this).config.lang.translate(message, args));
 	}
 
 	// hub-node communication and related methods
@@ -940,9 +970,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/// ditto
-	public shared void kick(uint hubId, string reason, string[] args) {
+	public shared void kick(uint hubId, string reason, inout(string)[] args) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
-			this.handler.send(HncomPlayer.Kick(hubId, reason, true, args).encode());
+			this.handler.send(HncomPlayer.Kick(hubId, reason, true, cast(string[])args).encode());
 		}
 	}
 
@@ -991,13 +1021,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	protected override void handleStatusLatency(HncomStatus.Latency packet) {
 		//TODO send packet back
 	}
-
-	protected override void handleStatusReload(HncomStatus.Reload packet) {
-		//TODO update settings
-		// only reload plugins, not settings
-		foreach(plugin ; this.n_plugins) {
-			foreach(del ; plugin.onreload) del();
-		}
+	
+	protected override void handleStatusRemoteCommand(HncomStatus.RemoteCommand packet) {
+		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender, command, commandId);
 	}
 
 	protected override void handleStatusAddNode(HncomStatus.AddNode packet) {
@@ -1029,17 +1055,19 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		this.n_max = packet.max;
 	}
 
-	protected override void handleStatusRemoteCommand(HncomStatus.RemoteCommand packet) {
-		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender, command, commandId);
+	protected override void handleStatusUpdateDisplayName(HncomStatus.UpdateDisplayName packet) {
+		this._config.hub.displayName = packet.displayName;
 	}
 
-	protected override void handleStatusListInfo(HncomStatus.ListInfo packet) {}
+	protected override void handleStatusUpdateMOTD(HncomStatus.UpdateMOTD packet) {
+		// assuming that is already parsed
+		if(packet.type == __BEDROCK__) this._config.hub.bedrock.motd = packet.motd;
+		else if(packet.type == __JAVA__) this._config.hub.java.motd = packet.motd;
+	}
 
-	protected override void handleStatusUpdateListByUUID(HncomStatus.UpdateListByUUID packet) {}
-
-	protected override void handleStatusUpdateListByUsername(HncomStatus.UpdateListByUsername packet) {}
-
-	protected override void handleStatusUpdateListByIp(HncomStatus.UpdateListByIp packet) {}
+	protected override void handleStatusUpdateSupportedProtocols(HncomStatus.UpdateSupportedProtocols packet) {
+		//TODO
+	}
 
 	protected override void handleStatusWebAdminCredentials(HncomStatus.WebAdminCredentials packet) {
 		//TODO start http server for panel
@@ -1133,12 +1161,10 @@ final class ServerCommandSender : CommandSender {
 
 	enum Origin : ubyte {
 
-		//TODO update from sel-hncom 8
 		prompt = 0,
-		hub = HncomStatus.RemoteCommand.HUB,
-		externalConsole = HncomStatus.RemoteCommand.EXTERNAL_CONSOLE,
-		remotePanel = HncomStatus.RemoteCommand.REMOTE_PANEL,
-		rcon = HncomStatus.RemoteCommand.RCON,
+		hub = HncomStatus.RemoteCommand.HUB + 1,
+		webAdmin = HncomStatus.RemoteCommand.WEB_ADMIN + 1,
+		rcon = HncomStatus.RemoteCommand.RCON + 1,
 
 	}
 
@@ -1164,16 +1190,85 @@ final class ServerCommandSender : CommandSender {
 		return cast(Command[string])this._commands;
 	}
 
-	protected override void sendMessageImpl(string message) {
-		logImpl("command", -1, this.id, message);
-	}
-
-	protected override void sendTranslationImpl(const Translation translation, string[] args, Text[] formats) {
-		logImpl("command", -1, this.id, join(cast(string[])formats, ""), this.server.config.lang.translate(translation, args));
+	protected override void sendMessageImpl(Message[] messages) {
+		this._server.logCommand(messages, this.id);
 	}
 
 	alias server this;
 
+}
+
+private abstract class ServerLogger : Logger {
+
+	public this(Terminal* terminal, inout LanguageManager lang) {
+		super(terminal, lang);
+	}
+
+	public override void logMessage(Message[] messages) {
+		this.logWith(messages);
+	}
+
+	/**
+	 * Creates a log with commandId and worldId.
+	 */
+	public void logWith(Message[] messages, int commandId=HncomStatus.Log.NO_COMMAND, int worldId=HncomStatus.Log.NO_WORLD) {
+		this.logWithImpl(messages, commandId, worldId);
+	}
+
+	protected abstract void logWithImpl(Message[], int, int);
+
+}
+
+private class NodeServerLogger : ServerLogger {
+
+	public this(Terminal* terminal, inout LanguageManager lang) {
+		super(terminal, lang);
+	}
+
+	// prints to the console and send to the hub
+	protected override void logWithImpl(Message[] messages, int commandId, int worldId) {
+		this.logImpl(messages);
+		Handler.sharedInstance.send(HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).encode());
+	}
+
+}
+
+private class LiteServerLogger : ServerLogger {
+
+	public this(Terminal* terminal, inout LanguageManager lang) {
+		super(terminal, lang);
+	}
+
+	// only send to the hub
+	protected override void logWithImpl(Message[] messages, int commandId, int worldId) {
+		Handler.sharedInstance.send(HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).encode());
+	}
+
+}
+
+private HncomStatus.Log.Message[] encodeHncomMessage(Message[] messages) {
+	HncomStatus.Log.Message[] ret;
+	string next;
+	void addText() {
+		ret ~= HncomStatus.Log.Message(false, next, []);
+		next.length = 0;
+	}
+	foreach(message ; messages) {
+		final switch(message.type) {
+			case Message.FORMAT:
+				next ~= message.format;
+				break;
+			case Message.TEXT:
+				next ~= message.text;
+				break;
+			case Message.TRANSLATION:
+				if(next.length) addText();
+				ret ~= HncomStatus.Log.Message(true, message.translation.translatable.default_, message.translation.parameters);
+				break;
+		}
+	}
+	if(next.length) addText();
+	return ret;
 }
 
 private void startResourceUsageThread(int pid) {
@@ -1192,6 +1287,7 @@ private void startResourceUsageThread(int pid) {
 	
 }
 
+//TODO use Terminal
 private void startCommandReaderThread(std.concurrency.Tid tid) {
 
 	debug Thread.getThis().name = "CommandReader";

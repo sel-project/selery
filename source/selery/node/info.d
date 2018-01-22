@@ -33,10 +33,6 @@ import selery.player.player : InputMode, DeviceOS;
  */
 final class PlayerInfo {
 
-	enum GAME_BEDROCK = "Minecraft";
-	enum GAME_EDU = "Minecraft: Education Edition";
-	enum GAME_JAVA = "Minecraft: Java Edition";
-
 	/**
 	 * Player's id assigned by the hub and unique for the player's session.
 	 */
@@ -68,7 +64,7 @@ final class PlayerInfo {
 	public uint latency;
 	public float packetLoss;
 
-	public string gameEdition;
+	public string gameName;
 	public string gameVersion;
 	public string game;
 
@@ -95,7 +91,8 @@ final class PlayerInfo {
 		this.usedAddress = add.serverAddress;
 		this.language = add.language;
 		this.inputMode = cast(InputMode)add.inputMode;
-		this.gameVersion = add.version_;
+		this.gameName = add.gameName;
+		this.gameVersion = add.gameVersion;
 		if(add.gameData.type == JSON_TYPE.OBJECT) {
 			if(type == __BEDROCK__) {
 				this.edu = "edu" in add.gameData && add.gameData["edu"].type == JSON_TYPE.TRUE;
@@ -105,13 +102,7 @@ final class PlayerInfo {
 				if(deviceModel && deviceModel.type == JSON_TYPE.STRING) this.deviceModel = deviceModel.str;
 			}
 		}
-		if(type == __JAVA__) {
-			this.gameEdition = GAME_JAVA;
-		} else {
-			if(this.edu) this.gameEdition = GAME_EDU;
-			else this.gameEdition = GAME_BEDROCK;
-		}
-		this.game = this.gameEdition ~ " " ~ this.gameVersion;
+		this.game = this.gameName ~ " " ~ this.gameVersion;
 	}
 
 }

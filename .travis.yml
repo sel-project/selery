@@ -23,10 +23,11 @@ matrix:
 deploy:
   provider: releases
   api_key: $API_KEY
-  file: "selery-${SELERY_VERSION}-${OS}-x86_64.zip"
+  file: "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-x86_64.zip"
   skip_cleanup: true
   on:
     tags: true
+    condition: $CONFIG == "release" && $DC == "ldc2"
 
 script:
   - dub build --compiler=$DC --build=$CONFIG
@@ -49,7 +50,7 @@ script:
   - cd ..
 
 after_success:
-  - if [[ $CONFIG == "release" && $DC == "ldc2" ]] ; then zip "selery-${SELERY_VERSION}-${OS}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}" ; fi
+  - zip "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}" ; fi
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about

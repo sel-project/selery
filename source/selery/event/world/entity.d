@@ -69,7 +69,6 @@ class EntityDeathEvent : EntityEvent {
 	private EntityDamageEvent n_damage;
 
 	private Translation m_message;
-	private string[] m_args;
 
 	public pure nothrow @safe @nogc this(Living entity, EntityDamageEvent damage) {
 		this.n_entity = entity;
@@ -80,31 +79,21 @@ class EntityDeathEvent : EntityEvent {
 		return this.n_damage;
 	}
 
-	public pure nothrow @property @safe @nogc const(Translation) message() {
+	public pure nothrow @property @safe @nogc Translation message() {
 		return this.m_message;
 	}
 
-	public pure nothrow @property @safe @nogc const(Translation) message(Translation message) {
+	public pure nothrow @property @safe @nogc Translation message(Translation message) {
 		return this.m_message = message;
 	}
 
-	public pure nothrow @property @safe @nogc const(Translation) message(bool display) {
+	public pure nothrow @property @safe @nogc Translation message(bool display) {
 		if(display) {
 			this.m_message = this.damageEvent.message;
-			this.m_args = this.damageEvent.args;
 		} else {
 			this.m_message = Translation.init;
-			this.m_args = [];
 		}
 		return this.message;
-	}
-
-	public pure nothrow @property @safe @nogc string[] args() {
-		return this.m_args;
-	}
-
-	public pure nothrow @property @safe string[] args(string[] args) {
-		return this.m_args = args is null ? [] : args;
 	}
 
 }

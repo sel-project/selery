@@ -40,13 +40,13 @@ import selery.entity.interfaces : Collectable;
 import selery.entity.metadata;
 import selery.entity.noai : ItemEntity, Painting, Lightning;
 import selery.event.world;
-import selery.format : Text, unformat;
+import selery.format : unformat;
 import selery.inventory.inventory;
 import selery.item.item : Item;
 import selery.item.items : Items;
 import selery.item.slot : Slot;
 import selery.lang : Translation;
-import selery.log;
+import selery.log : Message, Format;
 import selery.math.vector;
 import selery.node.handler : Handler;
 import selery.node.info : PlayerInfo;
@@ -242,7 +242,7 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	/**
-	 * Gets the player's game edition.
+	 * Gets the player's game name.
 	 * Example:
 	 * ---
 	 * "Minecraft"
@@ -250,8 +250,8 @@ abstract class Player : Human, WorldCommandSender {
 	 * "Minecraft: Windows 10 Edition"
 	 * ---
 	 */
-	public final pure nothrow @property @safe @nogc string gameEdition() {
-		return this.info.gameEdition;
+	public final pure nothrow @property @safe @nogc string gameName() {
+		return this.info.gameName;
 	}
 
 	/**
@@ -416,9 +416,7 @@ abstract class Player : Human, WorldCommandSender {
 
 	// *** PLAYER-RELATED METHODS ***
 	
-	protected override abstract void sendMessageImpl(string);
-	
-	protected override abstract void sendTranslationImpl(const Translation, string[], Text[]);
+	protected override abstract void sendMessageImpl(Message[] messages);
 
 	/**
 	 * Sends a tip message that will be displayed above the hotbar for two
@@ -428,12 +426,12 @@ abstract class Player : Human, WorldCommandSender {
 	 * player.sendTip("Hello there!");
 	 * @event move(PlayerMoveEvent event) {
 	 *    with(event.position)
-	 *       event.player.sendTip("{0},{1},{2}", x.to!string, y.to!string, z.to!string);
+	 *       event.player.sendTip(Format.green, x, ", ", y, ", ", z);
 	 * }
 	 * ---
 	 */
-	public void sendTip(string message) {
-		this.sendTipMessage(message);
+	public void sendTip(E...)(E args) {
+		this.sendTipImpl(Message.convert(args));
 	}
 
 	/// ditto
@@ -446,20 +444,27 @@ abstract class Player : Human, WorldCommandSender {
 	 * Example:
 	 * ---
 	 * // fade in, display title and subtitle and fade out
-	 * player.title = Title("title", "subtitle");
+	 * player.sendTitle("title", "subtitle");
 	 *
 	 * // display a title for 3 seconds
-	 * player.title = Title(Text.green ~ "green title", 60);
+	 * player.sendTitle(Title(Format.green, "green title"), 60);
 	 *
 	 * // display a subtitle for 10 seconds and fade out in 5 seconds
-	 * player.title = Title("", "subtitle", 0, 200, 100);
+	 * player.sendTitle(Title.init, Subtitle("subtitle"), 0, 200, 100);
 	 * ---
 	 */
-	public Title title(Title title) {
-		//if(title.title.length) title.title = translate(title.title, this.lang, args);
-		//if(title.subtitle.length) title.subtitle = translate(title.subtitle, this.lang, args);
-		this.sendTitleMessage(title);
-		return title;
+	public void sendTitle(Title title, Subtitle subtitle=Subtitle.init, uint fadeIn=10, uint stay=40, uint fadeOut=10) {
+		this.sendTitleImpl(title, subtitle, fadeIn, stay, fadeOut);
+	}
+
+	/// ditto
+	public void sendTitle(Title title, uint fadeIn, uint stay, uint fadeOut) {
+		this.sendTitle(title, Subtitle.init, fadeIn, stay, fadeOut);
+	}
+
+	/// ditto
+	public void sendTitle(string title, string subtitle="", uint fadeIn=10, uint stay=40, uint fadeOut=10) {
+		this.sendTitle(Title(title), Subtitle(subtitle), fadeIn, stay, fadeOut);
 	}
 
 	/**
@@ -476,6 +481,9 @@ abstract class Player : Human, WorldCommandSender {
 	public void clearTitle() {
 		this.sendResetTitles();
 	}
+
+	/// ditto
+	alias resetTitle = clearTitle;
 	
 	// Sends the movements of the entities in the player's watchlist
 	public final void sendMovements() {
@@ -586,8 +594,8 @@ abstract class Player : Human, WorldCommandSender {
 	 * Params:
 	 * 		reason = reason of the disconnection
 	 */
-	public void disconnect(const Translation reason=Translation.DISCONNECT_CLOSED, string[] args=[]) {
-		this.disconnectImpl(reason, args);
+	public void disconnect(const Translation reason=Translation("disconnect.closed")) {
+		this.disconnectImpl(reason);
 	}
 
 	/// ditto
@@ -598,7 +606,7 @@ abstract class Player : Human, WorldCommandSender {
 	/// ditto
 	alias kick = this.disconnect;
 
-	protected abstract void disconnectImpl(const Translation, string[]);
+	protected abstract void disconnectImpl(const Translation);
 
 	/**
 	 * Transfers the player in another node.
@@ -845,9 +853,9 @@ abstract class Player : Human, WorldCommandSender {
 
 	protected abstract void sendCompletedMessages(string[] messages);
 	
-	protected abstract void sendTipMessage(string message);
+	protected abstract void sendTipImpl(Message[] messages);
 
-	protected abstract void sendTitleMessage(Title message);
+	protected abstract void sendTitleImpl(Title title, Subtitle subtitle, uint fadeIn, uint stay, uint fadeOut);
 
 	protected abstract void sendHideTitles();
 
@@ -1022,7 +1030,7 @@ abstract class Player : Human, WorldCommandSender {
 	/// ditto
 	private void handleMovementPacketImpl(EntityPosition position, float yaw, float bodyYaw, float pitch) {
 		if(!selery.math.vector.isFinite(position) || /*position < int.min || position > int.max || */!isFinite(yaw) || !isFinite(bodyYaw) || !isFinite(pitch)) {
-			warning_log(this.name, " sent an invalid position! x: ", position.x, ", y: ", position.y, ", z: ", position.z, ", yaw: ", yaw, ", bodyYaw: ", bodyYaw, ", pitch: ", pitch);
+			//warning_log(this.name, " sent an invalid position! x: ", position.x, ", y: ", position.y, ", z: ", position.z, ", yaw: ", yaw, ", bodyYaw: ", bodyYaw, ", pitch: ", pitch);
 			this.kick("Invalid position!");
 		} else {
 			auto old = this.position;
@@ -1506,13 +1514,13 @@ class Puppet : Player {
 	
 	protected override @safe @nogc void sendMotionUpdates(Entity[] entities) {}
 	
-	protected override @safe @nogc void sendTitleMessage(Title message) {}
+	protected override @safe @nogc void sendTipImpl(Message[] messages) {}
+	
+	protected override @safe @nogc void sendTitleImpl(Title title, Subtitle subtitle, uint fadeIn, uint stay, uint fadeOut) {}
 	
 	protected override @safe @nogc void sendHideTitles() {}
 	
 	protected override @safe @nogc void sendResetTitles() {}
-
-	protected override @safe @nogc void sendTipMessage(string message) {}
 
 	protected override @safe @nogc void sendOpStatus() {}
 	
@@ -1586,29 +1594,18 @@ class Puppet : Player {
 	
 }
 
-struct Title {
+struct TitleImpl {
 
-	public string title, subtitle;
-	public tick_t fadeIn, stay, fadeOut;
+	Message[] message;
 
-	public this(string title, string subtitle="", tick_t fadeIn=10, tick_t stay=40, tick_t fadeOut=10) {
-		this.title = title;
-		this.subtitle = subtitle;
-		this.fadeIn = fadeIn;
-		this.stay = stay;
-		this.fadeOut = fadeOut;
+	this(E...)(E args) {
+		this.message = Message.convert(args);
 	}
 
-	public this(string title, tick_t fadeIn, tick_t stay, tick_t fadeOut) {
-		this(title, "", fadeIn, stay, fadeOut);
-	}
-
-	public this(string title, string subtitle, tick_t stay) {
-		this(title, subtitle, 0, stay, 0);
-	}
-
-	public this(string title, tick_t stay) {
-		this(title, "", stay);
-	}
+	alias message this;
 
 }
+
+alias Title = TitleImpl;
+
+alias Subtitle = TitleImpl;

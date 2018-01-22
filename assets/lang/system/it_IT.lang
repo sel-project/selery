@@ -75,4 +75,4 @@ commands.help.invalidSender = Spiacente, niente aiuto oggi!
 commands.reload.description = Ricarica i file di configurazione e i plugin ricaricabili.
 commands.reload.success = Le impostazioni e i plugin sono stati ricaricati
 commands.stop.failed = Il server si sta già fermando
-commands.transfer.description = Trasferisce un giocatore a un altro nodo.
+commands.transfer.description = Trasferisce un giocatore in un altro nodo.

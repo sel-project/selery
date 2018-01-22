@@ -42,8 +42,7 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 
 	} catch(Throwable t) {
 
-		import selery.log;
-		error_log(t);
+		server.logger.logError(t);
 		throw t;
 
 	}

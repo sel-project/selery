@@ -25,11 +25,12 @@ import selery.about : Software;
 import selery.command.command : Command;
 import selery.command.util : CommandSender, WorldCommandSender, PocketType, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
 import selery.config : Config, Gamemode, Difficulty, Dimension;
-import selery.format : Text;
-import selery.lang : Translation, Message;
+import selery.lang : Translation, Translatable;
+import selery.log : Format;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode;
+import selery.plugin : Description;
 import selery.util.messages : Messages;
 import selery.world.world : Time;
 
@@ -94,7 +95,6 @@ struct aliases {
  * [ ] ban
  * [ ] ban-ip
  * [ ] pardon
- * [x] reload
  * [x] stop
  * [ ] whitelist
  */
@@ -130,13 +130,13 @@ final class Commands {
 	private void registerImpl(string command, size_t count)(NodeServer server) {
 		mixin("alias C = " ~ command ~ to!string(count) ~ ";");
 		static if(count == 0) {
-			static if(hasUDA!(C, vanilla)) enum description = Translation.fromPocket("commands." ~ command ~ ".description");
-			else enum description = Translation("commands." ~ command ~ ".description");
+			static if(hasUDA!(C, vanilla)) enum description = Translatable.fromBedrock("commands." ~ command ~ ".description");
+			else enum description = Translatable("commands." ~ command ~ ".description");
 			static if(hasUDA!(C, aliases)) enum aliases = getUDAs!(C, aliases)[0].aliases;
 			else enum string[] aliases = [];
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Message(description), aliases, hasUDA!(C, op), false);
+			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description(description), aliases, hasUDA!(C, op), false);
 		} else {
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Message.init, [], false, false);
+			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description.init, [], false, false);
 		}
 		static if(__traits(hasMember, typeof(this), command ~ to!string(count + 1))) this.registerImpl!(command, count + 1)(server);
 	}
@@ -157,12 +157,12 @@ final class Commands {
 	}
 
 	void about0(CommandSender sender) {
-		sender.sendMessage(Messages.about.software, Software.name ~ " " ~ Software.fullVersion);
+		sender.sendMessage(Translation(Messages.about.software, Software.name ~ " " ~ Software.fullVersion));
 		if(this.server.plugins.length) {
-			sender.sendMessage(Messages.about.plugins, this.server.plugins.length);
+			sender.sendMessage(Translation(Messages.about.plugins, this.server.plugins.length));
 			foreach(_plugin ; this.server.plugins) {
 				auto plugin = cast()_plugin;
-				sender.sendMessage("* ", Text.green, plugin.name, Text.reset, " ", (!plugin.vers.startsWith("~") ? "v" : ""), plugin.vers);
+				sender.sendMessage("* ", Format.green, plugin.name, Format.reset, " ", (!plugin.vers.startsWith("~") ? "v" : ""), plugin.vers);
 			}
 		}
 	}
@@ -170,21 +170,21 @@ final class Commands {
 	@vanilla @op deop0(WorldCommandSender sender, Player player) {
 		if(player.op) {
 			player.op = false;
-			player.sendMessage(Messages.deop.message);
-			sender.sendMessage(Messages.deop.success, player.displayName);
+			player.sendMessage(Translation(Messages.deop.message));
+			sender.sendMessage(Translation(Messages.deop.success, player.displayName));
 		} else {
-			sender.sendMessage(Messages.deop.failed, player.displayName);
+			sender.sendMessage(Translation(Messages.deop.failed, player.displayName));
 		}
 	}
 
 	@vanilla deop1(ServerCommandSender sender, string player) {
-		//TODO
+		//TODO get player(s) from server.selectPlayers
 	}
 	
 	@vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
 		//TODO unsupported by selery
 		//sender.world.difficulty = difficulty;
-		sender.sendMessage(Messages.difficulty.success, difficulty);
+		sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
 	}
 	
 	@vanilla difficulty1(WorldCommandSender sender, Ranged!(ubyte, 0, 3) difficulty) {
@@ -202,7 +202,7 @@ final class Commands {
 	@vanilla @op @aliases("gm") gamemode0(WorldCommandSender sender, Gamemode gamemode, Player[] target) {
 		foreach(player ; target) {
 			player.gamemode = gamemode;
-			sender.sendMessage(Messages.gamemode.successOther, gamemode.to!string, player.displayName);
+			sender.sendMessage(Translation(Messages.gamemode.successOther, gamemode, player.displayName));
 		}
 	}
 	
@@ -212,7 +212,7 @@ final class Commands {
 
 	@vanilla gamemode1(Player sender, Gamemode gamemode) {
 		sender.gamemode = gamemode;
-		sender.sendMessage(Messages.gamemode.successSelf, gamemode.to!string);
+		sender.sendMessage(Translation(Messages.gamemode.successSelf, gamemode));
 	}
 
 	@vanilla gamemode3(Player sender, Ranged!(ubyte, 0, 3) gamemode) {
@@ -236,15 +236,15 @@ final class Commands {
 	@vanilla gamerule1(WorldCommandSender sender, Gamerule rule) {
 		//TODO
 		sender.sendMessage(rule, " = ", {
-				final switch(rule) with(Gamerule) {
-					case depleteHunger: return sender.world.depleteHunger.to!string;
-					case doDaylightCycle: return sender.world.time.cycle.to!string;
-					case doWeatherCycle: return sender.world.weather.cycle.to!string;
-					case naturalRegeneration: return sender.world.naturalRegeneration.to!string;
-					case pvp: return sender.world.pvp.to!string;
-					case randomTickSpeed: return sender.world.randomTickSpeed.to!string;
-				}
-			}());
+			final switch(rule) with(Gamerule) {
+				case depleteHunger: return sender.world.depleteHunger.to!string;
+				case doDaylightCycle: return sender.world.time.cycle.to!string;
+				case doWeatherCycle: return sender.world.weather.cycle.to!string;
+				case naturalRegeneration: return sender.world.naturalRegeneration.to!string;
+				case pvp: return sender.world.pvp.to!string;
+				case randomTickSpeed: return sender.world.randomTickSpeed.to!string;
+			}
+		}());
 	}
 
 	@vanilla gamerule2(WorldCommandSender sender, Gamerule rule, bool value) {
@@ -256,10 +256,10 @@ final class Commands {
 			case naturalRegeneration: sender.world.naturalRegeneration = value; break;
 			case pvp: sender.world.pvp = value; break;
 			default:
-				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
+				sender.sendMessage(Format.red, Translation(Messages.gamerule.invalidType, rule));
 				return;
 		}
-		sender.sendMessage(Messages.gamerule.success, rule, value);
+		sender.sendMessage(Translation(Messages.gamerule.success, rule, value));
 	}
 
 	@vanilla gamerule3(WorldCommandSender sender, Gamerule rule, Ranged!(int, 0, int.max) value) {
@@ -267,10 +267,10 @@ final class Commands {
 		switch(rule) with(Gamerule) {
 			case randomTickSpeed: sender.world.randomTickSpeed = value; break;
 			default:
-				sender.sendMessage(Text.red, Messages.gamerule.invalidType, rule);
+				sender.sendMessage(Format.red, Translation(Messages.gamerule.invalidType, rule));
 				return;
 		}
-		sender.sendMessage(Messages.gamerule.success, rule, value.value);
+		sender.sendMessage(Translation(Messages.gamerule.success, rule, value.value));
 	}
 
 	@vanilla help0(JavaPlayer sender, int page=1) {
@@ -282,11 +282,13 @@ final class Commands {
 		sort!((a, b) => a.name < b.name)(commands);
 		immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
 		page = clamp(--page, 0, pages - 1);
-		sender.sendMessage(Text.darkGreen, Messages.help.header, page+1, pages);
+		sender.sendMessage(Format.darkGreen, Messages.help.header, page+1, pages);
 		foreach(command ; commands[page*7..min($, (page+1)*7)]) {
-			sender.sendMessage(command.name, " - ", command.description); //FIXME description may be a translatable string
+			if(command.description.type == Description.EMPTY) sender.sendMessage(command.name);
+			else if(command.description.type == Description.TEXT) sender.sendMessage(command.name, " - ", command.description.text);
+			else sender.sendMessage(command.name, " - ", Translation(command.description.translatable));
 		}
-		sender.sendMessage(Text.green, Messages.help.footer);
+		sender.sendMessage(Format.green, Translation(Messages.help.footer));
 	}
 	
 	@vanilla help1(ServerCommandSender sender) {
@@ -303,11 +305,9 @@ final class Commands {
 		}
 		sort!((a, b) => a.name < b.name)(commands);
 		foreach(cmd ; commands) {
-			if(cmd.description.isTranslation) {
-				sender.sendMessage(Text.yellow, cmd.description.translation);
-			} else {
-				sender.sendMessage(Text.yellow, cmd.description.message);
-			}
+			if(cmd.description.type == Description.EMPTY) sender.sendMessage(Format.yellow, cmd.name, ":");
+			else if(cmd.description.type == Description.TEXT) sender.sendMessage(Format.yellow, cmd.description.text);
+			else sender.sendMessage(Format.yellow, Translation(cmd.description.translatable));
 			foreach(overload ; cmd.overloads) {
 				if(overload.callableBy(sender)) {
 					sender.sendMessage("- ", cmd.name, " ", formatArg(overload));
@@ -315,28 +315,36 @@ final class Commands {
 			}
 		}
 	}
+
+	@vanilla help2(JavaPlayer sender, string command) {
+		this.helpImpl(sender, "/", command);
+	}
+
+	@vanilla help3(ServerCommandSender sender, string command) {
+		this.helpImpl(sender, "", command);
+	}
 	
-	@vanilla help2(CommandSender sender, string command) {
+	private void helpImpl(CommandSender sender, string slash, string command) {
 		auto cmd = command in sender.availableCommands;
 		if(cmd) {
 			if(cmd.aliases.length) {
-				sender.sendMessage(Text.yellow, Messages.help.commandAliases, cmd.name, cmd.aliases.join(", "));
+				sender.sendMessage(Format.yellow, Translation(Messages.help.commandAliases, cmd.name, cmd.aliases.join(", ")));
 			} else {
-				sender.sendMessage(Text.yellow ~ cmd.name ~ ":");
+				sender.sendMessage(Format.yellow ~ cmd.name ~ ":");
 			}
-			if(cmd.description.isTranslation) {
-				sender.sendMessage(Text.yellow, cmd.description.translation);
-			} else {
-				sender.sendMessage(Text.yellow, cmd.description.message);
+			if(cmd.description.type == Description.TEXT) {
+				sender.sendMessage(Format.yellow, cmd.description.text);
+			} else if(cmd.description.type == Description.TRANSLATABLE) {
+				sender.sendMessage(Format.yellow, Translation(cmd.description.translatable));
 			}
-			sender.sendMessage(Messages.generic.usage, "");
+			sender.sendMessage(Translation(Messages.generic.usage, ""));
 			foreach(overload ; cmd.overloads) {
 				if(overload.callableBy(sender)) {
-					sender.sendMessage("- /", cmd.name, " ", formatArg(overload));
+					sender.sendMessage("- ", slash, cmd.name, " ", formatArg(overload));
 				}
 			}
 		} else {
-			sender.sendMessage(Text.red, Messages.generic.notFound);
+			sender.sendMessage(Format.red, Messages.generic.notFound);
 		}
 	}
 
@@ -346,7 +354,7 @@ final class Commands {
 			player.kick(message);
 			kicked ~= player.displayName;
 		}
-		sender.sendMessage(Messages.kick.successReason, kicked.join(", "), message);
+		sender.sendMessage(Translation(Messages.kick.successReason, kicked.join(", "), message));
 	}
 
 	@vanilla kick1(WorldCommandSender sender, Player[] target) {
@@ -355,24 +363,24 @@ final class Commands {
 			player.kick();
 			kicked ~= player.name;
 		}
-		sender.sendMessage(Messages.kick.success, kicked.join(", "));
+		sender.sendMessage(Translation(Messages.kick.success, kicked.join(", ")));
 	}
 
 	@vanilla kick2(ServerCommandSender sender, string player, string message) {
 		if(executeIfPlayer(sender, player, (uint hubId){ server.kick(hubId, message); })) {
-			sender.sendMessage(Messages.kick.successReason, player, message);
+			sender.sendMessage(Translation(Messages.kick.successReason, player, message));
 		}
 	}
 
 	@vanilla kick3(ServerCommandSender sender, string player) {
 		if(executeIfPlayer(sender, player, (uint hubId){ server.kick(hubId, "disconnect.closed", []); })) {
-			sender.sendMessage(Messages.kick.success, player);
+			sender.sendMessage(Translation(Messages.kick.success, player));
 		}
 	}
 
 	@vanilla list0(CommandSender sender) {
 		// list players on the current node
-		sender.sendMessage(Messages.list.players, sender.server.online, sender.server.max);
+		sender.sendMessage(Translation(Messages.list.players, sender.server.online, sender.server.max));
 		if(sender.server.online) {
 			string[] names;
 			foreach(player ; server.players) {
@@ -383,38 +391,29 @@ final class Commands {
 	}
 
 	@vanilla me0(Player sender, string message) {
+		//TODO unformat
 		sender.world.broadcast("* " ~ sender.displayName ~ " " ~ message);
 	}
 
 	@vanilla @op op0(WorldCommandSender sender, Player player) {
 		if(!player.op) {
 			player.op = true;
-			player.sendMessage(Messages.op.message);
-			sender.sendMessage(Messages.op.success, player.displayName);
+			player.sendMessage(Translation(Messages.op.message));
+			sender.sendMessage(Translation(Messages.op.success, player.displayName));
 		} else {
-			sender.sendMessage(Text.red, Messages.op.failed, player.displayName);
+			sender.sendMessage(Format.red, Translation(Messages.op.failed, player.displayName));
 		}
 	}
 
 	@vanilla op1(ServerCommandSender sender, string player) {
 		//TODO
 	}
-	
-	@op reload0(CommandSender sender) {
-		//TODO reload settings (max-players default world settings and commands)
-		foreach(plugin ; this.server.plugins) {
-			if(plugin.onreload.length) {
-				foreach(reload ; plugin.onreload) reload();
-			}
-		}
-		sender.sendMessage(Messages.reload.success);
-	}
 
 	@vanilla @op say0(WorldCommandSender sender, string message) {
 		auto player = cast(Player)sender;
-		immutable name = player is null ? "@" : player.displayName ~ Text.reset;
+		immutable name = player is null ? "@" : player.displayName ~ Format.reset;
 		//TODO convert targets into strings
-		sender.world.broadcast("[" ~ name ~ "] " ~ message);
+		sender.world.broadcast("[" ~ name ~ "] " ~ message); //TODO unformat
 	}
 
 	@vanilla say1(ServerCommandSender sender, string message) {
@@ -424,20 +423,20 @@ final class Commands {
 
 	@vanilla @op setmaxplayers0(CommandSender sender, uint players) {
 		sender.server.max = players;
-		sender.sendMessage(Messages.setmaxplayers.success, players);
+		sender.sendMessage(Translation(Messages.setmaxplayers.success, players));
 	}
 
 	@vanilla @op seed0(WorldCommandSender sender) {
-		sender.sendMessage(Messages.seed.success, sender.world.seed);
+		sender.sendMessage(Translation(Messages.seed.success, sender.world.seed));
 	}
 	
 	@vanilla @op stop0(CommandSender sender, bool gracefully=true) {
 		if(gracefully) {
 			if(isServerRunning) {
-				sender.sendMessage(Messages.stop.start);
+				sender.sendMessage(Translation(Messages.stop.start));
 				this.server.shutdown();
 			} else {
-				sender.sendMessage(Text.red, Messages.stop.failed);
+				sender.sendMessage(Format.red, Translation(Messages.stop.failed));
 			}
 		} else {
 			import std.c.stdlib : exit;
@@ -449,19 +448,19 @@ final class Commands {
 		string[] sent;
 		foreach(player ; recipient) {
 			if(player.id != sender.id) {
-				player.sendMessage(Text.italic, Messages.message.incoming, sender.displayName, message);
+				player.sendMessage(Format.italic, Translation(Messages.message.incoming, sender.displayName, message));
 				sent ~= player.displayName;
 			}
 		}
-		if(sent.length) sender.sendMessage(Text.italic, Messages.message.outcoming, sent.join(", "), message);
-		else sender.sendMessage(Text.red, Messages.message.sameTarget);
+		if(sent.length) sender.sendMessage(Format.italic, Translation(Messages.message.outcoming, sent.join(", "), message));
+		else sender.sendMessage(Format.red, Translation(Messages.message.sameTarget));
 	}
 
 	@vanilla @op time0(WorldCommandSender sender, SingleEnum!"add" add, uint amount) {
 		uint time = sender.world.time.time + amount;
 		if(time >= 24000) sender.world.time.day += time / 24000;
 		sender.world.time.time = time;
-		sender.sendMessage(Messages.time.added, amount);
+		sender.sendMessage(Translation(Messages.time.added, amount));
 	}
 
 	enum TimeQuery { day, daytime, gametime }
@@ -469,19 +468,19 @@ final class Commands {
 	@vanilla @op time1(WorldCommandSender sender, SingleEnum!"query" query, TimeQuery time) {
 		final switch(time) with(TimeQuery) {
 			case day:
-				sender.sendMessage(Messages.time.queryDay, sender.world.time.day);
+				sender.sendMessage(Translation(Messages.time.queryDay, sender.world.time.day));
 				break;
 			case daytime:
-				sender.sendMessage(Messages.time.queryDaytime, sender.world.time.time);
+				sender.sendMessage(Translation(Messages.time.queryDaytime, sender.world.time.time));
 				break;
 			case gametime:
-				sender.sendMessage(Messages.time.queryGametime, sender.world.ticks);
+				sender.sendMessage(Translation(Messages.time.queryGametime, sender.world.ticks));
 				break;
 		}
 	}
 
 	@vanilla @op time2(WorldCommandSender sender, SingleEnum!"set" set, uint amount) {
-		sender.sendMessage(Messages.time.set, (sender.world.time.time = amount));
+		sender.sendMessage(Translation(Messages.time.set, (sender.world.time.time = amount)));
 	}
 
 	@vanilla @op time3(WorldCommandSender sender, SingleEnum!"set" set, Time amount) {
@@ -491,11 +490,11 @@ final class Commands {
 	@vanilla @op toggledownfall0(WorldCommandSender sender) {
 		if(sender.world.weather.raining) sender.world.weather.clear();
 		else sender.world.weather.start();
-		sender.sendMessage(Messages.toggledownfall.success);
+		sender.sendMessage(Translation(Messages.toggledownfall.success));
 	}
 
 	@op transfer0(WorldCommandSender sender, Player[] target, string node) {
-		//TODO
+		//TODO transfer to another node
 	}
 
 	@op transfer1(ServerCommandSender sender, string target, string node) {
@@ -509,7 +508,7 @@ final class Commands {
 				sender.transfer(ip, _port);
 			} catch(Exception) {}
 		} else {
-			sender.sendMessage(Text.red, Messages.transferserver.invalidPort);
+			sender.sendMessage(Format.red, Translation(Messages.transferserver.invalidPort));
 		}
 	}
 
@@ -523,9 +522,9 @@ final class Commands {
 					success = true;
 				} catch(Exception) {}
 			}
-			if(success) sender.sendMessage(Messages.transferserver.success);
+			if(success) sender.sendMessage(Translation(Messages.transferserver.success));
 		} else {
-			sender.sendMessage(Text.red, Messages.transferserver.invalidPort);
+			sender.sendMessage(Format.red, Translation(Messages.transferserver.invalidPort));
 		}
 	}
 
@@ -535,15 +534,15 @@ final class Commands {
 		if(type == Weather.clear) {
 			if(duration <= 0) sender.world.weather.clear();
 			else sender.world.weather.clear(duration);
-			sender.sendMessage(Messages.weather.clear);
+			sender.sendMessage(Translation(Messages.weather.clear));
 		} else {
 			if(duration <= 0 || duration > 1_000_000) duration = sender.world.random.range(6000, 18000);
 			if(type == Weather.rain) {
 				sender.world.weather.start(duration, false);
-				sender.sendMessage(Messages.weather.rain);
+				sender.sendMessage(Translation(Messages.weather.rain));
 			} else {
 				sender.world.weather.start(duration, true);
-				sender.sendMessage(Messages.weather.thunder);
+				sender.sendMessage(Translation(Messages.weather.thunder));
 			}
 		}
 	}
@@ -604,7 +603,7 @@ private bool executeIfPlayer(ServerCommandSender sender, string name, lazy void 
 				del()(player.hubId);
 			}
 		}
-		if(!executed) sender.sendMessage(Text.red, Messages.generic.playerNotFound, name);
+		if(!executed) sender.sendMessage(Format.red, Translation(Messages.generic.playerNotFound, name));
 		return executed;
 	}
 }

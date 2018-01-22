@@ -17,7 +17,7 @@ html
 			p#connecting_text= translate("web.admin.title.connecting")
 		div#main
 			div#settings_button.tab_button.outer_tab
-				div.inner_tab= translate("menu.settings")
+				div.inner_tab(data-translation='menu.settings')= translate("menu.settings")
 			div#worlds_button.tab_button.outer_tab
 				div.inner_tab= translate("playscreen.worlds")
 			div#players_button.tab_button.outer_tab

@@ -23,7 +23,7 @@ import std.typecons : Tuple;
 
 import selery.command.command : Command;
 import selery.entity.entity : Entity;
-import selery.lang : Messageable;
+import selery.log : Message;
 import selery.math.vector : EntityPosition, isVector, distance;
 import selery.node.server : NodeServer;
 import selery.player.player : Player, Gamemode;
@@ -32,7 +32,7 @@ import selery.world.world : World;
 /**
  * Interface for command senders.
  */
-interface CommandSender : Messageable {
+interface CommandSender {
 
 	/**
 	 * Gets the command sender's current server.
@@ -50,6 +50,22 @@ interface CommandSender : Messageable {
 	 * ---
 	 */
 	public @property Command[string] availableCommands();
+
+	/**
+	 * Sends a message to the command sender.
+	 * The message can contain formatting codes and translations.
+	 * Example:
+	 * ---
+	 * sender.sendMessage("Hello");
+	 * sender.sendMessage(Format.blue, "This is a blue message");
+	 * sender.sendMessage(Format.yellow, Translation("multiplayer.player.joined", "Steve"));
+	 * ---
+	 */
+	public final void sendMessage(E...)(E args) {
+		this.sendMessageImpl(Message.convert(args));
+	}
+
+	protected void sendMessageImpl(Message[] messages);
 	
 }
 

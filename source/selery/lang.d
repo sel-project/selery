@@ -20,12 +20,16 @@ import std.conv : to, ConvException;
 import std.file : exists, read;
 import std.path : dirSeparator;
 import std.string;
-import std.traits : isArray;
 
-import selery.files : Files;
-import selery.format : Text;
+import selery.config : Files;
 
-final class Lang {
+deprecated("Use LanguageManager instead") alias Lang = LanguageManager;
+
+/**
+ * Stores translatable strings in various languages and provides
+ * methods to translate them with the provided arguments.
+ */
+class LanguageManager {
 
 	private const Files files;
 
@@ -34,7 +38,8 @@ final class Lang {
 
 	private string[] additionalFolders;
 
-	private Translatable[string][string] messages;
+	private TranslationManager[string][string] messages;
+	public string[string][string] raw; // used for web admin
 
 	public this(inout Files files) {
 		this.files = files;
@@ -44,7 +49,7 @@ final class Lang {
 	 * Loads languages in lang/system and lang/messages.
 	 * Throws: RangeError if one of the given languages is not supported by the software.
 	 */
-	public Lang load(string language, string[] acceptedLanguages) {
+	public typeof(this) load(string language, string[] acceptedLanguages) {
 		assert(acceptedLanguages.canFind(language));
 		this.language = language;
 		this.acceptedLanguages = acceptedLanguages;
@@ -61,7 +66,7 @@ final class Lang {
 	/**
 	 * loads languages from a specific directory.
 	 */
-	public Lang add(string dir) {
+	public typeof(this) add(string dir) {
 		this.additionalFolders ~= dir;
 		this.loadDir(dir);
 		return this;
@@ -73,7 +78,7 @@ final class Lang {
 	 * language.
 	 * Returns: the translated message if the language and the message exist or the message if not
 	 */
-	public inout string translate(string message, string language, string[] params=[]) {
+	public inout string translate(inout string message, inout(string)[] params, string language) {
 		auto lang = language in this.messages;
 		if(lang) {
 			auto translatable = message in *lang;
@@ -85,18 +90,23 @@ final class Lang {
 	}
 
 	/// ditto
+	public inout string translate(string message, string lang) {
+		return this.translate(message, [], language);
+	}
+
+	/// ditto
 	public inout string translate(string message, string[] params=[]) {
-		return this.translate(message, this.language, params);
+		return this.translate(message, params, this.language);
 	}
 
 	/// ditto
-	public inout string translate(inout Translation message, string language, string[] params=[]) {
-		return this.translate(message.sel, language, params);
+	public inout string translate(inout Translation translation, string language) {
+		return this.translate(translation.translatable.default_, translation.parameters, language);
 	}
 
 	/// ditto
-	public inout string translate(inout Translation message, string[] params=[]) {
-		return this.translate(message.sel, this.language, params);
+	public inout string translate(inout Translation translation) {
+		return this.translate(translation, this.language);
 	}
 
 	private void loadDir(string dir) {
@@ -122,6 +132,7 @@ final class Lang {
 				immutable message = line[0..equals].strip;
 				immutable text = line[equals+1..$].strip;
 				if(message.length) {
+					this.raw[language][message] = text;
 					immutable comment = text.indexOf("##");
 					Element[] elements;
 					string next;
@@ -151,17 +162,17 @@ final class Lang {
 					}
 					if(index >= 0) next ~= text[index..$];
 					if(next.length) elements ~= Element(next);
-					if(elements.length) this.messages[language][message] = Translatable(elements);
+					if(elements.length) this.messages[language][message] = TranslationManager(elements);
 				}
 			}
 		}
 	}
 
-	private static struct Translatable {
+	private static struct TranslationManager {
 
 		Element[] elements;
 
-		public inout string build(string[] args) {
+		public inout string build(inout(string)[] args) {
 			Appender!string ret;
 			foreach(element ; this.elements) {
 				if(element.isString) {
@@ -202,143 +213,60 @@ final class Lang {
 	
 }
 
+struct Translation {
+	
+	public Translatable translatable;
+	public string[] parameters;
+	
+	public this(E...)(Translatable translatable, E parameters) {
+		this.translatable = translatable;
+		foreach(param ; parameters) {
+			static if(is(typeof(param) : string) || is(typeof(param) == string[])) this.parameters ~= param;
+			else this.parameters ~= param.to!string;
+		}
+	}
+	
+	public this(E...)(string default_, E parameters) {
+		this(Translatable.all(default_), parameters);
+	}
+	
+}
+
 /**
  * Translation container for a multi-platform translation.
- * The `sel` translation should never be empty and it should be a string
+ * The `default_` translation should never be empty and it should be a string that can be
  * loaded from a language file.
- * The `minecraft` and `pocket` strings can either be a client-side translated message
- * or empty. In that case the `sel` string is translated server-side and sent
+ * The `minecraft` and `bedrock` strings can either be a client-side translated message
+ * or empty. In that case the `default_` string is translated server-side and sent
  * to the client.
  * Example:
  * ---
  * // server-side string
- * Translation("example.test");
+ * Translatable("example.test");
  * 
- * // server-side for minecraft and client-side for pocket
- * Translation("description.help", "", "commands.help.description");
+ * // server-side for minecraft and client-side for bedrock
+ * Translatable("description.help", "", "commands.help.description");
  * ---
  */
-struct Translation {
-
-	enum DISCONNECT_CLOSED = all("disconnect.closed");
-	enum DISCONNECT_TIMEOUT = all("disconnect.timeout");
-	enum DISCONNECT_END_OF_STREAM = all("disconnect.endOfStream");
-	enum DISCONNECT_LOST = all("disconnect.lost");
-	enum DISCONNECT_SPAM = all("disconnect.spam");
+struct Translatable {
 	
+	//TODO move somewhere else	
 	enum MULTIPLAYER_JOINED = all("multiplayer.player.joined");
 	enum MULTIPLAYER_LEFT = all("multiplayer.player.left");
-
-	public static nothrow @safe @nogc Translation all(const string translation) {
-		return Translation(translation, translation, translation);
+	
+	public static nothrow @safe @nogc Translatable all(inout string translation) {
+		return Translatable(translation, translation, translation);
 	}
-
-	public static nothrow @safe @nogc Translation fromJava(const string translation) {
-		return Translation(translation, translation, "");
+	
+	public static nothrow @safe @nogc Translatable fromJava(inout string translation) {
+		return Translatable(translation, translation, "");
 	}
-
-	public static nothrow @safe @nogc Translation fromPocket(const string translation) {
-		return Translation(translation, "", translation);
+	
+	public static nothrow @safe @nogc Translatable fromBedrock(inout string translation) {
+		return Translatable(translation, "", translation);
 	}
-
+	
 	/// Values.
-	public string sel, java, pocket; //TODO change to selery
-
-}
-
-struct Message {
-
-	private bool _ismsg;
-
-	union {
-
-		string message;
-		Translation translation;
-
-	}
-
-	public this(string message) {
-		this._ismsg = true;
-		this.message = message;
-	}
-
-	public this(Translation translation) {
-		this._ismsg = false;
-		this.translation = translation;
-	}
+	public string default_, java, bedrock;
 	
-	public inout pure nothrow @property @safe @nogc bool isMessage() {
-		return this._ismsg;
-	}
-	
-	public inout pure nothrow @property @safe @nogc bool isTranslation() {
-		return !this._ismsg;
-	}
-
-}
-
-/**
- * Interface implemented by a class that can receive raw
- * and translatable messages.
- */
-interface Messageable {
-
-	public void sendMessage(E...)(E args) {
-		static if(isTranslation!E) {
-			string[] message_args;
-			Text[] formats;
-			foreach(arg ; args[staticIndexOf!(Translation, E)+1..$]) {
-				static if(is(typeof(arg) : string) || (isArray!(typeof(arg)) && is(typeof(arg[0]) : string))) {
-					message_args ~= arg;
-				} else {
-					message_args ~= to!string(arg);
-				}
-			}
-			foreach(arg ; args[0..staticIndexOf!(Translation, E)]) {
-				formats ~= arg;
-			}
-			this.sendTranslationImpl(args[staticIndexOf!(Translation, E)], message_args, formats);
-		} else {
-			Appender!string message;
-			foreach(i, arg; args) {
-				static if(is(typeof(arg) == string)) {
-					message.put(arg);
-				} else static if(is(typeof(arg) : string)) {
-					message.put(cast(string)arg);
-				} else {
-					message.put(to!string(arg));
-				}
-			}
-			this.sendMessageImpl(message.data);
-		}
-	}
-	
-	protected void sendMessageImpl(string);
-
-	protected void sendTranslationImpl(const Translation, string[], Text[]);
-
-}
-
-private bool isTranslation(E...)() {
-	static if(staticIndexOf!(Translation, E) >= 0) {
-		return isText!(E[0..staticIndexOf!(Translation, E)]);
-	} else {
-		return false;
-	}
-}
-
-private bool isText(E...)() {
-	static if(E.length == 0) {
-		return true;
-	} else {
-		return is(E[0] == Text) && (E.length == 1 || isText!(E[1..$]));
-	}
-}
-
-alias staticIndexOf(T, E...) = staticIndexOfImpl!(0, T, E);
-
-template staticIndexOfImpl(size_t index, T, E...) {
-	static if(index >= E.length) enum ptrdiff_t staticIndexOfImpl = -1;
-	else static if(is(E[index] : T)) enum ptrdiff_t staticIndexOfImpl = index;
-	else enum staticIndexOfImpl = staticIndexOfImpl!(index + 1, T, E);
 }

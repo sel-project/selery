@@ -27,9 +27,8 @@ import std.uuid : UUID, parseUUID;
 import std.zip : ZipArchive;
 
 import selery.about;
-import selery.config : Config;
-import selery.files : Files, CompressedFiles;
-import selery.lang : Lang;
+import selery.config : Config, Files;
+import selery.lang : LanguageManager;
 
 import toml;
 import toml.json;
@@ -84,7 +83,7 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				
 			}
 			
-			this.lang = new Lang(this.files);
+			this.lang = new LanguageManager(this.files);
 		
 		}
 	
@@ -206,6 +205,9 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 				}
 				
 				if(isNode) with(this.node = new Config.Node()) {
+				
+					// override default
+					transferCommand = type != ConfigType.default_;
 				
 					set(bedrock.enabled, "bedrock", "enabled");
 					set(bedrock.protocols, "bedrock", "accepted-protocols");
@@ -357,6 +359,33 @@ auto loadConfig(ConfigType type, ubyte _edu, ubyte _realm) {
 	
 	return config;
 
+}
+
+class CompressedFiles : Files {
+	
+	private ZipArchive archive;
+	
+	public this(ZipArchive archive, string temp) {
+		super("", temp);
+		this.archive = archive;
+	}
+	
+	public override inout bool hasAsset(string file) {
+		return !!(convert(file) in (cast()this.archive).directory);
+	}
+	
+	public override inout void[] readAsset(string file) {
+		auto member = (cast()this.archive).directory[convert(file)];
+		if(member.expandedData.length != member.expandedSize) (cast()this.archive).expand(member);
+		return cast(void[])member.expandedData;
+	}
+	
+	private static string convert(string file) {
+		version(Windows) file = file.replace("\\", "/");
+		while(file[$-1] == '/') file = file[0..$-1];
+		return file;
+	}
+	
 }
 
 string addressString(Config.Hub.Address[] addresses) {

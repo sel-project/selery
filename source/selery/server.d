@@ -14,15 +14,15 @@
  */
 module selery.server;
 
-import selery.config : Config;
-import selery.files : Files;
-import selery.lang : Lang, Messageable;
+import selery.config : Config, Files;
+import selery.lang : LanguageManager;
+import selery.log : Logger;
 import selery.plugin : Plugin;
 
 /**
  * Generic server with a configuration and plugins.
  */
-interface Server : Messageable {
+interface Server {
 
 	/**
 	 * Gets the server's configuration.
@@ -55,9 +55,18 @@ interface Server : Messageable {
 	/**
 	 * Gets the server's language manager.
 	 */
-	final shared nothrow @property @safe @nogc const(Lang) lang() {
+	final shared nothrow @property @safe @nogc const(LanguageManager) lang() {
 		return this.config.lang;
 	}
+
+	/**
+	 * Gets the server's logger.
+	 * Example:
+	 * ---
+	 * server.logger.log("Hello");
+	 * ---
+	 */
+	shared @property Logger logger();
 
 	/**
 	 * Gets the plugins actived on the server.

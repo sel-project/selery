@@ -15,7 +15,7 @@
 module selery.plugin;
 
 import selery.about;
-import selery.lang : Translation, Message;
+import selery.lang : Translatable;
 import selery.server : Server;
 import selery.util.tuple : Tuple;
 
@@ -106,38 +106,68 @@ enum global;
 enum inherit;
 enum cancel;
 
+struct Description {
+
+	enum : ubyte {
+
+		EMPTY,
+		TEXT,
+		TRANSLATABLE
+
+	}
+
+	public ubyte type = EMPTY;
+
+	union {
+
+		string text;
+		Translatable translatable;
+
+	}
+
+	this(string text) {
+		this.type = TEXT;
+		this.text = text;
+	}
+
+	this(Translatable translatable) {
+		this.type = TRANSLATABLE;
+		this.translatable = translatable;
+	}
+
+}
+
 // attributes for commands
 struct command {
 
-	enum NO_DESCRIPTION = Message("");
-
 	string command;
 	string[] aliases;
-	Message description;
+	Description description;
 
-	public this(string command, string[] aliases=[], Message description=NO_DESCRIPTION) {
+	public this(string command, string[] aliases=[], Description description=Description.init) {
 		this.command = command;
 		this.aliases = aliases;
 		this.description = description;
 	}
 
 	public this(string command, string[] aliases, string description) {
-		this(command, aliases, Message(description));
+		this(command, aliases, Description(description));
 	}
 
-	public this(string command, string[] aliases, Translation description) {
-		this(command, aliases, Message(description));
+	public this(string command, string[] aliases, Translatable description) {
+		this(command, aliases, Description(description));
 	}
 
 	public this(string command, string description) {
 		this(command, [], description);
 	}
 
-	public this(string command, Translation description) {
+	public this(string command, Translatable description) {
 		this(command, [], description);
 	}
 
 }
+
 enum op;
 enum hidden;
 

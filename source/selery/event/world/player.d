@@ -20,7 +20,8 @@ import selery.event.event : Cancellable;
 import selery.event.world.damage : EntityDamageEvent;
 import selery.event.world.entity : EntityDeathEvent;
 import selery.event.world.world;
-import selery.format : Text;
+import selery.lang : Translation;
+import selery.log : Message, Format;
 import selery.item : Slot, Item;
 import selery.math.vector : BlockPosition, EntityPosition, ChunkPosition;
 import selery.player.player : Player;
@@ -58,25 +59,25 @@ abstract class PlayerAnnounceEvent : PlayerEvent {
 
 	mixin PlayerEvent.Implementation;
 	
-	private string def;
-	private string m_message;
+	private Message[] def;
+	private Message[] m_message;
 	
-	public @safe @nogc this(Player player, string message) {
+	public @safe @nogc this(Player player, Message[] message) {
 		this.n_player = player;
 		this.m_message = this.def = message;
 	}
 	
-	public final pure nothrow @property @safe @nogc string message() {
+	public final pure nothrow @property @safe @nogc Message[] message() {
 		return this.m_message;
 	}
 	
-	public final pure nothrow @property @safe @nogc string message(string message) {
+	public final pure nothrow @property @safe @nogc Message[] message(Message[] message) {
 		return this.m_message = message;
 	}
 	
-	public final @property @safe string message(bool display) {
+	public final @property @safe Message[] message(bool display) {
 		if(display) this.m_message = this.def;
-		else this.m_message = "";
+		else this.m_message.length = 0;
 		return this.m_message;
 	}
 	
@@ -96,8 +97,8 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 	
 	public bool spawn = true;
 	
-	public @safe this(Player player) {
-		super(player, Text.yellow ~ "{connection.join}");
+	public this(Player player) {
+		super(player, Message.convert(Format.yellow, Translation("connection.join", player.displayName)));
 	}
 	
 }
@@ -105,8 +106,8 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 /** Called when a player leaves the world, but it isn't despawned to the other entities/players yet */
 final class PlayerDespawnEvent : PlayerAnnounceEvent {
 	
-	public @safe this(Player player) {
-		super(player, Text.yellow ~ "{connection.left}");
+	public this(Player player) {
+		super(player, Message.convert(Format.yellow, Translation("connection.left", player.displayName)));
 	}
 	
 }

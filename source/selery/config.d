@@ -16,16 +16,46 @@ module selery.config;
 
 import std.algorithm : canFind;
 import std.conv : to;
+import std.file : exists, isFile, read, write;
 import std.json : JSONValue;
+import std.path : dirSeparator;
 import std.random : uniform;
 import std.socket : getAddress;
-import std.string : indexOf, startsWith;
+import std.string : indexOf, startsWith, endsWith;
 import std.uuid : UUID, randomUUID;
 
 import selery.about;
-import selery.files : Files;
-import selery.lang : Lang;
+import selery.lang : LanguageManager;
 
+enum Gamemode : ubyte {
+	
+	survival = 0, s = 0,
+	creative = 1, c = 1,
+	adventure = 2, a = 2,
+	spectator = 3, sp = 3,
+	
+}
+
+enum Difficulty : ubyte {
+	
+	peaceful = 0, p = 0,
+	easy = 1, e = 0,
+	normal = 2, n = 0,
+	hard = 3, h = 0,
+	
+}
+
+enum Dimension : ubyte {
+	
+	overworld = 0,
+	nether = 1,
+	end = 2,
+	
+}
+
+/**
+ * Configuration for the server.
+ */
 class Config {
 
 	enum LANGUAGES = ["en_GB", "en_US", "it_IT"];
@@ -33,7 +63,7 @@ class Config {
 	UUID uuid;
 
 	Files files;
-	Lang lang;
+	LanguageManager lang;
 
 	Hub hub;
 	Node node;
@@ -42,6 +72,9 @@ class Config {
 		this.uuid = uuid;
 	}
 
+	/**
+	 * Configuration for the hub.
+	 */
 	static class Hub {
 
 		static struct Address {
@@ -122,6 +155,15 @@ class Config {
 		ushort hncomPort = 28232;
 
 		public this() {
+			
+			string randomPassword() {
+				char[] password = new char[uniform!"[]"(8, 12)];
+				foreach(ref char c ; password) {
+					c = uniform!"[]"('a', 'z');
+					if(!uniform!"[]"(0, 4)) c -= 32;
+				}
+				return password.idup;
+			}
 
 			version(Windows) {
 				import std.utf : toUTF8;
@@ -154,6 +196,9 @@ class Config {
 
 	}
 
+	/**
+	 * Configuration for the node.
+	 */
 	static class Node {
 
 		static struct Game {
@@ -214,8 +259,6 @@ class Config {
 		bool meCommand = true;
 
 		bool opCommand = true;
-		
-		bool reloadCommand = true;
 
 		bool sayCommand = true;
 
@@ -256,39 +299,58 @@ class Config {
 
 }
 
-enum Gamemode : ubyte {
+/**
+ * File manager for assets and temp files.
+ */
+class Files {
 	
-	survival = 0, s = 0,
-	creative = 1, c = 1,
-	adventure = 2, a = 2,
-	spectator = 3, sp = 3,
+	public immutable string assets;
+	public immutable string temp;
 	
-}
-
-enum Difficulty : ubyte {
-	
-	peaceful = 0, p = 0,
-	easy = 1, e = 0,
-	normal = 2, n = 0,
-	hard = 3, h = 0,
-	
-}
-
-enum Dimension : ubyte {
-	
-	overworld = 0,
-	nether = 1,
-	end = 2,
-	
-}
-
-public @property string randomPassword() {
-	char[] password = new char[uniform!"[]"(8, 12)];
-	foreach(ref char c ; password) {
-		c = uniform!"[]"('a', 'z');
-		if(!uniform!"[]"(0, 4)) c -= 32;
+	public this(string assets, string temp) {
+		if(!assets.endsWith(dirSeparator)) assets ~= dirSeparator;
+		this.assets = assets;
+		if(!temp.endsWith(dirSeparator)) temp ~= dirSeparator;
+		this.temp = temp;
 	}
-	return password.idup;
+	
+	/**
+	 * Indicates whether an asset exists.
+	 * Returns: true if the asset exists, false otherwise
+	 */
+	public inout bool hasAsset(string file) {
+		return exists(this.assets ~ file) && isFile(this.assets ~ file);
+	}
+	
+	/**
+	 * Reads the content of an asset.
+	 * Throws: FileException if the file cannot be found.
+	 */
+	public inout void[] readAsset(string file) {
+		return read(this.assets ~ file);
+	}
+	
+	/**
+	 * Indicates whether a temp file exists.
+	 */
+	public inout bool hasTemp(string file) {
+		return exists(this.temp ~ temp) && isFile(this.temp ~ file);
+	}
+	
+	/**
+	 * Reads the content of a temp file.
+	 */
+	public inout void[] readTemp(string file) {
+		return read(this.temp ~ file);
+	}
+	
+	/**
+	 * Writes buffer to a temp file.
+	 */
+	public inout void writeTemp(string file, const(void)[] buffer) {
+		return write(this.temp ~ file, buffer);
+	}
+	
 }
 
 //TODO move to selery/lang.d

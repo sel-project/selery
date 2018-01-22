@@ -20,7 +20,7 @@ import std.net.curl : CurlException;
 import std.path : dirSeparator;
 import std.string : split;
 
-import selery.files : Files;
+import selery.config : Files;
 import selery.util.tuple : Tuple;
 import selery.util.util : seconds;
 

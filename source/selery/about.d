@@ -100,7 +100,7 @@ const struct Software {
 	 * Unstable versions are not fully tested and may fail to compile
 	 * on some systems.
 	 */
-	enum bool stable = true;
+	enum bool stable = false;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the

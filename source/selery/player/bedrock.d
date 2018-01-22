@@ -15,6 +15,7 @@
 module selery.player.bedrock;
 
 import std.algorithm : min, sort, canFind;
+import std.array : Appender;
 import std.base64 : Base64;
 import std.conv : to;
 import std.digest.digest : toHexString;
@@ -35,22 +36,21 @@ import selery.block.tile : Tile;
 import selery.command.args : CommandArg;
 import selery.command.command : Command, Position, Target;
 import selery.command.util : PocketType;
-import selery.config : Gamemode, Difficulty, Dimension;
+import selery.config : Gamemode, Difficulty, Dimension, Files;
 import selery.effect : Effect, Effects;
 import selery.entity.entity : Entity;
 import selery.entity.human : Skin;
 import selery.entity.living : Living;
 import selery.entity.metadata : SelMetadata = Metadata;
 import selery.entity.noai : Lightning, ItemEntity;
-import selery.files : Files;
-import selery.format : Text;
 import selery.inventory.inventory;
 import selery.item.slot : Slot;
-import selery.lang : Translation, translate;
-import selery.log;
+import selery.lang : Translation;
+import selery.log : Format, Message;
 import selery.math.vector;
 import selery.node.info : PlayerInfo;
 import selery.player.player;
+import selery.plugin : Description;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
 import selery.world.world : World;
@@ -128,11 +128,11 @@ abstract class BedrockPlayer : Player {
 		return this.info.deviceModel;
 	}
 
-	public final override void disconnectImpl(const Translation translation, string[] args) {
-		if(translation.pocket.length) {
-			this.server.kick(this.hubId, translation.pocket, args);
+	public final override void disconnectImpl(const Translation translation) {
+		if(translation.translatable.bedrock.length) {
+			this.server.kick(this.hubId, translation.translatable.bedrock, translation.parameters);
 		} else {
-			this.disconnect(this.server.config.lang.translate(translation, this.language, args));
+			this.disconnect(this.server.lang.translate(translation, this.language));
 		}
 	}
 
@@ -144,6 +144,63 @@ abstract class BedrockPlayer : Player {
 		}
 		return op;
 	}
+	
+	/**
+	 * Encodes a Message[] into a string that can be parsed by the client.
+	 * Every instance of Translation is translated server-side.
+	 */
+	public string encodeServerMessage(Message[] messages) {
+		Appender!string appender;
+		foreach(message ; messages) {
+			final switch(message.type) {
+				case Message.FORMAT:
+					appender.put(cast(string)message.format);
+					break;
+				case Message.TEXT:
+					appender.put(message.text);
+					break;
+				case Message.TRANSLATION:
+					appender.put(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters, this.language));
+					break;
+			}
+		}
+		return appender.data;
+	}
+
+	/**
+	 * Creates a string message that can be displayed by the client.
+	 */
+	protected override void sendMessageImpl(Message[] messages) {
+		Appender!string appender;
+		string[] params;
+		bool translation = false;
+		foreach(message ; messages) {
+			final switch(message.type) {
+				case Message.FORMAT:
+					appender.put(cast(string)message.format);
+					break;
+				case Message.TEXT:
+					appender.put(message.text);
+					break;
+				case Message.TRANSLATION:
+					if(message.translation.translatable.bedrock.length) {
+						//TODO check whether it's possible to use multiple translations
+						appender.put("%");
+						appender.put(message.translation.translatable.bedrock);
+						translation = true;
+					} else {
+						appender.put(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters, this.language));
+					}
+					break;
+			}
+		}
+		if(!translation) this.sendRawMessageImpl(appender.data);
+		else this.sendTranslationMessageImpl(appender.data, params);
+	}
+
+	protected abstract void sendRawMessageImpl(string message);
+
+	protected abstract void sendTranslationMessageImpl(string message, string[] params);
 
 	public override @trusted Command registerCommand(Command command) {
 		super.registerCommand(command);
@@ -348,34 +405,26 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		this.recalculateSpeed();
 	}
 
-	protected override void sendMessageImpl(string message) {
+	protected override void sendRawMessageImpl(string message) {
 		this.sendPacket(new Play.Text().new Raw(message));
 	}
-	
-	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		string pre;
-		foreach(format ; formats) {
-			pre ~= format;
-		}
-		if(message.pocket.length) {
-			this.sendPacket(new Play.Text().new Translation(pre ~ "%" ~ message.pocket, args));
-		} else {
-			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.language, args));
-		}
+
+	protected override void sendTranslationMessageImpl(string message,string[] params) {
+		this.sendPacket(new Play.Text().new Translation(message, params));
 	}
 
 	protected override void sendCompletedMessages(string[] messages) {
 		// unsupported
 	}
 	
-	protected override void sendTipMessage(string message) {
-		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_ACTION_BAR, message));
+	protected override void sendTipImpl(Message[] messages) {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_ACTION_BAR, this.encodeServerMessage(messages)));
 	}
 
-	protected override void sendTitleMessage(Title message) {
-		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TITLE, message.title));
-		if(message.subtitle.length) this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_SUBTITLE, message.subtitle));
-		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TIMINGS, "", message.fadeIn.to!uint, message.stay.to!uint, message.fadeOut.to!uint));
+	protected override void sendTitleImpl(Title title, Subtitle subtitle, uint fadeIn, uint stay, uint fadeOut) {
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TITLE, this.encodeServerMessage(title)));
+		if(subtitle.length) this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_SUBTITLE, this.encodeServerMessage(subtitle)));
+		this.sendPacket(new Play.SetTitle(Play.SetTitle.SET_TIMINGS, "", fadeIn, stay, fadeOut));
 	}
 
 	protected override void sendHideTitles() {
@@ -817,7 +866,13 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		}
 		foreach(command ; this.availableCommands) {
 			if(!command.hidden) {
-				auto pc = Types.Command(command.name, command.description.isTranslation ? (command.description.translation.pocket.length ? command.description.translation.pocket : this.server.config.lang.translate(command.description.translation, this.language)) : command.description.message);
+				Types.Command pc;
+				pc.name = command.name;
+				if(command.description.type == Description.TEXT) pc.description = command.description.text;
+				else if(command.description.type == Description.TRANSLATABLE) {
+					if(command.description.translatable.bedrock.length) pc.description = command.description.translatable.bedrock;
+					else pc.description = this.server.lang.translate(command.description.translatable.default_, this.language);
+				}
 				if(command.aliases.length) {
 					pc.aliasesEnum = addEnum(command.name ~ ".aliases", command.aliases);
 				}

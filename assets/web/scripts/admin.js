@@ -7,6 +7,8 @@ var animation_dots;
 var server = null;
 var connected = false;
 
+var lang = {};
+
 var worlds = {};
 var players = {};
 
@@ -34,12 +36,15 @@ window.onload = function(){
 	}
 	next_id = Math.round(Math.random() * 2000000 + 10000);
 	document.getElementById("console_input_text").onkeydown = function(event){
+		console.log(event.keyCode);
 		if(event.keyCode == 13) {
-			var issued = event.target.value;
-			server.send(JSON.stringify({id: "command", command: issued, command_id: next_id}));
-			commands[next_id] = issued;
-			event.target.value = "";
-			next_id++;
+			var issued = event.target.value.trim();
+			if(issued.length) {
+				server.send(JSON.stringify({id: "command", command: issued, command_id: next_id}));
+				commands[next_id] = issued;
+				event.target.value = "";
+				next_id++;
+			}
 		}
 	}
 	connect();
@@ -61,6 +66,7 @@ function connect() {
 	document.title = document.getElementById("alert_title").innerHTML = TITLE_CONNECTING;
 	document.getElementById("alert").style.display = "none";
 	document.getElementById("loading").style.display = "block";
+	document.getElementById("console_messages").innerHTML = ""; // clear console
 	animation_dots = "";
 	animation = setInterval(function(){
 		if(animation_dots.length == 3) animation_dots = "";
@@ -101,6 +107,11 @@ function handleHub(event) {
 	var json = JSON.parse(event.data);
 	console.log(json);
 	switch(json.packet) {
+		case "lang":
+			for(var key in json.data) {
+				lang[key] = json.data[key];
+			}
+			break;
 		case "settings":
 			
 			break;
@@ -119,11 +130,16 @@ function handleHub(event) {
 		
 			break;
 		case "log":
+			var log = "";
+			for(var message of json.log) {
+				if(message.text) log += message.text;
+				else log += translate(message.translation, message.with);
+			}
 			var cm = document.getElementById("console_messages");
 			var scroll = cm.scrollTop + cm.offsetHeight == cm.scrollHeight; // scrolled by user
 			var message = document.createElement("p");
 			message.classList.add("console_message");
-			message.innerText = json.log;
+			message.innerText = log;
 			message.innerHTML = format(message.innerHTML);
 			//TODO popup event info
 			cm.appendChild(message);
@@ -132,4 +148,15 @@ function handleHub(event) {
 		default:
 			break;
 	}
+}
+
+function translate(message, params) {
+	var t = lang[message];
+	if(t == undefined) return message;
+	if(params != undefined) {
+		for(var i in params) {
+			t = t.replace("{" + i + "}", params[i]);
+		}
+	}
+	return t;
 }

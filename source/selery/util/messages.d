@@ -14,7 +14,7 @@
  */
 module selery.util.messages;
 
-import selery.lang : Translation;
+import selery.lang : Translatable;
 
 final class Messages {
 
@@ -22,146 +22,148 @@ final class Messages {
 
 	enum about {
 
-		plugins = Translation("commands.about.plugins"),
-		software = Translation("commands.about.software"),
+		plugins = Translatable("commands.about.plugins"),
+		software = Translatable("commands.about.software"),
 
 	}
 
 	enum deop {
 
-		failed = Translation.all("commands.deop.failed"),
-		message = Translation.fromPocket("commands.deop.message"),
-		success = Translation.all("commands.deop.success"),
+		failed = Translatable.all("commands.deop.failed"),
+		message = Translatable.fromBedrock("commands.deop.message"),
+		success = Translatable.all("commands.deop.success"),
 
 	}
 
 	enum difficulty {
 
-		success = Translation.all("commands.difficulty.success"),
+		success = Translatable.all("commands.difficulty.success"),
 
 	}
 
 	enum gamemode {
 
-		successOther = Translation.all("commands.gamemode.success.other"),
-		successSelf = Translation.all("commands.gamemode.success.self"),
+		successOther = Translatable.all("commands.gamemode.success.other"),
+		successSelf = Translatable.all("commands.gamemode.success.self"),
 
 	}
 
 	enum gamerule {
 
-		invalidType = Translation.fromPocket("commands.gamerule.type.invalid"),
-		success = Translation.all("commands.gamerule.success"),
+		invalidType = Translatable.fromBedrock("commands.gamerule.type.invalid"),
+		success = Translatable.all("commands.gamerule.success"),
 
 	}
 
 	enum generic {
 
-		invalidBoolean = Translation.all("commands.generic.boolean.invalid"),
-		invalidParameter = Translation.all("commands.generic.parameter.invalid"),
-		invalidSyntax = Translation.all("commands.generic.syntax"),				//TODO has 3 parameters on PE
-		notFound = Translation.fromJava("commands.generic.notFound"),
-		numInvalid = Translation.all("commands.generic.num.invalid"),
-		numTooBig = Translation.all("commands.generic.num.tooBig"),
-		numTooSmall = Translation.all("commands.generic.num.tooSmall"),
-		playerNotFound = Translation("commands.kick.not.found", "commands.generic.player.notFound", "commands.kick.not.found"),
-		targetNotFound = Translation.all("commands.generic.noTargetMatch"),
-		targetNotPlayer = Translation.all("commands.generic.targetNotPlayer"),
-		usage = Translation.all("commands.generic.usage"),
+		invalidBoolean = Translatable.all("commands.generic.boolean.invalid"),
+		invalidParameter = Translatable.all("commands.generic.parameter.invalid"),
+		invalidSyntax = Translatable.fromJava("commands.generic.syntax"),
+		notFound = Translatable.fromJava("commands.generic.notFound"),
+		notFoundConsole = Translatable("commands.generic.notFound.console"),
+		numInvalid = Translatable.all("commands.generic.num.invalid"),
+		numTooBig = Translatable.all("commands.generic.num.tooBig"),
+		numTooSmall = Translatable.all("commands.generic.num.tooSmall"),
+		playerNotFound = Translatable("commands.kick.not.found", "commands.generic.player.notFound", "commands.kick.not.found"),
+		targetNotFound = Translatable.all("commands.generic.noTargetMatch"),
+		targetNotPlayer = Translatable.all("commands.generic.targetNotPlayer"),
+		usage = Translatable.all("commands.generic.usage"),
+		usageNoParam = Translatable.fromBedrock("commands.generic.usage.noparam"),
 
 	}
 
 	enum help {
 
-		commandAliases = Translation.fromPocket("commands.help.command.aliases"),
-		footer = Translation.all("commands.help.footer"),
-		header = Translation.all("commands.help.header"),
-		invalidSender = Translation("commands.help.invalidSender"),
+		commandAliases = Translatable.fromBedrock("commands.help.command.aliases"),
+		footer = Translatable.all("commands.help.footer"),
+		header = Translatable.all("commands.help.header"),
+		invalidSender = Translatable("commands.help.invalidSender"),
 
 	}
 
 	enum kick {
 
-		successReason = Translation.all("commands.kick.success.reason"),
-		success = Translation.all("commands.kick.success"),
+		successReason = Translatable.all("commands.kick.success.reason"),
+		success = Translatable.all("commands.kick.success"),
 
 	}
 
 	enum list {
 
-		players = Translation.all("commands.players.list"),
+		players = Translatable.all("commands.players.list"),
 
 	}
 
 	enum message {
 
-		incoming = Translation.all("commands.message.display.incoming"),
-		outcoming = Translation.all("commands.message.display.outgoing"),
-		sameTarget = Translation.all("commands.message.sameTarget"),
+		incoming = Translatable.all("commands.message.display.incoming"),
+		outcoming = Translatable.all("commands.message.display.outgoing"),
+		sameTarget = Translatable.all("commands.message.sameTarget"),
 
 	}
 
 	enum op {
 
-		failed = Translation.all("commands.op.failed"),
-		message = Translation.fromPocket("commands.op.message"),
-		success = Translation.all("commands.op.success"),
+		failed = Translatable.all("commands.op.failed"),
+		message = Translatable.fromBedrock("commands.op.message"),
+		success = Translatable.all("commands.op.success"),
 
 	}
 
 	enum reload {
 
-		success = Translation("commands.reload.success"),
+		success = Translatable("commands.reload.success"),
 
 	}
 
 	enum seed {
 
-		success = Translation.all("commands.seed.success"),
+		success = Translatable.all("commands.seed.success"),
 
 	}
 
 	enum setmaxplayers {
 
-		success = Translation.all("commands.setmaxplayers.success"), //TODO check java
+		success = Translatable.all("commands.setmaxplayers.success"), //TODO check java
 
 	}
 
 	enum stop {
 
-		failed = Translation("commands.stop.failed"),
-		start = Translation.all("commands.stop.start"),
+		failed = Translatable("commands.stop.failed"),
+		start = Translatable.all("commands.stop.start"),
 
 	}
 
 	enum time {
 
-		added = Translation.all("commands.time.added"),
-		queryDay = Translation.fromPocket("commands.time.query.day"),
-		queryDaytime = Translation.fromPocket("commands.time.query.daytime"),
-		queryGametime = Translation.fromPocket("commands.time.query.gametime"),
-		set = Translation.all("commands.time.set"),
+		added = Translatable.all("commands.time.added"),
+		queryDay = Translatable.fromBedrock("commands.time.query.day"),
+		queryDaytime = Translatable.fromBedrock("commands.time.query.daytime"),
+		queryGametime = Translatable.fromBedrock("commands.time.query.gametime"),
+		set = Translatable.all("commands.time.set"),
 
 	}
 
 	enum toggledownfall {
 
-		success = Translation.all("commands.downfall.success"),
+		success = Translatable.all("commands.downfall.success"),
 
 	}
 
 	enum transferserver {
 
-		invalidPort = Translation.fromPocket("commands.transferserver.invalid.port"),
-		success = Translation.fromPocket("commands.transferserver.successful"),
+		invalidPort = Translatable.fromBedrock("commands.transferserver.invalid.port"),
+		success = Translatable.fromBedrock("commands.transferserver.successful"),
 
 	}
 
 	enum weather {
 
-		clear = Translation.all("commands.weather.clear"),
-		rain = Translation.all("commands.weather.rain"),
-		thunder = Translation.all("commands.weather.thunder"),
+		clear = Translatable.all("commands.weather.clear"),
+		rain = Translatable.all("commands.weather.rain"),
+		thunder = Translatable.all("commands.weather.thunder"),
 
 	}
 

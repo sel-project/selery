@@ -34,6 +34,7 @@ import sel.server.util : GenericServer;
 import selery.about : Software;
 import selery.hub.player : World, PlayerSession;
 import selery.hub.server : HubServer;
+import selery.log : Message;
 import selery.util.diet;
 
 class WebAdminHandler : GenericServer {
@@ -88,8 +89,12 @@ class WebAdminHandler : GenericServer {
 				socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0));
 				socket.blocking = true;
 				// keep connection alive
-				auto client = new WebAdminClient(socket);
+				auto client = new WebAdminClient(socket, response.headers["Language"]);
+				this.server.add(client);
+				// send settings
 				client.sendSettings(this.server);
+				// send language files (only for the client's language)
+				client.sendLanguage(this.server.lang.raw[client.language]);
 				// send every world
 				foreach(node ; this.server.nodesList) {
 					foreach(world ; node.worlds) {
@@ -97,14 +102,13 @@ class WebAdminHandler : GenericServer {
 					}
 				}
 				//TODO send players
-				this.server.add(client);
 				auto address = socket.remoteAddress;
 				while(true) {
 					try {
 						JSONValue[string] json = parseJSON(cast(string)client.receive()).object;
 						switch(json.get("id", JSONValue.init).str) {
 							case "command":
-								this.server.handleCommand(json.get("command", JSONValue.init).str, RemoteCommand.REMOTE_PANEL, address, cast(uint)json.get("command_id", JSONValue.init).integer);
+								this.server.handleCommand(json.get("command", JSONValue.init).str, RemoteCommand.WEB_ADMIN, address, cast(uint)json.get("command_id", JSONValue.init).integer);
 								break;
 							default:
 								break;
@@ -155,8 +159,12 @@ class WebAdminHandler : GenericServer {
 						// new websocket connection
 						if(auth) {
 							auto response = authWebSocketClient(request);
-							if(response.valid) return response;
-							else return Response(StatusCodes.badRequest);
+							if(response.valid) {
+								response.headers["Language"] = getClientLanguage(request);
+								return response;
+							} else {
+								return Response(StatusCodes.badRequest);
+							}
 						} else {
 							return Response(StatusCodes.forbidden);
 						}
@@ -164,7 +172,7 @@ class WebAdminHandler : GenericServer {
 						// send login page or create a session
 						immutable lang = this.getClientLanguage(request);
 						string translate(string text, string[] params...) {
-							return this.server.config.lang.translate(text, lang, params);
+							return this.server.config.lang.translate(text, params, lang);
 						}
 						if(auth) {
 							// just logged in, needs the admin panel
@@ -220,11 +228,14 @@ class WebAdminClient {
 
 	private WebSocketServerStream stream;
 
+	public string language;
+
 	private immutable string to_string;
 
-	public this(Socket socket) {
+	public this(Socket socket, string language) {
 		this.id = atomicOp!"+="(_id, 1);
 		this.stream = new WebSocketServerStream(new TcpStream(socket));
+		this.language = language;
 		this.to_string = "WebAdmin@" ~ socket.remoteAddress.toString();
 	}
 
@@ -238,7 +249,14 @@ class WebAdminClient {
 		data["name"] = server.info.motd.raw;
 		data["max"] = server.maxPlayers;
 		data["favicon"] = server.info.favicon;
+		data["languages"] = server.config.hub.acceptedLanguages; //TODO also send language names
 		this.send("settings", data);
+	}
+
+	public void sendLanguage(inout string[string] messages) {
+		JSONValue[string] data;
+		foreach(key, value; messages) data[key] = value;
+		this.send("lang", ["data": JSONValue(data)]);
 	}
 
 	public void sendAddWorld(shared World world) {
@@ -258,8 +276,23 @@ class WebAdminClient {
 
 	public void sendRemovePlayer(shared PlayerSession player) {}
 
-	public void sendLog(string log, int commandId) {
-		this.send("log", ["log": JSONValue(log), "command_id": JSONValue(commandId)]);
+	public void sendLog(Message[] messages, int commandId, int worldId) {
+		JSONValue[] log;
+		string next;
+		void addText() {
+			log ~= JSONValue(["text": next]);
+			next.length = 0;
+		}
+		foreach(message ; messages) {
+			if(message.type == Message.FORMAT) next ~= message.format;
+			else if(message.type == Message.TEXT) next ~= message.text;
+			else {
+				if(next.length) addText();
+				log ~= JSONValue(["translation": JSONValue(message.translation.translatable.default_), "with": JSONValue(message.translation.parameters)]);
+			}
+		}
+		if(next.length) addText();
+		this.send("log", ["log": JSONValue(log), "command_id": JSONValue(commandId), "world_id": JSONValue(worldId)]);
 	}
 
 	public ubyte[] receive() {

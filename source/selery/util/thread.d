@@ -22,7 +22,7 @@ import std.datetime : dur;
 import std.file : exists, write, mkdirRecurse;
 
 import selery.crash : logCrash;
-import selery.lang : Lang;
+import selery.lang : LanguageManager;
 import selery.util.util : seconds;
 
 /**
@@ -31,7 +31,7 @@ import selery.util.util : seconds;
  */
 class SafeThread : Thread {
 
-	public this(T)(const Lang lang, T fn) if(is(T == function) || is(T == delegate)) {
+	public this(T)(const LanguageManager lang, T fn) if(is(T == function) || is(T == delegate)) {
 		super({
 			try {
 				fn();
@@ -41,7 +41,7 @@ class SafeThread : Thread {
 		});
 	}
 
-	public this(T)(string name, const Lang lang, T fn) if(is(T == function) || is(T == delegate)) {
+	public this(T)(string name, const LanguageManager lang, T fn) if(is(T == function) || is(T == delegate)) {
 		this(lang, fn);
 		this.name = name;
 	}

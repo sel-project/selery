@@ -17,8 +17,8 @@ module selery.node.plugin;
 
 // common
 public import selery.about : Software, tick_t, block_t, item_t;
-public import selery.format : Text;
 public import selery.lang : Translation;
+public import selery.log : Format;
 public import selery.util.util;
 
 // server
@@ -36,6 +36,3 @@ public import selery.world.world : World;
 
 // command utils
 public import selery.command.util : SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
-
-// logging
-public import selery.log : log, debug_log, warning_log, error_log;

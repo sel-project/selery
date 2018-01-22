@@ -25,10 +25,11 @@ import selery.command.args : StringReader, CommandArg;
 import selery.command.util : PocketType, CommandSender, WorldCommandSender, Ranged, isRanged, Target, Position;
 import selery.entity.entity : Entity;
 import selery.event.node.command : CommandNotFoundEvent, CommandFailedEvent;
-import selery.format : Text;
-import selery.lang : Message;
+import selery.lang : Translation;
+import selery.log : Format, Message;
 import selery.node.server : ServerCommandSender;
 import selery.player.player : Player;
+import selery.plugin : Description;
 import selery.util.messages : Messages;
 import selery.util.tuple : Tuple;
 
@@ -74,7 +75,10 @@ struct CommandResult {
 		if(this.result != success) {
 			if(this.result == notFound) {
 				//TODO call event with actual used command
-				if(!(cast()sender.server).callCancellableIfExists!CommandNotFoundEvent(sender, this.command)) sender.sendMessage(Text.red, Messages.generic.notFound);
+				if(!(cast()sender.server).callCancellableIfExists!CommandNotFoundEvent(sender, this.command)) {
+					if(cast(Player)sender) sender.sendMessage(Format.red, Translation(Messages.generic.notFound));
+					else sender.sendMessage(Format.red, Translation(Messages.generic.notFoundConsole));
+				}
 			} else {
 				//TODO call event with actual used command
 				if(!(cast()sender.server).callCancellableIfExists!CommandFailedEvent(sender, sender.availableCommands.get(this.command, null))) {
@@ -91,7 +95,7 @@ struct CommandResult {
 							case invalidRangeUp: return generic.numTooBig;
 						}
 					}();
-					sender.sendMessage(Text.red, message, this.args);
+					sender.sendMessage(Format.red, Translation(message, this.args));
 				}
 			}
 			return false;
@@ -103,8 +107,6 @@ struct CommandResult {
 }
 
 class Command {
-
-	enum MISSING_DESCRIPTION = Message("No description given");
 
 	/**
 	 * Command's overload.
@@ -327,7 +329,7 @@ class Command {
 	}
 	
 	immutable string name;
-	immutable Message description;
+	immutable Description description;
 	immutable string[] aliases;
 
 	immutable bool op;
@@ -335,7 +337,7 @@ class Command {
 
 	Overload[] overloads;
 	
-	this(string name, Message description=MISSING_DESCRIPTION, string[] aliases=[], bool op=false, bool hidden=false) {
+	this(string name, Description description=Description.init, string[] aliases=[], bool op=false, bool hidden=false) {
 		assert(checkCommandName(name));
 		assert(aliases.all!(a => checkCommandName(a))());
 		this.name = name;

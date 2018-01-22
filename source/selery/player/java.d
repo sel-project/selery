@@ -40,11 +40,10 @@ import selery.entity.living : Living;
 import selery.entity.metadata : SelMetadata = Metadata;
 import selery.entity.noai : ItemEntity, Lightning;
 import selery.event.world.player : PlayerMoveEvent;
-import selery.format : Text;
 import selery.inventory.inventory;
 import selery.item.slot : Slot;
-import selery.lang : Translation, translate;
-import selery.log;
+import selery.lang : Translation;
+import selery.log : Format, Message;
 import selery.math.vector;
 import selery.node.info : PlayerInfo;
 import selery.player.player;
@@ -119,13 +118,72 @@ abstract class JavaPlayer : Player {
 		this.loaded_maps.length = 0;
 		return super.world(world);
 	}
-	
-	public final override void disconnectImpl(const Translation translation, string[] args) {
-		if(translation.java.length) {
-			this.server.kick(this.hubId, translation.java, args);
+
+	public final override void disconnectImpl(const Translation translation) {
+		if(translation.translatable.java.length) {
+			this.server.kick(this.hubId, translation.translatable.java, translation.parameters);
 		} else {
-			this.disconnect(this.server.config.lang.translate(translation, this.language, args));
+			this.disconnect(this.server.lang.translate(translation, this.language));
 		}
+	}
+	
+	/**
+	 * Encodes a message into a JSONValue that can be parsed and displayed
+	 * by the client.
+	 * More info on the format: wiki.vg/Chat
+	 */
+	public JSONValue encodeMessage(Message[] messages) {
+		JSONValue[] extra;
+		JSONValue[string] current_format;
+		void parseText(string text) {
+			current_format["text"] = text;
+			extra ~= JSONValue(current_format);
+			current_format.remove("text");
+		}
+		foreach(message ; messages) {
+			final switch(message.type) {
+				case Message.FORMAT:
+					switch(message.format) with(Format) {
+						case darkBlue: current_format["color"] = "dark_blue"; break;
+						case darkGreen: current_format["color"] = "dark_green"; break;
+						case darkAqua: current_format["color"] = "dark_aqua"; break;
+						case darkRed: current_format["color"] = "dark_red"; break;
+						case darkPurple: current_format["color"] = "dark_purple"; break;
+						case darkGray: current_format["color"] = "dark_gray"; break;
+						case lightPurple: current_format["color"] = "light_purple"; break;
+						case obfuscated:
+						case bold:
+						case strikethrough:
+						case underlined:
+						case italic:
+							current_format[message.format.to!string] = true;
+							break;
+						case reset: current_format.clear(); break;
+						default:
+							current_format["color"] = message.format.to!string;
+							break;
+					}
+					break;
+				case Message.TEXT:
+					current_format["text"] = message.text;
+					extra ~= JSONValue(current_format);
+					current_format.remove("text");
+					break;
+				case Message.TRANSLATION:
+					if(message.translation.translatable.java.length) {
+						current_format["translation"] = message.translation.translatable.java;
+						current_format["with"] = message.translation.parameters;
+						extra ~= JSONValue(current_format);
+						current_format.remove("translation");
+						current_format.remove("with");
+					} else {
+						parseText(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters, this.language));
+					}
+					break;
+			}
+		}
+		if(extra.length) return JSONValue(["extra": extra]);
+		else return JSONValue(["text": ""]);
 	}
 
 	protected void handleClientStatus() {
@@ -227,63 +285,22 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.can
 		this.sendPacket(new Clientbound.TabComplete(messages));
 	}
 	
-	protected override void sendMessageImpl(string message) {
-		this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.CHAT));
-	}
-
-	protected override void sendTranslationImpl(const Translation message, string[] args, Text[] formats) {
-		if(message.java.length) {
-			JSONValue[string] json;
-			json["translate"] = message.java;
-			if(args.length) {
-				JSONValue[] a;
-				foreach(arg ; args) {
-					a ~= JSONValue(["text": arg]);
-				}
-				json["with"] = a;
-			}
-			foreach(format ; formats) {
-				switch(format) with(Text) {
-					case darkBlue: json["color"] = "dark_blue"; break;
-					case darkGreen: json["color"] = "dark_green"; break;
-					case darkAqua: json["color"] = "dark_aqua"; break;
-					case darkRed: json["color"] = "dark_red"; break;
-					case darkPurple: json["color"] = "dark_purple"; break;
-					case darkGray: json["color"] = "dark_gray"; break;
-					case lightPurple: json["color"] = "light_purple"; break;
-					case obfuscated:
-					case bold:
-					case strikethrough:
-					case underlined:
-					case italic:
-						json[format.to!string] = true;
-						break;
-					case reset: break;
-					default:
-						json["color"] = format.to!string;
-						break;
-				}
-			}
-			this.sendPacket(new Clientbound.ChatMessage(JSONValue(json).toString(), Clientbound.ChatMessage.CHAT));
-		} else {
-			string pre;
-			foreach(format ; formats) pre ~= format;
-			this.sendMessageImpl(pre ~ this.server.config.lang.translate(message, this.language, args));
-		}
+	protected override void sendMessageImpl(Message[] messages) {
+		this.sendPacket(new Clientbound.ChatMessage(this.encodeMessage(messages).toString(), Clientbound.ChatMessage.CHAT));
 	}
 	
-	protected override void sendTipMessage(string message) {
+	protected override void sendTipImpl(Message[] messages) {
 		static if(__protocol >= 305) {
-			this.sendPacket(new Clientbound.Title().new SetActionBar(JSONValue(["text": message]).toString()));
+			this.sendPacket(new Clientbound.Title().new SetActionBar(this.encodeMessage(messages).toString()));
 		} else {
-			this.sendPacket(new Clientbound.ChatMessage(JSONValue(["text": message]).toString(), Clientbound.ChatMessage.ABOVE_HOTBAR));
+			this.sendPacket(new Clientbound.ChatMessage(this.encodeMessage(messages).toString(), Clientbound.ChatMessage.ABOVE_HOTBAR));
 		}
 	}
 	
-	protected override void sendTitleMessage(Title message) {
-		this.sendPacket(new Clientbound.Title().new SetTitle(JSONValue(["text": message.title]).toString()));
-		if(message.subtitle.length) this.sendPacket(new Clientbound.Title().new SetSubtitle(JSONValue(["text": message.subtitle]).toString()));
-		this.sendPacket(new Clientbound.Title().new SetTimings(message.fadeIn.to!uint, message.stay.to!uint, message.fadeOut.to!uint));
+	protected override void sendTitleImpl(Title title, Subtitle subtitle, uint fadeIn, uint stay, uint fadeOut) {
+		this.sendPacket(new Clientbound.Title().new SetTitle(this.encodeMessage(title).toString()));
+		if(subtitle.length) this.sendPacket(new Clientbound.Title().new SetSubtitle(this.encodeMessage(subtitle).toString()));
+		this.sendPacket(new Clientbound.Title().new SetTimings(fadeIn, stay, fadeOut));
 	}
 
 	protected override void sendHideTitles() {
@@ -954,7 +971,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.can
 				this.handleAttack(eid);
 				break;
 			case Serverbound.UseEntity.INTERACT_AT:
-				warning_log("interact at ", position);
+
 				break;
 			default:
 				break;
@@ -1007,7 +1024,7 @@ class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.can
 				this.consuming = false;
 				break;
 			case Serverbound.PlayerDigging.SWAP_ITEM_IN_HAND:
-				warning_log("swap item in hand");
+
 				break;
 			default:
 				break;

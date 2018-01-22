@@ -35,7 +35,7 @@ import std.zip;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 35;
+enum size_t __GENERATOR__ = 36;
 
 void main(string[] args) {
 
@@ -62,7 +62,7 @@ void main(string[] args) {
 				write("version.txt", software["displayVersion"].str);
 				write("build.txt", software["stable"].type == JSON_TYPE.TRUE ? "0" : "1");
 				string[] notes;
-				string history = cast(string)read("../doc/history.md");
+				string history = cast(string)read("../docs/history.md");
 				immutable v = "### " ~ software["displayVersion"].str;
 				immutable start = history.indexOf(v) + v.length;
 				immutable end = history[start..$].indexOf("##");

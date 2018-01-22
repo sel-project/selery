@@ -19,17 +19,18 @@ import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
 import std.file : write, read, exists, mkdir;
+import std.stdio : writeln;
 import std.string : split, replace;
 
-import selery.about;
-import selery.format : Text, writeln;
-import selery.lang : Lang;
+import selery.about : Software;
+import selery.lang : LanguageManager;
+import selery.log : Format;
 
-public string logCrash(string type, const Lang lang, Throwable e) {
+public string logCrash(string type, inout LanguageManager lang, Throwable e) {
 
 	string filename = "crash/" ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
 
-	writeln(Text.red ~ lang.translate("warning.crash", [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
+	writeln(lang.translate("warning.crash", [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string])); //TODO use Terminal to change colour
 
 	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
 	file ~= "Message: " ~ e.msg ~ newline;
@@ -47,7 +48,7 @@ public string logCrash(string type, const Lang lang, Throwable e) {
 	if(!exists("crash")) mkdir("crash");
 	write(filename, file);
 
-	writeln(Text.red ~ lang.translate("warning.savedCrash", [filename]));
+	writeln(lang.translate("warning.savedCrash", [filename])); //TODO use Terminal to change colour
 
 	return filename;
 
