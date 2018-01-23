@@ -1776,11 +1776,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden, bool implemented=true) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, permissionLevel, permissions, hidden);
 		auto ptr = command in this.commands;
-		(*ptr).add!func(del);
+		(*ptr).add!func(del, implemented);
 	}
 
 	/**

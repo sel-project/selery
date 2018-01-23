@@ -18,20 +18,24 @@ import std.algorithm : sort, clamp, min, filter;
 import std.conv : to;
 import std.math : ceil;
 import std.string : join, toLower, startsWith;
-import std.traits : hasUDA, getUDAs;
+import std.traits : hasUDA, getUDAs, Parameters;
 import std.typetuple : TypeTuple;
 
 import selery.about : Software;
 import selery.command.command : Command;
 import selery.command.util : CommandSender, WorldCommandSender, PocketType, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
 import selery.config : Config, Gamemode, Difficulty, Dimension;
+import selery.effect : Effects;
+import selery.enchantment : Enchantments;
 import selery.entity.entity : Entity;
+import selery.format : unformat;
 import selery.lang : Translation, Translatable;
 import selery.log : Format;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
+import selery.player.bedrock : BedrockPlayer;
 import selery.player.java : JavaPlayer;
-import selery.player.player : Player, InputMode;
-import selery.plugin : Description, permission;
+import selery.player.player : Player, InputMode, PermissionLevel;
+import selery.plugin : Description, permission, hidden, unimplemented;
 import selery.util.messages : Messages;
 import selery.world.world : Time;
 
@@ -49,10 +53,11 @@ struct aliases {
 }
 
 /**
- * Supported vanilla commands (based on MCPE):
+ * Supported vanilla commands:
  * [ ] clear
  * [ ] clone
- * [x] deop
+ * [ ] defaultgamemode
+ * [ ] deop
  * [ ] difficulty
  * [ ] effect
  * [ ] enchant
@@ -67,7 +72,7 @@ struct aliases {
  * [x] list
  * [ ] locate
  * [x] me
- * [x] op
+ * [ ] op
  * [ ] playsound
  * [ ] replaceitem
  * [ ] say
@@ -89,12 +94,11 @@ struct aliases {
  * [ ] tp (teleport)
  * [x] transferserver
  * [x] weather
- * [ ] wsserver
- * [ ] xp
  * 
  * Supported multiplayer commands:
  * [ ] ban
  * [ ] ban-ip
+ * [ ] banlist
  * [ ] pardon
  * [x] stop
  * [ ] whitelist
@@ -137,11 +141,15 @@ final class Commands {
 			else enum string[] aliases = [];
 			static if(hasUDA!(C, permission)) enum permissions = getUDAs!(C, permission)[0].permissions;
 			else enum string[] permissions = [];
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description(description), aliases, hasUDA!(C, op), permissions, false);
+			server.registerCommand!C(mixin("&this." ~ command ~ count.to!string), convertedName!command, Description(description), aliases, hasUDA!(C, op), permissions, hasUDA!(C, hidden), !hasUDA!(C, unimplemented));
 		} else {
-			server.registerCommand!C(mixin("&this." ~ command ~ to!string(count)), convertedName!command, Description.init, [], 0, [], false);
+			server.registerCommand!C(mixin("&this." ~ command ~ count.to!string), convertedName!command, Description.init, [], 0, [], false, !hasUDA!(C, unimplemented));
 		}
 		static if(__traits(hasMember, typeof(this), command ~ to!string(count + 1))) this.registerImpl!(command, count + 1)(server);
+	}
+
+	private void sendUnimplementedMessage(CommandSender sender) {
+		sender.sendMessage(Format.red, "Not Implemented");
 	}
 
 	public Commands unregister() {
@@ -159,6 +167,8 @@ final class Commands {
 		static if(__traits(hasMember, typeof(this), command ~ to!string(count + 1))) this.unregisterImpl!(command, count + 1)(server);
 	}
 
+	// about
+
 	void about0(CommandSender sender) {
 		sender.sendMessage(Translation(Messages.about.software, Software.name ~ " " ~ Software.fullVersion));
 		if(this.server.plugins.length) {
@@ -170,31 +180,61 @@ final class Commands {
 		}
 	}
 
+	// clear
+
+	@vanilla @op clear0(Player sender) {
+		this.clear1(sender, [sender]);
+	}
+
+	@unimplemented @vanilla clear1(WorldCommandSender sender, Player[] target) {}
+
+	@unimplemented @vanilla clear2(WorldCommandSender sender, Player[] target, string itemName) {}
+
+	// clone
+
+	enum MaskMode { masked, replace }
+
+	enum CloneMode { force, move, normal }
+	
+	@unimplemented @vanilla @op clone0(WorldCommandSender sender, Position begin, Position end, Position destination, MaskMode maskMode=MaskMode.replace, CloneMode cloneMode=CloneMode.normal) {}
+	
+	@unimplemented @vanilla clone0(WorldCommandSender sender, Position begin, Position end, Position destination, SingleEnum!"filtered" maskMode, CloneMode cloneMode, string tileName) {}
+
+	// defaultgamemode
+
+	@unimplemented @vanilla @op defaultgamemode0(WorldCommandSender sender, Gamemode gamemode) {}
+
+	// deop
+
 	@vanilla @op deop0(WorldCommandSender sender, Player player) {
-		if(player.op) {
-			player.op = false;
-			player.sendMessage(Translation(Messages.deop.message));
+		if(player.permissionLevel <= PermissionLevel.operator) {
 			sender.sendMessage(Translation(Messages.deop.success, player.displayName));
+			if(player.operator) {
+				player.operator = false;
+				player.sendMessage(Translation(Messages.deop.message));
+			}
 		} else {
 			sender.sendMessage(Translation(Messages.deop.failed, player.displayName));
 		}
 	}
 
-	@vanilla deop1(ServerCommandSender sender, string player) {
+	@unimplemented @vanilla deop1(ServerCommandSender sender, string player) {
 		//TODO get player(s) from server.selectPlayers
 	}
+
+	// difficulty
 	
-	@vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
+	@unimplemented @vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
 		//TODO unsupported by selery
 		//sender.world.difficulty = difficulty;
-		sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
+		//sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
 	}
 	
 	@vanilla difficulty1(WorldCommandSender sender, Ranged!(ubyte, 0, 3) difficulty) {
 		this.difficulty0(sender, cast(Difficulty)difficulty.value);
 	}
 
-	@vanilla difficulty2(ServerCommandSender sender, string world, Difficulty difficulty) {
+	@unimplemented @vanilla difficulty2(ServerCommandSender sender, string world, Difficulty difficulty) {
 		//TODO
 	}
 
@@ -202,15 +242,63 @@ final class Commands {
 		this.difficulty2(sender, world, cast(Difficulty)difficulty.value);
 	}
 
+	// effect
+
+	@unimplemented @vanilla @op effect0(WorldCommandSender sender, SingleEnum!"clear" clear, Entity[] target) {}
+
+	@unimplemented @vanilla effect1(WorldCommandSender sender, SingleEnum!"clear" clear, Entity[] target, SnakeCaseEnum!Effects effect) {}
+
+	alias Duration = Ranged!(uint, 0, 1_000_000);
+
+	@unimplemented @vanilla effect2(WorldCommandSender sender, SingleEnum!"give" give, Entity[] target, SnakeCaseEnum!Effects effect, Duration duration=Duration(30), ubyte amplifier=0, bool hideParticles=false) {}
+
+	// enchant
+
+	alias Level = Ranged!(ubyte, 1, ubyte.max);
+
+	@unimplemented @vanilla @op enchant0(WorldCommandSender sender, Player[] target, SnakeCaseEnum!Enchantments enchantment, Level level=Level(1)) {}
+
+	@vanilla enchant1(Player sender, SnakeCaseEnum!Enchantments enchantment, Level level=Level(1)) {
+		this.enchant0(sender, [sender], enchantment, level);
+	}
+
+	// experience
+
+	enum ExperienceAction { add, set }
+
+	enum ExperienceType { points, levels }
+
+	@unimplemented @vanilla @op @aliases("xp") experience0(WorldCommandSender sender, ExperienceAction action, Player[] target, uint amount, ExperienceType type=ExperienceType.levels) {}
+
+	@vanilla experience1(Player sender, ExperienceAction action, uint amount, ExperienceType type=ExperienceType.levels) {
+		this.experience0(sender, action, [sender], amount, type);
+	}
+
+	@unimplemented @vanilla experience2(WorldCommandSender sender, SingleEnum!"query" query, Player target, ExperienceType type) {}
+
+	@vanilla experience3(Player sender, SingleEnum!"query" query, ExperienceType type) {
+		this.experience2(sender, query, sender, type);
+	}
+
+	// execute
+
+	//class ExecuteCommand : WorldCommandSender {}
+
+	@unimplemented @vanilla @op execute0(WorldCommandSender sender, Entity[] origin, Position position, string command) {}
+
+	// fill
+
+	enum OldBlockHandling { destroy, hollow, keep, outline, replace }
+
+	@unimplemented @vanilla @op fill0(WorldCommandSender sender, Position from, Position to, string block, OldBlockHandling oldBlockHandling=OldBlockHandling.replace) {}
+
+	// gamemode
+
 	@vanilla @op @aliases("gm") gamemode0(WorldCommandSender sender, Gamemode gamemode, Player[] target) {
 		foreach(player ; target) {
 			player.gamemode = gamemode;
 			sender.sendMessage(Translation(Messages.gamemode.successOther, gamemode, player.displayName));
 		}
-	}
-	
-	@vanilla gamemode2(WorldCommandSender sender, Ranged!(ubyte, 0, 3) gamemode, Player[] target) {
-		this.gamemode0(sender, cast(Gamemode)gamemode.value, target);
 	}
 
 	@vanilla gamemode1(Player sender, Gamemode gamemode) {
@@ -218,17 +306,9 @@ final class Commands {
 		sender.sendMessage(Translation(Messages.gamemode.successSelf, gamemode));
 	}
 
-	@vanilla gamemode3(Player sender, Ranged!(ubyte, 0, 3) gamemode) {
-		this.gamemode2(sender, gamemode, [sender]);
-	}
+	@unimplemented @vanilla gamemode2(ServerCommandSender sender, Gamemode gamemode, string target) {}
 
-	@vanilla gamemode4(ServerCommandSender sender, Gamemode gamemode, string target) {
-		//TODO
-	}
-
-	@vanilla gamemode5(ServerCommandSender sender, Ranged!(ubyte, 0, 3) gamemode, string target) {
-		this.gamemode4(sender, cast(Gamemode)gamemode.value, target);
-	}
+	// gamerule
 
 	enum Gamerule { depleteHunger, doDaylightCycle, doWeatherCycle, naturalRegeneration, pvp, randomTickSpeed }
 
@@ -275,6 +355,16 @@ final class Commands {
 		}
 		sender.sendMessage(Translation(Messages.gamerule.success, rule, value.value));
 	}
+	
+	// give
+	
+	@unimplemented @vanilla @op give0(WorldCommandSender sender, Player[] target, string item, ubyte amount=1) {}
+	
+	@vanilla give1(Player sender, string item, ubyte amount=1) {
+		this.give0(sender, [sender], item, amount);
+	}
+
+	// help
 
 	@vanilla help0(JavaPlayer sender, int page=1) {
 		// pocket players have the help command client-side
@@ -294,7 +384,7 @@ final class Commands {
 		sender.sendMessage(Format.green, Translation(Messages.help.footer));
 	}
 	
-	@vanilla help1(ServerCommandSender sender) {
+	@vanilla @aliases("?") help1(ServerCommandSender sender) {
 		Command[] commands;
 		foreach(name, command; sender.availableCommands) {
 			if(!command.hidden && name == command.name) {
@@ -318,11 +408,11 @@ final class Commands {
 			}
 		}
 	}
-
+	
 	@vanilla help2(JavaPlayer sender, string command) {
 		this.helpImpl(sender, "/", command);
 	}
-
+	
 	@vanilla help3(ServerCommandSender sender, string command) {
 		this.helpImpl(sender, "", command);
 	}
@@ -330,26 +420,34 @@ final class Commands {
 	private void helpImpl(CommandSender sender, string slash, string command) {
 		auto cmd = command in sender.availableCommands;
 		if(cmd) {
-			if(cmd.aliases.length) {
-				sender.sendMessage(Format.yellow, Translation(Messages.help.commandAliases, cmd.name, cmd.aliases.join(", ")));
-			} else {
-				sender.sendMessage(Format.yellow ~ cmd.name ~ ":");
-			}
-			if(cmd.description.type == Description.TEXT) {
-				sender.sendMessage(Format.yellow, cmd.description.text);
-			} else if(cmd.description.type == Description.TRANSLATABLE) {
-				sender.sendMessage(Format.yellow, Translation(cmd.description.translatable));
-			}
-			sender.sendMessage(Translation(Messages.generic.usage, ""));
+			string[] messages;
 			foreach(overload ; cmd.overloads) {
 				if(overload.callableBy(sender)) {
-					sender.sendMessage("- ", slash, cmd.name, " ", formatArg(overload));
+					messages ~= ("- " ~ slash ~ cmd.name ~ " " ~ formatArg(overload));
 				}
 			}
-		} else {
-			sender.sendMessage(Format.red, Messages.generic.notFound);
+			if(messages.length) {
+				if(cmd.aliases.length) {
+					sender.sendMessage(Format.yellow, Translation(Messages.help.commandAliases, cmd.name, cmd.aliases.join(", ")));
+				} else {
+					sender.sendMessage(Format.yellow ~ cmd.name ~ ":");
+				}
+				if(cmd.description.type == Description.TEXT) {
+					sender.sendMessage(Format.yellow, cmd.description.text);
+				} else if(cmd.description.type == Description.TRANSLATABLE) {
+					sender.sendMessage(Format.yellow, Translation(cmd.description.translatable));
+				}
+				sender.sendMessage(Translation(Messages.generic.usage, ""));
+				foreach(message ; messages) {
+					sender.sendMessage(message);
+				}
+				return;
+			}
 		}
+		sender.sendMessage(Format.red, Translation(Messages.generic.invalidParameter, command));
 	}
+
+	// kick
 
 	@vanilla @op kick0(WorldCommandSender sender, Player[] target, string message) {
 		string[] kicked;
@@ -381,7 +479,17 @@ final class Commands {
 		}
 	}
 
-	@vanilla list0(CommandSender sender) {
+	// kill
+
+	@unimplemented @vanilla @op kill0(WorldCommandSender sender, Entity[] target) {}
+
+	@vanilla kill1(Player sender) {
+		this.kill0(sender, [sender]);
+	}
+
+	// list
+
+	@vanilla @op list0(CommandSender sender) {
 		// list players on the current node
 		sender.sendMessage(Translation(Messages.list.players, sender.server.online, sender.server.max));
 		if(sender.server.online) {
@@ -393,14 +501,24 @@ final class Commands {
 		}
 	}
 
+	// locate
+
+	enum StructureType { endcity, fortress, mansion, mineshaft, monument, stronghold, temple, village }
+
+	@unimplemented @vanilla @op locate0(WorldCommandSender sender, StructureType structureType) {}
+
+	// me
+
 	@vanilla me0(Player sender, string message) {
-		//TODO unformat
-		sender.world.broadcast("* " ~ sender.displayName ~ " " ~ message);
+		//TODO replace target selectors with names
+		sender.world.broadcast("* " ~ sender.displayName ~ Format.reset ~ " " ~ unformat(message));
 	}
 
+	// op
+
 	@vanilla @op op0(WorldCommandSender sender, Player player) {
-		if(!player.op) {
-			player.op = true;
+		if(!player.operator) {
+			player.operator = true;
 			player.sendMessage(Translation(Messages.op.message));
 			sender.sendMessage(Translation(Messages.op.success, player.displayName));
 		} else {
@@ -408,9 +526,9 @@ final class Commands {
 		}
 	}
 
-	@vanilla op1(ServerCommandSender sender, string player) {
-		//TODO
-	}
+	@unimplemented @vanilla op1(ServerCommandSender sender, string player) {}
+
+	// say
 
 	@vanilla @op say0(WorldCommandSender sender, string message) {
 		auto player = cast(Player)sender;
@@ -419,19 +537,47 @@ final class Commands {
 		sender.world.broadcast("[" ~ name ~ "] " ~ message); //TODO unformat
 	}
 
-	@vanilla say1(ServerCommandSender sender, string message) {
-		//TODO
-		//sender.server.broadcast("[@] " ~ message);
-	}
+	@unimplemented @vanilla say1(ServerCommandSender sender, string message) {}
 
+	// seed
+
+	@vanilla @op seed0(WorldCommandSender sender) {
+		sender.sendMessage(Translation(Messages.seed.success, sender.world.seed));
+	}
+	
+	// setmaxplayers
+	
 	@vanilla @op setmaxplayers0(CommandSender sender, uint players) {
 		sender.server.max = players;
 		sender.sendMessage(Translation(Messages.setmaxplayers.success, players));
 	}
 
-	@vanilla @op seed0(WorldCommandSender sender) {
-		sender.sendMessage(Translation(Messages.seed.success, sender.world.seed));
+	// setworldspawn
+
+	@unimplemented @vanilla @op setworldspawn0(WorldCommandSender sender, Position position) {}
+
+	@vanilla setworldspawn1(WorldCommandSender sender) {
+		this.setworldspawn0(sender, Position(Position.Point(true, sender.position.x), Position.Point(true, sender.position.y), Position.Point(true, sender.position.z)));
 	}
+
+	// spawnpoint
+
+	@unimplemented @vanilla @op spawnpoint0(WorldCommandSender sender, Player[] target, Position position) {}
+
+	@vanilla spawnpoint1(WorldCommandSender sender, Player[] target) {
+		this.spawnpoint0(sender, target, Position(Position.Point(true, sender.position.x), Position.Point(true, sender.position.y), Position.Point(true, sender.position.z)));
+	}
+
+	@vanilla spawnpoint2(Player sender) {
+		this.spawnpoint1(sender, [sender]);
+	}
+
+	// spreadplayers
+
+	//TODO implement Rotation
+	//@unimplemented @vanilla @op spreadplayers0(WorldCommandSender sender, Rotation x, Rotation z, double spreadDistance, double maxRange, Entity[] target) {}
+
+	// stop
 	
 	@vanilla @op stop0(CommandSender sender, bool gracefully=true) {
 		if(gracefully) {
@@ -446,6 +592,14 @@ final class Commands {
 			exit(0);
 		}
 	}
+
+	// summon
+
+	@unimplemented @vanilla @op summon0(WorldCommandSender sender, string entityType, Position position) {}
+
+	@unimplemented @vanilla summon1(WorldCommandSender sender, string entityType) {}
+
+	// tell
 
 	@vanilla @aliases("msg", "w") tell0(Player sender, Player[] recipient, string message) {
 		string[] sent;
@@ -465,6 +619,8 @@ final class Commands {
 		sender.world.time.time = time;
 		sender.sendMessage(Translation(Messages.time.added, amount));
 	}
+
+	// time
 
 	enum TimeQuery { day, daytime, gametime }
 
@@ -490,13 +646,40 @@ final class Commands {
 		this.time2(sender, set, cast(uint)amount);
 	}
 
+	// title
+
+	@vanilla @op title0(WorldCommandSender sender, Player[] target, SingleEnum!"clear" clear) {
+		foreach(player ; target) player.clearTitle();
+		//TODO send message
+	}
+
+	@vanilla title1(WorldCommandSender sender, Player[] target, SingleEnum!"reset" reset) {
+		foreach(player ; target) player.resetTitle();
+		//TODO send message
+	}
+
+	@unimplemented @vanilla title2(WorldCommandSender sender, Player[] target, SingleEnum!"title" title, string text) {}
+
+	@unimplemented @vanilla title3(WorldCommandSender sender, Player[] target, SingleEnum!"subtitle" subtitle, string text) {}
+
+	@unimplemented @vanilla title4(WorldCommandSender sender, Player[] target, SingleEnum!"actionbar" actionbar, string text) {
+		foreach(player ; target) player.sendTip(text);
+		//TODO send message
+	}
+
+	@unimplemented @vanilla title5(WorldCommandSender sender, Player[] target, SingleEnum!"times" times, uint fadeIn, uint stay, uint fadeOut) {}
+
+	// toggledownfall
+
 	@vanilla @op toggledownfall0(WorldCommandSender sender) {
 		if(sender.world.weather.raining) sender.world.weather.clear();
 		else sender.world.weather.start();
 		sender.sendMessage(Translation(Messages.toggledownfall.success));
 	}
 
-	@vanilla @op @permission("minecraft:teleport") tp0(Player sender, Entity destination) {
+	// tp
+
+	@vanilla @op @permission("minecraft:teleport") @aliases("teleport") tp0(Player sender, Entity destination) {
 		this.tp2(sender, [sender], destination);
 	}
 
@@ -504,17 +687,17 @@ final class Commands {
 		this.tp3(sender, [sender], destination);
 	}
 
-	@vanilla tp2(WorldCommandSender sender, Entity[] victim, Entity destination) {}
+	@unimplemented @vanilla tp2(WorldCommandSender sender, Entity[] victim, Entity destination) {}
 
-	@vanilla tp3(WorldCommandSender sender, Entity[] victim, Position destination) {}
+	@unimplemented @vanilla tp3(WorldCommandSender sender, Entity[] victim, Position destination) {}
 
-	@op transfer0(WorldCommandSender sender, Player[] target, string node) {
-		//TODO transfer to another node
-	}
+	// transfer
 
-	@op transfer1(ServerCommandSender sender, string target, string node) {
-		//TODO
-	}
+	@unimplemented @op transfer0(WorldCommandSender sender, Player[] target, string node) {}
+
+	@unimplemented @op transfer1(ServerCommandSender sender, string target, string node) {}
+
+	// transferserver
 	
 	@vanilla @op transferserver0(Player sender, string ip, int port=19132) {
 		immutable _port = cast(ushort)port;
@@ -543,6 +726,8 @@ final class Commands {
 		}
 	}
 
+	// weather
+
 	enum Weather { clear, rain, thunder }
 
 	@vanilla @op weather0(WorldCommandSender sender, Weather type, int duration=0) {
@@ -561,8 +746,6 @@ final class Commands {
 			}
 		}
 	}
-
-	// UTILS
 
 }
 

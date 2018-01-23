@@ -38,10 +38,10 @@ enum Gamemode : ubyte {
 
 enum Difficulty : ubyte {
 	
-	peaceful = 0, p = 0,
-	easy = 1, e = 0,
-	normal = 2, n = 0,
-	hard = 3, h = 0,
+	peaceful = 0,
+	easy = 1,
+	normal = 2,
+	hard = 3,
 	
 }
 
@@ -238,19 +238,41 @@ class Config {
 		
 		bool aboutCommand = true;
 
+		bool clearCommand = true;
+
+		bool cloneCommand = true;
+
+		bool defaultgamemodeCommand = true;
+
 		bool deopCommand = true;
 
 		bool difficultyCommand = true;
+
+		bool effectCommand = true;
+
+		bool enchantCommand = true;
+
+		bool experienceCommand = true;
+
+		bool executeCommand = true;
+
+		bool fillCommand = true;
 
 		bool gamemodeCommand = true;
 
 		bool gameruleCommand = true;
 
+		bool giveCommand = true;
+
 		bool helpCommand = true;
 
 		bool kickCommand = true;
 
+		bool killCommand = true;
+
 		bool listCommand = true;
+
+		bool locateCommand = true;
 
 		bool meCommand = true;
 
@@ -262,7 +284,15 @@ class Config {
 
 		bool setmaxplayersCommand = true;
 
+		bool setworldspawnCommand = true;
+
+		bool spawnpointCommand = true;
+
 		bool stopCommand = true;
+
+		bool summonCommand = true;
+
+		bool titleCommand = true;
 
 		bool tellCommand = true;
 

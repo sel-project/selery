@@ -37,6 +37,7 @@ struct CommandResult {
 
 	// defaults
 	enum SUCCESS = CommandResult(success);
+	enum UNIMPLEMENTED = CommandResult(unimplemented);
 	enum NOT_FOUND = CommandResult(notFound);
 	enum INVALID_SYNTAX = CommandResult(invalidSyntax);
 
@@ -45,10 +46,10 @@ struct CommandResult {
 		success,
 
 		notFound,
+
+		unimplemented,
 		invalidSyntax,
-
 		invalidParameter,
-
 		invalidNumber,
 		invalidBoolean,
 		targetNotPlayer,
@@ -84,6 +85,7 @@ struct CommandResult {
 				if(!(cast()sender.server).callCancellableIfExists!CommandFailedEvent(sender, sender.availableCommands.get(this.command, null))) {
 					const message = (){
 						final switch(result) with(Messages) {
+							case unimplemented: return generic.notImplemented;
 							case invalidSyntax: return generic.invalidSyntax;
 							case invalidParameter: return generic.invalidParameter;
 							case invalidNumber: return generic.numInvalid;
@@ -148,7 +150,7 @@ class Command {
 		
 	}
 	
-	private class OverloadOf(C:CommandSender, E...) : Overload if(areValidArgs!(C, E[0..$/2])) {
+	private class OverloadOf(C:CommandSender, bool implemented, E...) : Overload if(areValidArgs!(C, E[0..$/2])) {
 
 		private alias Args = E[0..$/2];
 		private alias Params = E[$/2..$];
@@ -321,8 +323,12 @@ class Command {
 			}
 			reader.skip();
 			if(reader.eof) {
-				this.del(sender, cargs);
-				return CommandResult.SUCCESS;
+				static if(implemented) {
+					this.del(sender, cargs);
+					return CommandResult.SUCCESS;
+				} else {
+					return CommandResult.UNIMPLEMENTED;
+				}
 			} else {
 				return CommandResult.INVALID_SYNTAX;
 			}
@@ -354,10 +360,11 @@ class Command {
 	/**
 	 * Adds an overload from a function.
 	 */
-	void add(alias func)(void delegate(Parameters!func) del) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
+	void add(alias func)(void delegate(Parameters!func) del, bool implemented=true) if(Parameters!func.length >= 1 && is(Parameters!func[0] : CommandSender)) {
 		string[] params = [ParameterIdentifierTuple!func][1..$];
 		//TODO nameable params
-		this.overloads ~= new OverloadOf!(Parameters!func[0], Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
+		if(implemented) this.overloads ~= new OverloadOf!(Parameters!func[0], true, Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
+		else this.overloads ~= new OverloadOf!(Parameters!func[0], false, Parameters!func[1..$], ParameterDefaults!func[1..$])(del, params);
 	}
 
 	/**

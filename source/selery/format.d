@@ -14,10 +14,6 @@
  */
 module selery.format;
 
-import selery.log : Format;
-
-deprecated("Use selery.log.Format instead") alias Text = Format;
-
 /**
  * Removes valid formatting codes from a message.
  * Note that this function also removes uppercase formatting codes

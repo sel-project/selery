@@ -173,6 +173,7 @@ enum op = permissionLevel(1);
 struct permission { string[] permissions; this(string[] permissions...){ this.permissions = permissions; } }
 alias permissions = permission;
 enum hidden;
+enum unimplemented;
 
 void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritance, CommandBase, bool tasks, T, S)(T class_, Plugin plugin, S storage) {
 
@@ -221,7 +222,7 @@ void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritanc
 				else enum ubyte pl = 0;
 				static if(hasUDA!(F, permission)) enum p = getUDAs!(F, permission).permissions;
 				else enum string[] p = [];
-				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, pl, p, hasUDA!(F, hidden));
+				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, pl, p, hasUDA!(F, hidden), !hasUDA!(F, unimplemented));
 			}
 		}
 	}

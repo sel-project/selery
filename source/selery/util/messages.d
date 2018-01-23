@@ -62,6 +62,7 @@ final class Messages {
 		invalidSyntax = Translatable.fromJava("commands.generic.syntax"),
 		notFound = Translatable.fromJava("commands.generic.notFound"),
 		notFoundConsole = Translatable("commands.generic.notFound.console"),
+		notImplemented = Translatable.fromBedrock("commands.generic.notimplemented"),
 		numInvalid = Translatable.all("commands.generic.num.invalid"),
 		numTooBig = Translatable.all("commands.generic.num.tooBig"),
 		numTooSmall = Translatable.all("commands.generic.num.tooSmall"),
