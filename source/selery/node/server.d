@@ -868,16 +868,16 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
-	 * Creates and registers a world, initialising its terrain,
+	 * Creates and registers a world with its group, initialising its terrain,
 	 * registering events, commands and tasks.
 	 * Example:
 	 * ---
 	 * server.addWorld("world42"); // normal world
-	 * server.addWorld!CustomWorld(42); // custom world where 42 is passed to the constructor
+	 * server.addWorld!CustomWorld("custom", 42); // custom world where 42 is passed to the constructor
 	 * ---
 	 */
-	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(E args) /*if(__traits(compiles, new T(args)))*/ {
-		shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1));
+	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(string name, E args) /*if(__traits(compiles, new T(args)))*/ {
+		shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1), name);
 		this._worlds[world.id] = world;
 		bool default_ = this._default_world_id == 0;
 		if(default_) this._default_world_id = world.id;

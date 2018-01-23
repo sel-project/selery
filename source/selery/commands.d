@@ -830,7 +830,7 @@ private string formatArg(Command.Overload overload) {
 
 private void executeOnWorlds(ServerCommandSender sender, string name, void delegate(shared WorldInfo) del) {
 	foreach(world ; sender.server.worlds) {
-		//if(world.name == name) del(world);
+		if(world.name == name) del(world);
 	}
 }
 

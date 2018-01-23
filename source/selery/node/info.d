@@ -122,6 +122,13 @@ final class WorldInfo {
 	public immutable uint id;
 
 	/**
+	 * World's name, which is given by the user who creates the world.
+	 * It may not be unique on the node. Children worlds have the same id
+	 * as their parent's.
+	 */
+	public immutable string name;
+
+	/**
 	 * Thread where the world exists.
 	 * Children worlds inherit the tid from their parents.
 	 */
@@ -136,8 +143,9 @@ final class WorldInfo {
 	public shared(WorldInfo) parent = null;
 	public shared(WorldInfo)[uint] children;
 
-	public this(uint id) {
+	public this(uint id, string name) {
 		this.id = id;
+		this.name = name;
 	}
 
 }

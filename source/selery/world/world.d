@@ -275,10 +275,10 @@ private shared uint world_count = 0;
 class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player") {
 
 	public static void startWorld(T:World)(shared NodeServer server, shared WorldInfo info, T world, World parent, bool default_=false) {
+		world.info = info;
 		// send world info to the hub
 		Handler.sharedInstance.send(AddWorld(world.id, world.name, world.dimension, default_, parent is null ? -1 : parent.id).encode());
 		// update variables and start
-		world.info = info;
 		world.n_server = server;
 		world.setListener(cast()server.globalListener);
 		if(parent is null) {
@@ -313,7 +313,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}+/
 
 	public immutable uint id;
-	public immutable string _name;
 
 	protected shared WorldInfo info;
 
@@ -372,9 +371,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	private Command[string] commands;
 	
-	public this(string name="world", Generator generator=null, uint seed=unpredictableSeed) {
+	public this(Generator generator=null, uint seed=unpredictableSeed) {
 		this.id = atomicOp!"+="(world_count, 1);
-		this._name = name;
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
 		if(this.n_items is null) this.n_items = new ItemStorage();
@@ -387,12 +385,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.tasks = new TaskManager();
 	}
 	
-	public this(string name, uint seed) {
-		this(name, null, seed);
-	}
-	
 	public this(uint seed) {
-		this("world", seed);
+		this(null, seed);
 	}
 
 	protected final void initParent() {
@@ -453,7 +447,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/**
 	 * Gets the world's name used for identification and
-	 * loggin purposes.
+	 * logging purposes.
+	 * Children have the same name as their parent.
 	 * Example:
 	 * ---
 	 * if(!server.worldsWithName(world.name).canFind(world)) {
@@ -462,7 +457,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * ---
 	 */
 	public final pure nothrow @property @safe @nogc immutable(string) name() {
-		return this._name;
+		return this.info.name;
 	}
 
 	/**
@@ -714,7 +709,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		assert(world.parent is null);
 		world.n_parent = this;
 		world.n_server = this.server;
-		world.info = cast(shared)new WorldInfo(world.id);
+		world.info = cast(shared)new WorldInfo(world.info.id, world.info.name);
 		world.info.tid = this.info.tid;
 		world.info.parent = this.info;
 		this.info.children[world.id] = world.info;

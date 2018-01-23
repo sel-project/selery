@@ -29,7 +29,7 @@ import selery.world.world : World;
 
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, bool default_, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
 
-	Thread.getThis().name = "World#" ~ to!string(info.id);
+	Thread.getThis().name = "world#" ~ to!string(info.id);
 
 	try {
 
@@ -40,6 +40,7 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 
 		World.startWorld(server, info, world, null, default_);
 		world.startMainWorldLoop();
+		//TODO stop
 
 	} catch(Throwable t) {
 
