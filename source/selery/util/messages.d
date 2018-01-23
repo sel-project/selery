@@ -67,8 +67,8 @@ final class Messages {
 		numTooBig = Translatable.all("commands.generic.num.tooBig"),
 		numTooSmall = Translatable.all("commands.generic.num.tooSmall"),
 		playerNotFound = Translatable("commands.kick.not.found", "commands.generic.player.notFound", "commands.kick.not.found"),
-		targetNotFound = Translatable.all("commands.generic.noTargetMatch"),
-		targetNotPlayer = Translatable.all("commands.generic.targetNotPlayer"),
+		targetNotFound = Translatable.fromBedrock("commands.generic.noTargetMatch"),
+		targetNotPlayer = Translatable.fromBedrock("commands.generic.targetNotPlayer"),
 		usage = Translatable.all("commands.generic.usage"),
 		usageNoParam = Translatable.fromBedrock("commands.generic.usage.noparam"),
 

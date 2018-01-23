@@ -17,6 +17,7 @@ module selery.commands;
 import std.algorithm : sort, clamp, min, filter;
 import std.conv : to;
 import std.math : ceil;
+import std.random : uniform;
 import std.string : join, toLower, startsWith;
 import std.traits : hasUDA, getUDAs, Parameters;
 import std.typetuple : TypeTuple;
@@ -31,6 +32,7 @@ import selery.entity.entity : Entity;
 import selery.format : unformat;
 import selery.lang : Translation, Translatable;
 import selery.log : Format;
+import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.bedrock : BedrockPlayer;
 import selery.player.java : JavaPlayer;
@@ -57,13 +59,13 @@ struct aliases {
  * [ ] clear
  * [ ] clone
  * [ ] defaultgamemode
- * [ ] deop
+ * [x] deop
  * [ ] difficulty
  * [ ] effect
  * [ ] enchant
  * [ ] execute
  * [ ] fill
- * [ ] gamemode
+ * [x] gamemode
  * [ ] gamerule
  * [ ] give
  * [x] help
@@ -72,10 +74,10 @@ struct aliases {
  * [x] list
  * [ ] locate
  * [x] me
- * [ ] op
+ * [x] op
  * [ ] playsound
  * [ ] replaceitem
- * [ ] say
+ * [x] say
  * [ ] setblock
  * [x] setmaxplayers
  * [ ] setworldspawn
@@ -208,34 +210,47 @@ final class Commands {
 
 	@vanilla @op deop0(WorldCommandSender sender, Player player) {
 		if(player.permissionLevel <= PermissionLevel.operator) {
-			sender.sendMessage(Translation(Messages.deop.success, player.displayName));
 			if(player.operator) {
 				player.operator = false;
 				player.sendMessage(Translation(Messages.deop.message));
 			}
+			sender.sendMessage(Translation(Messages.deop.success, player.displayName));
 		} else {
 			sender.sendMessage(Translation(Messages.deop.failed, player.displayName));
 		}
 	}
 
-	@unimplemented @vanilla deop1(ServerCommandSender sender, string player) {
-		//TODO get player(s) from server.selectPlayers
+	@vanilla deop1(ServerCommandSender sender, string player) {
+		executeOnPlayers(sender, player, (shared PlayerInfo info){
+			if(info.permissionLevel <= PermissionLevel.operator) {
+				if(info.permissionLevel == PermissionLevel.operator) {
+					sender.server.updatePlayerPermissionLevel(info, PermissionLevel.user);
+					//TODO send message to the player
+				}
+				sender.sendMessage(Translation(Messages.deop.success, info.displayName));
+			} else {
+				sender.sendMessage(Format.red, Translation(Messages.deop.failed, info.displayName));
+			}
+		});
 	}
 
 	// difficulty
 	
-	@unimplemented @vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
-		//TODO unsupported by selery
-		//sender.world.difficulty = difficulty;
-		//sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
+	@vanilla @op difficulty0(WorldCommandSender sender, Difficulty difficulty) {
+		sender.world.difficulty = difficulty;
+		sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
 	}
 	
 	@vanilla difficulty1(WorldCommandSender sender, Ranged!(ubyte, 0, 3) difficulty) {
 		this.difficulty0(sender, cast(Difficulty)difficulty.value);
 	}
 
-	@unimplemented @vanilla difficulty2(ServerCommandSender sender, string world, Difficulty difficulty) {
-		//TODO
+	@vanilla difficulty2(ServerCommandSender sender, string world, Difficulty difficulty) {
+		executeOnWorlds(sender, world, (shared WorldInfo info){
+			sender.server.updateWorldDifficulty(info, difficulty);
+			sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
+		});
+
 	}
 
 	@vanilla difficulty3(ServerCommandSender sender, string world, Ranged!(ubyte, 0, 3) difficulty) {
@@ -306,7 +321,12 @@ final class Commands {
 		sender.sendMessage(Translation(Messages.gamemode.successSelf, gamemode));
 	}
 
-	@unimplemented @vanilla gamemode2(ServerCommandSender sender, Gamemode gamemode, string target) {}
+	@vanilla gamemode2(ServerCommandSender sender, Gamemode gamemode, string target) {
+		executeOnPlayers(sender, target, (shared PlayerInfo info){
+			sender.server.updatePlayerGamemode(info, gamemode);
+			sender.sendMessage(Translation(Messages.gamemode.successOther, gamemode, info.displayName));
+		});
+	}
 
 	// gamerule
 
@@ -468,15 +488,17 @@ final class Commands {
 	}
 
 	@vanilla kick2(ServerCommandSender sender, string player, string message) {
-		if(executeIfPlayer(sender, player, (uint hubId){ server.kick(hubId, message); })) {
-			sender.sendMessage(Translation(Messages.kick.successReason, player, message));
-		}
+		executeOnPlayers(sender, player, (shared PlayerInfo info){
+			sender.server.kick(info.hubId, message);
+			sender.sendMessage(Translation(Messages.kick.successReason, info.displayName, message));
+		});
 	}
 
 	@vanilla kick3(ServerCommandSender sender, string player) {
-		if(executeIfPlayer(sender, player, (uint hubId){ server.kick(hubId, "disconnect.closed", []); })) {
-			sender.sendMessage(Translation(Messages.kick.success, player));
-		}
+		executeOnPlayers(sender, player, (shared PlayerInfo info){
+			server.kick(info.hubId, "disconnect.closed", []);
+			sender.sendMessage(Translation(Messages.kick.success, info.displayName));
+		});
 	}
 
 	// kill
@@ -526,7 +548,25 @@ final class Commands {
 		}
 	}
 
-	@unimplemented @vanilla op1(ServerCommandSender sender, string player) {}
+	@vanilla op1(ServerCommandSender sender, string player) {
+		executeOnPlayers(sender, player, (shared PlayerInfo info){
+			if(info.permissionLevel < PermissionLevel.operator) {
+				sender.server.updatePlayerPermissionLevel(info, PermissionLevel.operator);
+				//TODO send message to the player
+				sender.sendMessage(Translation(Messages.op.success, info.displayName));
+			} else {
+				sender.sendMessage(Format.red, Translation(Messages.op.failed, info.displayName));
+			}
+		});
+	}
+
+	// permission
+
+	enum PermissionAction { grant, revoke }
+
+	@unimplemented @op permission0(WorldCommandSender sender, PermissionAction action, Player[] target, string permission) {}
+
+	@unimplemented void permission1(ServerCommandSender sender, PermissionAction action, string target, string permission) {}
 
 	// say
 
@@ -537,7 +577,9 @@ final class Commands {
 		sender.world.broadcast("[" ~ name ~ "] " ~ message); //TODO unformat
 	}
 
-	@unimplemented @vanilla say1(ServerCommandSender sender, string message) {}
+	@vanilla say1(ServerCommandSender sender, string message) {
+		sender.server.broadcast("[@] " ~ message);
+	}
 
 	// seed
 
@@ -786,22 +828,42 @@ private string formatArg(Command.Overload overload) {
 	return p.join(" ");
 }
 
-private bool executeIfPlayer(ServerCommandSender sender, string name, lazy void delegate(uint) del) {
-	if(name == "@a") {
-		foreach(player ; sender.server.players) {
-			del()(player.hubId);
+private void executeOnWorlds(ServerCommandSender sender, string name, void delegate(shared WorldInfo) del) {
+	foreach(world ; sender.server.worlds) {
+		//if(world.name == name) del(world);
+	}
+}
+
+private void executeOnPlayers(ServerCommandSender sender, string name, void delegate(shared PlayerInfo) del) {
+	if(name.startsWith("@")) {
+		if(name == "@a" || name == "@r") {
+			auto players = sender.server.players;
+			if(players.length) {
+				final switch(name) {
+					case "@a":
+						foreach(player ; sender.server.players) {
+							del(player);
+						}
+						break;
+					case "@r":
+						del(players[uniform(0, $)]);
+						break;
+				}
+			} else {
+				sender.sendMessage(Format.red, Translation(Messages.generic.targetNotFound));
+			}
+		} else {
+			sender.sendMessage(Format.red, Translation(Messages.generic.invalidSyntax));
 		}
-		return true;
 	} else {
 		immutable iname = name.toLower();
 		bool executed = false;
 		foreach(player ; sender.server.players) {
 			if(player.lname == iname) {
 				executed = true;
-				del()(player.hubId);
+				del(player);
 			}
 		}
 		if(!executed) sender.sendMessage(Format.red, Translation(Messages.generic.playerNotFound, name));
-		return executed;
 	}
 }

@@ -48,7 +48,7 @@ import selery.about;
 import selery.command.command : Command, CommandSender;
 import selery.command.execute : executeCommand;
 import selery.commands : Commands;
-import selery.config : Config;
+import selery.config : Config, Difficulty, Gamemode;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
 import selery.event.node;
@@ -59,6 +59,7 @@ import selery.node.handler; //TODO selective imports
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.player.java : JavaPlayer;
+import selery.player.player : PermissionLevel;
 import selery.plugin : Plugin, Description;
 import selery.server : Server;
 import selery.util.ip : publicAddresses;
@@ -862,8 +863,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * The list is a copy of the one kept by the server and its
 	 * modification has no effect on the server.
 	 */
-	public shared pure nothrow @property const(WorldInfo)[] worlds() {
-		return cast(const(WorldInfo)[])this._worlds.values;
+	public shared pure nothrow @property shared(WorldInfo)[] worlds() {
+		return this._worlds.values;
 	}
 
 	/**
@@ -910,38 +911,30 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	/**
 	 * Gets a list with all the players in the server.
 	 */
-	public shared pure nothrow @property const(PlayerInfo)[] players() {
-		return cast(const(PlayerInfo)[])this._players.values;
-	}
-
-	/**
-	 * Selects players using a query.
-	 * Example:
-	 * ---
-	 * server.selectPlayers("Steve");
-	 * server.selectPlayers("@a");
-	 * ---
-	 */
-	public shared const(PlayerInfo)[] selectPlayers(string query) {
-		if(query == "@a") {
-			return this.players;
-		} else {
-			PlayerInfo[] players;
-			foreach(player ; this._players) {
-				if(player.name == query) players ~= cast()player;
-			}
-			return players;
-		}
+	public shared pure nothrow @property shared(PlayerInfo)[] players() {
+		return this._players.values;
 	}
 
 	/**
 	 * Broadcasts a message in every registered world and their children
 	 * calling the world's broadcast method.
 	 */
-	public shared void broadcast(E...)(E args) {
+	public shared void broadcast(string message) {
 		foreach(world ; this._worlds) {
-			std.concurrency.send(world.tid, Broadcast(args.to!string, true));
+			std.concurrency.send(cast()world.tid, Broadcast(message));
 		}
+	}
+
+	public shared void updateWorldDifficulty(shared WorldInfo world, Difficulty difficulty) {
+		std.concurrency.send(cast()world.tid, UpdateDifficulty(difficulty));
+	}
+
+	public shared void updatePlayerGamemode(shared PlayerInfo player, Gamemode gamemode) {
+		std.concurrency.send(cast()player.world.tid, UpdatePlayerGamemode(player.hubId, gamemode));
+	}
+
+	public shared void updatePlayerPermissionLevel(shared PlayerInfo player, PermissionLevel permissionLevel) {
+		std.concurrency.send(cast()player.world.tid, UpdatePlayerPermissionLevel(player.hubId, permissionLevel));
 	}
 
 	/**

@@ -278,6 +278,8 @@ class Config {
 
 		bool opCommand = true;
 
+		bool permissionCommand = true;
+
 		bool sayCommand = true;
 
 		bool seedCommand = true;

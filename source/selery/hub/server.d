@@ -452,7 +452,7 @@ class HubServer : PlayerHandler, Server {
 	public shared void handleLog(string node, Log.Message[] messages, ulong timestamp, int commandId, int worldId, string worldName) {
 		Message[] log;
 		if(node.length) log ~= Message("[node/" ~ node ~ "]");
-		if(worldName.length) log ~= Message("[world/" ~ node ~ "]");
+		if(worldName.length) log ~= Message("[world/" ~ worldName ~ "]");
 		if(log.length) log ~= Message(" ");
 		// convert from Log.Message[] to Message[]
 		foreach(message ; messages) {

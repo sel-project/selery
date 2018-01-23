@@ -102,7 +102,6 @@ struct GamePacket {
 struct Broadcast {
 
 	string message;
-	bool children;
 
 }
 

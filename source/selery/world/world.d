@@ -72,6 +72,9 @@ import selery.world.thread;
 
 static import sul.blocks;
 
+/**
+ * Common properties for a group of worlds.
+ */
 final class WorldGroup {
 
 	Random random;
@@ -835,14 +838,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	private void handleBroadcast(Broadcast packet) {
-		if(packet.children) {
-			void broadcastImpl(World world) {
-				world.broadcast(packet.message);
-			}
-			broadcastImpl(this);
-		} else {
-			this.broadcast(packet.message);
-		}
+		this.broadcast(packet.message);
 	}
 
 	private void handleUpdateDifficulty(UpdateDifficulty packet) {

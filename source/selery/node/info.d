@@ -36,7 +36,7 @@ final class PlayerInfo {
 	/**
 	 * Player's id assigned by the hub and unique for the player's session.
 	 */
-	public uint hubId;
+	public immutable uint hubId;
 
 	/**
 	 * Indicates whether the player is still connected to the server.
@@ -77,7 +77,7 @@ final class PlayerInfo {
 	public string deviceModel;
 	public long xuid;
 
-	public shared WorldInfo world;
+	public shared WorldInfo world; // should never be null after initialised by the first Player construction
 
 	public this(Add add) {
 		this.hubId = add.hubId;
@@ -119,7 +119,7 @@ final class WorldInfo {
 	 * World's id, may be given by the server (for main worlds) or by the
 	 * parent world (children worlds).
 	 */
-	public uint id;
+	public immutable uint id;
 
 	/**
 	 * Thread where the world exists.
