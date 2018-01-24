@@ -133,12 +133,12 @@ abstract class JavaPlayer : Player {
 	 * More info on the format: wiki.vg/Chat
 	 */
 	public JSONValue encodeMessage(Message[] messages) {
-		JSONValue[] extra;
+		JSONValue[] array;
 		JSONValue[string] current_format;
 		void parseText(string text) {
-			current_format["text"] = text;
-			extra ~= JSONValue(current_format);
-			current_format.remove("text");
+			auto e = current_format.dup;
+			e["text"] = text;
+			array ~= JSONValue(e);
 		}
 		foreach(message ; messages) {
 			final switch(message.type) {
@@ -165,24 +165,22 @@ abstract class JavaPlayer : Player {
 					}
 					break;
 				case Message.TEXT:
-					current_format["text"] = message.text;
-					extra ~= JSONValue(current_format);
-					current_format.remove("text");
+					parseText(message.text);
 					break;
 				case Message.TRANSLATION:
 					if(message.translation.translatable.java.length) {
-						current_format["translation"] = message.translation.translatable.java;
-						current_format["with"] = message.translation.parameters;
-						extra ~= JSONValue(current_format);
-						current_format.remove("translation");
-						current_format.remove("with");
+						auto e = current_format.dup;
+						e["translate"] = message.translation.translatable.java;
+						e["with"] = message.translation.parameters;
+						array ~= JSONValue(e);
 					} else {
 						parseText(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters, this.language));
 					}
 					break;
 			}
 		}
-		if(extra.length) return JSONValue(["extra": extra]);
+		if(array.length == 1) return array[0];
+		else if(array.length) return JSONValue(["text": JSONValue(""), "extra": JSONValue(array)]);
 		else return JSONValue(["text": ""]);
 	}
 

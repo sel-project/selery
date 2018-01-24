@@ -312,7 +312,7 @@ final class Commands {
 	@vanilla @op @aliases("gm") gamemode0(WorldCommandSender sender, Gamemode gamemode, Player[] target) {
 		foreach(player ; target) {
 			player.gamemode = gamemode;
-			sender.sendMessage(Translation(Messages.gamemode.successOther, gamemode, player.displayName));
+			sender.sendMessage(Translation(Messages.gamemode.successOther, player.displayName, gamemode));
 		}
 	}
 
@@ -324,7 +324,7 @@ final class Commands {
 	@vanilla gamemode2(ServerCommandSender sender, Gamemode gamemode, string target) {
 		executeOnPlayers(sender, target, (shared PlayerInfo info){
 			sender.server.updatePlayerGamemode(info, gamemode);
-			sender.sendMessage(Translation(Messages.gamemode.successOther, gamemode, info.displayName));
+			sender.sendMessage(Translation(Messages.gamemode.successOther, info.displayName, gamemode));
 		});
 	}
 
@@ -386,16 +386,17 @@ final class Commands {
 
 	// help
 
-	@vanilla help0(JavaPlayer sender, int page=1) {
+	@vanilla @aliases("?") help0(JavaPlayer sender, int page=1) {
 		// pocket players have the help command client-side
 		Command[] commands;
 		foreach(name, command; sender.availableCommands) {
+			sender.server.logger.log(name);
 			if(command.name == name && !command.hidden) commands ~= command;
 		}
 		sort!((a, b) => a.name < b.name)(commands);
 		immutable pages = cast(size_t)ceil(commands.length.to!float / 7); // commands.length should always be at least 1 (help command)
 		page = clamp(--page, 0, pages - 1);
-		sender.sendMessage(Format.darkGreen, Messages.help.header, page+1, pages);
+		sender.sendMessage(Format.darkGreen, Translation(Messages.help.header, page+1, pages));
 		foreach(command ; commands[page*7..min($, (page+1)*7)]) {
 			if(command.description.type == Description.EMPTY) sender.sendMessage(command.name);
 			else if(command.description.type == Description.TEXT) sender.sendMessage(command.name, " - ", command.description.text);
@@ -404,7 +405,7 @@ final class Commands {
 		sender.sendMessage(Format.green, Translation(Messages.help.footer));
 	}
 	
-	@vanilla @aliases("?") help1(ServerCommandSender sender) {
+	@vanilla help1(ServerCommandSender sender) {
 		Command[] commands;
 		foreach(name, command; sender.availableCommands) {
 			if(!command.hidden && name == command.name) {
@@ -511,7 +512,7 @@ final class Commands {
 
 	// list
 
-	@vanilla @op list0(CommandSender sender) {
+	@vanilla list0(CommandSender sender) {
 		// list players on the current node
 		sender.sendMessage(Translation(Messages.list.players, sender.server.online, sender.server.max));
 		if(sender.server.online) {
@@ -789,6 +790,22 @@ final class Commands {
 		}
 	}
 
+	// world
+
+	@op world0(CommandSender sender, SingleEnum!"add" add, string name) {
+		sender.server.addWorld(name);
+	}
+
+	void world1(CommandSender sender, SingleEnum!"remove" remove, string name) {
+		executeOnWorlds(sender, name, (shared WorldInfo info){
+			sender.server.removeWorld(info.id);
+		});
+	}
+
+	@unimplemented void world2(CommandSender sender, SingleEnum!"info" info, string name) {}
+
+	@unimplemented void world3(CommandSender sender, SingleEnum!"list" list) {}
+
 }
 
 string convertName(string command, string replacement=" ") {
@@ -828,13 +845,13 @@ private string formatArg(Command.Overload overload) {
 	return p.join(" ");
 }
 
-private void executeOnWorlds(ServerCommandSender sender, string name, void delegate(shared WorldInfo) del) {
+private void executeOnWorlds(CommandSender sender, string name, void delegate(shared WorldInfo) del) {
 	foreach(world ; sender.server.worlds) {
 		if(world.name == name) del(world);
 	}
 }
 
-private void executeOnPlayers(ServerCommandSender sender, string name, void delegate(shared PlayerInfo) del) {
+private void executeOnPlayers(CommandSender sender, string name, void delegate(shared PlayerInfo) del) {
 	if(name.startsWith("@")) {
 		if(name == "@a" || name == "@r") {
 			auto players = sender.server.players;

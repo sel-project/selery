@@ -98,7 +98,7 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 	public bool spawn = true;
 	
 	public this(Player player) {
-		super(player, Message.convert(Format.yellow, Translation("connection.join", player.displayName)));
+		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.joined", player.displayName)));
 	}
 	
 }
@@ -107,7 +107,7 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 final class PlayerDespawnEvent : PlayerAnnounceEvent {
 	
 	public this(Player player) {
-		super(player, Message.convert(Format.yellow, Translation("connection.left", player.displayName)));
+		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.left", player.displayName)));
 	}
 	
 }

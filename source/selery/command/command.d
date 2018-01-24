@@ -385,7 +385,7 @@ class Command {
 private bool checkCommandName(string name) {
 	if(name.length) {
 		foreach(c ; name) {
-			if((c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_') return false;
+			if((c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_' && c != '?') return false;
 		}
 	}
 	return true;

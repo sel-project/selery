@@ -310,6 +310,8 @@ class Config {
 
 		bool weatherCommand = true;
 
+		bool worldCommand = true;
+
 	}
 
 	/**

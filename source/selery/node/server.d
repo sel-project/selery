@@ -1112,7 +1112,10 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	protected override void handlePlayerUpdatePermissionLevel(HncomPlayer.UpdatePermissionLevel packet) {
-		//TODO
+		auto player = packet.hubId in this._players;
+		if(player) {
+			(cast(shared)this).updatePlayerPermissionLevel(*player, cast(PermissionLevel)packet.permissionLevel);
+		}
 	}
 
 	protected override void handlePlayerUpdateViewDistance(HncomPlayer.UpdateViewDistance packet) {

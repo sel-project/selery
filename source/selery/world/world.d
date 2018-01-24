@@ -757,6 +757,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		}
 	}
 
+	// main loop for main worlds (not children)
 	public void startMainWorldLoop() {
 
 		void tickChildren(World world) {
@@ -789,25 +790,27 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			if(duration < 50_000) {
 				Thread.sleep(dur!"usecs"(50_000 - duration));
 			} else {
-				//TODO server is less than 20 tps
+				//TODO server is less than 20 tps!
 			}
 			timer.reset();
 
 		}
 
+		//TODO send CloseResult to the server thread
+
 	}
 
 	private void handleServerPackets() {
 		while(std.concurrency.receiveTimeout(dur!"msecs"(0),
-				&this.handleAddPlayer,
-				&this.handleRemovePlayer,
-				&this.handleGamePacket,
-				&this.handleBroadcast,
-				&this.handleUpdateDifficulty,
-				&this.handleUpdatePlayerGamemode,
-				&this.handleUpdatePlayerPermissionLevel,
-				&this.handleClose,
-			)) {}
+			&this.handleAddPlayer,
+			&this.handleRemovePlayer,
+			&this.handleGamePacket,
+			&this.handleBroadcast,
+			&this.handleUpdateDifficulty,
+			&this.handleUpdatePlayerGamemode,
+			&this.handleUpdatePlayerPermissionLevel,
+			&this.handleClose,
+		)) {}
 	}
 
 	private void handleAddPlayer(AddPlayer packet) {
@@ -816,11 +819,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	private void handleRemovePlayer(RemovePlayer packet) {
-		//TODO could also be in a child
 		auto player = packet.playerId in this.group.playersAA;
 		if(player) {
 			this.group.removePlayer(*player, false); //TODO whether the player has left the server
-			this.despawnPlayer(*player);
+			(*player).world.despawnPlayer(*player);
 			(*player).close();
 		}
 	}
@@ -860,10 +862,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			// cannot close if there are players online in the world or in the children
 			status = CloseResult.PLAYERS_ONLINE;
 		} else {
-			//TODO stop event loop (with exception?)
 			status = CloseResult.REMOVED;
 			this._stopped = true;
 		}
+		//TODO stop and save children
+		//TODO save close result and send it when the main loop terminates
 		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, status));
 	}
 	
@@ -1111,12 +1114,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		// prepare for spawning (send chunks and rules)
 		this.preSpawnPlayer(player);
 
-		// call the spawn event
-		auto event = this.callEventIfExists!PlayerSpawnEvent(player);
-
-		if(event is null || event.announce) {
-			this.broadcast(event.message);
-		}
+		// call the spawn event and broadcast message
+		auto event = new PlayerSpawnEvent(player);
+		this.callEvent(event);
+		if(event.announce) this.broadcast(event.message);
 
 		// spawn to entities
 		this.afterSpawnPlayer(player);
@@ -1193,10 +1194,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		//TODO some packet shouldn't be sent when the player is disconnecting or changing dimension
 		if(this.w_players.remove(player.id)) {
 
-			auto event = this.callEventIfExists!PlayerDespawnEvent(player);
-			if(event is null || event.announce) {
-				this.broadcast(event.message);
-			}
+			auto event = new PlayerDespawnEvent(player);
+			this.callEvent(event);
+			if(event.announce) this.broadcast(event.message);
+
 			foreach(viewer ; player.viewers) {
 				viewer.hide(player);
 			}
