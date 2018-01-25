@@ -669,8 +669,25 @@ private class ServerLogger : Logger {
 
 	public void logWith(Message[] messages, int commandId, int worldId) {
 		super.logImpl(messages);
-		foreach(rcon ; this.server.rcons) {
-			
+		if(this.server.rcons.length) {
+			Appender!string appender;
+			foreach(message ; messages) {
+				final switch(message.type) {
+					case Message.FORMAT:
+						appender.put(cast(string)message.format);
+						break;
+					case Message.TEXT:
+						appender.put(message.text);
+						break;
+					case Message.TRANSLATION:
+						appender.put(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters));
+						break;
+				}
+			}
+			immutable log = appender.data;
+			foreach(rcon ; this.server.rcons) {
+				rcon.consoleMessage(log, commandId);
+			}
 		}
 		foreach(webAdmin ; this.server.webAdmins) {
 			(cast()webAdmin).sendLog(messages, commandId, worldId);
