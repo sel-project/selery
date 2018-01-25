@@ -51,7 +51,7 @@ script:
   - cd ..
 
 after_success:
-  - zip "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}" ; fi
+  - zip "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-x86_64.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about
