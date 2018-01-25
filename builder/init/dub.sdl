@@ -1,0 +1,7 @@
+name "selery-init"
+targetType "executable"
+targetPath ".."
+workingDirectory ".."
+dependency "toml" version="~>0.4.0-rc.4"
+dependency "toml:json" version="~>0.4.0-rc.4"
+sourceFiles "init.d" "../../source/selery/about.d"

@@ -1,8 +1,3 @@
-/+ dub.sdl:
-name "selery-init"
-dependency "toml" version="~>0.4.0-rc.4"
-dependency "toml:json" version="~>0.4.0-rc.4"
-+/
 /*
  * Copyright (c) 2017-2018 SEL
  * 
@@ -32,10 +27,12 @@ import std.stdio : writeln;
 import std.string;
 import std.zip;
 
+import selery.about;
+
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 36;
+enum size_t __GENERATOR__ = 38;
 
 void main(string[] args) {
 
@@ -49,8 +46,6 @@ void main(string[] args) {
 	}
 	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 	
-	auto software = parseJSON(executeShell("cd " ~ libraries ~ "source" ~ dirSeparator ~ "selery && rdmd -version=Main about.d").output)["software"];
-	
 	bool portable = false;
 	string type = "default";
 	
@@ -59,11 +54,11 @@ void main(string[] args) {
 	foreach(arg ; args) {
 		switch(arg.toLower()) {
 			case "--generate-files":
-				write("version.txt", software["displayVersion"].str);
-				write("build.txt", software["stable"].type == JSON_TYPE.TRUE ? "0" : "1");
+				write("version.txt", Software.displayVersion);
+				write("build.txt", Software.stable ? "0" : "1");
 				string[] notes;
 				string history = cast(string)read("../docs/history.md");
-				immutable v = "### " ~ software["displayVersion"].str;
+				immutable v = "### " ~ Software.displayVersion;
 				immutable start = history.indexOf(v) + v.length;
 				immutable end = history[start..$].indexOf("##");
 				write("notes.txt", history[start..(end==-1?$:end)].strip.replace("\n", "\\n"));
@@ -91,7 +86,7 @@ void main(string[] args) {
 		}		
 	}
 
-	writeln("Loading plugins for " ~ software["name"].str ~ " " ~ software["fullVersion"].str ~ " configuration \"" ~ type ~ "\"");
+	writeln("Loading plugins for " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration \"" ~ type ~ "\"");
 
 	if(portable) {
 
@@ -325,7 +320,7 @@ void main(string[] args) {
 					}
 				}
 			}
-			if(api.length == 0 || api.canFind(software["api"].integer)) {
+			if(api.length == 0 || api.canFind(Software.api)) {
 				writeln(inf.name, " ", inf.version_, ": loaded");
 			} else {
 				writeln(inf.name, " ", inf.version_, ": cannot load due to wrong api ", api);
@@ -337,7 +332,7 @@ void main(string[] args) {
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
 	builder["targetPath"] = "..";
-	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ software["displayVersion"].str : "");
+	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ Software.displayVersion : "");
 	builder["targetType"] = "executable";
 	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
