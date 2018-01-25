@@ -31,8 +31,9 @@ deploy:
 
 script:
   - dub build --compiler=$DC --build=$CONFIG
-  - cd builder
-  - dub build --single --compiler=$DC --build=$CONFIG init.d
+  - cd builder/init
+  - dub build --compiler=$DC --build=$CONFIG
+  - cd ..
   - ./selery-init --generate-files
   - SELERY_VERSION=$(<version.txt)
   - ./selery-init hub

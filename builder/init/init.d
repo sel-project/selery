@@ -331,9 +331,10 @@ void main(string[] args) {
 	
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
-	builder["targetPath"] = "..";
-	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ Software.displayVersion : "");
 	builder["targetType"] = "executable";
+	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ Software.displayVersion : "");
+	builder["targetPath"] = "..";
+	builder["workingDirectory"] = "..";
 	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = [
@@ -360,8 +361,8 @@ void main(string[] args) {
 			} else {
 				JSONValue[string] sub;
 				sub["name"] = value.name;
-				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
 				sub["targetType"] = "library";
+				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
 				sub["configurations"] = [["name": "plugin"]];
 				sub["dependencies"] = ["selery": ["path": ".."]];
 				sub["sourcePaths"] = [relativePath(value.path ~ "src")];

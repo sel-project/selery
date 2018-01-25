@@ -106,8 +106,9 @@ before_build:
 
 build_script:
   - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - cd builder
-  - dub build --single --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION% init.d
+  - cd builder\init
+  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
+  - cd ..
   - selery-init --generate-files
   - set /p selery_version=<version.txt
   - set /p selery_build=<build.txt
