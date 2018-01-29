@@ -159,6 +159,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	private shared(uint) _world_count = 0;
 	private shared(uint) _default_world_id = 0; // 0 = no default world
 	private shared(WorldInfo)[uint] _worlds;
+	private shared(WorldInfo)[string] _worlds_names;
+
 	private shared(PlayerInfo)[uint] _players;
 
 	private shared Plugin[] n_plugins;
@@ -838,8 +840,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	/**
 	 * Gets the server's default world.
 	 */
-	public shared pure nothrow @property const(WorldInfo) world() {
-		return cast(const)this._worlds[this._default_world_id];
+	public shared pure nothrow @property shared(WorldInfo) defaultWorld() {
+		return this._worlds[this._default_world_id];
 	}
 
 	/**
@@ -853,17 +855,16 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * assert(server.world == test);
 	 * ---
 	 */
-	public shared pure nothrow @property const(WorldInfo) world(uint id) {
-		assert(id != 0);
+	public shared pure nothrow @property shared(WorldInfo) defaultWorld(uint id) {
 		if(id in this._worlds) {
 			this._default_world_id = id;
 		}
-		return this.world;
+		return this.defaultWorld;
 	}
 
 	/// ditto
-	public shared pure nothrow @property const(WorldInfo) world(inout WorldInfo world) {
-		return this.world = world.id;
+	public shared pure nothrow @property shared(WorldInfo) defaultWorld(shared WorldInfo world) {
+		return this.defaultWorld = world.id;
 	}
 
 	/**
@@ -876,8 +877,18 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
+	 * Gets a world by its name.
+	 * Returns: the WorldInfo of the world with the given name or null if a world with the given name doesn't exists.
+	 */
+	public shared @property shared(WorldInfo) getWorldByName(string name) {
+		auto world = name in this._worlds_names;
+		return world ? *world : null;
+	}
+
+	/**
 	 * Creates and registers a world with its group, initialising its terrain,
 	 * registering events, commands and tasks.
+	 * Returns: the WorldInfo of the created world or null if the a world with the same name already exists.
 	 * Example:
 	 * ---
 	 * server.addWorld("world42"); // normal world
@@ -885,12 +896,17 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * ---
 	 */
 	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(string name, E args) /*if(__traits(compiles, new T(args)))*/ {
-		shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1), name);
-		this._worlds[world.id] = world;
-		bool default_ = this._default_world_id == 0;
-		if(default_) this._default_world_id = world.id;
-		world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, default_, args);
-		return world;
+		if(name !in this._worlds_names) {
+			shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1), name);
+			this._worlds[world.id] = world;
+			this._worlds_names[world.name] = world;
+			bool default_ = this._default_world_id == 0;
+			if(default_) this._default_world_id = world.id;
+			world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, default_, args);
+			return world;
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -902,9 +918,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		auto world = id in this._worlds;
 		if(world) {
 			if((*world).id == this._default_world_id) {
-				this.logger.logWarning(Translation("warning.removingDefaultWorld"));
+				this.logger.logWarning(Translation("warning.removingDefaultWorld", (*world).name));
 			} else {
-				std.concurrency.send(cast()world.tid, Close());
+				std.concurrency.send(cast()world.tid, Close()); // wait for CloseResult before removing the world
 				return true;
 			}
 		}

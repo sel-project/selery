@@ -801,18 +801,28 @@ final class Commands {
 	}
 
 	// world
-
-	@op world0(CommandSender sender, SingleEnum!"add" add, string name) {
-		sender.server.addWorld(name);
+	
+	void world0(CommandSender sender, SingleEnum!"list" list) {
+		string[] names;
+		foreach(world ; sender.server.worlds) names ~= world.name;
+		sender.sendMessage(Translation("commands.world.list", names.length, names.join(", ")));
 	}
 
-	void world1(CommandSender sender, SingleEnum!"remove" remove, string name) {
+	@op world1(CommandSender sender, SingleEnum!"add" add, string name, bool defaultWorld=false) {
+		auto world = sender.server.addWorld(name);
+		if(world) {
+			sender.sendMessage(Translation("commands.world.add.success"));
+			if(defaultWorld) sender.server.defaultWorld = world;
+		} else {
+			sender.sendMessage(Format.red, Translation("commands.world.add.failed"));
+		}
+	}
+
+	void world2(CommandSender sender, SingleEnum!"remove" remove, string name) {
 		executeOnWorlds(sender, name, (shared WorldInfo info){
-			sender.server.removeWorld(info.id);
+			if(sender.server.removeWorld(info.id)) sender.sendMessage(Translation("commands.world.remove.success"));
 		});
 	}
-	
-	@unimplemented void world2(CommandSender sender, SingleEnum!"list" list) {}
 
 	@unimplemented void world3(CommandSender sender, SingleEnum!"info" info, string name) {}
 
@@ -856,8 +866,11 @@ private string formatArg(Command.Overload overload) {
 }
 
 private void executeOnWorlds(CommandSender sender, string name, void delegate(shared WorldInfo) del) {
-	foreach(world ; sender.server.worlds) {
-		if(world.name == name) del(world);
+	auto world = sender.server.getWorldByName(name);
+	if(world !is null) {
+		del(world);
+	} else {
+		sender.sendMessage(Format.red, Translation("commands.world.notFound", name));
 	}
 }
 

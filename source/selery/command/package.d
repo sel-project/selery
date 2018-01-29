@@ -23,4 +23,4 @@
 module selery.command;
 
 public import selery.command.command : Command;
-public import selery.command.util : CommandSender, WorldCommandSender, SingleEnum, SnakeCaseEnum, Position, Target;
+public import selery.command.util : CommandSender, WorldCommandSender, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;

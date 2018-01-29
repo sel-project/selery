@@ -82,6 +82,10 @@ abstract class PlayerAnnounceEvent : PlayerEvent {
 	public final pure nothrow @property @safe @nogc Message[] message(Message[] message) {
 		return this.m_message = message;
 	}
+
+	public final @property Message[] message(string message) {
+		return this.m_message = [Message(message)];
+	}
 	
 	public final @property @safe Message[] message(bool display) {
 		if(display) this.m_message = this.def;

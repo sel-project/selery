@@ -34,7 +34,7 @@ public import selery.node.server : NodeServer, ServerCommandSender;
 // plugin
 public import selery.node.plugin.config : Config, _, Value, value;
 public import selery.node.plugin.file : exists, isDir, isFile, read, write, remove;
-public import selery.node.plugin.plugin : NodePlugin, PluginOf, start, reload, stop, event, global, inherit, cancel, command, op, hidden;
+public import selery.node.plugin.plugin : NodePlugin, PluginOf, start, stop, event, global, inherit, cancel, command, op, permission, unimplemented, hidden;
 
 // command sender
 public import selery.player.player : Player;
