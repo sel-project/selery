@@ -227,11 +227,7 @@ class Command {
 
 		public override bool callableBy(CommandSender sender) {
 			static if(is(C == CommandSender)) return true;
-			else {
-				import std.stdio : writeln;
-				writeln("casting ", sender, " to ", C.stringof, ": ", cast(C)sender !is null);
-				return cast(C)sender !is null;
-			}
+			else return cast(C)sender !is null;
 		}
 		
 		public override CommandResult callArgs(CommandSender _sender, string args) {

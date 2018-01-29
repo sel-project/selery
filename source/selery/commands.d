@@ -575,7 +575,9 @@ final class Commands {
 
 	@unimplemented @op permission0(WorldCommandSender sender, PermissionAction action, Player[] target, string permission) {}
 
-	@unimplemented void permission1(ServerCommandSender sender, PermissionAction action, string target, string permission) {}
+	@unimplemented void permission1(WorldCommandSender sender, SingleEnum!"list" list, Player target) {}
+
+	@unimplemented void permission2(ServerCommandSender sender, PermissionAction action, string target, string permission) {}
 
 	// say
 
@@ -809,10 +811,10 @@ final class Commands {
 			sender.server.removeWorld(info.id);
 		});
 	}
+	
+	@unimplemented void world2(CommandSender sender, SingleEnum!"list" list) {}
 
-	@unimplemented void world2(CommandSender sender, SingleEnum!"info" info, string name) {}
-
-	@unimplemented void world3(CommandSender sender, SingleEnum!"list" list) {}
+	@unimplemented void world3(CommandSender sender, SingleEnum!"info" info, string name) {}
 
 }
 

@@ -790,8 +790,6 @@ abstract class Player : Human, WorldCommandSender {
 	public Command registerCommand(Command _command) {
 		auto command = _command.clone();
 		foreach(overload ; _command.overloads) {
-			import std.stdio : writeln;
-			writeln(_command.name);
 			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
 		if(command.overloads.length) {
