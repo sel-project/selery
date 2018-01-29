@@ -86,8 +86,6 @@ void main(string[] args) {
 		}		
 	}
 
-	writeln("Loading plugins for " ~ Software.name ~ " " ~ Software.fullVersion ~ " configuration \"" ~ type ~ "\"");
-
 	if(portable) {
 
 		auto zip = new ZipArchive();
@@ -117,96 +115,98 @@ void main(string[] args) {
 
 	TOMLDocument[string] plugs; // plugs[location] = settingsfile
 
-	bool loadPlugin(string path) {
-		if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
-		foreach(pack ; ["plugin.toml", "plugin.json"]) {
-			if(exists(path ~ pack)) {
-				if(pack.endsWith(".toml")) {
-					auto toml = parseTOML(cast(string)read(path ~ pack));
-					toml["single"] = false;
-					plugs[path] = toml;
-					return true;
-				} else {
-					auto json = parseJSON(cast(string)read(path ~ pack));
-					if(json.type == JSON_TYPE.OBJECT) {
-						json["single"] = false;
-						plugs[path] = TOMLDocument(toTOML(json).table);
+	if(plugins) {
+
+		bool loadPlugin(string path) {
+			if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
+			foreach(pack ; ["plugin.toml", "plugin.json"]) {
+				if(exists(path ~ pack)) {
+					if(pack.endsWith(".toml")) {
+						auto toml = parseTOML(cast(string)read(path ~ pack));
+						toml["single"] = false;
+						plugs[path] = toml;
 						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-	
-	void loadZippedPlugin(string path) {
-		// unzip and load as normal plugin
-		auto data = read(path);
-		auto zip = new ZipArchive(data);
-		immutable name = path[path.lastIndexOf("/")+1..$-4];
-		immutable dest = ".selery/plugins/" ~ name ~ "/";
-		bool update = true;
-		if(exists(dest)) {
-			if(exists(dest ~ "crc32")) {
-				update = false;
-				auto json = parseJSON(cast(string)read(dest ~ "crc32")).object;
-				// compare file names
-				if(sort(json.keys).release() != sort(zip.directory.keys).release()) update = true;
-				else {
-					// compare file's crc32
-					foreach(name, member; zip.directory) {
-						if(member.crc32 != json[name].integer) {
-							update = true;
-							break;
+					} else {
+						auto json = parseJSON(cast(string)read(path ~ pack));
+						if(json.type == JSON_TYPE.OBJECT) {
+							json["single"] = false;
+							plugs[path] = TOMLDocument(toTOML(json).table);
+							return true;
 						}
 					}
 				}
 			}
-			if(update) {
-				foreach(string file ; dirEntries(dest, SpanMode.breadth)) {
-					if(file.isFile) remove(file);
-				}
-			}
-		} else {
-			mkdirRecurse(dest);
+			return false;
 		}
-		if(update) {
-			JSONValue[string] files;
-			foreach(name, member; zip.directory) {
-				files[name] = member.crc32;
-				if(!name.endsWith("/")) {
-					zip.expand(member);
-					if(name.indexOf("/") != -1) mkdirRecurse(dest ~ name[0..name.lastIndexOf("/")]);
-					write(dest ~ name, member.expandedData);
-				}
-			}
-			write(dest ~ "crc32", JSONValue(files).toString());
-		}
-		if(!loadPlugin(dest)) loadPlugin(dest ~ name);
-	}
-
-	void loadSinglePlugin(string location) {
-		immutable name = location[location.lastIndexOf("/")+1..$-2].replace("-", "_");
-		foreach(line ; split(cast(string)read(location), "\n")) {
-			if(line.strip.startsWith("module") && line[6..$].strip.startsWith(name ~ ";")) {
-				string main = name ~ ".";
-				bool uppercase = true;
-				foreach(c ; name) {
-					if(c == '_') {
-						uppercase = true;
-					} else {
-						if(uppercase) main ~= toUpper("" ~ c);
-						else main ~= c;
-						uppercase = false;
+		
+		void loadZippedPlugin(string path) {
+			// unzip and load as normal plugin
+			auto data = read(path);
+			auto zip = new ZipArchive(data);
+			immutable name = path[path.lastIndexOf("/")+1..$-4];
+			immutable dest = ".selery/plugins/" ~ name ~ "/";
+			bool update = true;
+			if(exists(dest)) {
+				if(exists(dest ~ "crc32")) {
+					update = false;
+					auto json = parseJSON(cast(string)read(dest ~ "crc32")).object;
+					// compare file names
+					if(sort(json.keys).release() != sort(zip.directory.keys).release()) update = true;
+					else {
+						// compare file's crc32
+						foreach(name, member; zip.directory) {
+							if(member.crc32 != json[name].integer) {
+								update = true;
+								break;
+							}
+						}
 					}
 				}
-				plugs[location] = TOMLDocument(["name": TOMLValue(name.replace("_", "-")), "main": TOMLValue(main)]);
-				break;
+				if(update) {
+					foreach(string file ; dirEntries(dest, SpanMode.breadth)) {
+						if(file.isFile) remove(file);
+					}
+				}
+			} else {
+				mkdirRecurse(dest);
+			}
+			if(update) {
+				JSONValue[string] files;
+				foreach(name, member; zip.directory) {
+					files[name] = member.crc32;
+					if(!name.endsWith("/")) {
+						zip.expand(member);
+						if(name.indexOf("/") != -1) mkdirRecurse(dest ~ name[0..name.lastIndexOf("/")]);
+						write(dest ~ name, member.expandedData);
+					}
+				}
+				write(dest ~ "crc32", JSONValue(files).toString());
+			}
+			if(!loadPlugin(dest)) loadPlugin(dest ~ name);
+		}
+
+		void loadSinglePlugin(string location) {
+			immutable name = location[location.lastIndexOf("/")+1..$-2].replace("-", "_");
+			foreach(line ; split(cast(string)read(location), "\n")) {
+				if(line.strip.startsWith("module") && line[6..$].strip.startsWith(name ~ ";")) {
+					string main = name ~ ".";
+					bool uppercase = true;
+					foreach(c ; name) {
+						if(c == '_') {
+							uppercase = true;
+						} else {
+							if(uppercase) main ~= toUpper("" ~ c);
+							else main ~= c;
+							uppercase = false;
+						}
+					}
+					plugs[location] = TOMLDocument(["name": TOMLValue(name.replace("_", "-")), "main": TOMLValue(main)]);
+					break;
+				}
 			}
 		}
-	}
 
-	if(plugins) {
+		writeln("Loading plugins for ", Software.name, " ", Software.fullVersion, " configuration \"", type, "\"");
 
 		// load plugins in plugins folder
 		if(exists("../plugins")) {

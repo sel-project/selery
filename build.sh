@@ -5,8 +5,8 @@
 #
 
 case $(uname -m) in
-    x86_64|amd64) ARCH=x86_64; MODEL=64;;
-    i*86) ARCH=x86; MODEL=32;;
+    x86_64|amd64) ARCH=x86_64;;
+    i*86) ARCH=x86;;
     *)
         fatal "Unsupported Arch $(uname -m)"
         ;;
@@ -16,6 +16,7 @@ COMPILER=dmd
 BUILD=debug
 CONFIG=default
 PORTABLE=
+PLUGINS=
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -44,11 +45,15 @@ while [[ $# -gt 0 ]]; do
 			PORTABLE=--portable
 			;;
 			
+		-np | --no-plugins)
+			PLUGINS=--no-plugins
+			;;
+			
 	esac
 	shift
 done
 
 cd builder/init
-dub run --compiler=$COMPILER --build=$BUILD --arch=$ARCH -- $CONFIG $PORTABLE
+dub run --compiler=$COMPILER --build=$BUILD --arch=$ARCH -- $CONFIG $PORTABLE $PLUGINS
 cd ..
 dub build --compiler=$COMPILER --build=$BUILD --arch=$ARCH
