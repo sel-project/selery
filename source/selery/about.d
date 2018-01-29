@@ -104,11 +104,11 @@ const struct Software {
 	enum ubyte[3] versions = [major, minor, patch];
 	
 	/**
-	 * Indicates whether the current state of the software is stable.
-	 * Unstable versions are not fully tested and may fail to compile
-	 * on some systems.
+	 * Indicates whether the current version of the software is a release.
+	 * Development (non-release) versions are not fully tested and may fail
+	 * to compile on some systems.
 	 */
-	enum bool stable = false;
+	enum bool release = false;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the
@@ -121,7 +121,7 @@ const struct Software {
 	 * Full version of the software prefixed with a `v` and suffixed
 	 * with a build version if the version is not stable.
 	 */
-	enum string fullVersion = "v" ~ displayVersion ~ (!stable ? "-unstable" : "");
+	enum string fullVersion = "v" ~ displayVersion ~ (!release ? "-dev" : "");
 	
 	/**
 	 * Display name of the software that contains both the software name
@@ -139,7 +139,7 @@ const struct Software {
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
-		foreach(member ; TypeTuple!("name", "website", "stable", "displayVersion", "fullVersion", "codename", "display", "api")) {
+		foreach(member ; TypeTuple!("name", "website", "release", "displayVersion", "fullVersion", "codename", "display", "api")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];
@@ -201,17 +201,5 @@ version(D_Ddoc) {
 	else version(OSX) enum bool __supported = false;
 	else version(Android) enum bool __supported = false;
 	else enum bool __supported = false;
-
-}
-
-version(Main) {
-
-	import std.stdio : write;
-
-	void main(string[] args) {
-
-		write(JSONValue(["software": Software.toJSON(), "java": JSONValue(supportedJavaProtocols), "bedrock": JSONValue(supportedBedrockProtocols)]));
-
-	}
 
 }

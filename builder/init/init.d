@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 38;
+enum size_t __GENERATOR__ = 39;
 
 void main(string[] args) {
 
@@ -63,7 +63,7 @@ void main(string[] args) {
 		switch(arg.toLower()) {
 			case "--generate-files":
 				write("version.txt", Software.displayVersion);
-				write("build.txt", Software.stable ? "0" : "1");
+				write("build.txt", Software.release ? "0" : "1");
 				string[] notes;
 				string history = cast(string)read("../docs/history.md");
 				immutable v = "### " ~ Software.displayVersion;
