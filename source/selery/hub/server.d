@@ -607,7 +607,7 @@ class HubServer : PlayerHandler, Server {
 		auto player = client.id in this._players;
 		if(player) {
 			this._players.remove(client.id);
-			//TODO notify the connected node
+			(*player).onClosed(); // remove from the node
 		}
 	}
 

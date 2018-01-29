@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Copyright: (c) 2018 SEL
-# License: LGPL-3.0
+# Copyright: 2017-2018 sel-project
+# License: MIT
 #
 
 case $(uname -m) in

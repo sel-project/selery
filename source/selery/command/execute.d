@@ -25,7 +25,6 @@ module selery.command.execute;
 import std.string : strip, indexOf;
 import std.traits : isAbstractClass;
 
-import selery.command.args : CommandArg;
 import selery.command.command : CommandResult, Command;
 import selery.command.util : CommandSender;
 

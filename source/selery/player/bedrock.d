@@ -41,7 +41,6 @@ import sel.nbt.tags;
 import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.tile : Tile;
-import selery.command.args : CommandArg;
 import selery.command.command : Command, Position, Target;
 import selery.command.util : PocketType;
 import selery.config : Gamemode, Difficulty, Dimension, Files;

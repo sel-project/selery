@@ -458,7 +458,6 @@ class PlayerSession {
 	 */
 	protected shared void onTimedOut() {
 		this._node.onPlayerTimedOut(this);
-		this.close();
 	}
 	
 	/**
@@ -468,7 +467,6 @@ class PlayerSession {
 	 */
 	protected shared void onClosedByClient() {
 		this._node.onPlayerLeft(this);
-		this.close();
 	}
 	
 	/**
@@ -479,14 +477,9 @@ class PlayerSession {
 		this._node.onPlayerKicked(this);
 		this.kick(reason, false, []);
 	}
-	
-	/**
-	 * Closes every connection with the client and
-	 * removes the session from the handler and the
-	 * server (if registered to it).
-	 */
-	protected shared void close() {
-		//TODO is this method still necessary?
+
+	public shared void onClosed() {
+		this._node.onPlayerLeft(this);
 	}
 	
 }

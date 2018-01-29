@@ -29,7 +29,7 @@ import std.meta : staticIndexOf, Reverse;
 import std.string : toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, hasUDA, getUDAs, isIntegral, isFloatingPoint;
 
-import selery.command.args : StringReader, CommandArg;
+import selery.command.args : StringReader;
 import selery.command.util : PocketType, CommandSender, WorldCommandSender, Ranged, isRanged, Target, Position;
 import selery.entity.entity : Entity;
 import selery.event.node.command : CommandNotFoundEvent, CommandFailedEvent;
@@ -227,7 +227,11 @@ class Command {
 
 		public override bool callableBy(CommandSender sender) {
 			static if(is(C == CommandSender)) return true;
-			else return cast(C)sender !is null;
+			else {
+				import std.stdio : writeln;
+				writeln("casting ", sender, " to ", C.stringof, ": ", cast(C)sender !is null);
+				return cast(C)sender !is null;
+			}
 		}
 		
 		public override CommandResult callArgs(CommandSender _sender, string args) {
@@ -349,7 +353,7 @@ class Command {
 	immutable string[] aliases;
 
 	immutable ubyte permissionLevel;
-	string[] permissions;
+	immutable string[] permissions;
 	immutable bool hidden;
 
 	Overload[] overloads;
@@ -361,8 +365,16 @@ class Command {
 		this.description = description;
 		this.aliases = aliases.idup;
 		this.permissionLevel = permissionLevel;
-		this.permissions = permissions;
+		this.permissions = permissions.idup;
 		this.hidden = hidden;
+	}
+
+	/**
+	 * Returns a new command with the same settings (name, description, ...)
+	 * but without any overload.
+	 */
+	public Command clone() {
+		return new Command(this.name, cast()this.description, cast(string[])this.aliases, this.permissionLevel, cast(string[])this.permissions, this.hidden);
 	}
 
 	/**

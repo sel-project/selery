@@ -37,7 +37,6 @@ import selery.about;
 import selery.block.block : Block, PlacedBlock;
 import selery.block.blocks : Blocks;
 import selery.block.tile : Tile, Container;
-import selery.command.args : CommandArg;
 import selery.command.command : Command, WorldCommandSender;
 import selery.command.execute : executeCommand;
 import selery.config : Gamemode, Difficulty, Dimension;
@@ -789,8 +788,10 @@ abstract class Player : Human, WorldCommandSender {
 	 * Adds a new command using a command-container class.
 	 */
 	public Command registerCommand(Command _command) {
-		auto command = new Command(_command.name, _command.description, _command.aliases.dup, _command.permissionLevel, _command.permissions, _command.hidden);
+		auto command = _command.clone();
 		foreach(overload ; _command.overloads) {
+			import std.stdio : writeln;
+			writeln(_command.name);
 			if(overload.callableBy(this)) command.overloads ~= overload;
 		}
 		if(command.overloads.length) {

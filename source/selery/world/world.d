@@ -1111,7 +1111,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		// register server's commands
 		foreach(name, command; this.server.commands) {
-			if(name != command.name) player.registerCommand(cast()command);
+			player.registerCommand(cast()command);
 		}
 
 		// register world's commands
