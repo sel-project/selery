@@ -228,7 +228,7 @@ void loadPluginAttributes(bool main, EventBase, GlobalEventBase, bool inheritanc
 				enum c = getUDAs!(F, command)[0];
 				static if(hasUDA!(F, permissionLevel)) enum pl = getUDAs!(F, permissionLevel)[0].permissionLevel;
 				else enum ubyte pl = 0;
-				static if(hasUDA!(F, permission)) enum p = getUDAs!(F, permission).permissions;
+				static if(hasUDA!(F, permission)) enum p = getUDAs!(F, permission)[0].permissions;
 				else enum string[] p = [];
 				storage.registerCommand!F(mixin(del), c.command, c.description, c.aliases, pl, p, hasUDA!(F, hidden), !hasUDA!(F, unimplemented));
 			}

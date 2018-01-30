@@ -38,10 +38,10 @@ import selery.world.world : World;
 void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, bool default_, E args) if(!isAbstractClass!T && __traits(compiles, new T(args))) {
 
 	Thread.getThis().name = "world#" ~ to!string(info.id);
+	
+	T world = new T(args);
 
 	try {
-
-		T world = new T(args);
 
 		//TODO register default events
 		//TODO register specific events
@@ -54,6 +54,8 @@ void spawnWorld(T:World, E...)(shared NodeServer server, shared WorldInfo info, 
 
 		server.logger.logError(t);
 		throw t;
+
+		//TODO force the world to stop
 
 	}
 
@@ -71,31 +73,6 @@ struct AddPlayer {
 struct RemovePlayer {
 
 	uint playerId;
-
-}
-
-// world to server
-struct KickPlayer {
-	
-	uint playerId;
-	string reason;
-	bool translation;
-	string[] args;
-
-}
-
-// world to server
-struct TransferPlayer {
-	
-	uint playerId;
-
-}
-
-// world to server
-struct MovePlayer {
-
-	uint playerId;
-	uint worldId;
 
 }
 

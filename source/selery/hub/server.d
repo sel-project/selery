@@ -181,7 +181,7 @@ class HubServer : PlayerHandler, Server {
 
 		terminal.setTitle(config.hub.displayName ~ " | " ~ (!lite ? "hub | " : "") ~ Software.simpleDisplay);
 		
-		this.load(config); //TODO collect error messages
+		Message[][] errors = this.load(config);
 
 		this._logger = cast(shared)new ServerLogger(this, &terminal);
 		
@@ -189,6 +189,11 @@ class HubServer : PlayerHandler, Server {
 		
 		static if(!__supported) {
 			this.logger.logWarning(Translation("startup.unsupported", [Software.name]));
+		}
+
+		// print error message from config loading
+		foreach(message ; errors) {
+			this.logger.logMessage(message);
 		}
 
 		foreach(plugin ; plugins) {
@@ -264,7 +269,8 @@ class HubServer : PlayerHandler, Server {
 	 * - validate accepted language(s)
 	 * - load languages
 	 */
-	private shared void load(ref Config config) {
+	private shared Message[][] load(ref Config config) {
+		Message[][] errors;
 		// MOTDs and protocols
 		this._info.motd.raw = config.hub.displayName;
 		if(config.hub.bedrock) with(config.hub.bedrock) {
@@ -300,7 +306,7 @@ class HubServer : PlayerHandler, Server {
 					static import std.net.curl;
 					std.net.curl.download(config.hub.favicon, config.files.temp ~ cached);
 				} catch(CurlException e) {
-					this.logger.logWarning(Translation("warning.iconFailed", [config.hub.favicon, e.msg]));
+					errors ~= Message.convert(Format.yellow, Translation("warning.iconFailed", config.hub.favicon, e.msg));
 				}
 			}
 			if(config.files.hasTemp(cached)) {
@@ -314,7 +320,7 @@ class HubServer : PlayerHandler, Server {
 				if(header.width == 64 && header.height == 64) valid = true;
 			} catch(ImageIOException) {}
 			if(!valid) {
-				this.logger.logWarning(Translation("warning.invalidIcon", [config.hub.favicon]));
+				errors ~= Message.convert(Format.yellow, Translation("warning.invalidIcon", config.hub.favicon));
 				icon = Icon.init;
 			}
 		}
@@ -322,6 +328,7 @@ class HubServer : PlayerHandler, Server {
 		this._info.favicon = this._icon.base64data;
 		// save new config
 		this._config = cast(shared)config;
+		return errors;
 	}
 
 	public shared void shutdown() {

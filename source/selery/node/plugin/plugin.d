@@ -34,7 +34,13 @@ import selery.event.world : WorldEvent;
 import selery.node.server : NodeServer;
 import selery.server : Server;
 
-interface NodePlugin {}
+abstract class NodePlugin {
+
+	//@disable this();
+
+	protected shared NodeServer server;
+
+}
 
 class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 
@@ -51,11 +57,8 @@ class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
 	public override void load(shared Server server) {
 		static if(!is(T == Object)) {
 			auto node = cast(shared NodeServer)server;
-			static if(is(typeof(T.__ctor)) && Parameters!(T.__ctor).length == 1 && is(Parameters!(T.__ctor)[0] == typeof(node))) {
-				T main = new T(node);
-			} else {
-				T main = new T();
-			}
+			T main = new T();
+			main.server = node;
 			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()node);
 		}
 	}

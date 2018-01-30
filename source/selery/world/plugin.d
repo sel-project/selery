@@ -29,7 +29,7 @@ import std.traits : hasUDA, getUDAs, Parameters;
 
 import selery.about : tick_t;
 import selery.event.event : CancellableOf;
-import selery.plugin : event, cancel, command, op, hidden;
+import selery.plugin : event, cancel, command, op, hidden, permissionLevel, permission, unimplemented;
 import selery.world.world : World;
 
 void loadWorld(T:World)(T world, int oldState, uint newState) {
@@ -48,7 +48,11 @@ void loadWorld(T:World)(T world, int oldState, uint newState) {
 				static assert(getUDAs!(F, command).length == 1);
 				auto del = mixin("&world." ~ member);
 				enum c = getUDAs!(F, command)[0];
-				updateSymbols!(getStates!F)(getStates!F, oldState, newState, { world.registerCommand!F(del, c.command, c.description, c.aliases, hasUDA!(F, op), hasUDA!(F, hidden)); }, { world.unregisterCommand(c.command); });
+				static if(hasUDA!(F, permissionLevel)) enum pl = getUDAs!(F, permissionLevel)[0].permissionLevel;
+				else enum ubyte pl = 0;
+				static if(hasUDA!(F, permission)) enum p = getUDAs!(F, permission)[0].permissions;
+				else enum string[] p = [];
+				updateSymbols!(getStates!F)(getStates!F, oldState, newState, { world.registerCommand!F(del, c.command, c.description, c.aliases, pl, p, hasUDA!(F, hidden), !hasUDA!(F, unimplemented)); }, { world.unregisterCommand(c.command); });
 			}
 			static if(hasUDA!(F, event)) {
 				static assert(Parameters!F.length == 1);

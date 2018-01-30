@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 39;
+enum size_t __GENERATOR__ = 40;
 
 void main(string[] args) {
 
@@ -155,9 +155,9 @@ void main(string[] args) {
 			immutable dest = ".selery/plugins/" ~ name ~ "/";
 			bool update = true;
 			if(exists(dest)) {
-				if(exists(dest ~ "crc32")) {
+				if(exists(dest ~ "crc32.json")) {
 					update = false;
-					auto json = parseJSON(cast(string)read(dest ~ "crc32")).object;
+					auto json = parseJSON(cast(string)read(dest ~ "crc32.json")).object;
 					// compare file names
 					if(sort(json.keys).release() != sort(zip.directory.keys).release()) update = true;
 					else {
@@ -188,7 +188,7 @@ void main(string[] args) {
 						write(dest ~ name, member.expandedData);
 					}
 				}
-				write(dest ~ "crc32", JSONValue(files).toString());
+				write(dest ~ "crc32.json", JSONValue(files).toString());
 			}
 			if(!loadPlugin(dest)) loadPlugin(dest ~ name);
 		}
@@ -273,16 +273,11 @@ void main(string[] args) {
 					plugin.mod = spl[0];
 					plugin.main = main.str;
 				} else {
-					string[] m;
-					foreach(string s ; spl) {
-						if(s == s.idup.toLower) {
-							m ~= s;
-						} else {
-							break;
-						}
+					immutable m = main.str.lastIndexOf(".");
+					if(m != -1) {
+						plugin.mod = main.str[0..m];
+						plugin.main = main.str;
 					}
-					plugin.mod = m.join(".");
-					plugin.main = main.str;
 				}
 			}
 			if(plugin.single.length) {

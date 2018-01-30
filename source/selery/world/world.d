@@ -67,7 +67,7 @@ import selery.node.server : NodeServer;
 import selery.player.bedrock : BedrockPlayerImpl;
 import selery.player.java : JavaPlayerImpl;
 import selery.player.player : Player, isPlayer;
-import selery.plugin : Plugin, loadPluginAttributes;
+import selery.plugin : Plugin, loadPluginAttributes, Description;
 import selery.util.color : Color;
 import selery.util.random : Random;
 import selery.util.util : call;
@@ -804,7 +804,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		}
 
-		//TODO send CloseResult to the server thread
+		//TODO send RemoveWorld to the hub (children will be removed automatically)
+
+		//TODO save this world and children
+		//this.saveAll();
+
+		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, CloseResult.REMOVED));
 
 	}
 
@@ -865,17 +870,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	private void handleClose(Close packet) {
-		ubyte status;
 		if(this.group.players.length) {
 			// cannot close if there are players online in the world or in the children
-			status = CloseResult.PLAYERS_ONLINE;
+			// the world is not stopped
+			std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, CloseResult.PLAYERS_ONLINE));
 		} else {
-			status = CloseResult.REMOVED;
+			// the world will be stopped at the end of the next tick
 			this._stopped = true;
 		}
-		//TODO stop and save children
-		//TODO save close result and send it when the main loop terminates
-		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, status));
 	}
 	
 	/*
@@ -1009,6 +1011,18 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public final pure nothrow @property @safe @nogc tick_t ticks() {
 		return this.n_ticks;
 	}
+	
+	/**
+	 * Logs a message into the server's console as this world but without
+	 * sending it to the players.
+	 */
+	public void log(E...)(E args) {
+		this.logImpl(Message.convert(args));
+	}
+	
+	protected void logImpl(Message[] messages) {
+		this.server.logWorld(messages, this.id); //TODO that doesn't print the world's name in standalone nodes
+	}
 
 	/**
 	 * Broadcasts a message (raw or translatable) to every player in the world.
@@ -1019,20 +1033,19 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	protected void broadcastImpl(Message[] message) {
-		foreach(player ; this.w_players) player.sendMessage(message);
+		foreach(player ; this.group.players) player.sendMessage(message);
 		this.logImpl(message);
 	}
 
 	/**
-	 * Logs a message into the server's console as this world but without
-	 * sending it to the players.
+	 * Broadcasts a tip to the players in the world.
 	 */
-	public void log(E...)(E args) {
-		this.logImpl(Message.convert(args));
+	public final void broadcastTip(E...)(E args) {
+		this.broadcastTipImpl(Message.convert(args));
 	}
 
-	protected void logImpl(Message[] messages) {
-		this.server.logWorld(messages, this.id); //TODO that doesn't print the world's name in standalone nodes
+	protected void broadcastTipImpl(Message[] message) {
+		foreach(player ; this.group.players) player.sendTip(message);
 	}
 
 	/**
@@ -1776,7 +1789,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Registers a command.
 	 */
-	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Message description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden, bool implemented=true) {
+	public void registerCommand(alias func)(void delegate(Parameters!func) del, string command, Description description, string[] aliases, ubyte permissionLevel, string[] permissions, bool hidden, bool implemented=true) {
 		command = command.toLower;
 		if(command !in this.commands) this.commands[command] = new Command(command, description, aliases, permissionLevel, permissions, hidden);
 		auto ptr = command in this.commands;
