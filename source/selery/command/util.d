@@ -37,6 +37,8 @@ import selery.node.server : NodeServer;
 import selery.player.player : Player, Gamemode;
 import selery.world.world : World;
 
+import transforms.snake;
+
 /**
  * Interface for command senders.
  */
@@ -158,27 +160,11 @@ template SnakeCaseEnum(T) if(is(T == enum)) {
 	mixin("enum SnakeCaseEnum {" ~ (){
 		string ret;
 		foreach(immutable member ; __traits(allMembers, T)) {
-			ret ~= toSnakeCase(member) ~ "=T." ~ member ~ ",";
+			ret ~= member.snakeCaseCT ~ "=T." ~ member ~ ",";
 		}
 		return ret;
 	}() ~ "}");
 	
-}
-
-private string toSnakeCase(string str) {
-	string ret;
-	bool noUpper = true;
-	foreach(c ; str) {
-		if(c >= 'A' && c <= 'Z') {
-			if(noUpper) ret ~= c + 32;
-			else ret ~= "_" ~ cast(char)(c + 32);
-			noUpper = true;
-		} else {
-			ret ~= c;
-			noUpper = false;
-		}
-	}
-	return ret;
 }
 
 struct Ranged(T, string _type, T _min, T _max) if((isIntegral!T || isFloatingPoint!T) && _min < _max && (_type == "[]" || _type == "(]" || _type == "[)" || _type == "()")) {

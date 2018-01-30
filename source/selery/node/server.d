@@ -306,16 +306,10 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		// save latest language used
 		config.files.writeTemp("lang", config.hub.language);
 
-		version(Windows) {
-			if(!this.lite) executeShell("title " ~ info.displayName ~ " ^| node ^| " ~ Software.simpleDisplay); //TODO use Terminal
-		}
+		if(!this.lite) this.logger.terminal.setTitle(info.displayName ~ " | node | " ~ Software.simpleDisplay);
 
 		// reload languages
 		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
-		foreach(_plugin ; this.n_plugins) {
-			auto plugin = cast()_plugin;
-			if(plugin.languages !is null) config.lang.add(plugin.languages);
-		}
 
 		void handleGameInfo(ubyte type, HncomLogin.HubInfo.GameInfo info) {
 			void set(ref Config.Hub.Game game) {
@@ -420,6 +414,15 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
 		}
 
+		// load plugin's language files
+		foreach(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
+			if(plugin.languages !is null) {
+				//TODO parse every file
+				//TODO add to lang and send to the hub
+			}
+		}
+
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomLogin.NodeInfo nodeInfo;
 		uint[][ubyte] games;
@@ -488,8 +491,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			// receive messages
 			std.concurrency.receive(
 				&handlePromptCommand,
-				//TODO kick (wolrd)
-				//TODO close result (world)
+				&handleCloseResult,
 				(immutable(ubyte)[] payload){
 					// from the hub
 					if(payload.length) {
@@ -681,7 +683,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	/**
 	 * Gets the server's social informations like website and social
-	 * networks names.
+	 * networks' names.
 	 * Example:
 	 * ---
 	 * if(server.social.facebook.length) {
@@ -710,9 +712,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * Example:
 	 * ---
 	 * if(server.hubAddress.toAddrString() == "127.0.0.1") {
-	 *    log("the hub is ipv4 localhost!");
+	 *    writeln("the hub is ipv4 localhost!");
 	 * } else if(server.hubAddress.toAddrString() == "::1") {
-	 *    log("The hub is ipv6 localhost!");
+	 *    writeln("The hub is ipv6 localhost!");
 	 * }
 	 * ---
 	 */
@@ -732,11 +734,11 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * The count starts when the node is duccessfully connected with the hub.
 	 * Example:
 	 * ---
-	 * d("The server is online from ", server.uptime.minutes, " minutes");
+	 * writeln("The server is online from ", server.uptime.minutes, " minutes");
 	 * 
 	 * ulong m, s;
 	 * server.uptime.split!("minutes", "seconds")(m, s);
-	 * d("The server is online from ", m, " minutes and ", s, " seconds");
+	 * writeln("The server is online from ", m, " minutes and ", s, " seconds");
 	 * ---
 	 */
 	public shared @property @safe Duration uptime() {
@@ -930,6 +932,18 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	/// ditto
 	public shared bool removeWorld(WorldInfo world) {
 		return this.removeWorld(world.id);
+	}
+
+	protected shared void handleCloseResult(CloseResult result) {
+		auto world = result.worldId in this._worlds;
+		if(world) {
+			if(result.status == CloseResult.PLAYERS_ONLINE) {
+				this.logger.logWarning(Translation("warning.removingWithPlayers", (*world).name));
+			} else {
+				this._worlds.remove((*world).id);
+				this._worlds_names.remove((*world).name);
+			}
+		}
 	}
 
 	/**
