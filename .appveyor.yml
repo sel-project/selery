@@ -105,26 +105,18 @@ before_build:
   - mkdir plugins
 
 build_script:
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - cd builder\init
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - cd ..
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub --portable
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% node --portable
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% default --portable
+  - cd builder
   - selery-init --generate-files
   - set /p selery_version=<version.txt
   - set /p selery_build=<build.txt
   - set /p release_notes=<notes.txt
   - selery-init hub
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - selery-init node
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - selery-init default
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - selery-init hub --portable
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - selery-init node --portable
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
-  - selery-init default --portable
-  - dub build --arch=%Darch% --compiler=%DC% --build=%CONFIGURATION%
   - cd ..
 
 after_build:
@@ -151,9 +143,9 @@ after_build:
   
   - 7z a selery-%selery_version%-windows-%lower_platform%.zip selery-hub-%selery_version%.exe selery-node-%selery_version%.exe selery-%selery_version%.exe
   
-  - move selery-hub-%selery_version%.exe selery-hub-%selery-version%-windows-%lower_platform%.exe
-  - move selery-node-%selery_version%.exe selery-node-%selery-version%-windows-%lower_platform%.exe
-  - move selery-%selery_version%.exe selery-%selery-version%-windows-%lower_platform%.exe
+  - ren selery-hub-%selery_version%.exe selery-hub-%selery-version%-windows-%lower_platform%.exe
+  - ren selery-node-%selery_version%.exe selery-node-%selery-version%-windows-%lower_platform%.exe
+  - ren selery-%selery_version%.exe selery-%selery_version%-windows-%lower_platform%.exe
 
 test_script:
   - selery-hub --about

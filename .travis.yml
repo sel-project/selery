@@ -29,25 +29,19 @@ deploy:
     tags: true
     condition: $CONFIG == "release" && $DC == "ldc2"
 
+before_install:
+  - chmod +x build.sh
+
 script:
-  - dub build --compiler=$DC --build=$CONFIG
-  - cd builder/init
-  - dub build --compiler=$DC --build=$CONFIG
-  - cd ..
+  - ./build.sh -c $DC $CONFIG hub
+  - ./build.sh -c $DC $CONFIG node
+  - ./build.sh -c $DC $CONFIG default
+  - ./build.sh -c $DC $CONFIG hub --portable
+  - ./build.sh -c $DC $CONFIG node --portable
+  - ./build.sh -c $DC $CONFIG default --portable
+  - cd builder
   - ./selery-init --generate-files
   - SELERY_VERSION=$(<version.txt)
-  - ./selery-init hub
-  - dub build --compiler=$DC --build=$CONFIG
-  - ./selery-init node
-  - dub build --compiler=$DC --build=$CONFIG
-  - ./selery-init default
-  - dub build --compiler=$DC --build=$CONFIG
-  - ./selery-init hub --portable
-  - dub build --compiler=$DC --build=$CONFIG
-  - ./selery-init node --portable
-  - dub build --compiler=$DC --build=$CONFIG
-  - ./selery-init default --portable
-  - dub build --compiler=$DC --build=$CONFIG
   - cd ..
 
 after_success:
