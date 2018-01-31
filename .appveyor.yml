@@ -143,8 +143,8 @@ after_build:
   
   - 7z a selery-%selery_version%-windows-%lower_platform%.zip selery-hub-%selery_version%.exe selery-node-%selery_version%.exe selery-%selery_version%.exe
   
-  - ren selery-hub-%selery_version%.exe selery-hub-%selery-version%-windows-%lower_platform%.exe
-  - ren selery-node-%selery_version%.exe selery-node-%selery-version%-windows-%lower_platform%.exe
+  - ren selery-hub-%selery_version%.exe selery-hub-%selery_version%-windows-%lower_platform%.exe
+  - ren selery-node-%selery_version%.exe selery-node-%selery_version%-windows-%lower_platform%.exe
   - ren selery-%selery_version%.exe selery-%selery_version%-windows-%lower_platform%.exe
 
 test_script:

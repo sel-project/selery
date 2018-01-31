@@ -6,7 +6,7 @@ d:
 
 os:
   - linux
-#  - osx
+  - osx
   
 env:
   - CONFIG=debug
