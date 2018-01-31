@@ -125,6 +125,7 @@ abstract class Player : Human, WorldCommandSender {
 		this.gameId = info.type;
 		this._id++; // always an even number
 		this._display_name = this.chatName = info.displayName;
+		//TODO this is the hub's address!
 		this.connectedSameMachine = this.info.ip.startsWith("127.0.") || this.info.ip == "::1";
 		this.connectedSameNetwork = this.info.ip.startsWith("192.168.");
 		this.showNametag = true;
@@ -549,6 +550,78 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	alias op = operator;
+
+	/**
+	 * Grants a permission.
+	 * Returns: whether the permission was granted.
+	 * Example:
+	 * ---
+	 * player.grantPermission("minecraft.teleport");
+	 * player.grantPermission("minecraft.*");
+	 * ---
+	 */
+	public bool grantPermission(string permission) {
+		string[] s = permission.split(".");
+		if(s.length >= 2) {
+			if(s[$-1] == "*") return this.grantPermissionImpl(s[0..$-1], true);
+			else return this.grantPermissionImpl(s, false);
+		} else {
+			return false;
+		}
+	}
+
+	private bool grantPermissionImpl(string[] permission, bool all) {
+		return false;
+	}
+
+	/**
+	 * Revokes a permission.
+	 * Returns: whether the permission was revoked.
+	 * Example:
+	 * ---
+	 * player.revokePermission("minecraft.teleport");
+	 * player.revokePermission("example.*");
+	 * ---
+	 */
+	public bool revokePermission(string permission) {
+		string[] s = permission.split(".");
+		if(s.length >= 2) {
+			if(s[$-1] == "*") return this.revokePermissionImpl(s[0..$-1], true);
+			else return this.revokePermissionImpl(s, false);
+		}
+		return false;
+	}
+
+	private bool revokePermissionImpl(string[] permission, bool all) {
+		return false;
+	}
+
+	/**
+	 * Indicates whether the player has the given permission.
+	 * Example:
+	 * ---
+	 * if(!player.hasPermission("minecraft.teleport")) {
+	 *    player.grantPermission("minecraft.*");
+	 *    assert(player.hasPermission("minecraft.teleport"));
+	 * }
+	 * ---
+	 */
+	public bool hasPermission(string permission) {
+		return false;
+	}
+
+	/**
+	 * Gets a list of the player's permissions.
+	 * Example:
+	 * ---
+	 * player.grantPermission("minecraft.teleport");
+	 * player.grantPermission("minecraft.*");
+	 * assert(player.permissions == ["minecraft.*"]);
+	 * ---
+	 */
+	public @property string[] permissions() {
+		return [];
+	}
 	
 	/**
 	 * Gets the player's gamemode.
@@ -592,6 +665,7 @@ abstract class Player : Human, WorldCommandSender {
 	public final @property ubyte gamemode(ubyte gamemode) {
 		if(gamemode != this.m_gamemode && gamemode < 4) {
 			this.m_gamemode = gamemode;
+			//TODO update permissions
 			this.sendGamemode();
 		}
 		return this.m_gamemode;

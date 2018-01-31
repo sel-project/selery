@@ -41,32 +41,11 @@ void main(string[] args) {
 
 	start(ConfigType.node, args, (Config config){
 
-		T find(T)(T def, string opt0, string opt1=null) {
-			foreach(i, arg; args) {
-				if(arg.startsWith(opt0 ~ "=")) {
-					auto ret = to!T(arg[opt0.length+1..$]);
-					args = args[0..i] ~ args[i+1..$];
-					return ret;
-				} else if(opt1 !is null && arg == opt1 && i < args.length - 1) {
-					auto ret = to!T(args[i+1]);
-					args = args[0..i] ~ args[i+2..$];
-					return ret;
-				}
-			}
-			return def;
-		}
-
-		auto name = find!string("node", "--name", "-n");
-		auto password = find!string("", "--password", "-p");
-		auto ip = find!string("localhost", "--ip");
-		auto port = find!ushort(ushort(28232), "--port");
-		auto main = find!bool(true, "--main");
-
-		Address address = getAddress(ip, port)[0];
+		Address address = getAddress(config.node.ip, config.node.port)[0];
 
 		try {
 			
-			new shared NodeServer(address, name, password, main, config, loadPlugins!(PluginOf, NodePlugin, true)(config), args);
+			new shared NodeServer(address, config, loadPlugins!(PluginOf, NodePlugin, true)(config), args);
 			
 		} catch(LinkTerminated) {
 			

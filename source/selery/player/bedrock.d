@@ -725,7 +725,7 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		packet.time = this.world.time.to!uint;
 		packet.vers = this.server.config.hub.edu;
 		packet.rainLevel = this.world.weather.raining ? this.world.weather.intensity : 0;
-		packet.commandsEnabled = !this.server.config.hub.realm;
+		packet.commandsEnabled = true;
 		static if(__protocol >= 120) packet.permissionLevel = this.op ? 1 : 0;
 		packet.levelId = Software.display;
 		packet.worldName = this.server.name;
@@ -773,7 +773,15 @@ class BedrockPlayerImpl(uint __protocol) : BedrockPlayer if(supportedBedrockProt
 		if(this.creative || this.spectator) flags |= Play.AdventureSettings.ALLOW_FLIGHT;
 		if(this.spectator) flags |= Play.AdventureSettings.NO_CLIP;
 		if(this.spectator) flags |= Play.AdventureSettings.FLYING;
-		this.sendPacket(new Play.AdventureSettings(flags, this.permissionLevel));
+		uint abilities;
+		if(this.hasPermission("minecraft.build_and_mine")) abilities |= Play.AdventureSettings.BUILD_AND_MINE;
+		if(this.hasPermission("minecraft.doors_and_switches")) abilities |= Play.AdventureSettings.DOORS_AND_SWITCHES;
+		if(this.hasPermission("minecraft.open_containers")) abilities |= Play.AdventureSettings.OPEN_CONTAINERS;
+		if(this.hasPermission("minecraft.attack_players")) abilities |= Play.AdventureSettings.ATTACK_PLAYERS;
+		if(this.hasPermission("minecraft.attack_mobs")) abilities |= Play.AdventureSettings.ATTACK_MOBS;
+		if(this.operator) abilities |= Play.AdventureSettings.OP;
+		if(this.hasPermission("minecraft.teleport")) abilities |= Play.AdventureSettings.TELEPORT;
+		this.sendPacket(new Play.AdventureSettings(flags, this.permissionLevel, abilities));
 	}
 	
 	public override void sendRespawnPacket() {

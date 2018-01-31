@@ -54,7 +54,7 @@ void main(string[] args) {
 		
 		try {
 			
-			new shared NodeServer(new TidAddress(cast()LiteNode.tid), "", "", true, config, loadPlugins!(NodePluginOf, NodePlugin, true)(config), args);
+			new shared NodeServer(new TidAddress(cast()LiteNode.tid), config, loadPlugins!(NodePluginOf, NodePlugin, true)(config), args);
 			
 		} catch(LinkTerminated) {
 			

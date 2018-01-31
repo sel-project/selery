@@ -45,28 +45,14 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
-		debug {
-			json["debug"] = true;
-		} else {
-			json["debug"] = false;
-		}
+		debug json["debug"] = true;
+		else json["debug"] = false;
 		writeln(JSONValue(json));
 		return;
 
 	}
 	
-	ubyte edu, realm; // 0 = keep config's, 1 = false, 2 = true
-
-	for(size_t i=0; i<args.length; i++) {
-		void remove(ref ubyte set) {
-			set = true;
-			args = args[0..i] ~ args[i+1..$];
-		}
-		if(args[i] == "-edu" || args[i] == "--edu") remove(edu);
-		if(args[i] == "-realm" || args[i] == "--realm") remove(realm);
-	}
-	
-	Config config = loadConfig(type, edu, realm);
+	Config config = loadConfig(type, args);
 
 	if(!args.canFind("--init") && !args.canFind("-i")) startFunction(config);
 

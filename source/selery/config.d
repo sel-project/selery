@@ -114,7 +114,7 @@ class Config {
 			
 		}
 
-		bool edu, realm;
+		bool edu;
 
 		string displayName;
 		
@@ -186,12 +186,12 @@ class Config {
 				this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
 			} else {
 				import std.process : environment;
-				this.language = environment.get("LANG", "en_GB");
+				this.language = environment.get("LANG", "en_US");
 			}
 			this.language = bestLanguage(this.language, this.acceptedLanguages);
 
 			this.displayName = this.java.motd = this.bedrock.motd = (){
-				switch(language[0..language.indexOf("_")]) {
+				switch(this.language[0..this.language.indexOf("_")]) {
 					case "es": return "Un Servidor de Minecraft";
 					case "it": return "Un Server di Minecraft";
 					case "pt": return "Um Servidor de Minecraft";
@@ -219,6 +219,16 @@ class Config {
 			alias enabled this;
 
 		}
+
+		string name = "node";
+
+		string password = "";
+
+		string ip;
+
+		ushort port = 28232;
+
+		bool main = true;
 
 		Game java = Game(true, supportedJavaProtocols);
 
@@ -325,6 +335,12 @@ class Config {
 		bool weatherCommand = true;
 
 		bool worldCommand = true;
+
+		public this() {
+
+			this.ip = getAddress("localhost")[0].toAddrString();
+
+		}
 
 	}
 

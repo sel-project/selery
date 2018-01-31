@@ -138,8 +138,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	private Handler handler;
 	private Address n_hub_address;
-	private immutable string node_name;
-	private immutable bool node_main;
 
 	private const string[] n_args;
 
@@ -175,16 +173,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	private shared Command[string] _commands;
 
-	public shared this(Address hub, string name, string password, bool main, Config config, Plugin[] plugins=[], string[] args=[]) {
+	public shared this(Address hub, Config config, Plugin[] plugins=[], string[] args=[]) {
 
 		assert(config.node !is null);
 
 		debug Thread.getThis().name = "node";
 
 		this.lite = cast(TidAddress)hub !is null;
-
-		this.node_name = name;
-		this.node_main = main;
 
 		this.n_plugins = cast(shared)plugins;
 
@@ -196,6 +191,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		if(config.hub is null) config.hub = new Config.Hub();
 
+		//TODO load from config
 		// load language from the last execution (or default language)
 		if(config.files.hasTemp("lang")) {
 			config.hub.language = cast(string)config.files.readTemp("lang");
@@ -217,15 +213,20 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		} else {
 
-			this.logger.log(Translation("startup.connecting", [to!string(hub), name]));
+			this.logger.log(Translation("startup.connecting", [to!string(hub), config.node.name]));
 
 			try {
 				this.handler = new shared SocketHandler(hub);
-				this.handler.send(HncomLogin.ConnectionRequest(password, name, main).encode());
+				this.handler.send(HncomLogin.ConnectionRequest(config.node.password, config.node.name, config.node.main).encode());
 			} catch(SocketException e) {
 				this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
 				return;
 			}
+
+			// remove variable in config plugins should not read
+			config.node.password = "";
+			config.node.ip = "";
+			config.node.port = ushort(0);
 
 			// wait for ConnectionResponse
 			ubyte[] buffer = this.handler.receive();
@@ -285,9 +286,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		auto minecraft = "minecraft" in info.additionalJSON;
 		if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 			auto edu = "edu" in *minecraft;
-			auto realm = "realm" in *minecraft;
 			config.hub.edu = edu && edu.type == JSON_TYPE.TRUE;
-			config.hub.realm = realm && realm.type == JSON_TYPE.TRUE;
 		}
 
 		config.hub.displayName = info.displayName;
@@ -675,7 +674,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * Gets the current's node name.
 	 */
 	public shared pure nothrow @property @safe @nogc string nodeName() {
-		return this.node_name;
+		return this.config.node.name;
 	}
 
 	/**
@@ -684,7 +683,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * transferred by other nodes).
 	 */
 	public shared pure nothrow @property @safe @nogc bool isMainNode() {
-		return this.node_main;
+		return this.config.node.main;
 	}
 
 	/**

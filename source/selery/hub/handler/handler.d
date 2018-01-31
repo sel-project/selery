@@ -135,7 +135,7 @@ class Handler {
 		this.socialJson = config.hub.social.toString();
 		JSONValue[string] additional;
 		additional["social"] = config.hub.social;
-		additional["minecraft"] = ["edu": config.hub.edu, "realm": config.hub.realm];
+		additional["minecraft"] = ["edu": config.hub.edu];
 		additional["software"] = ["name": Software.name, "version": Software.displayVersion];
 		this.additionalJson = cast(shared)JSONValue(additional);
 	}
