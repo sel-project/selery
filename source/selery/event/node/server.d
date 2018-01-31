@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/node/server.d, selery/event/node/server.d)
+ */
 module selery.event.node.server;
 
 import selery.event.event : Event;

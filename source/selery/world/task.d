@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/world/task.d, selery/world/task.d)
+ */
 module selery.world.task;
 
 import selery.about : tick_t;

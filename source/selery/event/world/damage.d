@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/world/damage.d, selery/event/world/damage.d)
+ */
 module selery.event.world.damage;
 
 import std.algorithm : max;

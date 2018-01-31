@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/node/plugin/file.d, selery/node/plugin/file.d)
+ */
 module selery.node.plugin.file;
 
 static import std.file;

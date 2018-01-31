@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/util/tuple.d, selery/util/tuple.d)
+ */
 module selery.util.tuple;
 
 import std.conv : to;

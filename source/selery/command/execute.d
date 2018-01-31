@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/command/execute.d, selery/command/execute.d)
+ */
 module selery.command.execute;
 
 import std.string : strip, indexOf;

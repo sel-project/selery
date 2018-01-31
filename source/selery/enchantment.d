@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/enchantment.d, selery/enchantment.d)
+ */
 module selery.enchantment;
 
 import std.algorithm : min;

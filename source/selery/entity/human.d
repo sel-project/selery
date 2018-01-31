@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/entity/human.d, selery/entity/human.d)
+ */
 module selery.entity.human;
 
 import std.math : isNaN, sin, cos, PI;

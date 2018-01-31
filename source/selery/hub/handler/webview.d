@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler/webview.d, selery/hub/handler/webview.d)
+ */
 module selery.hub.handler.webview;
 
 import core.atomic : atomicOp;

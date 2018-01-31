@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/node/command.d, selery/event/node/command.d)
+ */
 module selery.event.node.command;
 
 import selery.command.command : Command;

@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/commands.d, selery/commands.d)
+ */
 module selery.commands;
 
 import std.algorithm : sort, clamp, min, filter;

@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/inventory/player.d, selery/inventory/player.d)
+ */
 module selery.inventory.player;
 
 import selery.inventory.inventory;

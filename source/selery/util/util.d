@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/util/util.d, selery/util/util.d)
+ */
 module selery.util.util;
 
 import std.conv : to, ConvException;

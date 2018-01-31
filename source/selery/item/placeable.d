@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/item/placeable.d, selery/item/placeable.d)
+ */
 module selery.item.placeable;
 
 import selery.about : block_t, item_t;

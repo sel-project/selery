@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/player/bedrock.d, selery/player/bedrock.d)
+ */
 module selery.player.bedrock;
 
 import std.algorithm : min, sort, canFind;

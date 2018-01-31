@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler/hncom.d, selery/hub/handler/hncom.d)
+ */
 module selery.hub.handler.hncom;
 
 import core.atomic : atomicOp;

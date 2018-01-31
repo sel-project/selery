@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/entity/metadata.d, selery/entity/metadata.d)
+ */
 module selery.entity.metadata;
 
 import std.conv : to;

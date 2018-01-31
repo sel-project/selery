@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/event.d, selery/event/event.d)
+ */
 module selery.event.event;
 
 import std.algorithm : sort, canFind;

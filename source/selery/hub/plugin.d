@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/plugin.d, selery/hub/plugin.d)
+ */
 module selery.hub.plugin;
 
 public import selery.plugin;

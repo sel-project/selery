@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/world/world.d, selery/event/world/world.d)
+ */
 module selery.event.world.world;
 
 import selery.about : tick_t;

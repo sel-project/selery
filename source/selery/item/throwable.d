@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/item/throwable.d, selery/item/throwable.d)
+ */
 module selery.item.throwable;
 /*
 import selery.entity.projectile : Projectile, EntitySnowball = Snowball, EntityEgg = Egg, EntityEnderpearl = Enderpearl, EntityPotion = Potion;

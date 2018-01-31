@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/player/java.d, selery/player/java.d)
+ */
 module selery.player.java;
 
 import std.algorithm : sort, min, canFind, clamp;

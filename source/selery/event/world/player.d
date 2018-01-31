@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/world/player.d, selery/event/world/player.d)
+ */
 module selery.event.world.player;
 
 import selery.block.block : Block;

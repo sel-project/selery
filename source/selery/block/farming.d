@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/block/farming.d, selery/block/farming.d)
+ */
 module selery.block.farming;
 
 import selery.about : block_t, item_t;

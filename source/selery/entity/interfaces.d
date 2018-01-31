@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/entity/interfaces.d, selery/entity/interfaces.d)
+ */
 module selery.entity.interfaces;
 
 interface Undead {}

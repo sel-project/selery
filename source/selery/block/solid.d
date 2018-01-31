@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/block/solid.d, selery/block/solid.d)
+ */
 module selery.block.solid;
 
 import std.algorithm : canFind, min;

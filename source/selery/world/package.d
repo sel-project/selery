@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/world/package.d, selery/world/package.d)
+ */
 module selery.world;
 
 public import selery.config : Gamemode, Difficulty, Dimension;

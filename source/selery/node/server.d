@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/node/server.d, selery/node/server.d)
+ */
 module selery.node.server;
 
 import core.atomic : atomicOp;

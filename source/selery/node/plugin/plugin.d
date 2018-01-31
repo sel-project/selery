@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/node/plugin/plugin.d, selery/node/plugin/plugin.d)
+ */
 module selery.node.plugin.plugin;
 
 import std.conv : to;

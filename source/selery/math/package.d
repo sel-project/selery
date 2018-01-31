@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/math/package.d, selery/math/package.d)
+ */
 module selery.math;
 
 public import selery.math.vector : Vector, Vector2, Vector3, Vector4, vector, abs, floor, ceil, round, distanceSquared, distance, dot;

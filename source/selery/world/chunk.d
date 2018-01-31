@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/world/chunk.d, selery/world/chunk.d)
+ */
 module selery.world.chunk;
 
 import core.memory : GC;

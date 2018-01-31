@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/player.d, selery/hub/player.d)
+ */
 module selery.hub.player;
 
 import core.atomic : atomicOp;

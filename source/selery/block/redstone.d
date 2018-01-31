@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/block/redstone.d, selery/block/redstone.d)
+ */
 module selery.block.redstone;
 
 import selery.about : block_t;

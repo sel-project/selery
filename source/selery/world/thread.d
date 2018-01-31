@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/world/thread.d, selery/world/thread.d)
+ */
 module selery.world.thread;
 
 import core.thread : Thread;

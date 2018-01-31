@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/player/package.d, selery/player/package.d)
+ */
 module selery.player;
 
 public import selery.player.java : JavaPlayer;

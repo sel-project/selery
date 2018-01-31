@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/inventory/inventory.d, selery/inventory/inventory.d)
+ */
 module selery.inventory.inventory;
 
 import std.conv : to;

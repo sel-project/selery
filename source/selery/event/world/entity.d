@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/event/world/entity.d, selery/event/world/entity.d)
+ */
 module selery.event.world.entity;
 
 import selery.entity.entity : Entity;

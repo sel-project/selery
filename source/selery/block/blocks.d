@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/block/blocks.d, selery/block/blocks.d)
+ */
 module selery.block.blocks;
 
 import selery.about : block_t, item_t;
