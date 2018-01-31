@@ -49,6 +49,10 @@ if "%1"=="" (
 	set plugins=--no-plugins
 ) else if "%1" == "-np" (
 	set plugins=--no-plugins
+) else if "%1" == "--clean" (
+	del dub.selections.json
+	del builder\dub.selections.json
+	del builder\init\dub.selections.json
 )
 shift
 goto loop
@@ -71,7 +75,7 @@ cd ..
 goto :eof
 
 :help
-echo Usage: build.bat [-h] [--dmd^|--ldc^|-c COMPILER] [debug^|release] [-a ARCH] [default^|hub^|node] [-p] [-np]
+echo Usage: build.bat [-h] [--dmd^|--ldc^|-c COMPILER] [debug^|release] [-a ARCH] [default^|hub^|node] [-p] [-np] [--clean]
 echo(
 echo Optional aguments:
 echo   -h, --help            Show this message and exit
@@ -82,3 +86,4 @@ echo   -a ARCH               Specify the architecture to build for
 echo   default, hub, node    Compile the specified configuration for Selery
 echo   -p, --portable        Compile in portable mode
 echo   -np, --no-plugins     Compile without plugins
+echo   --clean               Remove dub.selections.json files

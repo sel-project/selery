@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
 	case "$1" in
 	
 		-h | --help)
-			echo "Usage: ./build.sh [-h] [--dmd|--ldc|-c COMPILER] [debug|release] [-a ARCH] [default|hub|node] [-p] [-np]"
+			echo "Usage: ./build.sh [-h] [--dmd|--ldc|-c COMPILER] [debug|release] [-a ARCH] [default|hub|node] [-p] [-np] [--clean]"
 			echo ""
 			echo "Optional aguments:"
 			echo "  -h, --help            Show this message and exit"
@@ -26,6 +26,7 @@ while [[ $# -gt 0 ]]; do
 			echo "  default, hub, node    Compile the specified configuration for Selery"
 			echo "  -p, --portable        Compile in portable mode"
 			echo "  -np, --no-plugins     Compile without plugins"
+			echo "  --clean               Remove dub.selections.json files"
 			exit 0
 			;;
 			
@@ -61,6 +62,12 @@ while [[ $# -gt 0 ]]; do
 			
 		-np | --no-plugins)
 			PLUGINS=--no-plugins
+			;;
+			
+		--clean)
+			rm -f dub.selections.json
+			rm -f builder/dub.selections.json
+			rm -f builder/init/dub.selections.json
 			;;
 			
 	esac
