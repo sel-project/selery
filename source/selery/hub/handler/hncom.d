@@ -363,7 +363,7 @@ abstract class AbstractNode : Handler!serverbound {
 		auto player = packet.hubId in this.players;
 		if(player) {
 			this.players.remove(packet.hubId);
-			(*player).connect(Player.Add.TRANSFERRED, packet.node, packet.onFail);
+			(*player).connect(Player.Add.TRANSFERRED, packet.node, packet.message, packet.onFail);
 		}
 	}
 
@@ -455,9 +455,9 @@ abstract class AbstractNode : Handler!serverbound {
 	/**
 	 * Adds a player to the node.
 	 */
-	public shared void addPlayer(shared PlayerSession player, ubyte reason) {
+	public shared void addPlayer(shared PlayerSession player, ubyte reason, ubyte[] transferMessage) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
+		this.send(Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
 	}
 	
 	/**

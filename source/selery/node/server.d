@@ -217,13 +217,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 			try {
 				this.handler = new shared SocketHandler(hub);
-				this.handler.send(HncomLogin.ConnectionRequest(config.node.password, config.node.name, config.node.main).encode());
+				this.handler.send(HncomLogin.ConnectionRequest(config.node.name, config.node.password, config.node.main).encode());
 			} catch(SocketException e) {
 				this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
 				return;
 			}
 
-			// remove variable in config plugins should not read
+			// remove variables in config that plugins should not read
 			config.node.password = "";
 			config.node.ip = "";
 			config.node.port = ushort(0);

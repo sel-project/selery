@@ -154,21 +154,29 @@ const struct Software {
 	
 }
 
-/**
- * Protocols supported by the software.
- */
-enum uint[] supportedJavaProtocols = [210, 315, 316, 335, 338, 340];
-
-/// ditto
+/// Protocols supported by the software.
 enum uint[] supportedBedrockProtocols = [137, 141, 150, 160];
 
-/**
- * Tuples with the supported protocols.
- */
-alias SupportedJavaProtocols = ProtocolsImpl!(supportedJavaProtocols);
+/// ditto
+enum uint[] supportedJavaProtocols = [210, 315, 316, 335, 338, 340];
+
+/// Newest protocol supported.
+enum newestBedrockProtocol = supportedBedrockProtocols[$-1];
 
 /// ditto
+enum newestJavaProtocol = supportedJavaProtocols[$-1];
+
+/// Latest protocols (latest version e.g 1.2.*).
+enum uint[] latestBedrockProtocols = [137, 141, 150, 160];
+
+/// ditto
+enum uint[] latestJavaProtocols = [335, 338, 340];
+
+/// Tuples with the supported protocols.
 alias SupportedBedrockProtocols = ProtocolsImpl!(supportedBedrockProtocols);
+
+/// ditto
+alias SupportedJavaProtocols = ProtocolsImpl!(supportedJavaProtocols);
 
 private template ProtocolsImpl(uint[] protocols, E...) {
 	static if(protocols.length) {
@@ -177,14 +185,6 @@ private template ProtocolsImpl(uint[] protocols, E...) {
 		alias ProtocolsImpl = E;
 	}
 }
-
-/**
- * Newest protocol released.
- */
-enum newestJavaProtocol = supportedJavaProtocols[$-1];
-
-/// ditto
-enum newestBedrockProtocol = supportedBedrockProtocols[$-1];
 
 uint[] validateProtocols(ref uint[] protocols, uint[] accepted, uint[] default_) {
 	uint[] ret;

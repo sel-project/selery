@@ -343,7 +343,7 @@ class PlayerSession {
 	 * This function does not notify the old node of the change,
 	 * as the old node should have called the function.
 	 */
-	public shared bool connect(ubyte reason, int nodeId=-1, ubyte onFail=HncomPlayer.Transfer.DISCONNECT) {
+	public shared bool connect(ubyte reason, int nodeId=-1, ubyte[] message=[], ubyte onFail=HncomPlayer.Transfer.DISCONNECT) {
 		shared AbstractNode[] nodes;
 		if(nodeId < 0) {
 			nodes = this.server.mainNodes;
@@ -357,7 +357,7 @@ class PlayerSession {
 				this.last_node = node.id;
 				this.expected = 0;
 				this.unordered_payloads.clear();
-				node.addPlayer(this, reason);
+				node.addPlayer(this, reason, message);
 				return true;
 			}
 		}

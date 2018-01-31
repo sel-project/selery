@@ -117,10 +117,10 @@ class Config {
 		bool edu;
 
 		string displayName;
+
+		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], latestBedrockProtocols);
 		
-		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], supportedBedrockProtocols);
-		
-		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], supportedJavaProtocols);
+		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], latestJavaProtocols);
 		
 		bool allowVanillaPlayers = false;
 		
@@ -230,9 +230,9 @@ class Config {
 
 		bool main = true;
 
-		Game java = Game(true, supportedJavaProtocols);
+		Game java = Game(true, latestJavaProtocols);
 
-		Game bedrock = Game(true, supportedBedrockProtocols);
+		Game bedrock = Game(true, latestBedrockProtocols);
 
 		uint maxPlayers = 20;
 

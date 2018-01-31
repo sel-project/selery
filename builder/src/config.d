@@ -24,7 +24,7 @@ module config;
 
 import std.ascii : newline;
 import std.conv : to, ConvException;
-import std.file : exists, read, write, tempDir, mkdirRecurse;
+import std.file : exists, read, write, remove, tempDir, mkdirRecurse;
 import std.json : JSONValue;
 import std.path : dirSeparator, buildNormalizedPath;
 import std.socket : Address;
@@ -71,6 +71,16 @@ auto loadConfig(ConfigType type, ref string[] args) {
 	
 	immutable isHub = type == ConfigType.default_ || type == ConfigType.hub;
 	immutable isNode = type == ConfigType.default_ || type == ConfigType.node;
+	
+	bool hasArg(string a) {
+		foreach(i, arg; args) {
+			if(arg == a) {
+				args = args[0..i] ~ args[i+1..$];
+				return true;
+			}
+		}
+		return false;
+	}
 
 	auto config = new class Config {
 	
@@ -171,6 +181,14 @@ auto loadConfig(ConfigType type, ref string[] args) {
 					value = get!T(getValue(document.table, keys));
 				} catch(TOMLException) {}
 			}
+			
+			void setProtocols(ref uint[] value, uint[] all, uint[] latest, const(string)[] keys...) {
+				string s;
+				set(s, keys);
+				if(s == "all" || s == "*") value = all;
+				else if(s == "latest") value = latest;
+				else set(value, keys);
+			}
 
 			set(this.uuid, "uuid");
 			
@@ -185,12 +203,12 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(bedrock.enabled, "bedrock", "enabled");
 				set(bedrock.motd, "bedrock", "motd");
 				set(bedrock.addresses, "bedrock", "addresses");
-				set(bedrock.protocols, "bedrock", "accepted-protocols");
+				setProtocols(bedrock.protocols, supportedBedrockProtocols, latestBedrockProtocols, "bedrock", "accepted-protocols");
 				set(allowVanillaPlayers, "bedrock", "allow-vanilla-players");
 				set(java.enabled, "java", "enabled");
 				set(java.motd, "java", "motd");
 				set(java.addresses, "java", "addresses");
-				set(java.protocols, "java", "accepted-protocols");
+				setProtocols(java.protocols, supportedJavaProtocols, latestJavaProtocols, "java", "accepted-protocols");
 				set(query, "query");
 				set(language, "language");
 				set(acceptedLanguages, "accepted-languages");
@@ -212,9 +230,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(hncomPort, "hncom", "port");
 				set(social, "social");
 				
-				//TODO all/latest protocols
-				string protocols;
-				
 				// unlimited nodes
 				string unlimited;
 				set(unlimited, "hncom", "node-limit");
@@ -233,9 +248,9 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(port, "hub", "port");
 				set(main, "hub", "main");
 				set(bedrock.enabled, "bedrock", "enabled");
-				set(bedrock.protocols, "bedrock", "accepted-protocols");
+				setProtocols(bedrock.protocols, supportedBedrockProtocols, latestBedrockProtocols, "bedrock", "accepted-protocols");
 				set(java.enabled, "java", "enabled");
-				set(java.protocols, "java", "accepted-protocols");
+				setProtocols(java.protocols, supportedJavaProtocols, latestJavaProtocols, "java", "accepted-protocols");
 				set(maxPlayers, "max-players");
 				set(gamemode, "world", "gamemode");
 				set(difficulty, "world", "difficulty");
@@ -268,6 +283,12 @@ auto loadConfig(ConfigType type, ref string[] args) {
 		
 		public override void save() {
 		
+			string serializeProtocols(uint[] protocols, uint[] all, uint[] latest) {
+				if(protocols == latest) return `"latest"`;
+				else if(protocols == all) return `"all"`;
+				else return to!string(protocols);
+			}
+		
 			// is this needed?
 			if(this.hub is null) this.hub = new Config.Hub();
 			if(this.node is null) this.node = new Config.Node();
@@ -289,7 +310,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
 				file ~= "online-mode = false" ~ newline;
 				file ~= "addresses = " ~ addressString(addresses) ~ newline;
-				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+				file ~= "accepted-protocols = " ~ serializeProtocols(protocols, supportedBedrockProtocols, latestBedrockProtocols) ~ newline;
 				if(this.hub.edu) file ~= newline ~ "allow-vanilla-players = " ~ to!string(this.hub.allowVanillaPlayers);
 			}
 			if(isHub && !this.hub.edu) with(this.hub.java) {
@@ -298,7 +319,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				file ~= "motd = \"" ~ motd ~ "\"" ~ newline;
 				file ~= "online-mode = false" ~ newline;
 				file ~= "addresses = " ~ addressString(addresses) ~ newline;
-				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+				file ~= "accepted-protocols = " ~ serializeProtocols(protocols, supportedJavaProtocols, latestJavaProtocols) ~ newline;
 			}
 			if(type == ConfigType.node) with(this.node) {
 				file ~= newline ~ "[hub]" ~ newline;
@@ -308,15 +329,15 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				file ~= "port = " ~ to!string(port) ~ newline;
 				file ~= "main = " ~ to!string(main) ~ newline;
 			}
-			if(type == ConfigType.node) with(this.node.java) {
-				file ~= newline ~ "[java]" ~ newline;
-				file ~= "enabled = " ~ to!string(enabled) ~ newline;
-				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
-			}
 			if(type == ConfigType.node) with(this.node.bedrock) {
 				file ~= newline ~ "[bedrock]" ~ newline;
 				file ~= "enabled = " ~ to!string(enabled) ~ newline;
-				file ~= "accepted-protocols = " ~ to!string(protocols) ~ newline;
+				file ~= "accepted-protocols = " ~ serializeProtocols(protocols, supportedBedrockProtocols, latestBedrockProtocols) ~ newline;
+			}
+			if(type == ConfigType.node) with(this.node.java) {
+				file ~= newline ~ "[java]" ~ newline;
+				file ~= "enabled = " ~ to!string(enabled) ~ newline;
+				file ~= "accepted-protocols = " ~ serializeProtocols(protocols, supportedJavaProtocols, latestJavaProtocols) ~ newline;
 			}
 			if(isNode) with(this.node) {
 				file ~= newline ~ "[world]" ~ newline;
@@ -373,15 +394,11 @@ auto loadConfig(ConfigType type, ref string[] args) {
 		
 	};
 	
+	if(hasArg("--reset-config") || hasArg("-rc")) remove(filename);
+	
 	config.load();
 	
-	foreach(i, arg; args) {
-		if(arg == "--update-config" || arg == "-uc") {
-			args = args[0..i] ~ args[i+1..$];
-			config.save();
-			break;
-		}
-	}
+	if(hasArg("--update-config") || hasArg("-uc")) config.save();
 	
 	return config;
 
