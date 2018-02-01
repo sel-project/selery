@@ -189,17 +189,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		
 		this.n_hub_address = cast(shared)hub;
 
-		if(config.hub is null) config.hub = new Config.Hub();
-
-		//TODO load from config
-		// load language from the last execution (or default language)
-		if(config.files.hasTemp("lang")) {
-			config.hub.language = cast(string)config.files.readTemp("lang");
-		} else {
-			config.hub.language = "en_US";
-		}
-		//config.hub.acceptedLanguages = [config.hub.language];
-		config.lang.load(config.hub.language, [config.hub.language]);
+		if(config.hub is null) config.hub = config.new Config.Hub();
 
 		this._config = cast(shared)config;
 
@@ -290,10 +280,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		}
 
 		config.hub.displayName = info.displayName;
-		config.hub.language = info.language;
-		config.hub.acceptedLanguages = info.acceptedLanguages;
-
-		//TODO validate languages
 
 		this.n_online = info.online;
 		this.n_max = info.max;
@@ -308,13 +294,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
 		}
 
-		// save latest language used
-		config.files.writeTemp("lang", config.hub.language);
-
 		if(!this.lite) this.logger.terminal.setTitle(info.displayName ~ " | node | " ~ Software.simpleDisplay);
-
-		// reload languages
-		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
 
 		void handleGameInfo(ubyte type, HncomLogin.HubInfo.GameInfo info) {
 			void set(ref Config.Hub.Game game) {
@@ -355,8 +335,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	private shared void finishConstruction() {
-
-		import core.cpuid : coresPerCPU, processor, threadsPerCPU;
 
 		if(!this.lite) this.logger.log(Translation("startup.starting", [Format.green ~ Software.name ~ Format.white ~ " " ~ Software.fullVersion ~ Format.reset ~ " " ~ Software.fullCodename]));
 
@@ -406,8 +384,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		}
 
-		this.start_time = milliseconds;
-
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
 			plugin.load(this);
@@ -418,15 +394,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			];
 			this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
 		}
-
-		// load plugin's language files
-		foreach(_plugin ; this.n_plugins) {
-			auto plugin = cast()_plugin;
-			if(plugin.languages !is null) {
-				//TODO parse every file
-				//TODO add to lang and send to the hub
-			}
-		}
+		
+		// register commands if enabled in the settings
+		Commands.register(this);
 
 		// send node's informations to the hub and switch to a non-blocking connection
 		HncomLogin.NodeInfo nodeInfo;
@@ -443,10 +413,20 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		} else {
 			this.handler.send(nodeInfo.encode());
 		}
-		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
+		
+		// load plugin's language files
+		foreach(_plugin ; this.n_plugins) {
+			auto plugin = cast()_plugin;
+			if(plugin.languages !is null) {
+				foreach(language, messages; this.config.lang.parseFolder(plugin.languages)) {
+					this.updateLanguageFiles(language, messages);
+				}
+			}
+		}
 
-		// register commands if enabled in the settings
-		Commands.register(this);
+		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
+		
+		this.start_time = milliseconds;
 
 		// call @start functions
 		foreach(plugin ; this.n_plugins) {
@@ -840,7 +820,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * the hub if needed.
 	 */
 	protected shared void updateLanguageFiles(string language, string[string] messages) {
-		if(!this.lite) {} //TODO update config.lang
+		if(!this.lite) this.config.lang.add(language, messages);
 		this.handler.send(HncomStatus.UpdateLanguageFiles(language, messages).encode());
 	}
 

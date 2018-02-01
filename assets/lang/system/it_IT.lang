@@ -72,7 +72,7 @@ commands.about.description = Mostra informazioni sul software del server e i plu
 commands.about.software = Software: {0}
 commands.about.plugins = Plugin installati ({0}):
 commands.about.scripts: Script caricati: ({0}):
-commands.permission.description = Concedi o revoca i permessi di un giocatore.
+commands.permission.description = Concede o revoca i permessi di un giocatore.
 commands.permission.list = Permessi di {0}:
 commands.permission.grant.success = Il permesso '{0}' è stato concesso a {1}
 commands.permission.grant.failed = Il permesso '{0}' è già stato concesso a {1}
@@ -80,7 +80,7 @@ commands.permission.revoke.success = Il permesso '{0}' è stato revocato a {1}
 commands.permission.revoke.failed = Il giocatore {1} non ha il permesso '{0}'
 commands.stop.failed = Il server si sta già fermando
 commands.transfer.description = Trasferisce un giocatore in un altro nodo.
-commands.world.description = Aggiungi, rimuovi o ottieni una lista dei mondi.
+commands.world.description = Aggiunge, rimuove o elenca i mondi nel server.
 commands.world.notFound = Impossibile trovare un mondo chiamato '{0}'
 commands.world.add.success = Mondo aggiunto
 commands.world.add.failed = Un mondo con lo stesso nome e già stato registrato

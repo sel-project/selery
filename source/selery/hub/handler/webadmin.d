@@ -142,16 +142,13 @@ class WebAdminHandler : GenericServer {
 		if(lang) {
 			foreach(l1 ; split(*lang, ";")) {
 				foreach(l2 ; split(l1, ",")) {
-					if(l2.length == 5) {
-						immutable language = l2.replace("-", "_");
-						foreach(supported ; this.server.config.hub.acceptedLanguages) {
-							if(supported == language) return language;
-						}
+					if(l2.length == 5 || l2.length == 6) {
+						return this.server.config.lang.best(l2.replace("-", "_"));
 					}
 				}
 			}
 		}
-		return this.server.config.hub.language;
+		return this.server.config.language;
 	}
 
 	private shared Response handle(Socket client, Request request) {
@@ -263,7 +260,7 @@ class WebAdminClient {
 		data["name"] = server.info.motd.raw;
 		data["max"] = server.maxPlayers;
 		data["favicon"] = server.info.favicon;
-		data["languages"] = server.config.hub.acceptedLanguages; //TODO also send language names
+		data["languages"] = server.config.lang.acceptedLanguages;
 		this.send("settings", data);
 	}
 

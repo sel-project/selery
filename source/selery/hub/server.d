@@ -202,13 +202,6 @@ class HubServer : PlayerHandler, Server {
 			this.logger.logMessage(message);
 		}
 
-		foreach(plugin ; plugins) {
-			//TODO does this save?
-			if(plugin.languages !is null) config.lang.add(plugin.languages); // absolute path
-			//TODO add to query
-		}
-		//TODO save to _plugins
-
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
 		
@@ -229,7 +222,7 @@ class HubServer : PlayerHandler, Server {
 			sigset(SIGINT, &extsig);
 		}*/
 
-		//TODO load plugins
+		//TODO load plugins and their language files
 
 		// open web admin GUI
 		if(config.hub.webAdminOpen) {
@@ -292,15 +285,6 @@ class HubServer : PlayerHandler, Server {
 			this._info.motd.java = motd;
 			validateProtocols(protocols, supportedJavaProtocols, supportedJavaProtocols);
 		}
-		// languages
-		string[] accepted;
-		foreach(lang ; config.hub.acceptedLanguages) {
-			if(Config.LANGUAGES.canFind(lang)) accepted ~= lang;
-		}
-		if(!Config.LANGUAGES.canFind(config.hub.language)) config.hub.language = "en_US";
-		if(!accepted.canFind(config.hub.language)) accepted ~= config.hub.language;
-		config.hub.acceptedLanguages = accepted;
-		config.lang.load(config.hub.language, config.hub.acceptedLanguages);
 		// icon
 		Icon icon;
 		if(exists(config.hub.favicon) && isFile(config.hub.favicon)) {

@@ -92,7 +92,7 @@ class PlayerSession {
 		this.server = server;
 		this.client = client;
 		this.lower_username = this._display_name = username;
-		this._language = client.language.length ? client.language : server.config.hub.language;
+		this._language = client.language.length ? client.language : server.config.language;
 		if(client.skinName.length) this._skin = cast(shared)new Skin(client.skinName, client.skinData, client.skinGeometryName, client.skinGeometryData, client.skinCape);
 	}
 

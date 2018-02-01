@@ -28,7 +28,7 @@
  */
 module selery.config;
 
-import std.algorithm : canFind;
+import std.algorithm : canFind, min;
 import std.conv : to;
 import std.file : exists, isFile, read, write;
 import std.json : JSONValue;
@@ -72,9 +72,8 @@ enum Dimension : ubyte {
  */
 class Config {
 
-	enum LANGUAGES = ["en_GB", "en_US", "it_IT"];
-
 	UUID uuid;
+	string language;
 
 	Files files;
 	LanguageManager lang;
@@ -83,13 +82,29 @@ class Config {
 	Node node;
 
 	public this(UUID uuid=randomUUID()) {
-		this.uuid = uuid;
-	}
 
+		this.uuid = uuid;
+		
+		version(Windows) {
+			import std.utf : toUTF8;
+			import std.string : fromStringz;
+			import core.sys.windows.winnls;
+			wchar[] lang = new wchar[3];
+			wchar[] country = new wchar[3];
+			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO639LANGNAME, lang.ptr, 3);
+			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
+			this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
+		} else {
+			import std.process : environment;
+			this.language = environment.get("LANG", "en_US");
+		}
+
+	}
+	
 	/**
 	 * Configuration for the hub.
 	 */
-	static class Hub {
+	class Hub {
 
 		static struct Address {
 
@@ -125,10 +140,6 @@ class Config {
 		bool allowVanillaPlayers = false;
 		
 		bool query = true;
-		
-		string language;
-		
-		string[] acceptedLanguages = LANGUAGES;
 		
 		string serverIp;
 		
@@ -175,23 +186,8 @@ class Config {
 				return password.idup;
 			}
 
-			version(Windows) {
-				import std.utf : toUTF8;
-				import std.string : fromStringz;
-				import core.sys.windows.winnls;
-				wchar[] lang = new wchar[3];
-				wchar[] country = new wchar[3];
-				GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO639LANGNAME, lang.ptr, 3);
-				GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
-				this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
-			} else {
-				import std.process : environment;
-				this.language = environment.get("LANG", "en_US");
-			}
-			this.language = bestLanguage(this.language, this.acceptedLanguages);
-
 			this.displayName = this.java.motd = this.bedrock.motd = (){
-				switch(this.language[0..this.language.indexOf("_")]) {
+				switch(language[0..min(cast(size_t)language.indexOf("_"), $)]) {
 					case "es": return "Un Servidor de Minecraft";
 					case "it": return "Un Server di Minecraft";
 					case "pt": return "Um Servidor de Minecraft";
@@ -209,7 +205,7 @@ class Config {
 	/**
 	 * Configuration for the node.
 	 */
-	static class Node {
+	class Node {
 
 		static struct Game {
 

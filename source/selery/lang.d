@@ -32,6 +32,7 @@ import std.algorithm : canFind;
 import std.array : Appender;
 import std.conv : to, ConvException;
 import std.file : exists, read;
+import std.json : parseJSON;
 import std.path : dirSeparator;
 import std.string;
 
@@ -46,44 +47,128 @@ deprecated("Use LanguageManager instead") alias Lang = LanguageManager;
 class LanguageManager {
 
 	private const Files files;
+	public immutable string[] acceptedLanguages;
+	public immutable string language;
 
-	private string language;
-	private string[] acceptedLanguages;
-
-	private string[] additionalFolders;
+	private string[string] defaults;
 
 	private TranslationManager[string][string] messages;
 	public string[string][string] raw; // used for web admin
 
-	public this(inout Files files) {
+	public this(inout Files files, string language) {
 		this.files = files;
+		string[] accepted;
+		bool languageAccepted = false;
+		foreach(lang, countries; parseJSON(cast(string)files.readAsset("lang/languages.json")).object) {
+			foreach(i, country; countries.array) {
+				immutable code = lang ~ "_" ~ country.str.toUpper;
+				accepted ~= code;
+				if(i == 0) this.defaults[lang] = code;
+			}
+		}
+		this.acceptedLanguages = accepted.idup;
+		this.language = this.best(language);
+	}
+
+	public inout string best(string language) {
+		language = language.toLower;
+		// return full language matching full language (en_GB : en_GB)
+		foreach(lang ; this.acceptedLanguages) {
+			if(language == lang.toLower) return lang;
+		}
+		// return full language matching language only (en : en_GB)
+		if(language.length >= 2) {
+			auto d = language[0..2] in this.defaults;
+			if(d) return *d;
+		}
+		// return server's language
+		return this.language;
 	}
 
 	/**
 	 * Loads languages in lang/system and lang/messages.
 	 * Throws: RangeError if one of the given languages is not supported by the software.
 	 */
-	public typeof(this) load(string language, string[] acceptedLanguages) {
-		assert(acceptedLanguages.canFind(language));
-		this.language = language;
-		this.acceptedLanguages = acceptedLanguages;
+	public inout void load() {
 		foreach(type ; ["system", "messages"]) {
 			foreach(lang ; acceptedLanguages) {
-				immutable file = "lang" ~ dirSeparator ~ type ~ dirSeparator ~ lang ~ ".lang";
-				if(this.files.hasAsset(file)) this.loadImpl(lang, this.files.readAsset(file));
+				immutable file = "lang/" ~ type ~ "/" ~ lang ~ ".lang";
+				if(this.files.hasAsset(file)) this.add(lang, this.parseFile(cast(string)this.files.readAsset(file)));
 			}
 		}
-		foreach(dir ; this.additionalFolders) this.loadDir(dir);
-		return this;
+	}
+
+	public inout string[string][string] parseFolder(string folder) {
+		if(!folder.endsWith(dirSeparator)) folder ~= dirSeparator;
+		string[string][string] ret;
+		bool loadImpl(string lang, string file) {
+			if(exists(file)) {
+				ret[lang] = this.parseFile(cast(string)read(file));
+				return true;
+			} else {
+				return false;
+			}
+		}
+		foreach(lang ; acceptedLanguages) {
+			if(!loadImpl(lang, folder ~ lang ~ ".lang")) loadImpl(lang, folder ~ lang[0..2] ~ ".lang");
+		}
+		return ret;
+	}
+
+	private inout string[string] parseFile(string data) {
+		string[string] ret;
+		foreach(string line ; split(data, "\n")) {
+			immutable equals = line.indexOf("=");
+			if(equals != -1) {
+				immutable message = line[0..equals].strip;
+				immutable text = line[equals+1..$].strip;
+				if(message.length && message[0] != '#') ret[message] = text;
+			}
+		}
+		return ret;
 	}
 
 	/**
-	 * loads languages from a specific directory.
+	 * Adds messages using the given associative array of message:text.
 	 */
-	public typeof(this) add(string dir) {
-		this.additionalFolders ~= dir;
-		this.loadDir(dir);
-		return this;
+	public void add(string language, string[string] messages) {
+		foreach(message, text; messages) {
+			this.raw[language][message] = text;
+			Element[] elements;
+			string next;
+			ptrdiff_t index = -1;
+			foreach(i, c; text) {
+				if(index >= 0) {
+					if(c == '}') {
+						try {
+							auto num = to!size_t(text[index+1..i]);
+							if(next.length) {
+								elements ~= Element(next);
+								next.length = 0;
+							}
+							elements ~= Element(num);
+						} catch(ConvException) {
+							next ~= text[index..i+1];
+						}
+						index = -1;
+					}
+				} else {
+					if(c == '{') {
+						index = i;
+					} else {
+						next ~= c;
+					}
+				}
+			}
+			if(index >= 0) next ~= text[index..$];
+			if(next.length) elements ~= Element(next);
+			if(elements.length) this.messages[language][message] = TranslationManager(elements);
+		}
+	}
+
+	/// ditto
+	public const void add(string language, string[string] messages) {
+		(cast()this).add(language, messages);
 	}
 
 	/**
@@ -121,22 +206,6 @@ class LanguageManager {
 	/// ditto
 	public inout string translate(inout Translation translation) {
 		return this.translate(translation, this.language);
-	}
-
-	private void loadDir(string dir) {
-		if(!dir.endsWith(dirSeparator)) dir ~= dirSeparator;
-		foreach(language ; this.acceptedLanguages) {
-			if(!this.loadFile(language, dir ~ language ~ ".lang")) this.loadFile(language, dir ~ language[0..language.indexOf("_")] ~ ".lang");
-		}
-	}
-
-	private bool loadFile(string language, string file) {
-		if(exists(file)) {
-			this.loadImpl(language, read(file));
-			return true;
-		} else {
-			return false;
-		}
 	}
 
 	private void loadImpl(string language, void[] data) {
@@ -242,6 +311,10 @@ struct Translation {
 	
 	public this(E...)(string default_, E parameters) {
 		this(Translatable.all(default_), parameters);
+	}
+
+	public static Translation server(E...)(string default_, E parameters) {
+		return Translation(Translatable(default_), parameters);
 	}
 	
 }

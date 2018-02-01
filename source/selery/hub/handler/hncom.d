@@ -175,7 +175,7 @@ abstract class AbstractNode : Handler!serverbound {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, language, acceptedLanguages, webAdmin, cast()*this.additionalJson));
+			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.language, server.config.lang.acceptedLanguages.dup, webAdmin, cast()*this.additionalJson));
 		}
 		auto info = this.receiveNodeInfo(stream);
 		this.n_max = info.max;
@@ -334,8 +334,7 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusUpdateLanguageFiles(Status.UpdateLanguageFiles packet) {
-		//TODO add to config.lang
-		//TODO broadcast to connected web admin that match packet.language
+		this.server.config.lang.add(packet.language, packet.messages);
 	}
 
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {

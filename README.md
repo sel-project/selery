@@ -1,6 +1,5 @@
-![SEL Logo](https://i.imgur.com/cTu1FE5.png)
-
-**A Server for Minecraft (Bedrock Engine) and Minecraft: Java Edition written in [D](https://dlang.org)**
+Selery
+=================
 
 [![DUB Package](https://img.shields.io/dub/v/selery.svg)](https://code.dlang.org/packages/selery)
 [![Build Status](https://travis-ci.org/sel-project/selery.svg?branch=master)](https://travis-ci.org/sel-project/selery)
@@ -9,7 +8,7 @@
 The server is still in development and some features are not supported yet.
 
 Supported Minecraft (Bedrock Engine) versions:
-- [1.2.7](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.7) and [1.2.8](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.8)
+- [1.2.7](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.7), [1.2.8](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.8) and [1.2.9](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.9)
 - [1.2.6](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.6)
 - [1.2.5](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.5)
 - [1.2.0](https://minecraft.gamepedia.com/Bedrock_Edition_1.2), [1.2.1](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.1), [1.2.2](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.2) and [1.2.3](https://minecraft.gamepedia.com/Bedrock_Edition_1.2.3)
@@ -19,34 +18,41 @@ Supported Minecraft: Java Edition versions:
 - [1.11](https://minecraft.gamepedia.com/1.11), [1.11.1](https://minecraft.gamepedia.com/1.11.1) and [1.11.2](https://minecraft.gamepedia.com/1.11.2)
 - [1.10](https://minecraft.gamepedia.com/1.10), [1.10.1](https://minecraft.gamepedia.com/1.10.1) and [1.10.2](https://minecraft.gamepedia.com/1.10.2)
 
-### Structure
+## Installation
 
-SEL is based on the [hub-node communication protocol](https://sel-utils.github.io/protocol/hncom), which means that it can run as two separate instances (hub and node), which are connected through a socket.
+### From a pre-built package
 
-## Create a server
+Pre-built packages are compiled with the latest version of LDC in release mode and can be found in the [releases](https://github.com/sel-project/selery/releases) page.
 
-:warning: doesn't compile using 32-bit DMD
+### From source
 
-:warning: doesn't work using DMD in release mode
+- Clone the repository using `git clone git://github.com/sel-project/selery` or download the zipped repository from the latest release.
+- If you want to use the latest release run `git checkout $(git describe --tags --abbrev=0)` in the repository's location.
+- Build by running `build.bat` on Windows or `build.sh` on Linux/OS X.
+- Run the generated executable file.
 
+All in one:
 ```
 git clone git://github.com/sel-project/selery
-cd selery/builder
-dub --single init.d
-dub build
-cd ..
-./selery-default [-edu] [-realm]
+cd selery
+./build.sh
 ```
 
-If you're on Windows you must compile using a 64-bit architecture (for example `dub build -a x86_64`)
+## Structure
+
+Selery is based on the [hub-node communication protocol](https://sel-utils.github.io/protocol/hncom), which means that it can run as two separate instances (hub and node), which are connected through a socket.
 
 ## Libraries
 
-- [imageformats](https://code.dlang.org/packages/imageformats) to convert PNG images to binary (like skins and server's icon)
-- [resusage](https://code.dlang.org/packages/resusage) to monitor the usage of CPU and RAM
-- [sel-hncom](https://code.dlang.org/packages/sel-hncom) to connect the hub (network functionalities) and the node(s) (gameplay-related functionalities)
-- [sel-nbt](https://code.dlang.org/packages/sel-nbt) to manage, encode and decode [Named Binary Tag](https://minecraft.gamepedia.com/NBT_format)s
-- [sel-net](https://code.dlang.org/packages/sel-net) (not yet implemented)
-- [sel-server](https://code.dlang.org/packages/sel-server) to manage the network-related stuff of the Minecraft games
-- [sel-utils](https://code.dlang.org/packages/sel-utils) to encode and decode the packets used by Minecraft, metadata and IDs
-- [toml](https://code.dlang.org/packages/toml) to read and write the server's configuration files
+- [arsd-official:terminal](https://code.dlang.org/packages/arsd-official%3Aterminal)
+- [diet-ng](https://code.dlang.org/packages/diet-ng)
+- [imageformats](https://code.dlang.org/packages/imageformats) ([BSL-1.0 Licence](https://github.com/lgvz/imageformats/blob/master/LICENSE))
+- [resusage](https://code.dlang.org/packages/resusage) ([BSL-1.0 Licence](https://github.com/FreeSlave/resusage/blob/master/LICENSE_1_0.txt))
+- [sel-hncom](https://code.dlang.org/packages/sel-hncom) ([LGPL-3.0 Licence](https://github.com/sel-project/sel-hncom/blob/master/LICENSE))
+- [sel-nbt](https://code.dlang.org/packages/sel-nbt) ([LGPL-3.0 Licence](https://github.com/sel-project/sel-nbt/blob/master/LICENSE))
+- [sel-net](https://code.dlang.org/packages/sel-net) ([LGPL-3.0 Licence](https://github.com/sel-project/sel-net/blob/master/LICENSE))
+- [sel-server](https://code.dlang.org/packages/sel-server) ([LGPL-3.0 Licence](https://github.com/sel-project/sel-server/blob/master/LICENSE))
+- [sel-utils](https://code.dlang.org/packages/sel-utils)
+- [string-transform-d](https://code.dlang.org/packages/string-transform-d)
+- [toml](https://code.dlang.org/packages/toml)
+- [toml:json](https://code.dlang.org/packages/toml%3Ajson)

@@ -101,7 +101,8 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				
 			}
 			
-			this.lang = new LanguageManager(this.files);
+			this.lang = new LanguageManager(this.files, this.language);
+			this.lang.load();
 		
 		}
 	
@@ -191,6 +192,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 			}
 
 			set(this.uuid, "uuid");
+			set(this.language, "language");
 			
 			if(isHub) with(this.hub = new Config.Hub()) {
 			
@@ -209,9 +211,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(java.motd, "java", "motd");
 				set(java.addresses, "java", "addresses");
 				setProtocols(java.protocols, supportedJavaProtocols, latestJavaProtocols, "java", "accepted-protocols");
-				set(query, "query");
-				set(language, "language");
-				set(acceptedLanguages, "accepted-languages");
+				set(query, "query-enabled");
 				set(serverIp, "server-ip");
 				set(favicon, "favicon");
 				set(rcon, "rcon", "enabled");
@@ -298,10 +298,9 @@ auto loadConfig(ConfigType type, ref string[] args) {
 			file ~= "uuid = \"" ~ this.uuid.toString().toUpper() ~ "\"" ~ newline;
 			if(isHub) file ~= "display-name = \"" ~ this.hub.displayName ~ "\"" ~ newline;
 			if(isNode) file ~= "max-players = " ~ (this.node.maxPlayers == 0 ? "\"unlimited\"" : to!string(this.node.maxPlayers)) ~ newline;
-			if(isHub) file ~= "query = " ~ to!string(this.hub.query) ~ newline;
-			if(isHub) file ~= "language = \"" ~ this.hub.language ~ "\"" ~ newline;
-			if(isHub) file ~= "accepted-languages = " ~ to!string(this.hub.acceptedLanguages) ~ newline;
+			file ~= "language = \"" ~ this.language ~ "\"" ~ newline;
 			if(isHub) file ~= "server-ip = \"" ~ this.hub.serverIp ~ "\"" ~ newline;
+			if(isHub) file ~= "query-enabled = " ~ to!string(this.hub.query) ~ newline;
 			if(isHub && !this.hub.edu) file ~= "favicon = \"" ~ this.hub.favicon ~ "\"" ~ newline;
 			if(isHub) file ~= "social = {}" ~ newline; //TODO
 			if(isHub) with(this.hub.bedrock) {
