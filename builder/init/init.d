@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 40;
+enum size_t __GENERATOR__ = 41;
 
 void main(string[] args) {
 
@@ -342,6 +342,7 @@ void main(string[] args) {
 	builder["configurations"] = [["name": type]];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
+		"arsd-official:terminal": ["version": "~>1.2.2"], // bug in dub
 		"toml": ["version": "~>0.4.0-rc.4"],
 		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
@@ -367,7 +368,7 @@ void main(string[] args) {
 				sub["targetType"] = "library";
 				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
 				sub["configurations"] = [["name": "plugin"]];
-				sub["dependencies"] = ["selery": ["path": ".."]];
+				sub["dependencies"] = ["selery": ["path": ".."], "arsd-official:terminal": ["version": "~>1.2.2"]], // bug in dub;
 				sub["sourcePaths"] = [relativePath(value.path ~ "src")];
 				sub["importPaths"] = [relativePath(value.path ~ "src")];
 				auto dptr = "dependencies" in value.toml;
