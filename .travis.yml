@@ -9,7 +9,7 @@ os:
   - osx
   
 env:
-  gloabal:
+  global:
     - ARCH=x86_64
   matrix:
     - CONFIG=debug
