@@ -35,6 +35,8 @@ import std.path : dirSeparator;
 import std.random : randomShuffle;
 import std.string : split, join, endsWith;
 
+import memutils.all;
+
 import selery.about : block_t;
 import selery.block.block : Block;
 import selery.block.blocks : BlockStorage;
@@ -65,9 +67,6 @@ class Chunk {
 	public bool saveChangedBlocks = false;
 	public BlockPosition[] changed_blocks;
 	public Tile[uint] changed_tiles;
-
-	private immutable(ubyte)[] m_compressed_pe;
-	private immutable(ubyte)[] m_compressed_pc;
 	
 	public Tile[ushort] tiles;
 
@@ -254,7 +253,8 @@ class Chunk {
 	}
 
 	public Section* createSection(size_t y) {
-		this.n_sections[y] = new Section();
+		//this.n_sections[y] = new Section();
+		this.n_sections[y] = ThreadMem.alloc!Section();
 		if(y > this.highest_section) {
 			this.highest_section = y;
 		}
@@ -262,14 +262,18 @@ class Chunk {
 	}
 
 	public void removeSection(size_t y) {
-		this.n_sections.remove(y);
-		if(y == this.highest_section) {
-			size_t[] keys = this.n_sections.keys;
-			if(keys.length) {
-				sort(keys);
-				this.highest_section = keys[$-1];
-			} else {
-				this.highest_section = 0;
+		auto section = y in this.n_sections;
+		if(y) {
+			ThreadMem.free(*section);
+			this.n_sections.remove(y);
+			if(y == this.highest_section) {
+				size_t[] keys = this.n_sections.keys;
+				if(keys.length) {
+					sort(keys);
+					this.highest_section = keys[$-1];
+				} else {
+					this.highest_section = 0;
+				}
 			}
 		}
 	}
@@ -323,6 +327,10 @@ class Chunk {
 		//this.sections.call!"unload"();
 		foreach(Tile tile ; this.tiles) {
 			tile.unplace();
+		}
+		// free memory
+		foreach(section ; this.n_sections) {
+			ThreadMem.free(section);
 		}
 	}
 

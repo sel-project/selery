@@ -441,16 +441,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/*
 	 * Function called when the world is closed.
-	 * Saves the resources if they need to be saved.
+	 * Saves the resources if they need to be saved and unloads the chunks
+	 * freeing the memory allocated.
 	 */
 	protected void stop() {
 		foreach(ref chunks ; this.n_chunks) {
 			foreach(ref chunk ; chunks) {
 				chunk.unload();
 			}
-		}
-		foreach(child ; children) {
-			child.stop();
 		}
 	}
 
@@ -740,12 +738,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		foreach(i, child; this.n_children) {
 			if(world.id == child.id) {
 				this.n_children = this.n_children[0..i] ~ this.n_children[i+1..$];
-				void tp(World w) {
+				void unload(World w) {
 					foreach(player ; w.players) player.teleport(this, cast(EntityPosition)this.spawnPoint);
-					foreach(child ; w.children) tp(child);
+					w.stop(); // unload chunks
+					foreach(child ; w.children) unload(child);
 				}
-				tp(world); // teleport all players in the current world's spawn
-				world.stop();
+				unload(world); // teleport all players in the current world's spawn
 				this.info.children.remove(world.id);
 				return true;
 			}
@@ -809,10 +807,12 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 		}
 
+		//TODO make sure no players are online
+
 		//TODO send RemoveWorld to the hub (children will be removed automatically)
 
-		//TODO save this world and children
-		//this.saveAll();
+		//TODO also stop children
+		this.stop();
 
 		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, CloseResult.REMOVED));
 
