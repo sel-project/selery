@@ -24,9 +24,9 @@
  * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/util/node.d, selery/util/node.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/node/node.d, selery/node/node.d)
  */
-module selery.util.node;
+module selery.node.node;
 
 import std.algorithm : canFind;
 

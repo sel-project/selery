@@ -31,6 +31,7 @@ module selery.block.solid;
 import std.algorithm : canFind, min;
 import std.conv : to;
 import std.math : ceil;
+import std.random : Random, uniform, uniform01, randomShuffle;
 
 import selery.about : block_t, item_t, tick_t;
 import selery.block.block : Update, Remove, Block;
@@ -44,7 +45,6 @@ import selery.item.slot : Slot;
 import selery.item.tool : Tools;
 import selery.math.vector : BlockPosition;
 import selery.player.player : Player;
-import selery.util.random : Random;
 import selery.world.world : World;
 
 static import sul.blocks;
@@ -254,7 +254,7 @@ class MineableBlock : Block {
 					ret[drop.silkTouch] = 1;
 				} else if(drop.item) {
 					if(drop.max) {
-						auto res = world.random.range(drop.min, drop.max);
+						auto res = uniform!"[]"(drop.min, drop.max, world.random);
 						if(res > 0) ret[drop.item] = cast(ubyte)res;
 					} else {
 						ret[drop.item] = cast(ubyte)drop.min;
@@ -381,7 +381,7 @@ class SpreadingBlock : MineableBlock {
 
 	public override void onRandomTick(World world, BlockPosition position) {
 		// spread
-		world.random.shuffle(this.positions);
+		randomShuffle(this.positions, world.random);
 		foreach(check ; this.positions) {
 			BlockPosition target = position + check;
 			Block b = world[target];
@@ -457,7 +457,7 @@ final class GravelBlock : GravityBlock {
 
 	public override Slot[] drops(World world, Player player, Item item) {
 		Slot[] impl(float prob) {
-			return [Slot(world.items.get(world.random.next!float <= prob ? Items.flint : Items.gravel), 1)];
+			return [Slot(world.items.get(uniform01(world.random) <= prob ? Items.flint : Items.gravel), 1)];
 		}
 		if(item !is null) {
 			auto fortune = Enchantments.fortune in item;
@@ -520,11 +520,11 @@ class LeavesBlock(bool decayable, bool dropApples) : Block {
 
 	private Slot[] decayDrop(World world, ubyte sp, ubyte ap) {
 		Slot[] ret;
-		if(world.random.next(sp) == 0) {
+		if(uniform(0, sp, world.random) == 0) {
 			ret ~= Slot(world.items.get(this.sapling), 1);
 		}
 		static if(dropApples) {
-			if(world.random.next(ap) == 0) {
+			if(uniform(0, ap, world.random) == 0) {
 				ret ~= Slot(world.items.get(Items.apple), 1);
 			}
 		}
@@ -624,7 +624,7 @@ class PlantBlock : Block {
 		if(item !is null && item.toolType == Tools.shears) {
 			ret ~= Slot(world.items.get(this.shears), 1);
 		} else {
-			ubyte count = cast(ubyte)world.random.range(this.hand.min, this.hand.max);
+			ubyte count = cast(ubyte)uniform!"[]"(this.hand.min, this.hand.max, world.random);
 			if(count) {
 				auto f = world.items.getConstructor(this.hand.item);
 				if(f !is null) {

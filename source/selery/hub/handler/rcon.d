@@ -74,14 +74,10 @@ final class RconHandler : GenericServer {
 		Socket socket = cast()_socket;
 		while(true) {
 			Socket client = socket.accept();
-			if(!this.server.isBlocked(client.remoteAddress)) {
-				new SafeThread(this.server.lang, {
-					shared RconClient session = new shared RconClient(this.server, client);
-					delete session;
-				}).start();
-			} else {
-				client.close();
-			}
+			new SafeThread(this.server.lang, {
+				shared RconClient session = new shared RconClient(this.server, client);
+				delete session;
+			}).start();
 		}
 	}
 

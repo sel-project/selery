@@ -30,11 +30,11 @@ module selery.world.generator;
 
 import std.algorithm : min;
 import std.conv : to;
+import std.random : uniform, uniform01;
 
 import selery.block.block : Block;
 import selery.block.blocks : Blocks;
 import selery.math.vector : ChunkPosition, BlockPosition, distance;
-import selery.util.random : Random;
 import selery.world.chunk : Chunk;
 import selery.world.world : World;
 
@@ -107,11 +107,11 @@ class Flat : Generator {
 				}
 			}
 		}
-		if(this.trees && this.world.random.probability(.75)) {
+		if(this.trees && uniform01!float(this.world.random) >= .75) {
 			//test a tree
-			ubyte tree = this.world.random.next!ubyte(6);
-			ubyte height = this.world.random.range!ubyte(4, 24);
-			ubyte foliage = this.world.random.range!ubyte(3, min(height, cast(ubyte)7));
+			ubyte tree = uniform(ubyte(0), ubyte(6), this.world.random);
+			ubyte height = uniform(ubyte(4), ubyte(24), this.world.random);
+			ubyte foliage = uniform(ubyte(3), min(height, ubyte(7)), this.world.random);
 			//logs
 			foreach(y ; this.layers.length..this.layers.length+height) {
 				chunk[7, cast(uint)y, 7] = Blocks.woodUpDown[tree];

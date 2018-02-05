@@ -29,8 +29,8 @@
 module selery.event.node.node;
 
 import selery.event.node.server : NodeServerEvent;
+import selery.node.node : Node;
 import selery.node.server : NodeServer;
-import selery.util.node : Node;
 
 abstract class NodeEvent : NodeServerEvent {
 

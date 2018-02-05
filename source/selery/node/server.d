@@ -71,18 +71,16 @@ import selery.lang : LanguageManager, Translation;
 import selery.log : Format, Message, Logger;
 import selery.node.handler; //TODO selective imports
 import selery.node.info : PlayerInfo, WorldInfo;
+import selery.node.node : Node;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.player.java : JavaPlayer;
 import selery.player.player : PermissionLevel;
 import selery.plugin : Plugin, Description;
 import selery.server : Server;
-import selery.util.ip : publicAddresses;
-import selery.util.memory : Memory;
-import selery.util.node : Node;
 import selery.util.resourcepack : createResourcePacks, serveResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
-import selery.world.thread; //TODO selective imports
+import selery.world.thread;
 
 import HncomLogin = sel.hncom.login;
 import HncomUtil = sel.hncom.util;
@@ -376,10 +374,12 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			std.concurrency.spawn(&serveResourcePacks, std.concurrency.thisTid, cast(string)rp.java2.idup, cast(string)rp.java3.idup);
 			ushort port = std.concurrency.receiveOnly!ushort();
 
-			auto ip = publicAddresses(this.config.files);
-			//TODO also try to use local address before using 127.0.0.1
+			import myip : publicAddress4;
 
-			JavaPlayer.updateResourcePacks(rp.java2, rp.java3, ip.v4.length ? ip.v4 : "127.0.0.1", port);
+			auto ip = publicAddress4;
+			//TODO also try to use private addresses before using 127.0.0.1
+
+			JavaPlayer.updateResourcePacks(rp.java2, rp.java3, ip.length ? ip : "127.0.0.1", port);
 			BedrockPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
 
 		}
@@ -729,32 +729,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	public shared @property @safe Duration uptime() {
 		return dur!"msecs"(milliseconds - this.start_time);
 	}
-
-	/+
-	/**
-	 * Gets the current memory (RAM and SWAP) usage.
-	 * Example:
-	 * ---
-	 * if(server.ram.gigabytes >= mem!"GB"(1)) {
-	 *    d("The server is using more than 1 GB of RAM!");
-	 * }
-	 * ---
-	 */
-	public @property @safe @nogc Memory ram() {
-		return Memory(this.last_ram);
-	}
-
-	/**
-	 * Gets the current CPU usage.
-	 * Example:
-	 * ---
-	 * d("The server is using ", server.cpu, "% on ", totalCPUs, " CPUs");
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc float cpu() {
-		return this.last_cpu;
-	}
-	+/
 
 	/**
 	 * Gets a list with the nodes connected to the hub, this excluded.

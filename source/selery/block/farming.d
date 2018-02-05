@@ -28,6 +28,8 @@
  */
 module selery.block.farming;
 
+import std.random : dice, uniform, randomShuffle;
+
 import selery.about : block_t, item_t;
 import selery.block.block : Block, Update;
 import selery.block.blocks : Blocks;
@@ -119,7 +121,8 @@ class GrowingFarmingBlock : FarmingBlock {
 	}
 
 	public override void onRandomTick(World world, BlockPosition position) {
-		if(world.random.probability(world[position - [0, 1, 0]] != Blocks.farmland7 ? .125 : .25)) {
+		immutable float p = world[position - [0, 1, 0]] != Blocks.farmland7 ? .125 : .25;
+		if(dice(world.random, 1f - p, p)) {
 			this.grow(world, position);
 		}
 	}
@@ -168,7 +171,7 @@ class FruitCropBlock(bool isArray) : GrowingFarmingBlock {
 	public override void grow(World world, BlockPosition position) {
 		//search for a place to grow
 		BlockPosition[] positions = [position + [1, 0, 0], position + [0, 0, 1], position - [1, 0, 0], position - [0, 0, 1]];
-		world.random.shuffle(positions);
+		randomShuffle(positions, world.random);
 		foreach(BlockPosition pos ; positions) {
 			if(world[pos] == Blocks.air) {
 				Block s = world[pos - [0, 1, 0]];
@@ -209,7 +212,7 @@ class ChanceCropBlock : StageCropBlock {
 	}
 
 	public override void onRandomTick(World world, BlockPosition position) {
-		if(world.random.next(this.b) < this.a) {
+		if(uniform(0, this.b, world.random) < this.a) {
 			//TODO call this.grow ?
 			super.onRandomTick(world, position);
 		}
@@ -231,13 +234,7 @@ template StemBlock(T) {
 		}
 
 		public override Slot[] drops(World world, Player player, Item item) {
-			immutable amount = (){
-				immutable r = world.random.next(0, 125);
-				if(r < 100) return 0;
-				else if(r < 120) return 1;
-				else if(r < 124) return 2;
-				else return 3;
-			}();
+			immutable amount = dice(world.random, 100, 20, 4, 1);
 			if(amount) {
 				auto func = world.items.getConstructor(this.drop);
 				if(func !is null) {

@@ -35,6 +35,7 @@ import std.bitmanip : bigEndianToNative, nativeToBigEndian;
 import std.conv : to;
 import std.file : exists, read, write;
 import std.math;
+import std.random : uniform01;
 import std.string : split, replace;
 import std.traits : isArray, isAbstractClass;
 import std.typecons : Tuple;
@@ -916,9 +917,9 @@ abstract class Entity : EventListener!WorldEvent {
 	 * Drop an item from this entity
 	 */
 	public void drop(Slot slot) {
-		float f0 = this.world.random.next!float * PI * 2f;
-		float f1 = this.world.random.next!float * .02f;
-		this.world.drop(slot, this.position + [0, this.eyeHeight - .3, 0], this.direction * .3f + [cos(f0) * f1, (this.world.random.next!float - this.world.random.next!float) * .1f + .1f, sin(f0) * f1]);
+		float f0 = uniform01!float(this.world.random) * PI * 2f;
+		float f1 = uniform01!float(this.world.random) * .02f;
+		this.world.drop(slot, this.position + [0, this.eyeHeight - .3, 0], this.direction * .3f + [cos(f0) * f1, (uniform01!float(this.world.random) - uniform01!float(this.world.random)) * .1f + .1f, sin(f0) * f1]);
 	}
 
 	public @property @safe string name() {

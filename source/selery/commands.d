@@ -43,7 +43,6 @@ import selery.config : Config, Gamemode, Difficulty, Dimension;
 import selery.effect : Effects;
 import selery.enchantment : Enchantments;
 import selery.entity.entity : Entity;
-import selery.format : unformat;
 import selery.lang : Translation, Translatable;
 import selery.log : Format;
 import selery.node.info : PlayerInfo, WorldInfo;
@@ -53,6 +52,7 @@ import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode, PermissionLevel;
 import selery.plugin : Description, permission, hidden, unimplemented;
 import selery.util.messages : Messages;
+import selery.util.util : unformat;
 import selery.world.world : Time;
 
 enum vanilla;
@@ -795,7 +795,7 @@ final class Commands {
 			else sender.world.weather.clear(duration);
 			sender.sendMessage(Translation(Messages.weather.clear));
 		} else {
-			if(duration <= 0 || duration > 1_000_000) duration = sender.world.random.range(6000, 18000);
+			if(duration <= 0 || duration > 1_000_000) duration = uniform!"[]"(6000, 18000, sender.world.random);
 			if(type == Weather.rain) {
 				sender.world.weather.start(duration, false);
 				sender.sendMessage(Translation(Messages.weather.rain));

@@ -84,7 +84,23 @@ auto loadConfig(ConfigType type, ref string[] args) {
 
 	auto config = new class Config {
 	
+		private string language;
+	
 		public override void load() {
+		
+			version(Windows) {
+				import std.utf : toUTF8;
+				import std.string : fromStringz;
+				import core.sys.windows.winnls;
+				wchar[] lang = new wchar[3];
+				wchar[] country = new wchar[3];
+				GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO639LANGNAME, lang.ptr, 3);
+				GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
+				this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
+			} else {
+				import std.process : environment;
+				this.language = environment.get("LANGUAGE", environment.get("LANG", "en_US"));
+			}
 		
 			this.reload();
 		

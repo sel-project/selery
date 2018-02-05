@@ -28,11 +28,11 @@
  */
 module selery.world.chunk;
 
-import core.memory : GC;
 import std.algorithm : sort;
 import std.conv : to;
 import std.math : abs, ceil, log2;
 import std.path : dirSeparator;
+import std.random : randomShuffle;
 import std.string : split, join, endsWith;
 
 import selery.about : block_t;
@@ -300,7 +300,7 @@ class Chunk {
 					positions ~= Vector2!ubyte(x, z);
 				}
 			}
-			this.world.random.shuffle(positions);
+			randomShuffle(positions, this.world.random);
 			this.next_snow = positions;
 		}
 		auto ret = this.next_snow[$-1];

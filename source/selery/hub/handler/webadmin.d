@@ -148,7 +148,7 @@ class WebAdminHandler : GenericServer {
 				}
 			}
 		}
-		return this.server.config.language;
+		return this.server.config.lang.language;
 	}
 
 	private shared Response handle(Socket client, Request request) {

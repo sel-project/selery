@@ -29,6 +29,7 @@
 module selery.entity.human;
 
 import std.math : isNaN, sin, cos, PI;
+import std.random : uniform01;
 
 import selery.about;
 import selery.config : Difficulty;
@@ -130,8 +131,8 @@ class Human : Living, Collector, Shooter, PotionThrower {
 		//drop the content of the inventory
 		foreach(Slot slot ; this.inventory.full) {
 			if(!slot.empty && Enchantments.curseOfVanishing !in slot.item) {
-				float f0 = this.world.random.next!float * .5f;
-				float f1 = this.world.random.next!float * PI * 2;
+				float f0 = uniform01!float(this.world.random) * .5f;
+				float f1 = uniform01!float(this.world.random) * PI * 2;
 				this.world.drop(slot, this.position + [0, 1.3, 0], EntityPosition(-sin(f1) * f0, .2, cos(f1) * f0));
 			}
 		}

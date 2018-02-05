@@ -57,7 +57,7 @@ public @property @safe ulong microseconds() {
 }
 
 /**
- * Remove an element from an array.
+ * Removes an element from an array.
  * Params:
  * 		value = the value to be removed from the array
  * 		array = the array where the value should be removed from
@@ -93,7 +93,7 @@ unittest {
 }
 
 /**
- * Find a value in a array.
+ * Finds a value in a array.
  * Params:
  * 		value = the value to be searched in the array
  * 		array = the array to search into
@@ -113,7 +113,7 @@ public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(_
 }
 
 /** 
- * Convert from roman to an integer.
+ * Converts from roman number to an integer.
  * Example:
  * ---
  * assert("I".roman == 1);
@@ -156,28 +156,8 @@ unittest {
 	
 }
 
-/** Check if a value is between 0 and 1 */
-public deprecated @property @safe @nogc bool one(double value) {
-	return value >= 0f && value <= 1f;
-}
-
 /** 
- * Set the value between two numbers.
- * Example:
- * ---
- * assert(between(22, 0, 10) == 2);
- * assert(between(-1, 0, 10) == 9);
- * ---
- */
-public deprecated @safe @nogc T between(T)(T number, T min, T max) {
-	if(max <= min) return number;
-	while(number < min) number += max;
-	while(number > max) number -= max;
-	return number;
-}
-
-/** 
- * Call a function on every element in the array.
+ * Calls a function on every element in the array.
  * Example:
  * ---
  * Effect effect = new Effect(Effects.REGENERATION, 60, "V");
@@ -205,27 +185,7 @@ public @safe void call(string func, T, E...)(T array, E args) if((isArray!T || i
 }
 
 /**
- * Filters an array and returns one that contains only
- * the requested type.
- * Example:
- * ---
- * Entity[] entities = [entity, creeper, player, bat, cow, zombie, arrow, skeleton];
- * assert(entities.filter!Living == [creeper, player, bat, cow, zombie, skeleton]);
- * 
- * Block[] blocks = [gravel, wallSign, sand, noteblock, bedrock, shrub, postSign];
- * assert(blocks.filter!Tile == [wallSign, noteblock, postSign]);
- * ---
- */
-public deprecated @property @safe T[] filter(T, E)(E[] array) {
-	T[] ret;
-	foreach(ref E e ; array) {
-		if(cast(T)e) ret ~= cast(T)e;
-	}
-	return ret;
-}
-
-/**
- * Perform a safe conversion.
+ * Performs a safe conversion.
  * Example:
  * ---
  * assert(90.safe!ubyte == 90);
@@ -238,6 +198,35 @@ public @property @safe T safe(T, E)(E value) {
 	} catch(ConvException e) {
 		return T.init;
 	}
+}
+
+/**
+ * Removes valid formatting codes from a message.
+ * Note that this function also removes uppercase formatting codes
+ * because they're supported by Minecraft (but not by Minecraft Pocket
+ * Edition).
+ * Example:
+ * ---
+ * assert(unformat("§agreen") == "green");
+ * assert(unformat("res§Ret") == "reset");
+ * assert(unformat("§xunsupported") == "§xunsupported");
+ * ---
+ */
+string unformat(string message) {
+	// regex should be ctRegex!("§[0-9a-fk-or]", "") but obviously doesn't work on DMD's release mode
+	for(size_t i=0; i<message.length-2; i++) {
+		if(message[i] == 194 && message[i+1] == 167) {
+			char next = message[i+2];
+			if(next >= '0' && next <= '9' ||
+				next >= 'A' && next <= 'F' || next >= 'K' && next <= 'O' || next == 'R' ||
+				next >= 'a' && next <= 'f' || next >= 'k' && next <= 'o' || next == 'r')
+			{
+				message = message[0..i] ~ message[i+3..$];
+				i--;
+			}
+		}
+	}
+	return message;
 }
 
 class UnloggedException : Exception {

@@ -56,6 +56,8 @@ import arsd.terminal : Terminal, ConsoleOutputType;
 
 import imageformats : ImageIOException, read_png_header_from_mem;
 
+import myip : privateAddresses, publicAddress4;
+
 import sel.hncom.login : HubInfo, NodeInfo;
 import sel.hncom.status : Log;
 import sel.server.client : Client;
@@ -73,8 +75,6 @@ import selery.lang : Translation;
 import selery.log : Format, Message, Logger;
 import selery.plugin : Plugin;
 import selery.server : Server;
-import selery.util.block : Blocks;
-import selery.util.ip : localAddresses, publicAddresses;
 import selery.util.portable : startWebAdmin;
 import selery.util.thread;
 import selery.util.util : milliseconds;
@@ -149,7 +149,6 @@ class HubServer : PlayerHandler, Server {
 	private shared uint n_upload, n_download;
 
 	private shared Handler handler;
-	private shared Blocks blocks;
 
 	private shared AbstractNode[uint] nodes;
 	private shared AbstractNode[] main_nodes;
@@ -204,14 +203,11 @@ class HubServer : PlayerHandler, Server {
 
 		this.id = uniform!"[]"(ulong.min, ulong.max);
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
-		
-		auto pa = publicAddresses(config.files);
-		if(pa.v4.length || pa.v6.length) {
-			if(pa.v4.length) this.logger.log("Public ip: ", pa.v4);
-			if(pa.v6.length) this.logger.log("Public ipv6: ", pa.v6);
-		}
-		
-		this.blocks = new Blocks();
+
+		auto pr = privateAddresses;
+		if(pr.length) this.logger.log("Private addresses: ", pr.join(", "));
+		immutable pu4 = publicAddress4;
+		if(pu4.length) this.logger.log("Public address: ", pu4);
 
 		this.handler = new shared Handler(this, this._info, this._query);
 
@@ -255,7 +251,6 @@ class HubServer : PlayerHandler, Server {
 				}
 			}
 			Thread.sleep(dur!"msecs"(1000));
-			this.blocks.remove(1);
 		}
 
 	}
@@ -465,19 +460,6 @@ class HubServer : PlayerHandler, Server {
 			else log ~= Message(message.message);
 		}
 		(cast()this._logger).logWith(log, commandId, worldId);
-	}
-
-	public shared nothrow @safe @nogc bool isBlocked(Address address) {
-		return this.blocks.isBlocked(address);
-	}
-
-	public shared bool block(Address address, size_t seconds) {
-		if(this.blocks.block(address, seconds)) {
-			this.logger.log(Translation("warning.blocked", [to!string(address), to!string(seconds)]));
-			return true;
-		} else {
-			return false;
-		}
 	}
 
 	public shared bool acceptNode(Address address) {

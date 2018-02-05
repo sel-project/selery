@@ -37,7 +37,7 @@ import std.conv : to;
 import std.datetime : dur;
 import std.datetime.stopwatch : StopWatch;
 import std.math : sin, cos, PI, pow;
-import std.random : unpredictableSeed;
+import std.random : Random, unpredictableSeed, uniform, uniform01, dice;
 import std.string : replace, toLower, toUpper, join;
 import std.traits : Parameters;
 import std.typecons : Tuple;
@@ -75,7 +75,6 @@ import selery.player.java : JavaPlayerImpl;
 import selery.player.player : Player, isPlayer;
 import selery.plugin : Plugin, loadPluginAttributes, Description;
 import selery.util.color : Color;
-import selery.util.random : Random;
 import selery.util.util : call;
 import selery.world.chunk;
 import selery.world.generator;
@@ -253,7 +252,7 @@ final class WorldGroup {
 		}
 
 		void clear() {
-			clear(random.range(12000, 180000));
+			clear(uniform!"[]"(12000u, 180000u, random));
 		}
 
 		void start(uint time, uint intensity, bool thunderous) {
@@ -266,11 +265,11 @@ final class WorldGroup {
 		}
 
 		void start(uint time, bool thunderous) {
-			start(time, random.range(1, 4), thunderous);
+			start(time, uniform!"[]"(1, 4, random), thunderous);
 		}
 
 		void start() {
-			start(random.range(12000, 24000), random.range(0, 1) == 1);
+			start(uniform!"[]"(12000u, 24000u, random), !dice(random, .5, .5));
 		}
 
 		private void update() {
@@ -352,7 +351,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	protected BlockStorage n_blocks;
 	protected ItemStorage n_items;
 	
-	private Random n_random;
+	private Random _random;
 	
 	private tick_t n_ticks = 0;
 
@@ -390,7 +389,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
 		if(this.n_items is null) this.n_items = new ItemStorage();
-		this.n_random = Random(this.seed);
+		this._random = Random(this.seed);
 		this.inheritance = new EventListener!WorldEvent();
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
@@ -656,7 +655,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * world's seed.
 	 */
 	public final pure nothrow @property @safe @nogc ref Random random() {
-		return this.n_random;
+		return this._random;
 	}
 
 	/**
@@ -904,14 +903,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 				foreach(ref chunk ; c) {
 					int cx = chunk.x << 4;
 					int cz = chunk.z << 4;
-					if(this.weather.thunderous && this.random.probability(1f/100_000)) {
-						ubyte random = this.random.range!ubyte;
+					if(this.weather.thunderous && uniform01!float(this.random) < 1f/100_000) {
+						ubyte random = uniform!ubyte(this.random);
 						ubyte x = (random >> 4) & 0xF;
 						ubyte z = random & 0xF;
 						auto y = chunk.firstBlock(x, z);
 						if(y >= 0) this.strike(EntityPosition(chunk.x << 4 | x, y, chunk.z << 4 | z));
 					}
-					if(this.weather.raining && this.random.probability(.03125f * this.weather.intensity)) {
+					if(this.weather.raining && uniform01!float(this.random) < .03125f * this.weather.intensity) {
 						auto xz = chunk.nextSnow;
 						auto y = chunk.firstBlock(xz.x, xz.z);
 						if(y > 0) {
@@ -941,7 +940,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 						if(section.tick) {
 							immutable y = i << 4;
 							foreach(j ; 0..this.randomTickSpeed) {
-								auto random = this.random.next(0, 4096);
+								auto random = uniform(0, 4096, this.random);
 								auto block = section.blocks[random];
 								if(block && (*block).doRandomTick) {
 									(*block).onRandomTick(this, BlockPosition(cx | ((random >> 4) & 15), y | ((random >> 8) & 15), cz | (random & 15)));
@@ -1300,8 +1299,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/// ditto
 	public final ItemEntity drop(Slot slot, EntityPosition position) {
-		float f0 = this.random.next!float * .1f;
-		float f1 = this.random.next!float * PI * 2f;
+		float f0 = uniform01!float(this.random) * .1f;
+		float f1 = uniform01!float(this.random) * PI * 2f;
 		return this.drop(slot, position, EntityPosition(-sin(f1) * f0, .2f, cos(f1) * f0));
 	}
 
@@ -1342,7 +1341,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 			auto pointer = position.dup;
 		
-			for(double blastForce=this.random.range(.7, 1.3)*power; blastForce>0; blastForce-=attenuation) {
+			for(double blastForce=uniform!"[]"(.4f, 1.3f, this.random)*power; blastForce>0; blastForce-=attenuation) {
 				auto pos = cast(BlockPosition)pointer + [pointer.x < 0 ? 0 : 1, pointer.y < 0 ? 0 : 1, pointer.z < 0 ? 0 : 1];
 				//if(pos.y < 0 || pos.y >= 256) break; //TODO use a constant
 				auto block = pos in this;
@@ -1852,7 +1851,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/** Grows a tree in the given world. */
 	public static void growTree(World world, BlockPosition position, ushort[] trunk=Blocks.oakWood, ushort leaves=Blocks.oakLeavesDecay) {
-		uint height = world.random.next(3, 6);
+		uint height = uniform(3u, 6u, world.random);
 		foreach(uint i ; 0..height) {
 			world[position + [0, i, 0]] = trunk[0];
 		}

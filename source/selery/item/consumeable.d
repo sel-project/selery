@@ -28,6 +28,8 @@
  */
 module selery.item.consumeable;
 
+import std.random : uniform, uniform01;
+
 import selery.about : block_t, item_t;
 import selery.block.block : compareBlock, blockInto;
 import selery.block.blocks : Blocks;
@@ -112,7 +114,7 @@ class ConsumeableItem(sul.items.Item si, EffectInfo[] effects, Residue residue=R
 	public override Item onConsumed(Player player) {
 		static if(effects.length) {
 			foreach(EffectInfo effect ; effects) {
-				if(effect.probability >= 1 || player.world.random.probability(effect.probability)) {
+				if(effect.probability >= 1 || uniform01!float(player.world.random) >= effect.probability) {
 					player.addEffect(effect.effect, effect.level, effect.duration);
 				}
 			}
@@ -181,7 +183,7 @@ class TeleportationItem(sul.items.Item si, uint ghunger, float gsaturation) : Fo
 	
 	public override Item onConsumed(Player player) {
 		@property int rand() {
-			return player.world.random.range(-8, 8);
+			return uniform!"[]"(-8, 8, player.world.random);
 		}
 		auto center = BlockPosition(player.position.x.blockInto, player.position.y.blockInto, player.position.z.blockInto);
 		foreach(i ; 0..16) {

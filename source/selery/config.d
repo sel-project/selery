@@ -73,7 +73,6 @@ enum Dimension : ubyte {
 class Config {
 
 	UUID uuid;
-	string language;
 
 	Files files;
 	LanguageManager lang;
@@ -82,23 +81,7 @@ class Config {
 	Node node;
 
 	public this(UUID uuid=randomUUID()) {
-
 		this.uuid = uuid;
-		
-		version(Windows) {
-			import std.utf : toUTF8;
-			import std.string : fromStringz;
-			import core.sys.windows.winnls;
-			wchar[] lang = new wchar[3];
-			wchar[] country = new wchar[3];
-			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO639LANGNAME, lang.ptr, 3);
-			GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SISO3166CTRYNAME, country.ptr, 3);
-			this.language = fromStringz(toUTF8(lang).ptr) ~ "_" ~ fromStringz(toUTF8(country).ptr);
-		} else {
-			import std.process : environment;
-			this.language = environment.get("LANG", "en_US");
-		}
-
 	}
 	
 	/**
@@ -131,11 +114,11 @@ class Config {
 
 		bool edu;
 
-		string displayName;
+		string displayName = "A Minecraft Server";
 
-		Game bedrock = Game(true, "", false, [Address("0.0.0.0", 19132)], latestBedrockProtocols);
+		Game bedrock = Game(true, "A Minecraft Server", false, [Address("0.0.0.0", 19132)], latestBedrockProtocols);
 		
-		Game java = Game(true, "", false, [Address("0.0.0.0", 25565)], latestJavaProtocols);
+		Game java = Game(true, "A Minecraft Server", false, [Address("0.0.0.0", 25565)], latestJavaProtocols);
 		
 		bool allowVanillaPlayers = false;
 		
@@ -186,14 +169,16 @@ class Config {
 				return password.idup;
 			}
 
-			this.displayName = this.java.motd = this.bedrock.motd = (){
-				switch(language[0..min(cast(size_t)language.indexOf("_"), $)]) {
-					case "es": return "Un Servidor de Minecraft";
-					case "it": return "Un Server di Minecraft";
-					case "pt": return "Um Servidor de Minecraft";
-					default: return "A Minecraft Server";
-				}
-			}();
+			if(lang !is null) {
+				this.displayName = this.java.motd = this.bedrock.motd = (){
+					switch(lang.language[0..min(cast(size_t)lang.language.indexOf("_"), $)]) {
+						case "es": return "Un Servidor de Minecraft";
+						case "it": return "Un Server di Minecraft";
+						case "pt": return "Um Servidor de Minecraft";
+						default: return "A Minecraft Server";
+					}
+				}();
+			}
 
 			this.rconPassword = randomPassword();
 
