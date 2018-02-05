@@ -9,10 +9,11 @@ os:
   - osx
   
 env:
-  - CONFIG=debug ARCH=x86
-  - CONFIG=debug ARCH=x86_64
-  - CONFIG=release ARCH=x86
-  - CONFIG=release ARCH=x86_64
+  gloabal:
+    - ARCH=x86_64
+  matrix:
+    - CONFIG=debug
+    - CONFIG=debug
 
 matrix:
   exclude:
