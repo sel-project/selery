@@ -154,17 +154,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				} else static if(is(T == JSONValue)) {
 					return toJSON(target); //TODO handle conversion errors
 				} else static if(is(T == Config.Hub.Address)) {
-					Config.Hub.Address address;
-					auto s = target.str.split(":");
-					if(s.length >= 2) {
-						try {
-							address.port = to!ushort(s[$-1]);
-						} catch(ConvException) {}
-						address.ip = s[0..$-1].join(":");
-						if(address.ip.startsWith("[")) address.ip = address.ip[1..$];
-						if(address.ip.endsWith("]")) address.ip = address.ip[0..$-1];
-					}
-					return address;
+					return convertAddress(target.str);
 				} else {
 					static assert(0);
 				}
@@ -181,14 +171,25 @@ auto loadConfig(ConfigType type, ref string[] args) {
 			}
 			
 			void set(T)(ref T value, const(string)[] keys...) {
-				static if(is(T == string) || isIntegral!T || isFloatingPoint!T || is(T == bool)) {
+				static if(is(T == string) || isIntegral!T || isFloatingPoint!T || is(T == bool) || isArray!T) {
 					// override using --key=value
-					immutable test = "--" ~ keys.join("-");
+					immutable option = "--" ~ keys.join("-");
 					foreach(i, arg; args) {
-						if(arg.startsWith(test ~ "=")) {
+						if(arg.startsWith(option ~ "=")) {
 							args = args[0..i] ~ args[i+1..$];
 							try {
-								value = to!T(arg[test.length+1..$]);
+								immutable data = arg[option.length+1..$];
+								static if(isArray!T && !is(T == string)) {
+									T _value;
+									alias A = typeof(_value[0]);
+									foreach(s_data ; split(data, ",")) {
+										static if(is(A == Config.Hub.Address)) _value ~= convertAddress(s_data);
+										else _value ~= to!A(s_data);
+									}
+									value = _value;
+								} else {
+									value = to!T(data);
+								}
 							} catch(ConvException) {}
 							return;
 						}
@@ -409,7 +410,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 		
 	};
 	
-	if(hasArg("--reset-config") || hasArg("-rc")) remove(filename);
+	if(hasArg("--reset") || hasArg("-r")) remove(filename);
 	
 	config.load();
 	
@@ -444,6 +445,21 @@ class CompressedFiles : Files {
 		return file;
 	}
 	
+}
+
+/**
+ * Throws: ConvException
+ */
+Config.Hub.Address convertAddress(string str) {
+	Config.Hub.Address address;
+	auto s = str.split(":");
+	if(s.length >= 2) {
+		address.port = to!ushort(s[$-1]);
+		address.ip = s[0..$-1].join(":");
+		if(address.ip.startsWith("[")) address.ip = address.ip[1..$];
+		if(address.ip.endsWith("]")) address.ip = address.ip[0..$-1];
+	}
+	return address;
 }
 
 string addressString(Config.Hub.Address[] addresses) {

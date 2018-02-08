@@ -2,7 +2,7 @@
 
 ### 0.1.1
 
-Update version format.
+Added more command-line options and improved the project's README file.
 
 ### 0.1.0
 

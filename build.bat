@@ -62,6 +62,11 @@ if "%arch%" == "" (
 		set arch=x86
 	)
 )
+if "%arch%" == "x86" (
+	if "%compiler%" == "dmd" (
+		set arch=x86_mscoff
+	)
+)
 cd builder\init
 dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %plugins%
 cd ..

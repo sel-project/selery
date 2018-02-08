@@ -50,9 +50,9 @@ script:
   - ./build.sh -c $DC -a $ARCH $CONFIG default
 
 after_success:
-  - ./selery-hub --about
-  - ./selery-node --about
-  - ./selery --about
+  - ./selery-hub --about --pretty
+  - ./selery-node --about --pretty
+  - ./selery --about --pretty
   - rm -rf assets/icons
   - mv README.md README
   - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE README selery-hub selery-node selery assets/

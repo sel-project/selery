@@ -25,7 +25,7 @@ module starter;
 import std.algorithm : canFind;
 import std.conv : to;
 import std.file : exists, write, read;
-import std.json : JSONValue;
+import std.json : JSONValue, toJSON;
 import std.stdio : writeln;
 
 import selery.about : Software;
@@ -46,13 +46,15 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
-		//json["release"] = [];
+		static if(__traits(compiles, import("release.json"))) json["release"] = parseJSON(import("release"));
+		else json["release"] = (JSONValue[string]).init;
 		debug json["debug"] = true;
 		else json["debug"] = false;
-		writeln(JSONValue(json));
+		auto j = JSONValue(json);
+		writeln(toJSON(j, args.canFind("--pretty")));
 		return;
 
-	} else if(args.canFind("--notes") || args.canFind("--release-notes") || args.canFind("-rn")) {
+	} else if(args.canFind("--changelog") || args.canFind("-c")) {
 		
 		static if(__traits(compiles, import("notes.txt")) && __traits(compiles, import("version.txt")) && Software.displayVersion == import("version.txt")) {
 			import std.string : replace;

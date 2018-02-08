@@ -112,7 +112,6 @@ build_script:
   - cd views
   - set /p selery_version=<version.txt
   - set /p release_notes=<notes.txt
-  - set /p selery_release<release.txt
   - cd ..\..
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
@@ -145,9 +144,9 @@ after_build:
   - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE README selery-hub.exe selery-node.exe selery.exe assets\
 
 test_script:
-  - selery-hub --about
-  - selery-node --about
-  - selery --about
+  - selery-hub --about --pretty
+  - selery-node --about --pretty
+  - selery --about --pretty
   
 on_success:
   - set RESULT=0
