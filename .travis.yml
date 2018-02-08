@@ -52,10 +52,12 @@ after_success:
   - ./selery --about
   - rm -rf assets/icons
   - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE selery-hub selery-node selery assets/
-  - bash <(curl -s https://gist.githubusercontent.com/Kripth/80e204f4ea331d455eddaab96c95c67e/raw/)
+  - curl -s https://gist.githubusercontent.com/Kripth/e570f715c27d0a345619e2ea881ed97d/raw/ > update.d
+  - rdmd update.d
   
 after_failure:
-  - bash <(curl -s https://gist.githubusercontent.com/Kripth/80e204f4ea331d455eddaab96c95c67e/raw/)
+  - curl -s https://gist.githubusercontent.com/Kripth/e570f715c27d0a345619e2ea881ed97d/raw/ > update.d
+  - rdmd update.d
 
 notifications:
   - email: false

@@ -146,11 +146,11 @@ test_script:
   - selery --about
   
 on_success:
-  - set RESULT=passed
+  - set RESULT=0
   
 on_failure:
-  - set RESULT=failed
+  - set RESULT=1
   
 on_finish:
-  - powershell -Command Invoke-WebRequest https://gist.githubusercontent.com/Kripth/9b83b065f740d308c81afdff81e8276d/raw/ -OutFile update.bat
-  - update.bat
+  - powershell -Command Invoke-WebRequest https://gist.githubusercontent.com/Kripth/e570f715c27d0a345619e2ea881ed97d/raw/ -OutFile update.d
+  - rdmd update.d

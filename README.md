@@ -1,8 +1,9 @@
 Selery
 ======
-[![GitHub release](https://img.shields.io/github/release/qubyte/rubidium.svg)](https://github.com/sel-project/selery/releases)
+
+[![GitHub release](https://img.shields.io/github/release/sel-peoject-selery.svg)](https://github.com/sel-project/selery/releases)
 [![DUB package](https://img.shields.io/dub/v/selery.svg)](https://code.dlang.org/packages/selery)
-======
+
 [![Linux x86_64 build](https://sel-bot.github.io/status/sel-project/selery/linux_x86_64_badge.svg)](https://travis-ci.org/sel-project/selery)
 [![OS X x86_64 build](https://sel-bot.github.io/status/sel-project/selery/osx_x86_64_badge.svg)](https://travis-ci.org/sel-project/selery)
 [![Windows x86 build](https://sel-bot.github.io/status/sel-project/selery/windows_x86_badge.svg)](https://ci.appveyor.com/project/Kripth/selery)
