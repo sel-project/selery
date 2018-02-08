@@ -144,3 +144,13 @@ test_script:
   - selery-hub --about
   - selery-node --about
   - selery --about
+  
+on_success:
+  - set RESULT=passed
+  
+on_failure:
+  - set RESULT=failed
+  
+on_finish:
+  - powershell -Command Invoke-WebRequest https://gist.githubusercontent.com/Kripth/9b83b065f740d308c81afdff81e8276d/raw/ -OutFile update.bat
+  - update.bat
