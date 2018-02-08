@@ -106,13 +106,14 @@ before_build:
 
 build_script:
   - cd builder\init
-  - dub build -c %DC% -a %Darch% --build=%CONFIGURATION%
+  - dub build --compiler=%DC% --arch=%Darch% --build=%CONFIGURATION%
   - cd ..
   - selery-init --generate-files
-  - set /p selery_version=<views\version.txt
-  - set /p release_notes=<views\notes.txt
-  - set /p selery_release<views\release.txt
-  - cd ..
+  - cd views
+  - set /p selery_version=<version.txt
+  - set /p release_notes=<notes.txt
+  - set /p selery_release<release.txt
+  - cd ..\..
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
