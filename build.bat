@@ -9,7 +9,6 @@ set compiler=dmd
 set build=debug
 set arch=
 set config=default
-set portable=
 set plugins=
 
 :loop
@@ -41,10 +40,6 @@ if "%1"=="" (
 	set config=hub
 ) else if "%1" == "node" (
 	set config=node
-) else if "%1" == "--portable" (
-	set portable=--portable
-) else if "%1" == "-p" (
-	set portable=--portable
 ) else if "%1" == "--no-plugins" (
 	set plugins=--no-plugins
 ) else if "%1" == "-np" (
@@ -68,14 +63,14 @@ if "%arch%" == "" (
 	)
 )
 cd builder\init
-dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %portable% %plugins%
+dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %plugins%
 cd ..
 dub build --compiler=%compiler% --build=%build% --arch=%arch%
 cd ..
 goto :eof
 
 :help
-echo Usage: build.bat [-h] [--dmd^|--ldc^|-c COMPILER] [debug^|release] [-a ARCH] [default^|hub^|node] [-p] [-np] [--clean]
+echo Usage: build.bat [-h] [--dmd^|--ldc^|-c COMPILER] [debug^|release] [-a ARCH] [default^|hub^|node] [-np] [--clean]
 echo(
 echo Optional aguments:
 echo   -h, --help            Show this message and exit
@@ -84,6 +79,5 @@ echo   -c COMPILER           Compile using the spcified compiler
 echo   debug, release        Compile using DUB's debug or release mode
 echo   -a ARCH               Specify the architecture to build for
 echo   default, hub, node    Compile the specified configuration for Selery
-echo   -p, --portable        Compile in portable mode
 echo   -np, --no-plugins     Compile without plugins
 echo   --clean               Remove dub.selections.json files

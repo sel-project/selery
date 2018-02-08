@@ -23,11 +23,11 @@ matrix:
 skip_tags: true
 
 artifacts:
-  - path: selery-hub-%selery_version%-windows-%lower_platform%.exe
+  - path: selery-hub.exe
     name: hub
-  - path: selery-node-%selery_version%-windows-%lower_platform%.exe
+  - path: selery-node.exe
     name: node
-  - path: selery-%selery_version%-windows-%lower_platform%.exe
+  - path: selery.exe
     name: default
   - path: selery-%selery_version%-windows-%lower_platform%.zip
     name: zip
@@ -108,9 +108,6 @@ build_script:
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
-  - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub --portable
-  - build.bat -c %DC% %CONFIGURATION% -a %Darch% node --portable
-  - build.bat -c %DC% %CONFIGURATION% -a %Darch% default --portable
   - cd builder
   - selery-init --generate-files
   - set /p selery_version=<version.txt
@@ -120,32 +117,28 @@ build_script:
   - cd ..
 
 after_build:
-  - rcedit selery-hub-%selery_version%.exe --set-version-string ProductName "Selery's hub"
-  - rcedit selery-hub-%selery_version%.exe --set-version-string FileDescription "Selery's hub %selery_version%"
-  - rcedit selery-hub-%selery_version%.exe --set-version-string OriginalFileName selery-hub-%selery_version%.exe
-  - rcedit selery-hub-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
-  - rcedit selery-hub-%selery_version%.exe --set-product-version %selery_version%
-  - rcedit selery-hub-%selery_version%.exe --set-icon assets\icons\hub.ico
+  - rcedit selery-hub.exe --set-version-string ProductName "Selery's hub"
+  - rcedit selery-hub.exe --set-version-string FileDescription "Selery's hub %selery_version%"
+  - rcedit selery-hub.exe --set-version-string OriginalFileName selery-hub.exe
+  - rcedit selery-hub.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-hub.exe --set-product-version %selery_version%
+  - rcedit selery-hub.exe --set-icon assets\icons\hub.ico
   
-  - rcedit selery-node-%selery_version%.exe --set-version-string ProductName "Selery's node"
-  - rcedit selery-node-%selery_version%.exe --set-version-string FileDescription "Selery's node %selery_version%"
-  - rcedit selery-node-%selery_version%.exe --set-version-string OriginalFileName selery-node-%selery_version%.exe
-  - rcedit selery-node-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
-  - rcedit selery-node-%selery_version%.exe --set-product-version %selery_version%
-  - rcedit selery-node-%selery_version%.exe --set-icon assets\icons\node.ico
+  - rcedit selery-node.exe --set-version-string ProductName "Selery's node"
+  - rcedit selery-node.exe --set-version-string FileDescription "Selery's node %selery_version%"
+  - rcedit selery-node.exe --set-version-string OriginalFileName selery-node.exe
+  - rcedit selery-node.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-node.exe --set-product-version %selery_version%
+  - rcedit selery-node.exe --set-icon assets\icons\node.ico
   
-  - rcedit selery-%selery_version%.exe --set-version-string ProductName "Selery"
-  - rcedit selery-%selery_version%.exe --set-version-string FileDescription "Selery %selery_version%"
-  - rcedit selery-%selery_version%.exe --set-version-string OriginalFileName selery-%selery_version%.exe
-  - rcedit selery-%selery_version%.exe --set-file-version %selery_version%.%selery_build%
-  - rcedit selery-%selery_version%.exe --set-product-version %selery_version%
-  - rcedit selery-%selery_version%.exe --set-icon assets\icons\default.ico
+  - rcedit selery.exe --set-version-string ProductName "Selery"
+  - rcedit selery.exe --set-version-string FileDescription "Selery %selery_version%"
+  - rcedit selery.exe --set-version-string OriginalFileName selery.exe
+  - rcedit selery.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery.exe --set-product-version %selery_version%
+  - rcedit selery.exe --set-icon assets\icons\default.ico
   
-  - 7z a selery-%selery_version%-windows-%lower_platform%.zip selery-hub-%selery_version%.exe selery-node-%selery_version%.exe selery-%selery_version%.exe
-  
-  - ren selery-hub-%selery_version%.exe selery-hub-%selery_version%-windows-%lower_platform%.exe
-  - ren selery-node-%selery_version%.exe selery-node-%selery_version%-windows-%lower_platform%.exe
-  - ren selery-%selery_version%.exe selery-%selery_version%-windows-%lower_platform%.exe
+  - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE selery-hub.exe selery-node.exe selery.exe assets\
 
 test_script:
   - selery-hub --about

@@ -114,7 +114,7 @@ const struct Software {
 	 * Development (non-release) versions are not fully tested and may fail
 	 * to compile on some systems.
 	 */
-	enum bool release = false;
+	enum bool release = true;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the

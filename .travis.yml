@@ -19,6 +19,8 @@ matrix:
   exclude:
     - d: dmd
       env: CONFIG=release
+    - d: dmd
+      os: osx
   allow_failures:
     - os: osx
       d: dmd
@@ -26,7 +28,7 @@ matrix:
 deploy:
   provider: releases
   api_key: $API_KEY
-  file: "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.zip"
+  file: "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz"
   skip_cleanup: true
   on:
     tags: true
@@ -39,19 +41,19 @@ script:
   - ./build.sh -c $DC -a $ARCH $CONFIG hub
   - ./build.sh -c $DC -a $ARCH $CONFIG node
   - ./build.sh -c $DC -a $ARCH $CONFIG default
-  - ./build.sh -c $DC -a $ARCH $CONFIG hub --portable
-  - ./build.sh -c $DC -a $ARCH $CONFIG node --portable
-  - ./build.sh -c $DC -a $ARCH $CONFIG default --portable
   - cd builder
   - ./selery-init --generate-files
   - SELERY_VERSION=$(<version.txt)
   - cd ..
 
 after_success:
-  - zip "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.zip" "selery-hub-${SELERY_VERSION}" "selery-node-${SELERY_VERSION}" "selery-${SELERY_VERSION}"
   - ./selery-hub --about
   - ./selery-node --about
   - ./selery --about
+  - rm -rf assets/icons
+  - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE selery-hub selery-node selery assets/
+  
+after_failure:
 
 notifications:
   - email: false
