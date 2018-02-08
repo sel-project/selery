@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 46;
+enum size_t __GENERATOR__ = 47;
 
 void main(string[] args) {
 
@@ -76,7 +76,7 @@ void main(string[] args) {
 				} else {
 					write("views/notes.txt", "");
 				}
-				write("views/release.txt", environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1 ? "1" : "0");
+				environment["selery_release"] = environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1 ? "1" : "0";
 				return;
 			case "--no-plugins":
 				plugins = false;

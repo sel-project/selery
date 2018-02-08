@@ -39,7 +39,7 @@ before_install:
 
 script:
   - cd builder/init
-  - dub build -c $DC -a $ARCH --build=$CONFIG
+  - dub build --compiler=$DC --arch=$ARCH --build=$CONFIG
   - cd ..
   - ./selery-init --generate-files
   - cd views
