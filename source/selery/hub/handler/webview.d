@@ -127,7 +127,7 @@ class WebViewHandler : GenericServer, Reloadable {
 			software["name"] = JSONValue(name);
 			software["display"] = JSONValue(display);
 			software["codename"] = JSONValue(["name": JSONValue(codename), "emoji": JSONValue(codenameEmoji)]);
-			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch), "release": JSONValue(release)]);
+			software["version"] = JSONValue(["major": JSONValue(major), "minor": JSONValue(minor), "patch": JSONValue(patch)]);
 			if(config.bedrock) protocols["bedrock"] = JSONValue(config.bedrock.protocols);
 			if(config.java) protocols["java"] = JSONValue(config.java.protocols);
 			json["software"] = JSONValue(software);

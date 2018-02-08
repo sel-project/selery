@@ -104,17 +104,10 @@ const struct Software {
 	enum ubyte minor = 1;
 	
 	/// ditto
-	enum ubyte patch = 0;
+	enum ubyte patch = 1;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];
-	
-	/**
-	 * Indicates whether the current version of the software is a release.
-	 * Development (non-release) versions are not fully tested and may fail
-	 * to compile on some systems.
-	 */
-	enum bool release = true;
 	
 	/**
 	 * Version of the software in format major.minor.patch following the
@@ -127,7 +120,7 @@ const struct Software {
 	 * Full version of the software prefixed with a `v` and suffixed
 	 * with a build version if the version is not stable.
 	 */
-	enum string fullVersion = "v" ~ displayVersion ~ (!release ? "-dev" : "");
+	enum string fullVersion = "v" ~ displayVersion;
 	
 	/**
 	 * Display name of the software that contains both the software name
@@ -145,7 +138,7 @@ const struct Software {
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
-		foreach(member ; TypeTuple!("name", "website", "release", "displayVersion", "fullVersion", "codename", "display", "api")) {
+		foreach(member ; TypeTuple!("name", "website", "displayVersion", "fullVersion", "codename", "display", "api")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];

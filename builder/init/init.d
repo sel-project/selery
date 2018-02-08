@@ -29,7 +29,7 @@ import std.conv : ConvException, to;
 import std.file;
 import std.json;
 import std.path : dirSeparator, buildNormalizedPath, absolutePath, relativePath;
-import std.process : executeShell;
+import std.process : environment, executeShell;
 import std.regex : matchFirst, ctRegex;
 import std.stdio : writeln;
 import std.string;
@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 41;
+enum size_t __GENERATOR__ = 46;
 
 void main(string[] args) {
 
@@ -62,14 +62,21 @@ void main(string[] args) {
 	foreach(arg ; args) {
 		switch(arg.toLower()) {
 			case "--generate-files":
-				write("version.txt", Software.displayVersion);
-				write("build.txt", Software.release ? "0" : "1");
+				mkdirRecurse("views");
+				write("views/version.txt", Software.displayVersion);
 				string[] notes;
 				string history = cast(string)read("../docs/history.md");
 				immutable v = "### " ~ Software.displayVersion;
-				immutable start = history.indexOf(v) + v.length;
-				immutable end = history[start..$].indexOf("##");
-				write("notes.txt", history[start..(end==-1?$:end)].strip.replace("\n", "\\n"));
+				auto start = history.indexOf(v);
+				if(start != -1) {
+					start += v.length;
+					history = history[start..$];
+					immutable end = history.indexOf("##");
+					write("views/notes.txt", history[0..(end==-1?$:end)].strip.replace("\n", "\\n"));
+				} else {
+					write("views/notes.txt", "");
+				}
+				write("views/release.txt", environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1 ? "1" : "0");
 				return;
 			case "--no-plugins":
 				plugins = false;
@@ -117,7 +124,6 @@ void main(string[] args) {
 	} else if(exists("views/portable.zip")) {
 
 		remove("views/portable.zip");
-		rmdir("views");
 
 	}
 

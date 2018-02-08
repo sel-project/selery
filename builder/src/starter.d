@@ -39,17 +39,29 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 
 		import std.system : endian;
 
+		static if(__traits(compiles, import("notes.txt"))) {}
+		
 		JSONValue[string] json;
 		json["type"] = cast(string)type;
-		json["portable"] = portable;
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
+		//json["release"] = [];
 		debug json["debug"] = true;
 		else json["debug"] = false;
 		writeln(JSONValue(json));
 		return;
 
+	} else if(args.canFind("--notes") || args.canFind("--release-notes") || args.canFind("-rn")) {
+		
+		static if(__traits(compiles, import("notes.txt")) && __traits(compiles, import("version.txt")) && Software.displayVersion == import("version.txt")) {
+			import std.string : replace;
+			writeln("Release notes for ", Software.name, " ", Software.displayVersion, ":\n\n", replace(import("notes.txt"), "\\n", "\n")); //TODO remove links
+		} else {
+			writeln("Release notes were not included in this build.");
+		}
+		return;
+		
 	}
 	
 	Config config = loadConfig(type, args);

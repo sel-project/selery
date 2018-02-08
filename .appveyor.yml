@@ -44,7 +44,7 @@ deploy:
     on:
       DC: ldc2
       configuration: release
-      selery_build: 0
+      selery_release: 1
 
 install:
   - ps: function SetUpDCompiler
@@ -105,16 +105,17 @@ before_build:
   - mkdir plugins
 
 build_script:
+  - cd builder\init
+  - dub build -c %DC% -a %Darch% --build=%CONFIGURATION%
+  - cd ..
+  - selery-init --generate-files
+  - set /p selery_version=<views\version.txt
+  - set /p release_notes=<views\notes.txt
+  - set /p selery_release<views\release.txt
+  - cd ..
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
-  - cd builder
-  - selery-init --generate-files
-  - set /p selery_version=<version.txt
-  - set /p selery_build=<build.txt
-  - set /p release_notes=<notes.txt
-  - selery-init hub
-  - cd ..
 
 after_build:
   - rcedit selery-hub.exe --set-version-string ProductName "Selery's hub"
@@ -138,7 +139,9 @@ after_build:
   - rcedit selery.exe --set-product-version %selery_version%
   - rcedit selery.exe --set-icon assets\icons\default.ico
   
-  - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE selery-hub.exe selery-node.exe selery.exe assets\
+  - rmdir /s /q assets\icons
+  - ren README.md README
+  - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE README selery-hub.exe selery-node.exe selery.exe assets\
 
 test_script:
   - selery-hub --about

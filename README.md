@@ -1,7 +1,7 @@
 Selery
 ======
 
-[![GitHub release](https://img.shields.io/github/release/sel-peoject-selery.svg)](https://github.com/sel-project/selery/releases)
+[![GitHub release](https://img.shields.io/github/release/sel-project/selery.svg)](https://github.com/sel-project/selery/releases)
 [![DUB package](https://img.shields.io/dub/v/selery.svg)](https://code.dlang.org/packages/selery)
 
 [![Linux x86_64 build](https://sel-bot.github.io/status/sel-project/selery/linux_x86_64_badge.svg)](https://travis-ci.org/sel-project/selery)
@@ -44,7 +44,7 @@ cd selery
 
 ## Structure
 
-Selery is based on the [hub-node communication protocol](https://sel-utils.github.io/protocol/hncom), which means that it can run as two separate instances (hub and node), which are connected through a socket.
+Selery is based on the [hub-node communication protocol](https://github.com/sel-project/sel-hncom), which means that it can run as two separate instances (hub and node), which are connected through a socket.
 
 ## Libraries
 
