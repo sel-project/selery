@@ -76,6 +76,17 @@ void main(string[] args) {
 				} else {
 					write("views/notes.txt", "");
 				}
+				JSONValue[string] release;
+				if(environment.get("TRAVIS", "") == "true") {
+					release["ci"] = "travis-ci";
+					release["repo"] = environment["TRAVIS_REPO_SLUG"];
+					release["job"] = environment["TRAVIS_JOB_NUMBER"];
+				} else if(environment.get("", "").toLower == "true") {
+					release["ci"] = "appveyor";
+					release["repo"] = environment["APPVEYOR_REPO_NAME"];
+					release["job"] = environment["APPVEYOR_JOB_NUMBER"];
+				}
+				write("views/release.json", JSONValue(release).toString());
 				environment["selery_release"] = environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1 ? "1" : "0";
 				return;
 			case "--no-plugins":
