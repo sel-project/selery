@@ -44,7 +44,7 @@ deploy:
     on:
       DC: ldc2
       configuration: release
-      selery_release: 1
+      selery_is_release: true
 
 install:
   - ps: function SetUpDCompiler
@@ -112,6 +112,7 @@ build_script:
   - cd views
   - set /p selery_version=<version.txt
   - set /p release_notes=<notes.txt
+  - set /p selery_is_release=<is_release.txt
   - cd ..\..
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
@@ -140,8 +141,7 @@ after_build:
   - rcedit selery.exe --set-icon assets\icons\default.ico
   
   - rmdir /s /q assets\icons
-  - ren README.md README
-  - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE README selery-hub.exe selery-node.exe selery.exe assets\
+  - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE selery-hub.exe selery-node.exe selery.exe assets\
 
 test_script:
   - selery-hub --about --pretty

@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 47;
+enum size_t __GENERATOR__ = 48;
 
 void main(string[] args) {
 
@@ -81,13 +81,13 @@ void main(string[] args) {
 					release["ci"] = "travis-ci";
 					release["repo"] = environment["TRAVIS_REPO_SLUG"];
 					release["job"] = environment["TRAVIS_JOB_NUMBER"];
-				} else if(environment.get("", "").toLower == "true") {
+				} else if(environment.get("APPVEYOR", "").toLower == "true") {
 					release["ci"] = "appveyor";
 					release["repo"] = environment["APPVEYOR_REPO_NAME"];
 					release["job"] = environment["APPVEYOR_JOB_NUMBER"];
 				}
 				write("views/release.json", JSONValue(release).toString());
-				environment["selery_release"] = environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1 ? "1" : "0";
+				write("views/is_release.txt", to!string(environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1);
 				return;
 			case "--no-plugins":
 				plugins = false;

@@ -54,8 +54,7 @@ after_success:
   - ./selery-node --about --pretty
   - ./selery --about --pretty
   - rm -rf assets/icons
-  - mv README.md README
-  - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE README selery-hub selery-node selery assets/
+  - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE selery-hub selery-node selery assets/
   - curl -s https://gist.githubusercontent.com/Kripth/e570f715c27d0a345619e2ea881ed97d/raw/ > update.d
   - rdmd update.d
   
