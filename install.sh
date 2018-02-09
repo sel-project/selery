@@ -7,6 +7,7 @@
 FOLDER=selery
 VERSION=
 ARCH=
+PRESERVE=false
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
 		-a)
 			ARCH=$2
 			shift
+			;;
+		
+		--preserve-archive | -pa)
+			PRESERVE="true"
 			;;
 			
 	esac
@@ -76,8 +81,8 @@ else
 fi
 
 # download
-FILE="selery-${VERSION//v/}-$OS-$ARCH.$EXT"
-curl -L "https://github.com/sel-project/selery/releases/download/$VERSION/$FILE" -o $FILE
+FILE="selery-$VERSION-$OS-$ARCH.$EXT"
+curl -L "https://github.com/sel-project/selery/releases/download/v$VERSION/$FILE" -o $FILE
 
 # extract
 mkdir -p $FOLDER
@@ -85,4 +90,9 @@ if [ "$EXT" == "zip" ] ; then
 	unzip -o $FILE -d $FOLDER
 else
 	tar -xJf $FILE -C $FOLDER
+fi
+
+# delete archive
+if [ "$PRESERVE" = "false" ] ; then
+	rm -f $FILE
 fi
