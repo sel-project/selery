@@ -211,7 +211,9 @@ abstract class JavaPlayer : Player {
 	
 }
 
-class JavaPlayerImpl(uint __protocol) : JavaPlayer if(supportedJavaProtocols.canFind(__protocol)) {
+alias JavaPlayerImpl(uint protocol) = SamePlayer!(protocol, supportedJavaProtocols, (uint[uint]).init, JavaPlayerOf);
+
+private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 
 	mixin("import Types = sul.protocol.java" ~ __protocol.to!string ~ ".types;");
 	mixin("import Clientbound = sul.protocol.java" ~ __protocol.to!string ~ ".clientbound;");

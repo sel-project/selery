@@ -104,7 +104,7 @@ const struct Software {
 	enum ubyte minor = 1;
 	
 	/// ditto
-	enum ubyte patch = 1;
+	enum ubyte patch = 2;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];

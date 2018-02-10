@@ -30,7 +30,7 @@ module selery.player.player;
 
 import core.thread : Thread;
 
-import std.algorithm : count, max, min, clamp;
+import std.algorithm : canFind, count, max, min, clamp;
 import std.array : join, split;
 import std.concurrency : Tid, send, receiveOnly;
 import std.conv : to;
@@ -1528,6 +1528,13 @@ enum isPlayer(T) = is(T : Player) && !is(T : Puppet);
  */
 public @safe @nogc bool isPlayerInstance(Entity entity) {
 	return cast(Player)entity && !cast(Puppet)entity;
+}
+
+template SamePlayer(uint protocol, uint[] supported, uint[uint] same, alias T) if(supported.canFind(protocol)) {
+	
+	static if(!!(protocol in same)) alias SamePlayer = T!(same[protocol]);
+	else alias SamePlayer = T!protocol;
+	
 }
 
 mixin template generateHandlers(E...) {
