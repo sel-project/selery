@@ -40,9 +40,9 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 51;
+enum size_t __GENERATOR__ = 53;
 
-void main(string[] args) {
+int main(string[] args) {
 
 	string libraries;
 	if(exists(".selery/libraries")) {
@@ -55,8 +55,6 @@ void main(string[] args) {
 	if(!libraries.endsWith(dirSeparator)) libraries ~= dirSeparator;
 	
 	bool portable = false;
-	string type = "default";
-	
 	bool plugins = true;
 	
 	foreach(arg ; args) {
@@ -88,24 +86,12 @@ void main(string[] args) {
 				}
 				write("views/release.json", JSONValue(release).toString());
 				write("views/is_release.txt", to!string(environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1));
-				return;
+				return 0;
 			case "--no-plugins":
 				plugins = false;
 				break;
 			case "--portable":
 				portable = true;
-				break;
-			case "default":
-			case "classic":
-			case "allinone":
-			case "all-in-one":
-				type = "default";
-				break;
-			case "hub":
-				type = "hub";
-				break;
-			case "node":
-				type = "node";
 				break;
 			default:
 				break;
@@ -231,7 +217,7 @@ void main(string[] args) {
 			}
 		}
 
-		writeln("Loading plugins for ", Software.name, " ", Software.fullVersion, " configuration \"", type, "\"");
+		writeln("Generating dub package for ", Software.name, " ", Software.displayVersion, ".");
 
 		// load plugins in plugins folder
 		if(exists("../plugins")) {
@@ -320,52 +306,65 @@ void main(string[] args) {
 
 	// control api version
 	foreach(ref inf ; ordered) {
-		if(inf.active) {
-			long[] api;
-			auto ptr = "api" in inf.toml;
-			if(ptr) {
-				if((*ptr).type == TOML_TYPE.INTEGER) {
-					api ~= (*ptr).integer;
-				} else if((*ptr).type == TOML_TYPE.ARRAY) {
-					foreach(v ; (*ptr).array) {
-						if(v.type == TOML_TYPE.INTEGER) api ~= v.integer;
-					}
-				} else if((*ptr).type == TOML_TYPE.TABLE) {
-					auto from = "from" in *ptr;
-					auto to = "to" in *ptr;
-					if(from && (*from).type == TOML_TYPE.INTEGER && to && (*to).type == TOML_TYPE.INTEGER) {
-						foreach(a ; (*from).integer..(*to).integer+1) {
-							api ~= a;
-						}
+		long[] api;
+		auto ptr = "api" in inf.toml;
+		if(ptr) {
+			if((*ptr).type == TOML_TYPE.INTEGER) {
+				api ~= (*ptr).integer;
+			} else if((*ptr).type == TOML_TYPE.ARRAY) {
+				foreach(v ; (*ptr).array) {
+					if(v.type == TOML_TYPE.INTEGER) api ~= v.integer;
+				}
+			} else if((*ptr).type == TOML_TYPE.TABLE) {
+				auto from = "from" in *ptr;
+				auto to = "to" in *ptr;
+				if(from && (*from).type == TOML_TYPE.INTEGER && to && (*to).type == TOML_TYPE.INTEGER) {
+					foreach(a ; (*from).integer..(*to).integer+1) {
+						api ~= a;
 					}
 				}
 			}
-			if(api.length == 0 || api.canFind(Software.api)) {
-				writeln(inf.name, " ", inf.version_, ": loaded");
-			} else {
-				writeln(inf.name, " ", inf.version_, ": cannot load due to wrong api ", api);
-				inf.active = false;
-			}
+		}
+		if(api.length == 0 || api.canFind(Software.api)) {
+			writeln(inf.name, " ", inf.version_, ": loaded");
+		} else {
+			writeln(inf.name, " ", inf.version_, ": cannot load due to wrong api ", api);
+			return 1;
 		}
 	}
 	
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
-	builder["targetType"] = "executable";
-	builder["targetName"] = (type == "default" ? "selery" : ("selery-" ~ type)) ~ (portable ? "-" ~ Software.displayVersion : "");
 	builder["targetPath"] = "..";
 	builder["workingDirectory"] = "..";
-	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
-	builder["configurations"] = [["name": type]];
+	builder["sourceFiles"] = [".selery/builder.d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
 		"arsd-official:terminal": ["version": "~>1.2.2"], // bug in dub
 		"toml": ["version": "~>0.4.0-rc.4"],
 		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
+	builder["configurations"] = new JSONValue[0];
 	builder["subPackages"] = new JSONValue[0];
 	
-	size_t count = 0;
+	JSONValue[string] targets;
+	
+	foreach(target ; ["default", "hub", "node"]) {
+	
+		JSONValue[string] sb;
+		sb["name"] = target;
+		sb["targetName"] = "selery" ~ (target!="default" ? "-" ~ target : "") ~ (portable ? "-" ~ Software.displayVersion : "");
+		sb["targetType"] = "executable";
+		sb["sourceFiles"] = ["main/" ~ target ~ ".d"];
+		sb["subPackages"] = new JSONValue[0];
+		sb["dependencies"] = (JSONValue[string]).init;
+		
+		JSONValue json = JSONValue(sb);
+		builder["configurations"].array ~= json;
+		
+		targets[target] = json;
+	
+	}
 		
 	string imports = "";
 	string loads = "";
@@ -375,68 +374,67 @@ void main(string[] args) {
 	if(!exists(".selery")) mkdir(".selery");
 
 	foreach(ref value ; ordered) {
-		if(value.active) {
-			count++;
-			if(value.single.length) {
-				builder["sourceFiles"].array ~= JSONValue(relativePath(value.single));
-			} else {
-				JSONValue[string] sub;
-				sub["name"] = value.name;
-				sub["targetType"] = "library";
-				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
-				sub["configurations"] = [["name": "plugin"]];
-				sub["dependencies"] = ["selery": ["path": ".."], "arsd-official:terminal": ["version": "~>1.2.2"]], // bug in dub;
-				sub["sourcePaths"] = [relativePath(value.path ~ "src")];
-				sub["importPaths"] = [relativePath(value.path ~ "src")];
-				auto dptr = "dependencies" in value.toml;
-				if(dptr && dptr.type == TOML_TYPE.TABLE) {
-					foreach(name, d; dptr.table) {
-						if(name.startsWith("dub:")) {
-							sub["dependencies"][name[4..$]] = toJSON(d);
-						} else {
-							//TODO depends on another plugin
-						}
+		if(value.single.length) {
+			builder["sourceFiles"].array ~= JSONValue(relativePath(value.single));
+		} else {
+			JSONValue[string] sub;
+			sub["name"] = value.name;
+			sub["targetType"] = "library";
+			sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
+			sub["configurations"] = [["name": "plugin"]];
+			sub["dependencies"] = ["selery": ["path": ".."], "arsd-official:terminal": ["version": "~>1.2.2"]], // bug in dub;
+			sub["sourcePaths"] = [relativePath(value.path ~ "src")];
+			sub["importPaths"] = [relativePath(value.path ~ "src")];
+			auto dptr = "dependencies" in value.toml;
+			if(dptr && dptr.type == TOML_TYPE.TABLE) {
+				foreach(name, d; dptr.table) {
+					if(name.startsWith("dub:")) {
+						sub["dependencies"][name[4..$]] = toJSON(d);
+					} else {
+						//TODO depends on another plugin
 					}
 				}
-				builder["subPackages"].array ~= JSONValue(sub);
-				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			string extra(string path) {
-				auto ret = value.path ~ path;
-				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
-					foreach(f ; dirEntries(ret, SpanMode.breadth)) {
-						// at least one element inside
-						if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
-					}
-				}
-				return "null";
-			}
-			if(value.main.length) {
-				imports ~= "static import " ~ value.mod ~ ";\n";
-			}
-			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
-			auto conditions = "conditions" in value.toml;
-			if(conditions && conditions.type == TOML_TYPE.TABLE) {
-				string[] conds;
-				foreach(key, value; conditions.table) {
-					if(value.type == TOML_TYPE.BOOL) conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.boolean) ~ ")";
-				}
-				load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
-			}
-			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
-			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
-			loads ~= "\t" ~ load ~ "\n";
+			builder["subPackages"].array ~= JSONValue(sub);
+			targets[value.target]["dependencies"][":" ~ value.name] = "*";
+			targets["default"]["dependencies"][":" ~ value.name] = "*";
 		}
-		
+		string extra(string path) {
+			auto ret = value.path ~ path;
+			if((value.main.length || value.api) && exists(ret) && ret.isDir) {
+				foreach(f ; dirEntries(ret, SpanMode.breadth)) {
+					// at least one element inside
+					if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
+				}
+			}
+			return "null";
+		}
+		if(value.main.length) {
+			imports ~= "static import " ~ value.mod ~ ";\n";
+		}
+		string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+		auto conditions = "conditions" in value.toml;
+		if(conditions && conditions.type == TOML_TYPE.TABLE) {
+			string[] conds;
+			foreach(key, value; conditions.table) {
+				if(value.type == TOML_TYPE.BOOL) conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.boolean) ~ ")";
+			}
+			load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+		}
+		if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
+		if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
+		loads ~= "\t" ~ load ~ "\n";
 	}
 
 	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T, bool is_node)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
+	
+	return 0;
 
 }
 
-enum invalid = ["selery", "sel", "toml", "default", "hub", "node", "builder", "condition", "config", "starter", "pluginloader"];
+enum invalid = ["selery", "sel", "toml", "default", "lite", "hub", "node", "builder", "condition", "config", "starter", "pluginloader"];
 
 void checkName(string name) {
 	void error(string message) {
@@ -456,8 +454,7 @@ struct Info {
 	public TOMLDocument toml;
 
 	public string single;
-
-	public bool active = true;
+	
 	public size_t priority = 1;
 
 	public bool api;
@@ -466,8 +463,18 @@ struct Info {
 	public string[] authors = [];
 	public string version_ = "~local";
 	
+	public string target = "node";
+	
 	public string path;
 	public string mod;
 	public string main;
 
+}
+
+struct Plugin {
+
+	string name;
+	string[] authors;
+	string version_;
+	
 }

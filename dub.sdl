@@ -10,7 +10,7 @@ stringImportPaths "assets/web/views" "assets/web/styles" "assets/web/scripts"
 dependency "arsd-official:terminal" version="~>1.2.2"
 dependency "diet-ng" version="~>1.4.3"
 dependency "imageformats" version="~>6.1.2"
-dependency "memutils" version="~>0.4.9"
+dependency "memutils" version="~>0.4.10"
 dependency "my-ip" version="~>0.1.0"
 dependency "resusage" version="~>0.2.7"
 dependency "sel-hncom" version="~>8.0.0"
@@ -24,6 +24,10 @@ dependency "string-transform-d" version="~>1.0.0"
 //dependency "sel-net" path="../sel-stream"
 //dependency "sel-server" path="../sel-server"
 
-// remove comments for a faster complilation using DMD's release mode
-//versions "NoBlocks"
-//versions "NoItems"
+configuration "library" {
+	targetType "library"
+}
+configuration "realm" {
+	targetType "library"
+	versions "Realm"
+}

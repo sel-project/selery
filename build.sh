@@ -8,7 +8,6 @@ COMPILER=dmd
 BUILD=debug
 ARCH=
 CONFIG=default
-PORTABLE=
 PLUGINS=
 
 while [[ $# -gt 0 ]]; do
@@ -70,6 +69,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd builder/init
-dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $CONFIG $PORTABLE $PLUGINS
+dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $PLUGINS || exit 1
 cd ..
-dub build --compiler=$COMPILER --build=$BUILD $ARCH
+dub build --compiler=$COMPILER --build=$BUILD $ARCH --config=$CONFIG
