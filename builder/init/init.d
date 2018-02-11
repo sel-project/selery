@@ -40,7 +40,7 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 50;
+enum size_t __GENERATOR__ = 51;
 
 void main(string[] args) {
 
@@ -74,7 +74,7 @@ void main(string[] args) {
 					immutable end = history.indexOf("##");
 					write("views/notes.txt", history[0..(end==-1?$:end)].strip.replace("\n", "\\n"));
 				} else {
-					write("views/notes.txt", "");
+					write("views/notes.txt", "There are no release notes for this version.");
 				}
 				JSONValue[string] release;
 				if(environment.get("TRAVIS", "") == "true") {

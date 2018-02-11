@@ -24,9 +24,8 @@ module starter;
 
 import std.algorithm : canFind;
 import std.conv : to;
-import std.file : exists, write, read;
-import std.json : JSONValue, parseJSON, toJSON;
-import std.stdio : writeln;
+import std.json : JSONValue, parseJSON;
+import std.stdio : write, writeln;
 
 import selery.about : Software;
 import selery.config : Config;
@@ -50,9 +49,8 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		else json["release"] = (JSONValue[string]).init;
 		debug json["debug"] = true;
 		else json["debug"] = false;
-		auto j = JSONValue(json);
-		writeln(toJSON(j, args.canFind("--pretty")));
-		return;
+		if(args.canFind("--pretty")) writeln(JSONValue(json).toPrettyString());
+		else write(JSONValue(json).toString());
 
 	} else if(args.canFind("--changelog") || args.canFind("-c")) {
 		
@@ -62,12 +60,13 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		} else {
 			writeln("Release notes were not included in this build.");
 		}
-		return;
+		
+	} else {
+	
+		Config config = loadConfig(type, args);
+
+		if(!args.canFind("--init") && !args.canFind("-i")) startFunction(config);
 		
 	}
-	
-	Config config = loadConfig(type, args);
-
-	if(!args.canFind("--init") && !args.canFind("-i")) startFunction(config);
 
 }

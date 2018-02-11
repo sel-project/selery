@@ -16,8 +16,6 @@ environment:
 matrix:
   exclude:
     - DC: dmd
-      platform: x86
-    - DC: dmd
       configuration: release
 
 skip_tags: true
@@ -29,6 +27,8 @@ artifacts:
     name: node
   - path: selery.exe
     name: default
+  - path: selery-portable-%selery_version%.exe
+    name: portable
   - path: selery-%selery_version%-windows-%lower_platform%.zip
     name: zip
 
@@ -44,6 +44,19 @@ deploy:
     on:
       DC: ldc2
       configuration: release
+      selery_is_release: true
+  - provider: GitHub
+    tag: v$(selery_version)
+    release: Selery $(selery_version)
+    description: "$(release_notes)"
+    auth_token:
+      secure: ioKlisLYTQCnQTUDVHlgLw24mtQ2/uMlCOt4BPvioprrpHYROYCP1lR/oFER/EIB
+    artifact: selery-portable-%selery_version%.exe
+    force_update: true
+    on:
+      DC: ldc2
+      configuration: release
+      platform: x86
       selery_is_release: true
 
 install:
@@ -78,7 +91,7 @@ install:
             }
         }
   - ps: SetUpDCompiler
-  - powershell -Command Invoke-WebRequest https://github.com/electron/rcedit/releases/download/v1.0.0/rcedit-x64.exe -OutFile rcedit.exe
+  - powershell -Command Invoke-WebRequest https://github.com/electron/rcedit/releases/download/v1.0.0/rcedit-x86.exe -OutFile rcedit.exe
   - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.3.0-windows-x86.zip -OutFile dub.zip
   - 7z x dub.zip -odub > nul
   - set PATH=%CD%;%CD%\%binpath%;%CD%\dub;%PATH%
@@ -87,6 +100,12 @@ install:
 before_build:
   - ps: if($env:platform -eq "x86"){
             $env:compilersetupargs = "x86";
+            if($env:DC -eq "dmd"){
+              $env:Darch = "x86_mscoff";
+            }
+            elseif($env:DC -eq "ldc") {
+              $env:Darch = "x86";
+            }
             $env:Darch = "x86";
           }
         elseif($env:platform -eq "x64"){
@@ -102,7 +121,6 @@ before_build:
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
-  - mkdir plugins
 
 build_script:
   - cd builder\init
@@ -117,28 +135,38 @@ build_script:
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
+  - cd builder
+  - selery-init --portable
+  - dub build --compiler=%DC% --arch=%Darch% --build=%CONFIGURATION%
 
 after_build:
   - rcedit selery-hub.exe --set-version-string ProductName "Selery's hub"
   - rcedit selery-hub.exe --set-version-string FileDescription "Selery's hub %selery_version%"
   - rcedit selery-hub.exe --set-version-string OriginalFileName selery-hub.exe
-  - rcedit selery-hub.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-hub.exe --set-file-version %selery_version%.0
   - rcedit selery-hub.exe --set-product-version %selery_version%
   - rcedit selery-hub.exe --set-icon assets\icons\hub.ico
   
   - rcedit selery-node.exe --set-version-string ProductName "Selery's node"
   - rcedit selery-node.exe --set-version-string FileDescription "Selery's node %selery_version%"
   - rcedit selery-node.exe --set-version-string OriginalFileName selery-node.exe
-  - rcedit selery-node.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery-node.exe --set-file-version %selery_version%.0
   - rcedit selery-node.exe --set-product-version %selery_version%
   - rcedit selery-node.exe --set-icon assets\icons\node.ico
   
   - rcedit selery.exe --set-version-string ProductName "Selery"
   - rcedit selery.exe --set-version-string FileDescription "Selery %selery_version%"
   - rcedit selery.exe --set-version-string OriginalFileName selery.exe
-  - rcedit selery.exe --set-file-version %selery_version%.%selery_build%
+  - rcedit selery.exe --set-file-version %selery_version%.0
   - rcedit selery.exe --set-product-version %selery_version%
   - rcedit selery.exe --set-icon assets\icons\default.ico
+  
+  - rcedit selery-portable-%selery_version%.exe --set-version-string ProductName "Selery portable"
+  - rcedit selery-portable-%selery_version%.exe --set-version-string FileDescription "Selery portable %selery_version%"
+  - rcedit selery-portable-%selery_version%.exe --set-version-string OriginalFileName selery-portable-%selery_version%.exe
+  - rcedit selery-portable-%selery_version%.exe --set-file-version %selery_version%.0
+  - rcedit selery-portable-%selery_version%.exe --set-product-version %selery_version%
+  - rcedit selery-portable-%selery_version%.exe --set-icon assets\icons\default.ico
   
   - rmdir /s /q assets\icons
   - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE selery-hub.exe selery-node.exe selery.exe assets\
