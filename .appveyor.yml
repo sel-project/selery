@@ -140,6 +140,7 @@ build_script:
   - cd builder
   - selery-init --portable
   - dub build --compiler=%DC% --arch=%Darch% --build=%CONFIGURATION%
+  - cd ..
 
 after_build:
   - rcedit selery-hub.exe --set-version-string ProductName "Selery's hub"
