@@ -164,6 +164,7 @@ after_build:
   - rcedit selery.exe --set-product-version %selery_version%
   - rcedit selery.exe --set-icon assets\icons\default.ico
   
+  - rename selery-%selery_version%.exe selery-portable-%selery_version%.exe
   - rcedit selery-portable-%selery_version%.exe --set-version-string ProductName "Selery portable"
   - rcedit selery-portable-%selery_version%.exe --set-version-string FileDescription "Selery portable %selery_version%"
   - rcedit selery-portable-%selery_version%.exe --set-version-string OriginalFileName selery-portable-%selery_version%.exe
