@@ -45,8 +45,6 @@ import std.string; //TODO selective imports
 import std.traits : Parameters;
 import std.uuid : UUID;
 
-import arsd.terminal : Terminal, ConsoleOutputType;
-
 import imageformats.png : read_png_from_mem;
 
 import resusage.memory;
@@ -81,6 +79,8 @@ import selery.util.resourcepack : createResourcePacks, serveResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
 import selery.world.thread;
+
+import terminalcolor : Terminal;
 
 import HncomLogin = sel.hncom.login;
 import HncomUtil = sel.hncom.util;
@@ -191,8 +191,8 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		this._config = cast(shared)config;
 
-		Terminal terminal = Terminal(ConsoleOutputType.linear);
-		this._logger = cast(shared)new Logger(&terminal, config.lang); // only writes in the console
+		Terminal terminal = new Terminal();
+		this._logger = cast(shared)new Logger(terminal, config.lang); // only writes in the console
 
 		if(lite) {
 
@@ -292,7 +292,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			if("google-plus" in *social) this.n_social.googlePlus = (*social)["google-plus"].str;
 		}
 
-		if(!this.lite) this.logger.terminal.setTitle(info.displayName ~ " | node | " ~ Software.simpleDisplay);
+		if(!this.lite) this.logger.terminal.title = info.displayName ~ " | node | " ~ Software.simpleDisplay;
 
 		void handleGameInfo(ubyte type, HncomLogin.HubInfo.GameInfo info) {
 			void set(ref Config.Hub.Game game) {
@@ -449,8 +449,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		this.logger.log(Translation("startup.started"));
 
-		Terminal* terminal = (cast()this._logger).terminal;
-		assert(terminal);
+		Terminal terminal = (cast()this._logger).terminal;
 		if(this.lite) {
 			this._logger = this.serverlogger = cast(shared)new LiteServerLogger(terminal, this.lang);
 		} else {
@@ -1193,7 +1192,7 @@ final class ServerCommandSender : CommandSender {
 
 private abstract class ServerLogger : Logger {
 
-	public this(Terminal* terminal, inout LanguageManager lang) {
+	public this(Terminal terminal, inout LanguageManager lang) {
 		super(terminal, lang);
 	}
 
@@ -1214,7 +1213,7 @@ private abstract class ServerLogger : Logger {
 
 private class NodeServerLogger : ServerLogger {
 
-	public this(Terminal* terminal, inout LanguageManager lang) {
+	public this(Terminal terminal, inout LanguageManager lang) {
 		super(terminal, lang);
 	}
 
@@ -1228,7 +1227,7 @@ private class NodeServerLogger : ServerLogger {
 
 private class LiteServerLogger : ServerLogger {
 
-	public this(Terminal* terminal, inout LanguageManager lang) {
+	public this(Terminal terminal, inout LanguageManager lang) {
 		super(terminal, lang);
 	}
 

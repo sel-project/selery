@@ -52,8 +52,6 @@ import std.typecons;
 import std.uuid : parseUUID, UUID;
 import std.utf : UTFException;
 
-import arsd.terminal : Terminal, ConsoleOutputType;
-
 import imageformats : ImageIOException, read_png_header_from_mem;
 
 import myip : privateAddresses, publicAddress4;
@@ -78,6 +76,8 @@ import selery.server : Server;
 import selery.util.portable : startWebAdmin;
 import selery.util.thread;
 import selery.util.util : milliseconds;
+
+import terminalcolor : Terminal;
 
 /+version(Windows) {
 	
@@ -182,13 +182,13 @@ class HubServer : PlayerHandler, Server {
 		}
 		this._accepted_nodes = cast(shared const)acceptedNodes;
 
-		Terminal terminal = Terminal(ConsoleOutputType.linear);
+		Terminal terminal = new Terminal();
 
-		terminal.setTitle(config.hub.displayName ~ " | " ~ (!lite ? "hub | " : "") ~ Software.simpleDisplay);
+		terminal.title = config.hub.displayName ~ " | " ~ (!lite ? "hub | " : "") ~ Software.simpleDisplay;
 		
 		Message[][] errors = this.load(config);
 
-		this._logger = cast(shared)new ServerLogger(this, &terminal);
+		this._logger = cast(shared)new ServerLogger(this, terminal);
 		
 		this.logger.log(Translation("startup.starting", [Format.green ~ Software.name ~ Format.reset ~ " " ~ Format.white ~ Software.fullVersion ~ Format.reset ~ " " ~ Software.fullCodename]));
 		
@@ -645,7 +645,7 @@ private class ServerLogger : Logger {
 
 	private shared HubServer server;
 	
-	public this(shared HubServer server, Terminal* terminal) {
+	public this(shared HubServer server, Terminal terminal) {
 		super(terminal, server.lang);
 		this.server = server;
 	}

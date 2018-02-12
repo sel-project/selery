@@ -340,7 +340,6 @@ int main(string[] args) {
 	builder["sourceFiles"] = [".selery/builder.d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
-		"arsd-official:terminal": ["version": "~>1.2.2"], // bug in dub
 		"toml": ["version": "~>0.4.0-rc.4"],
 		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
@@ -382,7 +381,7 @@ int main(string[] args) {
 			sub["targetType"] = "library";
 			sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
 			sub["configurations"] = [["name": "plugin"]];
-			sub["dependencies"] = ["selery": ["path": ".."], "arsd-official:terminal": ["version": "~>1.2.2"]], // bug in dub;
+			sub["dependencies"] = ["selery": ["path": ".."]],
 			sub["sourcePaths"] = [relativePath(value.path ~ "src")];
 			sub["importPaths"] = [relativePath(value.path ~ "src")];
 			auto dptr = "dependencies" in value.toml;

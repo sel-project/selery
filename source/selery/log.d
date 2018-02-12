@@ -33,7 +33,7 @@ import std.conv : to;
 import std.string : indexOf;
 import std.traits : EnumMembers;
 
-import arsd.terminal : Terminal, Color, bright = Bright;
+import terminalcolor;
 
 import selery.lang : LanguageManager, Translation, Translatable;
 
@@ -132,10 +132,10 @@ struct Message {
 
 class Logger {
 
-	public Terminal* terminal;
+	public Terminal terminal;
 	private const LanguageManager lang;
 
-	public this(Terminal* terminal, inout LanguageManager lang) {
+	public this(Terminal terminal, inout LanguageManager lang) {
 		this.terminal = terminal;
 		this.lang = cast(const)lang;
 	}
@@ -171,9 +171,7 @@ class Logger {
 			}
 		}
 		// add new line, reset formatting and print unflushed data
-		this.terminal.writeln();
-		this.terminal.flush();
-		this.terminal.reset();
+		this.terminal.writelnr();
 	}
 
 	private void writeText(string text) {
@@ -196,66 +194,71 @@ class Logger {
 	}
 
 	private void applyFormat(Format format) {
-		version(Windows) this.terminal.flush(); // print with current format, then update
 		final switch(format) {
 			case Format.black:
-				this.terminal.color(Color.black, Color.DEFAULT);
+				this.terminal.foreground = Color.black;
 				break;
 			case Format.darkBlue:
-				this.terminal.color(Color.blue, Color.DEFAULT);
+				this.terminal.foreground = Color.blue;
 				break;
 			case Format.darkGreen:
-				this.terminal.color(Color.green, Color.DEFAULT);
+				this.terminal.foreground = Color.green;
 				break;
 			case Format.darkAqua:
-				this.terminal.color(Color.cyan, Color.DEFAULT);
+				this.terminal.foreground = Color.cyan;
 				break;
 			case Format.darkRed:
-				this.terminal.color(Color.red, Color.DEFAULT);
+				this.terminal.foreground = Color.red;
 				break;
 			case Format.darkPurple:
-				this.terminal.color(Color.magenta, Color.DEFAULT);
+				this.terminal.foreground = Color.magenta;
 				break;
 			case Format.gold:
-				this.terminal.color(Color.yellow, Color.DEFAULT);
+				this.terminal.foreground = Color.yellow;
 				break;
 			case Format.gray:
-				this.terminal.color(Color.white, Color.DEFAULT);
+				this.terminal.foreground = Color.lightGray;
 				break;
 			case Format.darkGray:
-				this.terminal.color(Color.black | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.gray;
 				break;
 			case Format.blue:
-				this.terminal.color(Color.blue | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightBlue;
 				break;
 			case Format.green:
-				this.terminal.color(Color.green | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightGreen;
 				break;
 			case Format.aqua:
-				this.terminal.color(Color.cyan | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightCyan;
 				break;
 			case Format.red:
-				this.terminal.color(Color.red | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightRed;
 				break;
 			case Format.lightPurple:
-				this.terminal.color(Color.magenta | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightMagenta;
 				break;
 			case Format.yellow:
-				this.terminal.color(Color.yellow | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.brightYellow;
 				break;
 			case Format.white:
-				this.terminal.color(Color.white | bright, Color.DEFAULT);
+				this.terminal.foreground = Color.white;
+				break;
+			case Format.bold:
+				this.terminal.bold = true;
+				break;
+			case Format.strikethrough:
+				this.terminal.strikethrough = true;
 				break;
 			case Format.underlined:
-				this.terminal.underline(true);
+				this.terminal.underlined = true;
+				break;
+			case Format.italic:
+				this.terminal.italic = true;
 				break;
 			case Format.reset:
 				this.terminal.reset();
 				break;
 			case Format.obfuscated:
-			case Format.bold:
-			case Format.strikethrough:
-			case Format.italic:
 				// not supported
 				break;
 		}
