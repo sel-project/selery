@@ -76,6 +76,6 @@ if [ "$COMPILER" = "" ] ; then
 fi
 
 cd builder/init
-dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $PLUGINS || exit 1
+dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $CONFIG $PLUGINS || exit 1
 cd ..
-dub build --compiler=$COMPILER --build=$BUILD $ARCH --config=$CONFIG
+dub build --compiler=$COMPILER --build=$BUILD $ARCH

@@ -68,13 +68,13 @@ if "%arch%" == "x86" (
 	)
 )
 cd builder\init
-dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %plugins%
+dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %plugins%
 if %errorlevel% neq 0 (
 	cd ..\..
 	exit /b %errorlevel%
 )
 cd ..
-dub build --compiler=%compiler% --build=%build% --arch=%arch% --config=%config%
+dub build --compiler=%compiler% --build=%build% --arch=%arch%
 cd ..
 goto :eof
 

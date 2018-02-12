@@ -45,8 +45,7 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
-		static if(__traits(compiles, import("release.json"))) json["release"] = parseJSON(import("release.json"));
-		else json["release"] = (JSONValue[string]).init;
+		static if(__traits(compiles, import("release.json"))) json["build"]["builder"] = parseJSON(import("release.json"));
 		debug json["debug"] = true;
 		else json["debug"] = false;
 		if(args.canFind("--pretty")) writeln(JSONValue(json).toPrettyString());

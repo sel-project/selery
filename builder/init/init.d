@@ -40,7 +40,15 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 53;
+enum size_t __GENERATOR__ = 54;
+
+enum Type {
+
+	default_ = "default",
+	hub = "hub",
+	node = "node"
+
+}
 
 int main(string[] args) {
 
@@ -56,6 +64,8 @@ int main(string[] args) {
 	
 	bool portable = false;
 	bool plugins = true;
+	
+	Type type = Type.default_;
 	
 	foreach(arg ; args) {
 		switch(arg.toLower()) {
@@ -92,6 +102,18 @@ int main(string[] args) {
 				break;
 			case "--portable":
 				portable = true;
+				break;
+			case "default":
+			case "classic":
+			case "allinone":
+			case "all-in-one":
+				type = Type.default_;
+				break;
+			case "hub":
+				type = Type.hub;
+				break;
+			case "node":
+				type = Type.node;
 				break;
 			default:
 				break;
@@ -335,35 +357,17 @@ int main(string[] args) {
 	
 	JSONValue[string] builder;
 	builder["name"] = "selery-builder";
+	builder["targetName"] = "selery" ~ (type!=Type.default_ ? "-" ~ type : "") ~ (portable ? "-" ~ Software.displayVersion : "");
+	builder["targetType"] = "executable";
 	builder["targetPath"] = "..";
 	builder["workingDirectory"] = "..";
-	builder["sourceFiles"] = [".selery/builder.d"];
+	builder["sourceFiles"] = [".selery/builder.d", "main/" ~ type ~ ".d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
 		"toml": ["version": "~>0.4.0-rc.4"],
 		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
-	builder["configurations"] = new JSONValue[0];
 	builder["subPackages"] = new JSONValue[0];
-	
-	JSONValue[string] targets;
-	
-	foreach(target ; ["default", "hub", "node"]) {
-	
-		JSONValue[string] sb;
-		sb["name"] = target;
-		sb["targetName"] = "selery" ~ (target!="default" ? "-" ~ target : "") ~ (portable ? "-" ~ Software.displayVersion : "");
-		sb["targetType"] = "executable";
-		sb["sourceFiles"] = ["main/" ~ target ~ ".d"];
-		sb["subPackages"] = new JSONValue[0];
-		sb["dependencies"] = (JSONValue[string]).init;
-		
-		JSONValue json = JSONValue(sb);
-		builder["configurations"].array ~= json;
-		
-		targets[target] = json;
-	
-	}
 		
 	string imports = "";
 	string loads = "";
@@ -395,8 +399,7 @@ int main(string[] args) {
 				}
 			}
 			builder["subPackages"].array ~= JSONValue(sub);
-			targets[value.target]["dependencies"][":" ~ value.name] = "*";
-			targets["default"]["dependencies"][":" ~ value.name] = "*";
+			builder["dependencies"][":" ~ value.name] = "*";
 		}
 		string extra(string path) {
 			auto ret = value.path ~ path;
