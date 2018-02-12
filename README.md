@@ -16,13 +16,17 @@ Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition wr
 
 Pre-built packages are compiled with the latest version of LDC in release mode and can be found in the [releases](https://github.com/sel-project/selery/releases) page.
 
+```
+curl -Ls https://goo.gl/5kfhJG | bash
+```
+
 ### From source
 
 To build Selery from source you'll need a [D](https://dlang.org) compiler ([DMD](https://wiki.dlang.org/DMD) for faster compilation, suitable for testing, or
 [LDC](https://wiki.dlang.org/LDC) for faster and better code, better for production) and [DUB](https://code.dlang.org/getting_started), D's package manager,
 which is usually included in both DMD and LDC's packages.
 
-Packages and installers are available for several operating systems and architectures [dlang.org's download page](https://dlang.org/download.html).
+Packages and installers are available for several operating systems and architectures at [dlang.org's download page](https://dlang.org/download.html).
 
 - Clone the repository using `git clone git://github.com/sel-project/selery` or download the zipped repository from the latest release.
 - If you want to use the latest release run `git checkout $(git describe --tags --abbrev=0)` in the repository's location.
