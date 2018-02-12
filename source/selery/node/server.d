@@ -97,32 +97,6 @@ public nothrow @property @safe @nogc bool isServerRunning() {
 	return running;
 }
 
-version(Windows) {
-
-	import core.sys.windows.wincon : CTRL_C_EVENT;
-	import core.sys.windows.windef : DWORD, BOOL;
-
-	alias extern (Windows) BOOL function(DWORD) PHANDLER_ROUTINE;
-	extern (Windows) BOOL SetConsoleCtrlHandler(PHANDLER_ROUTINE, BOOL);
-
-	extern (Windows) int sigHandler(uint sig) {
-		if(sig == CTRL_C_EVENT) {
-			std.concurrency.send(cast()server_tid, Stop());
-			return true; // this will let the process run in background until it kills himself
-		}
-		return false; // windows will instantly kill the process
-	}
-
-} else version(Posix) {
-
-	import core.sys.posix.signal;
-
-	extern (C) void extsig(int sig) {
-		std.concurrency.send(cast()server_tid, Stop());
-	}
-
-}
-
 private struct Stop {}
 
 /**
@@ -438,13 +412,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		if(this._default_world_id == 0) {
 			//TODO load world in worlds/world
 			this.addWorld("world");
-		}
-		
-		version(Windows) {
-			SetConsoleCtrlHandler(&sigHandler, true);
-		} else version(linux) {
-			sigset(SIGTERM, &extsig);
-			sigset(SIGINT, &extsig);
 		}
 
 		this.logger.log(Translation("startup.started"));

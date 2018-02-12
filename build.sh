@@ -4,7 +4,7 @@
 # License: MIT
 #
 
-COMPILER=dmd
+COMPILER=
 BUILD=debug
 ARCH=
 CONFIG=default
@@ -67,6 +67,13 @@ while [[ $# -gt 0 ]]; do
 	esac
 	shift
 done
+
+if [ "$COMPILER" = "" ] ; then
+	case $(uname -m) in
+		arm*) COMPILER=ldc2;;
+		*) COMPILER=dmd;;
+	esac
+fi
 
 cd builder/init
 dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $PLUGINS || exit 1

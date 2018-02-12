@@ -79,33 +79,6 @@ import selery.util.util : milliseconds;
 
 import terminalcolor : Terminal;
 
-/+version(Windows) {
-	
-	import core.sys.windows.wincon : CTRL_C_EVENT;
-	import core.sys.windows.windef : DWORD, BOOL;
-	
-	alias extern (Windows) BOOL function(DWORD) PHANDLER_ROUTINE;
-	extern (Windows) BOOL SetConsoleCtrlHandler(PHANDLER_ROUTINE, BOOL);
-	
-	extern (Windows) int sigHandler(uint sig) {
-		if(sig == CTRL_C_EVENT) {
-			Server.instance.shutdown();
-			return true; // this will let the process run in background until it kills himself
-		}
-		return false; // windows will instantly kill the process
-	}
-	
-} else version(Posix) {
-	
-	import core.sys.posix.signal;
-	
-	extern (C) void extsig(int sig) {
-		Server.instance.shutdown();
-		//server.stop();
-	}
-	
-}+/
-
 struct Icon {
 
 	string url;
