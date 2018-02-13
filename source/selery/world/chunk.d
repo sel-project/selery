@@ -35,7 +35,7 @@ import std.path : dirSeparator;
 import std.random : randomShuffle;
 import std.string : split, join, endsWith;
 
-import memutils.all;
+import memutils.utils : ThreadMem;
 
 import selery.about : block_t;
 import selery.block.block : Block;

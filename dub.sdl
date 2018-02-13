@@ -24,10 +24,13 @@ dependency "terminal" version="~>0.1.0"
 //dependency "sel-net" path="../sel-stream"
 //dependency "sel-server" path="../sel-server"
 
+/*
 configuration "library" {
 	targetType "library"
 }
+
 configuration "realm" {
 	targetType "library"
 	versions "Realm"
 }
+*/

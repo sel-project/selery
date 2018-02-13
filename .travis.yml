@@ -19,8 +19,6 @@ matrix:
   exclude:
     - d: dmd
       env: CONFIG=release
-    - d: dmd
-      os: osx
   allow_failures:
     - os: osx
       d: dmd

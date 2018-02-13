@@ -7,10 +7,10 @@ Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition wr
 
 |              | DMD (debug)                      | LDC (debug)                      | LDC (release)                      |
 |-------------:|----------------------------------|----------------------------------|------------------------------------|
-| Windows x64  | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
 | Windows x86  |                                  | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
+| Windows x64  | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
 | Linux x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
-| OS X x84-64  |                                  | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
+| OS X x84-64  | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
 
 ## Installation
 
