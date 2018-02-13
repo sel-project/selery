@@ -361,12 +361,13 @@ int main(string[] args) {
 	builder["targetType"] = "executable";
 	builder["targetPath"] = "..";
 	builder["workingDirectory"] = "..";
-	builder["sourceFiles"] = [".selery/builder.d", "main/" ~ type ~ ".d"];
+	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
 		"toml": ["version": "~>0.4.0-rc.4"],
 		"toml:json": ["version": "~>0.4.0-rc.4"],
 	];
+	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
 		
 	string imports = "";
