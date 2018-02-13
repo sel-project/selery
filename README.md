@@ -8,9 +8,9 @@ Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition wr
 |              | DMD (debug)                      | LDC (debug)                      | LDC (release)                      |
 |-------------:|----------------------------------|----------------------------------|------------------------------------|
 | Windows x64  | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
-| Windows x86  | [![][win86-dmd-debug]][appveyor] | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
+| Windows x86  |                                  | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
 | Linux x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
-| OS X x84-64  | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
+| OS X x84-64  |                                  | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
 
 ## Installation
 
@@ -73,14 +73,14 @@ selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 [appveyor]: https://ci.appveyor.com/project/Kripth/selery
 [travis]: https://travis-ci.org/sel-project/selery
 [win64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_dmd_debug.svg
-[win64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc_debug.svg
-[win64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc_release.svg
+[win64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc2_debug.svg
+[win64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc2_release.svg
 [win86-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_dmd_debug.svg
-[win86-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc_debug.svg
-[win86-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc_release.svg
-[lin64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x64_dmd_debug.svg
-[lin64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x64_ldc_debug.svg
-[lin64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/linux_x64_ldc_release.svg
-[osx64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x64_dmd_debug.svg
-[osx64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x64_ldc_debug.svg
-[osx64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/osx_x64_ldc_release.svg
+[win86-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc2_debug.svg
+[win86-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc2_release.svg
+[lin64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_dmd_debug.svg
+[lin64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_ldc2_debug.svg
+[lin64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_ldc2_release.svg
+[osx64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_dmd_debug.svg
+[osx64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_ldc2_debug.svg
+[osx64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_ldc2_release.svg
