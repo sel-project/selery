@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/player/java.d, selery/player/java.d)
@@ -40,6 +40,7 @@ import std.system : Endian;
 import std.uuid : UUID;
 import std.zlib : Compress, HeaderFormat;
 
+import sel.format : Format;
 import sel.nbt.stream;
 import sel.nbt.tags;
 
@@ -57,7 +58,7 @@ import selery.event.world.player : PlayerMoveEvent;
 import selery.inventory.inventory;
 import selery.item.slot : Slot;
 import selery.lang : Translation;
-import selery.log : Format, Message;
+import selery.log : Message;
 import selery.math.vector;
 import selery.node.info : PlayerInfo;
 import selery.player.player;

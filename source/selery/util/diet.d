@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/util/diet.d, selery/util/diet.d)

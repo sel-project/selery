@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/node/server.d, selery/node/server.d)
@@ -50,6 +50,7 @@ import imageformats.png : read_png_from_mem;
 import resusage.memory;
 import resusage.cpu;
 
+import sel.format : Format;
 import sel.hncom.about;
 import sel.hncom.handler : HncomHandler;
 import sel.server.bedrock : bedrockSupportedProtocols;
@@ -66,7 +67,7 @@ import selery.event.event : Event, EventListener;
 import selery.event.node;
 import selery.event.world.world : WorldEvent;
 import selery.lang : LanguageManager, Translation;
-import selery.log : Format, Message, Logger;
+import selery.log : Message, Logger;
 import selery.node.handler; //TODO selective imports
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.node : Node;
@@ -80,7 +81,7 @@ import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
 import selery.world.thread;
 
-import terminalcolor : Terminal;
+import terminal : Terminal;
 
 import HncomLogin = sel.hncom.login;
 import HncomUtil = sel.hncom.util;

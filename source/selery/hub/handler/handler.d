@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler/handler.d, selery/hub/handler/handler.d)
@@ -32,6 +32,7 @@ import std.json : JSONValue;
 import std.socket : SocketException;
 import std.string : toLower, indexOf, strip, split, join;
 
+import sel.format : Format;
 import sel.server.bedrock : BedrockServerImpl;
 import sel.server.java : JavaServerImpl;
 import sel.server.query : Query;
@@ -45,7 +46,6 @@ import selery.hub.handler.webadmin : WebAdminHandler;
 import selery.hub.handler.webview : WebViewHandler;
 import selery.hub.server : HubServer;
 import selery.lang : Translation;
-import selery.log : Format;
 import selery.util.thread : SafeThread;
 
 /**

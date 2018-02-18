@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/node/plugin/package.d, selery/node/plugin/package.d)
@@ -31,8 +31,10 @@ module selery.node.plugin;
 // common
 public import selery.about : Software, tick_t, block_t, item_t;
 public import selery.lang : Translation;
-public import selery.log : Format;
 public import selery.util.util;
+
+// format
+public import sel.format : Format;
 
 // server
 public import selery.node.server : NodeServer, ServerCommandSender;

@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/player/bedrock.d, selery/player/bedrock.d)
@@ -59,7 +59,7 @@ import selery.entity.noai : Lightning, ItemEntity;
 import selery.inventory.inventory;
 import selery.item.slot : Slot;
 import selery.lang : Translation;
-import selery.log : Format, Message;
+import selery.log : Message;
 import selery.math.vector;
 import selery.node.info : PlayerInfo;
 import selery.player.player;

@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/server.d, selery/hub/server.d)
@@ -56,6 +56,7 @@ import imageformats : ImageIOException, read_png_header_from_mem;
 
 import myip : privateAddresses, publicAddress4;
 
+import sel.format : Format;
 import sel.hncom.login : HubInfo, NodeInfo;
 import sel.hncom.status : Log;
 import sel.server.client : Client;
@@ -70,14 +71,14 @@ import selery.hub.handler.rcon : RconClient;
 import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
 import selery.lang : Translation;
-import selery.log : Format, Message, Logger;
+import selery.log : Message, Logger;
 import selery.plugin : Plugin;
 import selery.server : Server;
 import selery.util.portable : startWebAdmin;
 import selery.util.thread;
 import selery.util.util : milliseconds;
 
-import terminalcolor : Terminal;
+import terminal : Terminal;
 
 struct Icon {
 

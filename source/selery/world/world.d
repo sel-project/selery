@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/world/world.d, selery/world/world.d)
@@ -43,6 +43,7 @@ import std.traits : Parameters;
 import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
+import sel.format : Format;
 import sel.hncom.about;
 import sel.hncom.status : AddWorld, RemoveWorld;
 
@@ -65,7 +66,7 @@ import selery.item.item : Item;
 import selery.item.items : ItemStorage, Items;
 import selery.item.slot : Slot;
 import selery.lang : Translation;
-import selery.log : Format, Message;
+import selery.log : Message;
 import selery.math.vector;
 import selery.node.handler : Handler;
 import selery.node.info : PlayerInfo, WorldInfo;

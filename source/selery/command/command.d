@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/command/command.d, selery/command/command.d)
@@ -35,12 +35,14 @@ import std.meta : staticIndexOf, Reverse;
 import std.string : toLower, startsWith;
 import std.traits : Parameters, ParameterDefaults, ParameterIdentifierTuple, hasUDA, getUDAs, isIntegral, isFloatingPoint;
 
+import sel.format : Format;
+
 import selery.command.args : StringReader;
 import selery.command.util : PocketType, CommandSender, WorldCommandSender, Ranged, isRanged, Target, Position;
 import selery.entity.entity : Entity;
 import selery.event.node.command : CommandNotFoundEvent, CommandFailedEvent;
 import selery.lang : Translation;
-import selery.log : Format, Message;
+import selery.log : Message;
 import selery.node.server : ServerCommandSender;
 import selery.player.player : Player;
 import selery.plugin : Description;

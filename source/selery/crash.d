@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/crash.d, selery/crash.d)
@@ -33,18 +33,18 @@ import std.ascii : newline;
 import std.conv : to;
 import std.datetime : Clock;
 import std.file : write, read, exists, mkdir;
-import std.stdio : writeln;
 import std.string : split, replace;
+
+import sel.format : Format, writeln;
 
 import selery.about : Software;
 import selery.lang : LanguageManager;
-import selery.log : Format;
 
 public string logCrash(string type, inout LanguageManager lang, Throwable e) {
 
 	string filename = "crash/" ~ type ~ "_" ~ Clock.currTime().toSimpleString().split(".")[0].replace(" ", "_").replace(":", ".") ~ ".txt";
 
-	writeln(lang.translate("warning.crash", [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string])); //TODO use Terminal to change colour
+	writeln(Format.red ~ lang.translate("warning.crash", [typeid(e).to!string.split(".")[$-1], e.msg, e.file, e.line.to!string]));
 
 	string file = "Critical " ~ (cast(Error)e ? "error" : "exception") ~ " on " ~ Software.display ~ newline ~ newline;
 	file ~= "Message: " ~ e.msg ~ newline;
@@ -62,7 +62,7 @@ public string logCrash(string type, inout LanguageManager lang, Throwable e) {
 	if(!exists("crash")) mkdir("crash");
 	write(filename, file);
 
-	writeln(lang.translate("warning.savedCrash", [filename])); //TODO use Terminal to change colour
+	writeln(Format.red ~ lang.translate("warning.savedCrash", [filename]));
 
 	return filename;
 

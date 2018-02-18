@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/entity/living.d, selery/entity/living.d)
@@ -31,13 +31,14 @@ module selery.entity.living;
 import std.conv : to;
 import std.math : round, isNaN;
 
+import sel.format : Format;
+
 import selery.about;
 import selery.command.command : Position;
 import selery.effect : Effect, Effects;
 import selery.entity.entity : Entity, Rotation;
 import selery.entity.metadata;
 import selery.event.world;
-import selery.log : Format;
 import selery.math.vector;
 import selery.player.player : Player;
 import selery.util.color : Color;

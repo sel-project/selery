@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/commands.d, selery/commands.d)
@@ -36,6 +36,8 @@ import std.string : join, toLower, startsWith;
 import std.traits : hasUDA, getUDAs, Parameters;
 import std.typetuple : TypeTuple;
 
+import sel.format : Format, unformat;
+
 import selery.about : Software;
 import selery.command.command : Command;
 import selery.command.util : CommandSender, WorldCommandSender, PocketType, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
@@ -44,7 +46,6 @@ import selery.effect : Effects;
 import selery.enchantment : Enchantments;
 import selery.entity.entity : Entity;
 import selery.lang : Translation, Translatable;
-import selery.log : Format;
 import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.bedrock : BedrockPlayer;
@@ -52,7 +53,6 @@ import selery.player.java : JavaPlayer;
 import selery.player.player : Player, InputMode, PermissionLevel;
 import selery.plugin : Description, permission, hidden, unimplemented;
 import selery.util.messages : Messages;
-import selery.util.util : unformat;
 import selery.world.world : Time;
 
 enum vanilla;

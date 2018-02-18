@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/util/util.d, selery/util/util.d)
@@ -198,35 +198,6 @@ public @property @safe T safe(T, E)(E value) {
 	} catch(ConvException e) {
 		return T.init;
 	}
-}
-
-/**
- * Removes valid formatting codes from a message.
- * Note that this function also removes uppercase formatting codes
- * because they're supported by Minecraft (but not by Minecraft Pocket
- * Edition).
- * Example:
- * ---
- * assert(unformat("§agreen") == "green");
- * assert(unformat("res§Ret") == "reset");
- * assert(unformat("§xunsupported") == "§xunsupported");
- * ---
- */
-string unformat(string message) {
-	// regex should be ctRegex!("§[0-9a-fk-or]", "") but obviously doesn't work on DMD's release mode
-	for(size_t i=0; i<message.length-2; i++) {
-		if(message[i] == 194 && message[i+1] == 167) {
-			char next = message[i+2];
-			if(next >= '0' && next <= '9' ||
-				next >= 'A' && next <= 'F' || next >= 'K' && next <= 'O' || next == 'R' ||
-				next >= 'a' && next <= 'f' || next >= 'k' && next <= 'o' || next == 'r')
-			{
-				message = message[0..i] ~ message[i+3..$];
-				i--;
-			}
-		}
-	}
-	return message;
 }
 
 class UnloggedException : Exception {

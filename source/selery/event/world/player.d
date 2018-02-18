@@ -21,12 +21,14 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/event/world/player.d, selery/event/world/player.d)
  */
 module selery.event.world.player;
+
+import sel.format : Format;
 
 import selery.block.block : Block;
 import selery.entity.entity : Entity;
@@ -36,7 +38,7 @@ import selery.event.world.entity : EntityDeathEvent;
 import selery.event.world.world;
 import selery.item : Slot, Item;
 import selery.lang : Translation;
-import selery.log : Message, Format;
+import selery.log : Message;
 import selery.math.vector : BlockPosition, EntityPosition, ChunkPosition;
 import selery.player.player : Player;
 import selery.world.world : World;

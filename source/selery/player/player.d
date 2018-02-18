@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/player/player.d, selery/player/player.d)
@@ -38,6 +38,8 @@ import std.math : abs, isFinite;
 import std.socket : Address;
 import std.string : toLower, toUpper, startsWith, strip, replace;
 import std.uuid : UUID;
+
+import sel.format : Format, unformat;
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock;
@@ -58,13 +60,13 @@ import selery.item.item : Item;
 import selery.item.items : Items;
 import selery.item.slot : Slot;
 import selery.lang : Translation;
-import selery.log : Message, Format;
+import selery.log : Message;
 import selery.math.vector;
 import selery.node.handler : Handler;
 import selery.node.info : PlayerInfo;
 import selery.node.node : Node;
 import selery.node.server : NodeServer;
-import selery.util.util : milliseconds, call, unformat;
+import selery.util.util : milliseconds, call;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
 import selery.world.world : World;
