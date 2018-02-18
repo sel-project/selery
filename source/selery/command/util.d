@@ -21,7 +21,7 @@
  *
  */
 /**
- * Copyright: 2017-2018 sel-project
+ * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/command/util.d, selery/command/util.d)
