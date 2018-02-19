@@ -40,8 +40,6 @@ import selery.about;
 import toml;
 import toml.json;
 
-enum size_t __GENERATOR__ = 54;
-
 enum Type {
 
 	default_ = "default",
@@ -73,14 +71,14 @@ int main(string[] args) {
 				mkdirRecurse("views");
 				write("views/version.txt", Software.displayVersion);
 				string[] notes;
-				string history = cast(string)read("../docs/history.md");
+				string changelog = cast(string)read("../.github/changelog.md");
 				immutable v = "### " ~ Software.displayVersion;
-				auto start = history.indexOf(v);
+				auto start = changelog.indexOf(v);
 				if(start != -1) {
 					start += v.length;
-					history = history[start..$];
-					immutable end = history.indexOf("##");
-					write("views/notes.txt", history[0..(end==-1?$:end)].strip.replace("\n", "\\n"));
+					changelog = changelog[start..$];
+					immutable end = changelog.indexOf("##");
+					write("views/notes.txt", changelog[0..(end==-1?$:end)].strip.replace("\n", "\\n"));
 				} else {
 					write("views/notes.txt", "There are no release notes for this version.");
 				}
