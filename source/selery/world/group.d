@@ -24,7 +24,7 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/world/thread.d, selery/world/thread.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/world/group.d, selery/world/group.d)
  */
 module selery.world.group;
 
