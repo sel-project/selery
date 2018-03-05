@@ -78,10 +78,10 @@ import selery.util.color : Color;
 import selery.util.util : call;
 import selery.world.chunk;
 import selery.world.generator;
+import selery.world.group;
 import selery.world.map : Map;
 import selery.world.plugin : loadWorld;
 import selery.world.task : TaskManager;
-import selery.world.group;
 
 static import sul.blocks;
 
