@@ -29,7 +29,7 @@
 module selery.world.group;
 
 import core.atomic : atomicOp;
-debug import core.thread : Thread;
+import core.thread : Thread;
 
 import std.concurrency : Tid, send, receiveTimeout;
 import std.conv : to;
