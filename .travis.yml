@@ -9,22 +9,25 @@ os:
   - osx
   
 env:
-  global:
-    - ARCH=x86_64
   matrix:
-    - CONFIG=debug
-    - CONFIG=release
+    - CONFIG=debug ARCH=x86_64
+    - CONFIG=release ARCH=x86_64
+    - CONFIG=release ARCH=x86
 
 matrix:
-  include:
-    - {os: linux, d: ldc, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
-    - {os: linux, d: dmd, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
   exclude:
     - d: dmd
-      env: CONFIG=release
+      env: CONFIG=release ARCH=x86_64
+    - d: dmd
+      env: CONFIG=release ARCH=x86
   allow_failures:
     - os: osx
       d: dmd
+
+addons:
+  apt:
+    packages:
+      - gcc-multilib
 
 deploy:
   provider: releases
