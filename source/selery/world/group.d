@@ -41,16 +41,19 @@ import std.traits : isAbstractClass, Parameters;
 import std.typetuple : TypeTuple;
 
 import sel.hncom.about : __BEDROCK__, __JAVA__;
+import sel.hncom.status : HncomAddWorld = AddWorld, HncomRemoveWorld = RemoveWorld;
 
 import selery.about : SupportedBedrockProtocols, SupportedJavaProtocols;
 import selery.config : Difficulty, Gamemode, Config;
 import selery.log : Message;
 import selery.math.vector : EntityPosition;
+import selery.node.handler : Handler;
 import selery.node.server : NodeServer;
 import selery.player.bedrock : BedrockPlayerImpl;
 import selery.player.java : JavaPlayerImpl;
 import selery.player.player : PlayerInfo, Player, PermissionLevel;
 import selery.util.util : call;
+import selery.world.plugin : loadWorld;
 import selery.world.world : WorldInfo, World;
 
 private shared uint _id;
@@ -98,8 +101,17 @@ void spawnWorldGroup(shared NodeServer server, shared GroupInfo info, bool main)
 
 	debug Thread.getThis().name = "world_group#" ~ to!string(info.id);
 
-	WorldGroup group = new WorldGroup(server, info, main);
-	group.start();
+	try {
+
+		WorldGroup group = new WorldGroup(server, info, main);
+		group.start();
+
+	} catch(Throwable t) {
+
+		import selery.crash;
+		logCrash("world", server.lang, t);
+
+	}
 	
 	//TODO catch exceptions per-world
 	
@@ -107,7 +119,7 @@ void spawnWorldGroup(shared NodeServer server, shared GroupInfo info, bool main)
 
 final class WorldGroup {
 
-	private shared NodeServer server;
+	private shared NodeServer _server;
 	private shared GroupInfo info;
 	private bool main;
 	private Random random;
@@ -131,7 +143,7 @@ final class WorldGroup {
 	Weather weather;
 	
 	private this(shared NodeServer server, shared GroupInfo info, bool main) {
-		this.server = server;
+		this._server = server;
 		this.info = info;
 		this.main = main;
 		this.random = Random(unpredictableSeed);
@@ -148,6 +160,10 @@ final class WorldGroup {
 			this.weather = new Weather(doWeatherCycle);
 			this.weather.clear();
 		}
+	}
+
+	public pure nothrow @property @safe @nogc shared(NodeServer) server() {
+		return this._server;
 	}
 
 	public pure nothrow @property World[] worlds() {
@@ -434,7 +450,12 @@ final class WorldGroup {
 	 * Adds a world.
 	 */
 	public void addWorld(T:World=World, E...)(shared WorldInfo info, E args) {
-		this.addWorldImpl(info, new T(args));
+		T world = new T(args);
+		this.addWorldImpl(info, world);
+		// register events and similar stuff
+		world._update_state = delegate(int oldState, uint newState){ loadWorld(world, oldState, newState); };
+		world.updateState(0);
+		world.start(this);
 	}
 
 	private void addWorldImpl(shared WorldInfo info, World world) {
@@ -443,18 +464,25 @@ final class WorldGroup {
 		world.info.group = this.info;
 		this.info.worlds[world.id] = world.info;
 		if(this.info.defaultWorld is null) this.info.defaultWorld = world.info;
-		this.worlds[world.id] = world;
-		//TODO register stuff
-		//TODO send packet to the hub
+		this._worlds[world.id] = world;
+		// send packet to the hub
+		Handler.sharedInstance.send(HncomAddWorld(info.id, this.info.id, this.info.name, world.dimension, false).encode()); //TODO default?
+		// set events listener
+		world.setListener(cast()server.globalListener);
 	}
 
 	/**
 	 * Removes a world.
 	 */
 	public void removeWorld(uint worldId) {
-		//TODO check whether it can be stopped
-		//TODO save and delete
-		//TODO send packet to the hub
+		World* world = worldId in this._worlds;
+		if(world) {
+			//TODO check whether it can be stopped
+			// send packet to the hub
+			Handler.sharedInstance.send(HncomRemoveWorld(worldId).encode());
+			//TODO save and delete
+			world.stop();
+		}
 	}
 	
 	/*

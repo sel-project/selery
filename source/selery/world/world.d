@@ -44,8 +44,6 @@ import std.typecons : Tuple;
 import std.typetuple : TypeTuple;
 
 import sel.format : Format;
-import sel.hncom.about;
-import sel.hncom.status : AddWorld, RemoveWorld;
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock, Update, Remove, blockInto;
@@ -68,7 +66,6 @@ import selery.item.slot : Slot;
 import selery.lang : Translation;
 import selery.log : Message;
 import selery.math.vector;
-import selery.node.handler : Handler;
 import selery.node.server : NodeServer;
 import selery.player.bedrock : BedrockPlayerImpl;
 import selery.player.java : JavaPlayerImpl;
@@ -80,7 +77,6 @@ import selery.world.chunk;
 import selery.world.generator;
 import selery.world.group;
 import selery.world.map : Map;
-import selery.world.plugin : loadWorld;
 import selery.world.task : TaskManager;
 
 static import sul.blocks;
@@ -110,57 +106,17 @@ final class WorldInfo {
  */
 class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "player") {
 
-	public static void startWorld(T:World)(shared NodeServer server, shared WorldInfo info, T world, World parent, bool default_=false) {
-		world.info = info;
-		// send world info to the hub
-		Handler.sharedInstance.send(AddWorld(world.id, world.name, world.dimension, default_, parent is null ? -1 : parent.id).encode());
-		// update variables and start
-		world.n_server = server;
-		world.setListener(cast()server.globalListener);
-		if(parent is null) {
-			world.initParent();
-		} else {
-			world.initChild();
-			world.setListener(parent.inheritance);
-			world.inheritance = parent.inheritance;
-		}
-		world._update_state = delegate(int oldState, uint newState){ loadWorld(world, oldState, newState); };
-		world.updateState(0);
-		world.start();
-	}
-
-	/+public static void stopWorld(World world, World transferTo) {
-		if(transferTo !is null) {
-			void transfer(World from) {
-				auto c = from.w_players.length;
-				if(c) {
-					warning_log(translate(Translation("warning.removingWithPlayers"), world.server.settings.language, [from.name, to!string(c)]));
-					foreach(player ; from.w_players) {
-						player.world = transferTo;
-					}
-				}
-				foreach(child ; from.children) {
-					transfer(child);
-				}
-			}
-			transfer(world);
-		}
-		world.stop();
-	}+/
-
 	public shared WorldInfo info;
 
 	private bool _started = false;
 	private bool _stopped = false;
-
-	protected shared NodeServer n_server;
 
 	protected Dimension n_dimension = Dimension.overworld;
 	protected uint n_seed;
 	protected string n_type;
 
 	private int _state = -1;
-	protected void delegate(int, uint) _update_state;
+	public void delegate(int, uint) _update_state;
 
 	private WorldGroup group;
 	
@@ -170,9 +126,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private Random _random;
 	
 	private tick_t n_ticks = 0;
-
-	protected EventListener!WorldEvent inheritance;
-	protected TaskManager task_manager;
 
 	protected Generator generator;
 	
@@ -206,7 +159,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
 		if(this.n_items is null) this.n_items = new ItemStorage();
 		this._random = Random(this.seed);
-		this.inheritance = new EventListener!WorldEvent();
 		this.generator = generator is null ? new Flat(this) : generator;
 		this.generator.seed = seed;
 		this.n_type = this.generator.type;
@@ -226,7 +178,8 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Function called when the the world is created.
 	 * Calls init and orders the default chunks.
 	 */
-	public void start() {
+	public void start(WorldGroup group) {
+		this.group = group;
 		this.initChunks();
 		this.updated_blocks.length = 0;
 		sort!"a.x.abs + a.z.abs < b.x.abs + b.z.abs"(this.defaultChunks);
@@ -265,7 +218,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	public final pure nothrow @property @safe @nogc shared(NodeServer) server() {
-		return this.n_server;
+		return this.group.server;
 	}
 
 	/**
@@ -444,14 +397,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/**
 	 * Gets the current world's state.
 	 */
-	protected final pure nothrow @property @safe @nogc uint currentState() {
+	public final pure nothrow @property @safe @nogc uint currentState() {
 		return this._state;
 	}
 
-	/**
+	/*
 	 * Updates the world's state.
 	 */
-	protected final void updateState(uint state) {
+	public final void updateState(uint state) {
 		if(this._state != state) {
 			this._update_state(this._state, state);
 			this._state = state;
