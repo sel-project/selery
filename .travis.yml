@@ -13,13 +13,9 @@ env:
     - CONFIG=debug ARCH=x86_64
     - CONFIG=release ARCH=x86_64
     - CONFIG=release ARCH=x86
+#    - CONFIG=release ARCH=arm
 
 matrix:
-  exclude:
-    - d: dmd
-      env: CONFIG=release ARCH=x86_64
-    - d: dmd
-      env: CONFIG=release ARCH=x86
   allow_failures:
     - os: osx
       d: dmd
