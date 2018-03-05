@@ -93,6 +93,7 @@ install:
             }
         }
   - ps: SetUpDCompiler
+  - [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   - powershell -Command Invoke-WebRequest https://github.com/electron/rcedit/releases/download/v1.0.0/rcedit-x86.exe -OutFile rcedit.exe
   - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.3.0-windows-x86.zip -OutFile dub.zip
   - 7z x dub.zip -odub > nul

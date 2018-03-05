@@ -15,11 +15,10 @@
 /builder/views
 /crash
 /plugins
-/_plugins
 /resources
 /worlds
 /*.toml
 /*.json
 /*.png
-selery
+/selery
 selery-*
