@@ -28,7 +28,7 @@
  */
 module selery.player.java;
 
-import std.algorithm : sort, min, canFind, clamp;
+import std.algorithm : sort, min, canFind, clamp, countUntil;
 import std.conv : to;
 import std.digest.digest : toHexString;
 import std.digest.sha : sha1Of;
@@ -60,9 +60,7 @@ import selery.item.slot : Slot;
 import selery.lang : Translation;
 import selery.log : Message;
 import selery.math.vector;
-import selery.node.info : PlayerInfo;
 import selery.player.player;
-import selery.util.util : array_index;
 import selery.world.chunk : Chunk;
 import selery.world.map : Map;
 import selery.world.world : World;
@@ -415,7 +413,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 							auto block = section[x, y, z];
 							if(block && (*block).javaId != 0) {
 								uint b = (*block).javaId << 4 | (*block).javaMeta;
-								auto p = array_index(b, palette);
+								auto p = countUntil(palette, b);
 								if(p >= 0) {
 									pointers ~= p & 255;
 								} else {

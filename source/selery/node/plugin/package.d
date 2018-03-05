@@ -46,7 +46,7 @@ public import selery.node.plugin.plugin : NodePlugin, PluginOf, start, stop, eve
 
 // command sender
 public import selery.player.player : Player;
-public import selery.command.command : CommandSender, WorldCommandSender;
+public import selery.command.util : CommandSender, WorldCommandSender;
 public import selery.world.world : World;
 
 // command utils

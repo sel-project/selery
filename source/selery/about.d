@@ -101,10 +101,10 @@ const struct Software {
 	enum ubyte major = 0;
 	
 	/// ditto
-	enum ubyte minor = 1;
+	enum ubyte minor = 2;
 	
 	/// ditto
-	enum ubyte patch = 2;
+	enum ubyte patch = 0;
 	
 	/// ditto
 	enum ubyte[3] versions = [major, minor, patch];

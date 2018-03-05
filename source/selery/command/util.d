@@ -36,11 +36,12 @@ import std.traits : isIntegral, isFloatingPoint;
 import std.typecons : Tuple;
 
 import selery.command.command : Command;
+import selery.config : Gamemode;
 import selery.entity.entity : Entity;
 import selery.log : Message;
 import selery.math.vector : EntityPosition, isVector, distance;
 import selery.node.server : NodeServer;
-import selery.player.player : Player, Gamemode;
+import selery.player.player : Player;
 import selery.world.world : World;
 
 import transforms.snake;

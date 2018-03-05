@@ -69,11 +69,10 @@ import selery.lang : Translation;
 import selery.log : Message;
 import selery.math.vector;
 import selery.node.handler : Handler;
-import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : NodeServer;
 import selery.player.bedrock : BedrockPlayerImpl;
 import selery.player.java : JavaPlayerImpl;
-import selery.player.player : Player, isPlayer;
+import selery.player.player : PlayerInfo, Player, isPlayer;
 import selery.plugin : Plugin, loadPluginAttributes, Description;
 import selery.util.color : Color;
 import selery.util.util : call;
@@ -82,206 +81,29 @@ import selery.world.generator;
 import selery.world.map : Map;
 import selery.world.plugin : loadWorld;
 import selery.world.task : TaskManager;
-import selery.world.thread;
+import selery.world.group;
 
 static import sul.blocks;
 
-/**
- * Common properties for a group of worlds.
- */
-final class WorldGroup {
+private shared uint _id;
 
-	Random random;
+final class WorldInfo {
 
-	Player[] players;
-	Player[uint] playersAA;
+	public immutable uint id;
 
-	Gamemode gamemode;
-	Difficulty difficulty;
+	public shared GroupInfo group;
 
-	// rules that the client does not need to know about
-	bool pvp;
-	bool naturalRegeneration;
-	bool depleteHunger;
-	uint randomTickSpeed;
-	uint viewDistance;
+	public size_t entities;
 
-	Time time;
-	Weather weather;
+	public size_t players;
 
-	private this(ref Random random) {
-		this.random = random;
-	}
+	public size_t chunks;
 
-	public this(ref Random random, const Config.Node config) {
-		this(random);
-		this.gamemode = {
-			switch(config.gamemode) {
-				default: return Gamemode.survival;
-				case 1: return Gamemode.creative;
-				case 2: return Gamemode.adventure;
-				case 3: return Gamemode.spectator;
-			}
-		}();
-		this.difficulty = {
-			switch(config.difficulty) {
-				case 0: return Difficulty.peaceful;
-				case 1: return Difficulty.easy;
-				default: return Difficulty.normal;
-				case 3: return Difficulty.hard;
-			}
-		}();
-		this.depleteHunger = config.depleteHunger;
-		this.naturalRegeneration = config.naturalRegeneration;
-		this.pvp = config.pvp;
-		this.randomTickSpeed = config.randomTickSpeed;
-		this.viewDistance = config.viewDistance;
-		//TODO more rules
-		this.time = new Time(config.doDaylightCycle);
-		this.weather = new Weather(config.doWeatherCycle);
-		this.weather.clear();
-	}
-
-	//TODO constructor from world's save file
-
-	void tick() {
-		if(this.time.cycle) {
-			if(++this.time._time == 24000) {
-				this.time._time = 0;
-				this.time.day++;
-			}
-		}
-		if(this.weather.cycle) {
-			if(--this.weather._time == 0) {
-				if(this.weather._raining) this.weather.clear();
-				else this.weather.start();
-			}
-		}
-	}
-
-	// updates
-
-	void addPlayer(Player player) {
-		this.players.call!"sendAddList"([player]);
-		this.players ~= player;
-		this.playersAA[player.hubId] = player;
-		player.sendAddList(this.players);
-	}
-
-	void removePlayer(Player player, bool closed) {
-		foreach(i, p; this.players) {
-			if(p.hubId == player.hubId) {
-				this.playersAA.remove(player.hubId);
-				this.players = this.players[0..i] ~ this.players[i+1..$];
-				this.players.call!"sendRemoveList"([player]);
-				if(!closed) player.sendRemoveList(this.players);
-			}
-		}
-	}
-
-	void updateDifficulty(Difficulty difficulty) {
-		this.difficulty = difficulty;
-		this.players.call!"sendDifficulty"(difficulty);
-	}
-
-	void updateGamemode(Gamemode gamemode) {
-		this.gamemode = gamemode;
-		this.players.call!"sendWorldGamemode"(gamemode);
-	}
-
-	private class Time {
-
-		bool _cycle;
-		uint day;
-		uint _time;
-
-		this(bool cycle) {
-			this._cycle = cycle;
-		}
-
-		@property bool cycle() {
-			return _cycle;
-		}
-
-		@property bool cycle(bool cycle) {
-			players.call!"sendDoDaylightCycle"(cycle);
-			return _cycle = cycle;
-		}
-
-		@property uint time() {
-			return _time;
-		}
-
-		@property uint time(uint time) {
-			time %= 24000;
-			players.call!"sendTime"(time);
-			return _time = time;
-		}
-
-		alias time this;
-
-	}
-
-	private class Weather {
-
-		public bool cycle;
-		private bool _raining, _thunderous;
-		private uint _time;
-		private uint _intensity;
-
-		this(bool cycle) {
-			this.cycle = cycle;
-		}
-
-		@property bool raining() {
-			return _raining;
-		}
-
-		@property bool thunderous() {
-			return _thunderous;
-		}
-
-		@property uint intensity() {
-			return _intensity;
-		}
-
-		void clear(uint duration) {
-			_raining = _thunderous = false;
-			_time = duration;
-			_intensity = 0;
-			update();
-		}
-
-		void clear() {
-			clear(uniform!"[]"(12000u, 180000u, random));
-		}
-
-		void start(uint time, uint intensity, bool thunderous) {
-			assert(intensity > 0);
-			_raining = true;
-			_thunderous = thunderous;
-			_time = time;
-			_intensity = intensity;
-			update();
-		}
-
-		void start(uint time, bool thunderous) {
-			start(time, uniform!"[]"(1, 4, random), thunderous);
-		}
-
-		void start() {
-			start(uniform!"[]"(12000u, 24000u, random), !dice(random, .5, .5));
-		}
-
-		private void update() {
-			players.call!"sendWeather"(_raining, _thunderous, _time, _intensity);
-		}
-
+	public shared this() {
+		this.id = atomicOp!"+="(_id, 1);
 	}
 
 }
-
-private shared uint world_count = 0;
 
 /**
  * Basic world.
@@ -326,9 +148,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world.stop();
 	}+/
 
-	public immutable uint id;
-
-	protected shared WorldInfo info;
+	public shared WorldInfo info;
 
 	private bool _started = false;
 	private bool _stopped = false;
@@ -339,15 +159,10 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	protected uint n_seed;
 	protected string n_type;
 
-	private shared(WorldInfo)[uint] children_info;
-
 	private int _state = -1;
 	protected void delegate(int, uint) _update_state;
 
 	private WorldGroup group;
-
-	private World n_parent;
-	private World[] n_children;
 	
 	protected BlockStorage n_blocks;
 	protected ItemStorage n_items;
@@ -386,7 +201,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	private Command[string] commands;
 	
 	public this(Generator generator=null, uint seed=unpredictableSeed) {
-		this.id = atomicOp!"+="(world_count, 1);
+		this.info = new shared WorldInfo();
 		this.n_seed = seed;
 		if(this.n_blocks is null) this.n_blocks = new BlockStorage();
 		if(this.n_items is null) this.n_items = new ItemStorage();
@@ -403,19 +218,15 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		this(null, seed);
 	}
 
-	protected final void initParent() {
-		this.group = new WorldGroup(this.random, this.server.config.node);
-	}
-
-	protected final void initChild() {
-		this.group = this.parent.group;
+	public final pure nothrow @property @safe @nogc uint id() {
+		return this.info.id;
 	}
 
 	/*
 	 * Function called when the the world is created.
 	 * Calls init and orders the default chunks.
 	 */
-	protected void start() {
+	public void start() {
 		this.initChunks();
 		this.updated_blocks.length = 0;
 		sort!"a.x.abs + a.z.abs < b.x.abs + b.z.abs"(this.defaultChunks);
@@ -445,7 +256,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	 * Saves the resources if they need to be saved and unloads the chunks
 	 * freeing the memory allocated.
 	 */
-	protected void stop() {
+	public void stop() {
 		foreach(ref chunks ; this.n_chunks) {
 			foreach(ref chunk ; chunks) {
 				chunk.unload();
@@ -455,21 +266,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	public final pure nothrow @property @safe @nogc shared(NodeServer) server() {
 		return this.n_server;
-	}
-
-	/**
-	 * Gets the world's name used for identification and
-	 * logging purposes.
-	 * Children have the same name as their parent.
-	 * Example:
-	 * ---
-	 * if(!server.worldsWithName(world.name).canFind(world)) {
-	 *    log(world.name, " is not managed by the server");
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @property @safe @nogc immutable(string) name() {
-		return this.info.name;
 	}
 
 	/**
@@ -516,12 +312,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		return gamemode;
 	}
 
-	/// ditto
-	public final @property Gamemode gamemode(int gamemode) {
-		with(Gamemode) assert(gamemode >= survival && gamemode <= spectator);
-		return this.gamemode = cast(Gamemode)gamemode;
-	}
-
 	/**
 	 * Gets/sets the world's difficulty.
 	 */
@@ -533,12 +323,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	public final @property Difficulty difficulty(Difficulty difficulty) {
 		this.group.updateDifficulty(difficulty);
 		return difficulty;
-	}
-
-	/// ditto
-	public final @property Difficulty difficulty(int difficulty) {
-		assert(difficulty >= Difficulty.peaceful && difficulty <= Difficulty.hard);
-		return this.difficulty = cast(Difficulty)difficulty;
 	}
 
 	/**
@@ -658,101 +442,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/**
-	 * Gets the world's parent world.
-	 * Returns: A world instance if the world has a parent, null otherwise
-	 * Example:
-	 * ---
-	 * if(world.parent !is null) {
-	 *    assert(world.parent.canFind(world));
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @property @safe @nogc World parent() {
-		return this.n_parent;
-	}
-
-	/**
-	 * Gets the world's children.
-	 * Returns: An array of worlds, empty if the world has no children
-	 * Example:
-	 * ---
-	 * if(world.children.length) {
-	 *    log(world.name, " has ", world.children.length, " child(ren)");
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @property @safe @nogc World[] children() {
-		return this.n_children;
-	}
-
-	/**
-	 * Checks whether or not the given world is a child of this one.
-	 * Example:
-	 * ---
-	 * if(!overworld.hasChild(nether)) {
-	 *    overworld.addChild(nether);
-	 * }
-	 * ---
-	 */
-	public final pure nothrow @safe @nogc bool hasChild(World world) {
-		foreach(child ; this.n_children) {
-			if(world.id == child.id) return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Adds a child to the world.
-	 * A child world is not managed (and ticked) by the server but
-	 * by its parent. This means that this method should be used instead
-	 * of server.addWorld.
-	 * Returns: a new instance of the given world, constructed with the given parameters
-	 * Example:
-	 * ---
-	 * auto overworld = server.addWorld!Overworld();
-	 * auto nether = overworld.addChild!Nether();
-	 * ---
-	 */
-	public final T addChild(T:World=World, E...)(E args) if(__traits(compiles, new T(args))) {
-		return this.addChildImpl(new T(args));
-	}
-
-	private World addChildImpl(World world) {
-		assert(world.parent is null);
-		world.n_parent = this;
-		world.n_server = this.server;
-		world.info = cast(shared)new WorldInfo(world.info.id, world.info.name);
-		world.info.tid = this.info.tid;
-		world.info.parent = this.info;
-		this.info.children[world.id] = world.info;
-		World.startWorld(this.server, world.info, world, this);
-		this.n_children ~= world;
-		return world;
-	}
-
-	/**
-	 * Removes a child and its children teleporting their players to
-	 * the current world's spawn point.
-	 * Returns: true if the given world was a child, false otherwise
-	 */
-	public final bool removeChild(World world) {
-		foreach(i, child; this.n_children) {
-			if(world.id == child.id) {
-				this.n_children = this.n_children[0..i] ~ this.n_children[i+1..$];
-				void unload(World w) {
-					foreach(player ; w.players) player.teleport(this, cast(EntityPosition)this.spawnPoint);
-					w.stop(); // unload chunks
-					foreach(child ; w.children) unload(child);
-				}
-				unload(world); // teleport all players in the current world's spawn
-				this.info.children.remove(world.id);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * Gets the current world's state.
 	 */
 	protected final pure nothrow @property @safe @nogc uint currentState() {
@@ -768,130 +457,13 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 			this._state = state;
 		}
 	}
-
-	// main loop for main worlds (not children)
-	public void startMainWorldLoop() {
-
-		void tickChildren(World world) {
-			world.tick();
-			foreach(child ; world.children) tickChildren(child);
-		}
-
-		StopWatch timer;
-		ulong duration;
-
-		while(!this._stopped) {
-
-			timer.start();
-
-			// handle server's message (new players, new packets, ...)
-			this.handleServerPackets();
-
-			// tick the group
-			this.group.tick();
-
-			// tick the world and the children
-			tickChildren(this);
-
-			// flush player's packets
-			foreach(player ; this.group.players) player.flush();
-
-			// sleep until next tick
-			timer.stop();
-			timer.peek.split!"usecs"(duration);
-			if(duration < 50_000) {
-				Thread.sleep(dur!"usecs"(50_000 - duration));
-			} else {
-				//TODO server is less than 20 tps!
-			}
-			timer.reset();
-
-		}
-
-		//TODO make sure no players are online
-
-		//TODO send RemoveWorld to the hub (children will be removed automatically)
-
-		//TODO also stop children
-		this.stop();
-
-		std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, CloseResult.REMOVED));
-
-	}
-
-	private void handleServerPackets() {
-		while(std.concurrency.receiveTimeout(dur!"msecs"(0),
-			&this.handleAddPlayer,
-			&this.handleRemovePlayer,
-			&this.handleGamePacket,
-			&this.handleBroadcast,
-			&this.handleUpdateDifficulty,
-			&this.handleUpdatePlayerGamemode,
-			&this.handleUpdatePlayerPermissionLevel,
-			&this.handleClose,
-		)) {}
-	}
-
-	private void handleAddPlayer(AddPlayer packet) {
-		//TODO allow spawning in a child
-		this.spawnPlayer(packet.player, packet.transferred);
-	}
-
-	private void handleRemovePlayer(RemovePlayer packet) {
-		auto player = packet.playerId in this.group.playersAA;
-		if(player) {
-			this.group.removePlayer(*player, false); //TODO whether the player has left the server
-			(*player).world.despawnPlayer(*player);
-			(*player).close();
-		}
-	}
-
-	private void handleGamePacket(GamePacket packet) {
-		auto player = packet.playerId in this.group.playersAA;
-		if(player) {
-			(*player).handle(packet.payload[0], packet.payload[1..$].dup);
-		}
-	}
-
-	private void handleBroadcast(Broadcast packet) {
-		this.broadcast(packet.message);
-	}
-
-	private void handleUpdateDifficulty(UpdateDifficulty packet) {
-		this.difficulty = packet.difficulty;
-	}
-
-	private void handleUpdatePlayerGamemode(UpdatePlayerGamemode packet) {
-		auto player = packet.playerId in this.group.playersAA;
-		if(player) {
-			(*player).gamemode = packet.gamemode;
-		}
-	}
-
-	private void handleUpdatePlayerPermissionLevel(UpdatePlayerPermissionLevel packet) {
-		auto player = packet.playerId in this.group.playersAA;
-		if(player) {
-			(*player).permissionLevel = packet.permissionLevel;
-		}
-	}
-
-	private void handleClose(Close packet) {
-		if(this.group.players.length) {
-			// cannot close if there are players online in the world or in the children
-			// the world is not stopped
-			std.concurrency.send(cast()this.server.tid, CloseResult(this.info.id, CloseResult.PLAYERS_ONLINE));
-		} else {
-			// the world will be stopped at the end of the next tick
-			this._stopped = true;
-		}
-	}
 	
 	/*
 	 * Ticks the world and its children.
 	 * This function should be called by the startMainWorldLoop function
 	 * (if parent world is null) or by the parent world (if it is not null).
 	 */
-	protected void tick() {
+	public void tick() {
 
 		this.n_ticks++;
 
@@ -1032,14 +604,15 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	/**
 	 * Broadcasts a message (raw or translatable) to every player in the world.
+	 * To broadcast a message to every player in the group, use `group.broadcast`.
 	 */
-	public final void broadcast(E...)(E args) {
+	public void broadcast(E...)(E args) {
 		static if(E.length == 1 && is(E[0] == Message[])) this.broadcastImpl(args[0]);
 		else this.broadcastImpl(Message.convert(args));
 	}
 
 	protected void broadcastImpl(Message[] message) {
-		foreach(player ; this.group.players) player.sendMessage(message);
+		foreach(player ; this.players) player.sendMessage(message);
 		this.logImpl(message);
 	}
 
@@ -1051,7 +624,7 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	protected void broadcastTipImpl(Message[] message) {
-		foreach(player ; this.group.players) player.sendTip(message);
+		foreach(player ; this.players) player.sendTip(message);
 	}
 
 	/**
@@ -1094,72 +667,11 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	}
 
 	/*
-	 * Creates and spawn a player when it comes from another world group,
-	 * node or from a new connection.
+	 * Prepares a player for spawning.
 	 */
-	private Player spawnPlayer(shared PlayerInfo info, bool transferred) {
+	public void preSpawnPlayer(Player player) {
 
-		info.world = this.info; // set as the main world even when spawned in a child
-
-		//TODO load saved info from file
-
-		Player player = (){
-			final switch(info.type) {
-				foreach(type ; TypeTuple!("Bedrock", "Java")) {
-					case mixin("__" ~ toUpper(type) ~ "__"): {
-						final switch(info.protocol) {
-							foreach(protocol ; mixin("Supported" ~ type ~ "Protocols")) {
-								case protocol: {
-									mixin("alias ReturnPlayer = " ~ type ~ "PlayerImpl;");
-									return cast(Player)new ReturnPlayer!protocol(info, this, cast(EntityPosition)this.spawnPoint);
-								}
-							}
-						}
-					}
-				}
-			}
-		}();
-
-		//TODO if the player is transferred from another world or from the hub, send the change dimension packet or unload every chunk
-
-		// send generic informations that will not change when changing dimension
-		player.sendJoinPacket();
-
-		// add and send to the list
-		this.group.addPlayer(player);
-
-		// register server's commands
-		foreach(name, command; this.server.commands) {
-			player.registerCommand(cast()command);
-		}
-
-		// register world's commands
-		foreach(command ; this.commands) {
-			player.registerCommand(command);
-		}
-
-		// prepare for spawning (send chunks and rules)
-		this.preSpawnPlayer(player);
-
-		// call the spawn event and broadcast message
-		auto event = new PlayerSpawnEvent(player);
-		this.callEvent(event);
-		if(event.announce) this.broadcast(event.message);
-
-		// spawn to entities
-		this.afterSpawnPlayer(player);
-
-		//TODO call event.after
-
-		return player;
-
-	}
-
-	private void preSpawnPlayer(Player player) {
-
-		//TODO send packet to the hub with the new world
-
-		player.spawn = this.spawnPoint; // sends spawn position
+		player.spawn = this.spawnPoint; // send spawn position
 		player.move(this.spawnPoint.entityPosition); // send position
 
 		player.sendResourcePack(); //TODO world's resource pack
@@ -1195,7 +707,15 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 
 	}
 
-	private void afterSpawnPlayer(Player player) {
+	/*
+	 * Spawns and optionally announce a player.
+	 */
+	public void afterSpawnPlayer(Player player, bool announce) {
+
+		// call the spawn event and broadcast message
+		auto event = new PlayerSpawnEvent(player, announce);
+		this.callEvent(event);
+		if(event.announce) this.group.broadcast(event.message);
 
 		//TODO let the event choose if spawn or not
 		foreach(splayer ; this.w_players) {
@@ -1216,14 +736,14 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 	/*
 	 * Despawns a player (i.e. on disconnection, on world change, ...).
 	 */
-	protected final void despawnPlayer(Player player) {
+	public void despawnPlayer(Player player) {
 
 		//TODO some packet shouldn't be sent when the player is disconnecting or changing dimension
 		if(this.w_players.remove(player.id)) {
 
-			auto event = new PlayerDespawnEvent(player);
+			auto event = new PlayerDespawnEvent(player, true); //TODO do not announce when moved to another world in the same group
 			this.callEvent(event);
-			if(event.announce) this.broadcast(event.message);
+			if(event.announce) this.group.broadcast(event.message);
 
 			foreach(viewer ; player.viewers) {
 				viewer.hide(player);
@@ -1874,10 +1394,6 @@ class World : EventListener!(WorldEvent, EntityEvent, "entity", PlayerEvent, "pl
 		world[position + [1, height + 3, 0]] = leaves;
 		world[position + [0, height + 3, -1]] = leaves;
 		world[position + [0, height + 3, 1]] = leaves;
-	}
-
-	public override string toString() {
-		return typeid(this).to!string ~ "(" ~ to!string(this.id) ~ ", " ~ this.name ~ ", " ~ to!string(this.n_children) ~ ")";
 	}
 
 }

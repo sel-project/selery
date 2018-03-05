@@ -49,13 +49,13 @@ import HncomPlayer = sel.hncom.player;
 class World {
 	
 	public immutable uint id;
+	public immutable uint groupId;
 	public immutable string name;
 	public immutable ubyte dimension;
 	
-	public World parent;
-	
-	public shared this(uint id, string name, ubyte dimension) {
+	public shared this(uint id, uint groupId, string name, ubyte dimension) {
 		this.id = id;
+		this.groupId = groupId;
 		this.name = name;
 		this.dimension = dimension;
 	}

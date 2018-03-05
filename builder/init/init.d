@@ -143,6 +143,16 @@ int main(string[] args) {
 		remove("views/portable.zip");
 
 	}
+	
+	bool[string] active_plugins;
+	
+	if(exists("../plugins.toml")) {
+		try {
+			foreach(key, value; parseTOML(cast(string)read("../plugins.toml"))) {
+				active_plugins[key] = value.type == TOML_TYPE.TRUE;
+			}
+		} catch(TOMLException) {}
+	}
 
 	TOMLDocument[string] plugs; // plugs[location] = settingsfile
 
@@ -318,6 +328,14 @@ int main(string[] args) {
 			throw new Exception("Plugin '" ~ plugin.name ~ " at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
 		}
 	}
+	
+	// remove plugins disabled in plugins.toml
+	foreach(plugin, enabled; active_plugins) {
+		if(!enabled) {
+			auto p = plugin in info;
+			if(p) p.enabled = false;
+		}
+	}
 
 	auto ordered = info.values;
 
@@ -362,8 +380,8 @@ int main(string[] args) {
 	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
-		"toml": ["version": "~>0.4.0-rc.4"],
-		"toml:json": ["version": "~>0.4.0-rc.4"],
+		"toml": ["version": "~>1.0.0-rc.2"],
+		"toml:json": ["version": "~>1.0.0-rc.2"],
 	];
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
@@ -374,62 +392,69 @@ int main(string[] args) {
 	string[] fimports;
 	
 	if(!exists(".selery")) mkdir(".selery");
+	
+	string[] pluginsFile;
 
 	foreach(ref value ; ordered) {
-		if(value.single.length) {
-			builder["sourceFiles"].array ~= JSONValue(relativePath(value.single));
-		} else {
-			JSONValue[string] sub;
-			sub["name"] = value.name;
-			sub["targetType"] = "library";
-			sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
-			sub["configurations"] = [["name": "plugin"]];
-			sub["dependencies"] = ["selery": ["path": ".."]],
-			sub["sourcePaths"] = [relativePath(value.path ~ "src")];
-			sub["importPaths"] = [relativePath(value.path ~ "src")];
-			auto dptr = "dependencies" in value.toml;
-			if(dptr && dptr.type == TOML_TYPE.TABLE) {
-				foreach(name, d; dptr.table) {
-					if(name.startsWith("dub:")) {
-						sub["dependencies"][name[4..$]] = toJSON(d);
-					} else {
-						//TODO depends on another plugin
+		pluginsFile ~= value.name ~ " = " ~ value.enabled.to!string;
+		if(value.enabled) {
+			if(value.single.length) {
+				builder["sourceFiles"].array ~= JSONValue(relativePath(value.single));
+			} else {
+				JSONValue[string] sub;
+				sub["name"] = value.name;
+				sub["targetType"] = "library";
+				sub["targetPath"] = ".." ~ dirSeparator ~ "libs";
+				sub["configurations"] = [["name": "plugin"]];
+				sub["dependencies"] = ["selery": ["path": ".."]],
+				sub["sourcePaths"] = [relativePath(value.path ~ "src")];
+				sub["importPaths"] = [relativePath(value.path ~ "src")];
+				auto dptr = "dependencies" in value.toml;
+				if(dptr && dptr.type == TOML_TYPE.TABLE) {
+					foreach(name, d; dptr.table) {
+						if(name.startsWith("dub:")) {
+							sub["dependencies"][name[4..$]] = toJSON(d);
+						} else {
+							//TODO depends on another plugin
+						}
 					}
 				}
+				builder["subPackages"].array ~= JSONValue(sub);
+				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			builder["subPackages"].array ~= JSONValue(sub);
-			builder["dependencies"][":" ~ value.name] = "*";
-		}
-		string extra(string path) {
-			auto ret = value.path ~ path;
-			if((value.main.length || value.api) && exists(ret) && ret.isDir) {
-				foreach(f ; dirEntries(ret, SpanMode.breadth)) {
-					// at least one element inside
-					if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
+			string extra(string path) {
+				auto ret = value.path ~ path;
+				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
+					foreach(f ; dirEntries(ret, SpanMode.breadth)) {
+						// at least one element inside
+						if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
+					}
 				}
+				return "null";
 			}
-			return "null";
-		}
-		if(value.main.length) {
-			imports ~= "static import " ~ value.mod ~ ";\n";
-		}
-		string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
-		auto conditions = "conditions" in value.toml;
-		if(conditions && conditions.type == TOML_TYPE.TABLE) {
-			string[] conds;
-			foreach(key, value; conditions.table) {
-				if(value.type == TOML_TYPE.BOOL) conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.boolean) ~ ")";
+			if(value.main.length) {
+				imports ~= "static import " ~ value.mod ~ ";\n";
 			}
-			load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+			auto conditions = "conditions" in value.toml;
+			if(conditions && conditions.type == TOML_TYPE.TABLE) {
+				string[] conds;
+				foreach(key, value; conditions.table) {
+					conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.type == TOML_TYPE.TRUE) ~ ")";
+				}
+				load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+			}
+			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
+			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
+			loads ~= "\t" ~ load ~ "\n";
 		}
-		if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
-		if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
-		loads ~= "\t" ~ load ~ "\n";
 	}
 
 	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T, bool is_node)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
+	
+	writeDiff("../plugins.toml", pluginsFile.join(newline) ~ newline);
 	
 	return 0;
 
@@ -451,6 +476,8 @@ void writeDiff(string location, const void[] data) {
 }
 
 struct Info {
+
+	public bool enabled = true;
 
 	public TOMLDocument toml;
 

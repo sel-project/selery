@@ -58,8 +58,9 @@ import sel.server.bedrock : bedrockSupportedProtocols;
 import selery.world.world : World; // do not move this import down
 
 import selery.about;
-import selery.command.command : Command, CommandSender;
+import selery.command.command : Command;
 import selery.command.execute : executeCommand;
+import selery.command.util : CommandSender;
 import selery.commands : Commands;
 import selery.config : Config, Difficulty, Gamemode;
 import selery.entity.human : Skin;
@@ -69,17 +70,17 @@ import selery.event.world.world : WorldEvent;
 import selery.lang : LanguageManager, Translation;
 import selery.log : Message, Logger;
 import selery.node.handler; //TODO selective imports
-import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.node : Node;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.player.java : JavaPlayer;
-import selery.player.player : PermissionLevel;
+import selery.player.player : PlayerInfo, PermissionLevel;
 import selery.plugin : Plugin, Description;
 import selery.server : Server;
 import selery.util.resourcepack : createResourcePacks, serveResourcePacks;
 import selery.util.tuple : Tuple;
 import selery.util.util : milliseconds, microseconds;
-import selery.world.thread;
+import selery.world.group;
+import selery.world.world : WorldInfo;
 
 import terminal : Terminal;
 
@@ -133,10 +134,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	private shared Tuple!(string, "website", string, "facebook", string, "twitter", string, "youtube", string, "instagram", string, "googlePlus") n_social;
 
-	private shared(uint) _world_count = 0;
-	private shared(uint) _default_world_id = 0; // 0 = no default world
-	private shared(WorldInfo)[uint] _worlds;
-	private shared(WorldInfo)[string] _worlds_names;
+	private shared(uint) _main_group_id = 0; // 0 = no default group
+	private shared(GroupInfo)[uint] _groups;
+	private shared(GroupInfo)[string] _groups_names;
 
 	private shared(PlayerInfo)[uint] _players;
 
@@ -381,7 +381,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.name, plugin.vers);
+			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.id, plugin.name, plugin.vers);
 		}
 		if(this.lite) {
 			std.concurrency.send(cast()(cast(shared MessagePassingHandler)this.handler).hub, cast(shared)nodeInfo);
@@ -410,10 +410,12 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 		
-		if(this._default_world_id == 0) {
+		if(this._main_group_id == 0) {
 			//TODO load world in worlds/world
 			this.addWorld("world");
 		}
+
+		//TODO wait unitl world's spawn area is ready
 
 		this.logger.log(Translation("startup.started"));
 
@@ -508,18 +510,15 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
-	 * Gets the arguments the server has been launched with, excluding
-	 * the ones used by sel or the manager.
+	 * Gets the arguments the server has been launched with, excluding the ones
+     * used to edit the configuration files.
 	 * Example:
 	 * ---
 	 * // from command-line
-	 * ./node --name=test -a -b -p=test
-	 * assert(server.args == ["-a", "-b"]);
-	 * 
-	 * // from sel manager
-	 * sel start test --name=test -a --loop -b
+	 * ./selery --display-name=test -a -b
 	 * assert(server.args == ["-a", "-b"]);
 	 * ---
+     *
 	 * Custom arguments can be used by plugins to load optional settings.
 	 * Example:
 	 * ---
@@ -765,34 +764,15 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		this.handler.send(HncomStatus.UpdateLanguageFiles(language, messages).encode());
 	}
 
+	public shared pure nothrow @property shared(GroupInfo) mainWorldGroup() {
+		return this._groups[this._main_group_id];
+	}
+
 	/**
-	 * Gets the server's default world.
+	 * Gets the default world of the server's main group of worlds.
 	 */
 	public shared pure nothrow @property shared(WorldInfo) defaultWorld() {
-		return this._worlds[this._default_world_id];
-	}
-
-	/**
-	 * Sets the server's default world if the given world has been
-	 * created and registered using the addWorld template method.
-	 * Returns: The server's default world (the given world if it has been set as default)
-	 * Example:
-	 * ---
-	 * auto test = server.addWorld!Test("test-world");
-	 * server.world = test;
-	 * assert(server.world == test);
-	 * ---
-	 */
-	public shared pure nothrow @property shared(WorldInfo) defaultWorld(uint id) {
-		if(id in this._worlds) {
-			this._default_world_id = id;
-		}
-		return this.defaultWorld;
-	}
-
-	/// ditto
-	public shared pure nothrow @property shared(WorldInfo) defaultWorld(shared WorldInfo world) {
-		return this.defaultWorld = world.id;
+		return this.mainWorldGroup.defaultWorld;
 	}
 
 	/**
@@ -800,55 +780,86 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 * The list is a copy of the one kept by the server and its
 	 * modification has no effect on the server.
 	 */
-	public shared pure nothrow @property shared(WorldInfo)[] worlds() {
-		return this._worlds.values;
+	public shared pure nothrow @property shared(GroupInfo)[] worldGroups() {
+		return this._groups.values;
 	}
 
 	/**
 	 * Gets a world by its name.
 	 * Returns: the WorldInfo of the world with the given name or null if a world with the given name doesn't exists.
 	 */
-	public shared @property shared(WorldInfo) getWorldByName(string name) {
-		auto world = name in this._worlds_names;
-		return world ? *world : null;
+	public shared @property shared(GroupInfo) getGroupByName(string name) {
+		auto group = name in this._groups_names;
+		return group ? *group : null;
 	}
 
 	/**
-	 * Creates and registers a world with its group, initialising its terrain,
-	 * registering events, commands and tasks.
-	 * Returns: the WorldInfo of the created world or null if the a world with the same name already exists.
-	 * Example:
-	 * ---
-	 * server.addWorld("world42"); // normal world
-	 * server.addWorld!CustomWorld("custom", 42); // custom world where 42 is passed to the constructor
-	 * ---
+	 * Creates a new group of worlds with the given name and starts it in a new thread.
+     * This method only creates a group, which is a container for worlds, but no actual world.
+     * To create a world the addWorld method must be used.
+     * Example:
+     * ---
+     * auto group = server.addWorldGroup("MyGroup");
+     * auto world = server.addWorld(group, 0); // where 0 is the seed
+     * ---
 	 */
-	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(string name, E args) /*if(__traits(compiles, new T(args)))*/ {
-		if(name !in this._worlds_names) {
-			shared WorldInfo world = cast(shared)new WorldInfo(atomicOp!"+="(this._world_count, 1), name);
-			this._worlds[world.id] = world;
-			this._worlds_names[world.name] = world;
-			bool default_ = this._default_world_id == 0;
-			if(default_) this._default_world_id = world.id;
-			world.tid = cast(shared)std.concurrency.spawn(&spawnWorld!(T, E), cast(shared)this, world, default_, args);
-			return world;
+	public shared synchronized shared(GroupInfo) addWorldGroup(string name) {
+		if(name !in this._groups_names) {
+			shared GroupInfo group = new shared GroupInfo(name);
+			this._groups[group.id] = group;
+			this._groups_names[name] = group;
+			bool main = false;
+			if(this._main_group_id == 0) {
+				this._main_group_id = group.id;
+				main = true;
+			}
+			group.tid = cast(shared)std.concurrency.spawn(&spawnWorldGroup, this, group, main);
+			return group;
 		} else {
 			return null;
 		}
 	}
-
+	
 	/**
-	 * Removes a world and unloads it.
-	 * When trying to remove the default world a message error will be
-	 * displayed and the world will not be unloaded.
+	 * Creates and registers a world in the given group, initialising its terrain,
+	 * registering events, commands and tasks.
+	 * Returns: the WorldInfo of the created world.
+     * Example:
+     * ---
+     * server.addWorld(server.mainWorldGroup);
+     * server.addWorld(server.addWorldGroup("test"));
+     * ---
 	 */
-	public shared synchronized bool removeWorld(uint id) {
-		auto world = id in this._worlds;
-		if(world) {
-			if((*world).id == this._default_world_id) {
-				this.logger.logWarning(Translation("warning.removingDefaultWorld", (*world).name));
+	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(shared GroupInfo group, E args) {
+		shared WorldInfo world = new shared WorldInfo();
+		// this is also done after the world is created, but the thread can
+		// be busy and the world may not be asigned in time, resulting in an
+		// error when the list of worlds or the `defaultWorld` variable are requested
+		group.worlds[world.id] = world;
+		if(group.defaultWorld is null) group.defaultWorld = world;
+		// request the new world
+		std.concurrency.send(cast()group.tid, AddWorld(cast(shared)new AddWorld.Create!T(world, args))); // the world is then added to the group in the group's thread
+		return world;
+	}
+
+    /**
+     * Creates a group with the given name and adds the given world.
+     * Example:
+     * ---
+     * server.addWorld("test");
+     * ---
+     */
+	public shared synchronized shared(WorldInfo) addWorld(T:World=World, E...)(string name, E args) {
+		return this.addWorld!T(this.addWorldGroup(name), args);
+	}
+
+	public shared synchronized bool removeWorldGroup(uint groupId) {
+		auto group = groupId in this._groups;
+		if(group) {
+			if(groupId == this._main_group_id) {
+				this.logger.logWarning(Translation("warning.removingMainGroup", group.name));
 			} else {
-				std.concurrency.send(cast()world.tid, Close()); // wait for CloseResult before removing the world
+				std.concurrency.send(cast()group.tid, Close()); // wait for CloseResult before removing the world
 				return true;
 			}
 		}
@@ -856,18 +867,22 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/// ditto
-	public shared bool removeWorld(WorldInfo world) {
-		return this.removeWorld(world.id);
+	public shared synchronized bool removeWorldGroup(shared GroupInfo group) {
+		return this.removeWorldGroup(group.id);
+	}
+
+	public shared synchronized void removeWorld(shared WorldInfo world) {
+		std.concurrency.send(cast()world.group.tid, RemoveWorld(world.id));
 	}
 
 	protected shared void handleCloseResult(CloseResult result) {
-		auto world = result.worldId in this._worlds;
-		if(world) {
+		auto group = result.groupId in this._groups;
+		if(group) {
 			if(result.status == CloseResult.PLAYERS_ONLINE) {
-				this.logger.logWarning(Translation("warning.removingWithPlayers", (*world).name));
+				this.logger.logWarning(Translation("warning.removingWithPlayers", group.name));
 			} else {
-				this._worlds.remove((*world).id);
-				this._worlds_names.remove((*world).name);
+				this._groups.remove(group.id);
+				this._groups_names.remove(group.name);
 			}
 		}
 	}
@@ -880,25 +895,25 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 
 	/**
-	 * Broadcasts a message in every registered world and their children
+	 * Broadcasts a message in every registered group and their worlds`
 	 * calling the world's broadcast method.
 	 */
 	public shared void broadcast(string message) {
-		foreach(world ; this._worlds) {
-			std.concurrency.send(cast()world.tid, Broadcast(message));
+		foreach(group ; this._groups) {
+			std.concurrency.send(cast()group.tid, Broadcast(message));
 		}
 	}
 
-	public shared void updateWorldDifficulty(shared WorldInfo world, Difficulty difficulty) {
-		std.concurrency.send(cast()world.tid, UpdateDifficulty(difficulty));
+	public shared void updateGroupDifficulty(shared GroupInfo group, Difficulty difficulty) {
+		std.concurrency.send(cast()group.tid, UpdateDifficulty(difficulty));
 	}
 
 	public shared void updatePlayerGamemode(shared PlayerInfo player, Gamemode gamemode) {
-		std.concurrency.send(cast()player.world.tid, UpdatePlayerGamemode(player.hubId, gamemode));
+		std.concurrency.send(cast()player.world.group.tid, UpdatePlayerGamemode(player.hubId, gamemode));
 	}
 
 	public shared void updatePlayerPermissionLevel(shared PlayerInfo player, PermissionLevel permissionLevel) {
-		std.concurrency.send(cast()player.world.tid, UpdatePlayerPermissionLevel(player.hubId, permissionLevel));
+		std.concurrency.send(cast()player.world.group.tid, UpdatePlayerPermissionLevel(player.hubId, permissionLevel));
 	}
 
 	/**
@@ -947,7 +962,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		auto player = hubId in this._players;
 		if(player) {
 			if((*player).world !is null) {
-				std.concurrency.send(cast()(*player).world.tid, RemovePlayer(hubId));
+				std.concurrency.send(cast()(*player).world.group.tid, RemovePlayer(hubId));
 			}
 			this._players.remove(hubId);
 			(cast()this).callEventIfExists!PlayerLeftEvent(this, cast(const)*player, reason);
@@ -1036,32 +1051,32 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		if(!skin.valid) {
 			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
-			ubyte a = packet.uuid.data[7] ^ packet.uuid.data[15];
-			ubyte b = (packet.uuid.data[3] ^ packet.uuid.data[11]) ^ a;
-			skin = ((b & 1) == 0) ? Skin.STEVE : Skin.ALEX;
+			string data = packet.uuid.toString().replace("-", "");
+			skin = (data[7] ^ data[15] ^ data[23] ^ data[31]) ? Skin.ALEX : Skin.STEVE;
 		}
 
 		shared PlayerInfo player = cast(shared)new PlayerInfo(packet);
 		player.skin = skin;
 
 		// add to the lists
-		this._players[player.hubId] = cast(shared)player;
+		this._players[player.hubId] = player;
 
 		auto event = (cast()this).callEventIfExists!PlayerJoinEvent(cast(shared)this, cast(const)player, packet.reason);
 
 		//TODO allow kicking from event
 
-		shared(WorldInfo) world;
-		if(event is null || event.world is null || event.world.id !in this._worlds) {
-			world = this._worlds[this._default_world_id];
-		} else {
-			world = this._worlds[event.world.id];
-		}
-
 		// do not spawn if it has been disconnected during the event
 		if(player.hubId in this._players) {
+			
+			shared(WorldInfo) world;
+			if(event is null || event.world is null || event.world.group.id !in this._groups) {
+				world = (cast(shared)this).defaultWorld;
+			}
 
-			std.concurrency.send(cast()world.tid, AddPlayer(player, packet.reason != HncomPlayer.Add.FIRST_JOIN));
+			// set the world before the group's thread does to avoid null references
+			player.world = world;
+
+			std.concurrency.send(cast()world.group.tid, AddPlayer(player, world.id, packet.reason != HncomPlayer.Add.FIRST_JOIN));
 
 		}
 
@@ -1101,7 +1116,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	protected override void handlePlayerGamePacket(HncomPlayer.GamePacket packet) {
 		auto player = packet.hubId in this._players;
 		if(player && packet.payload.length) {
-			std.concurrency.send(cast()(*player).world.tid, GamePacket(packet.hubId, packet.payload.idup));
+			std.concurrency.send(cast()(*player).world.group.tid, GamePacket(packet.hubId, packet.payload.idup));
 		}
 	}
 

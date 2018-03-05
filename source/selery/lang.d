@@ -34,7 +34,7 @@ import std.conv : to, ConvException;
 import std.file : exists, read;
 import std.json : parseJSON;
 import std.path : dirSeparator;
-import std.string;
+import std.string : toUpper, toLower, endsWith, split, indexOf, strip;
 
 import selery.config : Files;
 

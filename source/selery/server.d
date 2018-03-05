@@ -34,7 +34,7 @@ import selery.log : Logger;
 import selery.plugin : Plugin;
 
 /**
- * Generic server with a configuration and plugins.
+ * Generic server with a configuration, logger and plugins.
  */
 interface Server {
 
@@ -43,11 +43,10 @@ interface Server {
 	 * Example:
 	 * ---
 	 * // server name
-	 * log("Welcome to ", server.config.hub.displayName);
+	 * writeln("Welcome to ", server.config.hub.displayName);
 	 * 
 	 * // game version
-	 * static if(__pocket) assert(server.config.node.pocket);
-	 * static if(__minecraft) log("Port for Minecraft: ", server.config.node.minecraft.port); 
+	 * if(server.config.node.java) writeln("Port for Java Edition: ", server.config.node.java.port); 
 	 * ---
 	 */
 	shared nothrow @property @safe @nogc const(Config) config();
@@ -86,8 +85,8 @@ interface Server {
 	 * Gets the plugins actived on the server.
 	 * Example:
 	 * ---
-	 * log("There are ", server.plugins.filter!(a => a.author == "sel-plugins").length, " by sel-plugins");
-	 * log("There are ", server.plugins.filter!(a => a.api).length, " plugins with APIs");
+	 * writeln("There are ", server.plugins.filter!(a => a.author == "sel-plugins").length, " by sel-plugins");
+	 * writeln("There are ", server.plugins.filter!(a => a.api).length, " plugins with APIs");
 	 * ---
 	 */
 	shared nothrow @property @safe @nogc const(Plugin)[] plugins();

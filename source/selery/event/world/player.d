@@ -78,9 +78,10 @@ abstract class PlayerAnnounceEvent : PlayerEvent {
 	private Message[] def;
 	private Message[] m_message;
 	
-	public @safe @nogc this(Player player, Message[] message) {
+	public @safe @nogc this(Player player, Message[] message, bool announce) {
 		this.n_player = player;
-		this.m_message = this.def = message;
+		this.def = message;
+		if(announce) this.m_message = message;
 	}
 	
 	public final pure nothrow @property @safe @nogc Message[] message() {
@@ -117,17 +118,17 @@ final class PlayerSpawnEvent : PlayerAnnounceEvent {
 	
 	public bool spawn = true;
 	
-	public this(Player player) {
-		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.joined", player.displayName)));
+	public this(Player player, bool announce) {
+		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.joined", player.displayName)), announce);
 	}
 	
 }
 
 /** Called when a player leaves the world, but it isn't despawned to the other entities/players yet */
 final class PlayerDespawnEvent : PlayerAnnounceEvent {
-	
-	public this(Player player) {
-		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.left", player.displayName)));
+
+	public this(Player player, bool announce) {
+		super(player, Message.convert(Format.yellow, Translation("multiplayer.player.left", player.displayName)), announce);
 	}
 	
 }

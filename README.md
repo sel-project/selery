@@ -3,15 +3,6 @@ Selery
 
 Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition written in [D](https://dlang.org).
 
-## Build Status
-
-|              | DMD (debug)                      | LDC (debug)                      | LDC (release)                      |
-|-------------:|:--------------------------------:|:--------------------------------:|:----------------------------------:|
-| Windows x86  |                                  | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
-| Windows x64  | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
-| Linux x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
-| OS X x84-64  | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
-
 ## Installation
 
 ### From a pre-built package
@@ -48,6 +39,16 @@ The build scripts supports some useful options that can be viewed by launching i
 
 :warning: Due to [issue 17508](https://issues.dlang.org/show_bug.cgi?id=17508), Windows x86 must be linked using Microsoft's compiler (`-a x86_mscoff`) instead of DMD's. This action is performed automatically by the build script.
 
+## Build Status
+
+|                | DMD (debug)                      | LDC (debug)                      | LDC (release)                      |
+|---------------:|:--------------------------------:|:--------------------------------:|:----------------------------------:|
+| Windows x86    |                                  | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
+| Windows x86-64 | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
+| Linux x86      | [![][lin86-dmd-debug]][travis]   | [![][lin86-ldc-debug]][travis]   | [![][lin86-ldc-release]][travis]   |
+| Linux x86-64   | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
+| OS X x86-64    | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
+
 ## Setting up
 
 Selery's configuration file is created when the server is started in the same path as the executable.
@@ -81,6 +82,9 @@ selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 [lin64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_dmd_debug.svg
 [lin64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_ldc2_debug.svg
 [lin64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/linux_x86-64_ldc2_release.svg
+[lin86-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86_dmd_debug.svg
+[lin86-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/linux_x86_ldc2_debug.svg
+[lin86-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/linux_x86_ldc2_release.svg
 [osx64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_dmd_debug.svg
 [osx64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_ldc2_debug.svg
 [osx64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/osx_x86-64_ldc2_release.svg

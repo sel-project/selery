@@ -13,8 +13,8 @@ dependency "memutils" version="~>0.4.10"
 dependency "my-ip" version="~>0.1.0"
 dependency "resusage" version="~>0.2.7"
 dependency "sel-format" version="~>0.1.0"
-dependency "sel-hncom" version="~>8.0.0"
-dependency "sel-nbt" version="~>2.0.6"
+dependency "sel-hncom" version="~>9.0.0"
+dependency "sel-nbt" version="~>2.1.0"
 dependency "sel-net" version="~>0.2.1"
 dependency "sel-server" version="~>0.3.0"
 dependency "sel-utils" version="==1.4.1"
@@ -24,14 +24,3 @@ dependency "terminal" version="~>0.2.1"
 //dependency "sel-hncom" path="../sel-hncom"
 //dependency "sel-net" path="../sel-stream"
 //dependency "sel-server" path="../sel-server"
-
-/*
-configuration "library" {
-	targetType "library"
-}
-
-configuration "realm" {
-	targetType "library"
-	versions "Realm"
-}
-*/

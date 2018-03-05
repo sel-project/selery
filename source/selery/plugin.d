@@ -28,16 +28,22 @@
  */
 module selery.plugin;
 
+import core.atomic : atomicOp;
+
 import selery.about;
 import selery.lang : Translatable;
 import selery.server : Server;
 import selery.util.tuple : Tuple;
+
+private shared uint _id;
 
 /**
  * Informations about a plugin and registration-related
  * utilities.
  */
 class Plugin {
+
+	public immutable uint id;
 
 	protected string n_name;
 	protected string[] n_authors;
@@ -48,6 +54,10 @@ class Plugin {
 	protected string n_languages, n_textures;
 	
 	public void delegate()[] onstart, onreload, onstop;
+
+	public this() {
+		this.id = atomicOp!"+="(_id, 1);
+	}
 	
 	/**
 	 * Gets the plugin's name as indicated in the plugin's

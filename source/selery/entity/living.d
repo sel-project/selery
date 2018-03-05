@@ -34,7 +34,7 @@ import std.math : round, isNaN;
 import sel.format : Format;
 
 import selery.about;
-import selery.command.command : Position;
+import selery.command.util : Position;
 import selery.effect : Effect, Effects;
 import selery.entity.entity : Entity, Rotation;
 import selery.entity.metadata;

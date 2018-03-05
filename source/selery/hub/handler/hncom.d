@@ -53,7 +53,6 @@ import sel.server.util;
 import selery.about;
 import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.hub.server : HubServer;
-import selery.lang : translate;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
 
@@ -155,8 +154,8 @@ abstract class AbstractNode : Handler!serverbound {
 	private shared uint n_max;
 	public shared Login.NodeInfo.Plugin[] plugins;
 	
-	private shared PlayerSession[immutable(uint)] players;
-	private shared WorldSession[immutable(uint)] _worlds;
+	private shared PlayerSession[uint] players;
+	private shared WorldSession[uint] _worlds;
 	
 	private uint n_latency;
 	
@@ -175,7 +174,7 @@ abstract class AbstractNode : Handler!serverbound {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.language, server.config.lang.acceptedLanguages.dup, webAdmin, cast()*this.additionalJson));
+			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.acceptedLanguages.dup, webAdmin, cast()*this.additionalJson));
 		}
 		auto info = this.receiveNodeInfo(stream);
 		this.n_max = info.max;
@@ -338,17 +337,25 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {
-		auto world = new shared WorldSession(packet.worldId, packet.name, packet.dimension);
-		if(packet.parent != -1) {
-			auto parent = packet.parent in this._worlds;
-			if(parent) world.parent = *parent;
-		}
-		this._worlds[packet.worldId] = world;
+		//TODO notify the panel
+		this._worlds[packet.worldId] = new shared WorldSession(packet.worldId, packet.groupId, packet.name, packet.dimension);
 	}
 
 	protected override void handleStatusRemoveWorld(Status.RemoveWorld packet) {
+		//TODO notify the panel
 		this._worlds.remove(packet.worldId);
 	}
+
+	protected override void handleStatusRemoveWorldGroup(Status.RemoveWorldGroup packet) {
+		//TODO notify the panel
+		foreach(world ; _worlds) {
+			if(world.groupId == packet.groupId) this._worlds.remove(world.id);
+		}
+	}
+
+	protected override void handleStatusAddPlugin(Status.AddPlugin packet) {}
+
+	protected override void handleStatusRemovePlugin(Status.RemovePlugin packet) {}
 
 	protected override void handlePlayerKick(Player.Kick packet) {
 		auto player = packet.hubId in this.players;

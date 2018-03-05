@@ -46,14 +46,14 @@ import selery.effect : Effects;
 import selery.enchantment : Enchantments;
 import selery.entity.entity : Entity;
 import selery.lang : Translation, Translatable;
-import selery.node.info : PlayerInfo, WorldInfo;
 import selery.node.server : isServerRunning, NodeServer, ServerCommandSender;
 import selery.player.bedrock : BedrockPlayer;
 import selery.player.java : JavaPlayer;
-import selery.player.player : Player, InputMode, PermissionLevel;
+import selery.player.player : PlayerInfo, Player, PermissionLevel;
 import selery.plugin : Description, permission, hidden, unimplemented;
 import selery.util.messages : Messages;
-import selery.world.world : Time;
+import selery.world.group : GroupInfo;
+import selery.world.world : WorldInfo, Time;
 
 enum vanilla;
 enum op;
@@ -260,8 +260,8 @@ final class Commands {
 	}
 
 	@vanilla difficulty2(ServerCommandSender sender, string world, Difficulty difficulty) {
-		executeOnWorlds(sender, world, (shared WorldInfo info){
-			sender.server.updateWorldDifficulty(info, difficulty);
+		executeOnWorlds(sender, world, (shared GroupInfo info){
+			sender.server.updateGroupDifficulty(info, difficulty);
 			sender.sendMessage(Translation(Messages.difficulty.success, difficulty));
 		});
 
@@ -810,7 +810,7 @@ final class Commands {
 	
 	void world0(CommandSender sender, SingleEnum!"list" list) {
 		string[] names;
-		foreach(world ; sender.server.worlds) names ~= world.name;
+		foreach(group ; sender.server.worldGroups) names ~= group.name;
 		sender.sendMessage(Translation("commands.world.list", names.length, names.join(", ")));
 	}
 
@@ -818,15 +818,15 @@ final class Commands {
 		auto world = sender.server.addWorld(name);
 		if(world) {
 			sender.sendMessage(Translation("commands.world.add.success"));
-			if(defaultWorld) sender.server.defaultWorld = world;
+			//if(defaultWorld) sender.server.defaultWorld = world;
 		} else {
 			sender.sendMessage(Format.red, Translation("commands.world.add.failed"));
 		}
 	}
 
 	void world2(CommandSender sender, SingleEnum!"remove" remove, string name) {
-		executeOnWorlds(sender, name, (shared WorldInfo info){
-			if(sender.server.removeWorld(info.id)) sender.sendMessage(Translation("commands.world.remove.success"));
+		executeOnWorlds(sender, name, (shared GroupInfo info){
+			if(sender.server.removeWorldGroup(info)) sender.sendMessage(Translation("commands.world.remove.success"));
 		});
 	}
 
@@ -871,10 +871,10 @@ private string formatArg(Command.Overload overload) {
 	return p.join(" ");
 }
 
-private void executeOnWorlds(CommandSender sender, string name, void delegate(shared WorldInfo) del) {
-	auto world = sender.server.getWorldByName(name);
-	if(world !is null) {
-		del(world);
+private void executeOnWorlds(CommandSender sender, string name, void delegate(shared GroupInfo) del) {
+	auto group = sender.server.getGroupByName(name);
+	if(group !is null) {
+		del(group);
 	} else {
 		sender.sendMessage(Format.red, Translation("commands.world.notFound", name));
 	}

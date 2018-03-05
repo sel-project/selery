@@ -56,7 +56,6 @@ class Chunk {
 	
 	private ChunkPosition n_position;
 	private World n_world;
-	public immutable string location;
 
 	private Section[size_t] n_sections;
 	private size_t highest_section;
@@ -73,14 +72,8 @@ class Chunk {
 	// snowing informations
 	private Vector2!ubyte[] next_snow;
 
-	public @safe this(World world, ChunkPosition position, string location=null) {
+	public @safe this(World world, ChunkPosition position) {
 		this.n_world = world;
-		if(location is null) {
-			this.location = "worlds" ~ dirSeparator ~ world.name ~ dirSeparator ~ "chunks" ~ dirSeparator ~ to!string(position.x) ~ "_" ~ to!string(position.z) ~ ".sc";
-		} else {
-			assert(location.endsWith(dirSeparator ~ to!string(position.x) ~ "_" ~ to!string(position.z) ~ ".sc"));
-			this.location = location;	
-		}
 		this.n_position = position;
 	}
 
@@ -333,16 +326,6 @@ class Chunk {
 			ThreadMem.free(section);
 		}
 	}
-
-}
-
-class UnsaveableChunk : Chunk {
-
-	public @safe this(World world, ChunkPosition position, string location=null) {
-		super(world, position, location);
-	}
-
-	public override @safe @nogc void save() {}
 
 }
 

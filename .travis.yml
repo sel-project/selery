@@ -16,6 +16,9 @@ env:
     - CONFIG=release
 
 matrix:
+  include:
+    - {os: linux, d: ldc, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
+    - {os: linux, d: dmd, env: ARCH="x86", addons: {apt: {packages: [[gcc-multilib]]}}}
   exclude:
     - d: dmd
       env: CONFIG=release

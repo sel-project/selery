@@ -217,9 +217,9 @@ class Config {
 
 		uint maxPlayers = 20;
 
-		uint gamemode = Gamemode.survival;
+		Gamemode gamemode = Gamemode.survival;
 
-		uint difficulty = Difficulty.normal;
+		Difficulty difficulty = Difficulty.normal;
 
 		bool depleteHunger = true;
 		

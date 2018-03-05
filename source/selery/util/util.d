@@ -71,7 +71,7 @@ public @property @safe ulong microseconds() {
  * assert(s.remove('t') && s == "es");
  * ---
  */
-public @property @trusted bool array_remove(T, E)(T value, ref E[] array) /*if(__traits(compiles, T.init == E.init))*/ {
+deprecated public @property @trusted bool array_remove(T, E)(T value, ref E[] array) /*if(__traits(compiles, T.init == E.init))*/ {
 	foreach(uint i, E val; array) {
 		if(val == value) {
 			array = array[0..i] ~ array[i+1..$];
@@ -105,7 +105,7 @@ unittest {
  * assert("test".indexOf('e') == 1);
  * ---
  */
-public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(__traits(compiles, T.init == E.init))*/ {
+deprecated public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] array) /*if(__traits(compiles, T.init == E.init))*/ {
 	foreach(uint i, E avalue; array) {
 		if(value == avalue) return i;
 	}

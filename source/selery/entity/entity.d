@@ -43,7 +43,7 @@ import std.uuid : UUID;
 
 import selery.about;
 import selery.block.block : Block, blockInto;
-import selery.command.command : Position;
+import selery.command.util : Position;
 import selery.entity.metadata : Metadata;
 import selery.event.event : EventListener;
 import selery.event.world.damage;

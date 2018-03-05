@@ -144,7 +144,7 @@ auto loadConfig(ConfigType type, ref string[] args) {
 					}
 					return ret;
 				} else static if(is(T == bool)) {
-					return target.boolean;
+					return target.type == TOML_TYPE.TRUE;
 				} else static if(isFloatingPoint!T) {
 					return cast(T)target.floating;
 				} else static if(isIntegral!T) {

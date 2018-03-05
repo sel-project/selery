@@ -273,9 +273,9 @@ class WebAdminClient {
 	public void sendAddWorld(shared World world) {
 		JSONValue[string] data;
 		data["id"] = world.id;
+		data["group_id"] = world.groupId;
 		data["name"] = world.name;
 		data["dimension"] = world.dimension;
-		if(world.parent !is null) data["parent_id"] = world.parent.id;
 		this.send("add_world", data);
 	}
 

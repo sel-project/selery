@@ -179,9 +179,9 @@ class HubServer : PlayerHandler, Server {
 		this.uuid_count = uniform!"[]"(ulong.min, ulong.max);
 
 		auto pr = privateAddresses;
-		if(pr.length) this.logger.log("Private addresses: ", pr.join(", "));
+		if(pr.length) this.logger.log(Translation("startup.privateAddresses", pr.join(", ")));
 		immutable pu4 = publicAddress4;
-		if(pu4.length) this.logger.log("Public address: ", pu4);
+		if(pu4.length) this.logger.log(Translation("startup.publicAddress", pu4));
 
 		this.handler = new shared Handler(this, this._info, this._query);
 
