@@ -34,7 +34,8 @@ import std.conv : to;
 import std.string : indexOf;
 import std.traits : EnumMembers;
 
-import sel.format : Format, writeln;
+import sel.format : Format;
+import sel.terminal : writeln;
 
 import terminal : Terminal;
 

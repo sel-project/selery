@@ -35,7 +35,8 @@ import std.datetime : Clock;
 import std.file : write, read, exists, mkdir;
 import std.string : split, replace;
 
-import sel.format : Format, writeln;
+import sel.format : Format;
+import sel.terminal : writeln;
 
 import selery.about : Software;
 import selery.lang : LanguageManager;
