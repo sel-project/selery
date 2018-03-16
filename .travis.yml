@@ -34,6 +34,7 @@ deploy:
 
 before_install:
   - chmod +x build.sh
+  - mkdir plugins
 
 script:
   - cd builder/init
@@ -48,9 +49,9 @@ script:
   - ./build.sh -c $DC -a $ARCH $CONFIG default
 
 after_success:
-  - ./selery-hub --about --pretty
-  - ./selery-node --about --pretty
-  - ./selery --about --pretty
+  - ./selery-hub --about
+  - ./selery-node --about
+  - ./selery --about
   - rm -rf assets/icons
   - tar -cJf "selery-${SELERY_VERSION}-${TRAVIS_OS_NAME}-${ARCH}.tar.xz" LICENSE selery-hub selery-node selery assets/
   - curl -s https://gist.githubusercontent.com/Kripth/e570f715c27d0a345619e2ea881ed97d/raw/ > update.d

@@ -28,25 +28,52 @@
  */
 module selery.hub.plugin;
 
+import std.traits : hasUDA, Parameters;
+
+import selery.hub.server : HubServer;
 public import selery.plugin;
 import selery.server : Server;
 
-interface HubPlugin {}
+class HubPlugin {
 
-class PluginOf(T) : Plugin if(is(T == Object) || is(T : HubPlugin)) {
+	protected shared HubServer server;
+
+}
+
+class HubPluginInfo : Plugin {
+
+	public this(string name, string[] authors, string version_, string languages, string textures, bool main) {
+		super(name, authors, version_, languages, textures, main);
+	}
+
+	abstract void load(shared HubServer server);
+
+}
+
+class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 	
-	public this(string name, string[] authors, string vers, bool api, string languages, string textures) {
-		this.n_name = name;
-		this.n_authors = authors;
-		this.n_version = vers;
-		this.n_api = api;
-		this.n_languages = languages;
-		this.n_textures = textures;
-		static if(!is(T : Object)) this.hasMain = true;
+	public this(string name, string[] authors, string version_, string languages, string textures) {
+		super(name, authors, version_, languages, textures, !is(T == Object));
 	}
 	
-	public override void load(shared Server server) {
-		//TODO register events
+	public override void load(shared HubServer server) {
+		static if(!is(T == Object)) {
+			T main = new T();
+			main.server = server;
+			foreach(member ; __traits(allMembers, T)) {
+				static if(is(typeof(__traits(getMember, T, member)) == function)) {
+					mixin("alias F = T." ~ member ~ ";");
+					enum del = "&main." ~ member;
+					// start/stop
+					static if(hasUDA!(F, start) && Parameters!F.length == 0) {
+						this.onstart ~= mixin(del);
+					}
+					static if(hasUDA!(F, stop) && Parameters!F.length == 0) {
+						this.onstop ~= mixin(del);
+					}
+				}
+			}
+		}
 	}
 	
 }

@@ -66,7 +66,7 @@ selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 
 **More useful command-line options:**
 
-- `--about` or `-a` to print the software's build informations in JSON format. The `--pretty` option can be used to print a pretty JSON instead of a minified one.
+- `--about` or `-a` to print the software's build informations in JSON format. The `--min` option can be used to print a minified JSON instead of a pretty-printed one.
 - `--init` or `-i` to initialize the configuration file.
 - `--update-config` or `-uc` to rewrite the configuration file, maintaining the current configuration. It should be used after updating the software to a newer version that changes the configuration format.
 - `--reset` to reset the whole configuration file to its default values.

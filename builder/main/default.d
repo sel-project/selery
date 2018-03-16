@@ -33,10 +33,10 @@ import std.string : indexOf, lastIndexOf, replace;
 import selery.config : Config;
 import selery.crash : logCrash;
 import selery.hub.handler.hncom : LiteNode;
-import selery.hub.plugin : HubPlugin, HubPluginOf = PluginOf;
+import selery.hub.plugin : HubPluginOf;
 import selery.hub.server : HubServer;
 import selery.node.handler : TidAddress;
-import selery.node.plugin : NodePlugin, NodePluginOf = PluginOf;
+import selery.node.plugin.plugin : NodePluginOf;
 import selery.node.server : NodeServer;
 import selery.util.util : UnloggedException;
 
@@ -48,13 +48,13 @@ void main(string[] args) {
 
 	start(ConfigType.default_, args, (Config config){
 
-		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, HubPlugin, false)(config), args); }).start();
+		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, "hub")(config), args); }).start();
 
 		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
 		
 		try {
 			
-			new shared NodeServer(new TidAddress(cast()LiteNode.tid), config, loadPlugins!(NodePluginOf, NodePlugin, true)(config), args);
+			new shared NodeServer(new TidAddress(cast()LiteNode.tid), config, loadPlugins!(NodePluginOf, "node")(config), args);
 			
 		} catch(LinkTerminated) {
 			

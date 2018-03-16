@@ -23,7 +23,7 @@
 module loader.hub;
 
 import selery.config : Config;
-import selery.hub.plugin : HubPlugin, PluginOf;
+import selery.hub.plugin : HubPluginOf;
 import selery.hub.server : HubServer;
 
 import config : ConfigType;
@@ -34,7 +34,7 @@ void main(string[] args) {
 
 	start(ConfigType.hub, args, (Config config){
 
-		new shared HubServer(false, config, loadPlugins!(PluginOf, HubPlugin, false)(config), args);
+		new shared HubServer(false, config, loadPlugins!(HubPluginOf, "hub")(config), args);
 
 	});
 

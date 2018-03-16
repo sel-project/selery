@@ -37,19 +37,20 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 	if(args.canFind("--about") || args.canFind("-a")) {
 
 		import std.system : endian;
-
-		static if(__traits(compiles, import("notes.txt"))) {}
+		
+		import pluginloader : info;
 		
 		JSONValue[string] json;
 		json["type"] = cast(string)type;
 		json["software"] = Software.toJSON();
 		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
+		json["plugins"] = parseJSON(info);
 		static if(__traits(compiles, import("release.json"))) json["build"]["builder"] = parseJSON(import("release.json"));
 		debug json["debug"] = true;
 		else json["debug"] = false;
-		if(args.canFind("--pretty")) writeln(JSONValue(json).toPrettyString());
-		else write(JSONValue(json).toString());
+		if(args.canFind("--min")) write(JSONValue(json).toString());
+		else writeln(JSONValue(json).toPrettyString());
 
 	} else if(args.canFind("--changelog") || args.canFind("-c")) {
 		

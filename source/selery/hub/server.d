@@ -70,6 +70,7 @@ import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
 import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
+import selery.hub.plugin : HubPluginInfo;
 import selery.lang : Translation;
 import selery.log : Message, Logger;
 import selery.plugin : Plugin;
@@ -185,14 +186,28 @@ class HubServer : PlayerHandler, Server {
 
 		this.handler = new shared Handler(this, this._info, this._query);
 
-		/*version(Windows) {
-			SetConsoleCtrlHandler(&sigHandler, true);
-		} else version(linux) {
-			sigset(SIGTERM, &extsig);
-			sigset(SIGINT, &extsig);
-		}*/
+		this._plugins = cast(shared Plugin[])plugins;
 
-		//TODO load plugins and their language files
+		// load plugins
+		foreach(_plugin ; _plugins) {
+			auto plugin = cast(HubPluginInfo)_plugin;
+			plugin.load(this);
+			if(plugin.main) {
+				auto a = [
+					Format.green ~ plugin.name ~ Format.reset,
+					Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
+					Format.white ~ plugin.vers
+				];
+				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), a));
+			}
+		}
+
+		//TODO load plugins' language files
+
+		// call @start
+		foreach(plugin ; _plugins) {
+			foreach(del ; plugin.onstart) del();
+		}
 
 		// open web admin GUI
 		if(config.hub.webAdminOpen) {

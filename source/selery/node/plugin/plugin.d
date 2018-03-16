@@ -40,32 +40,33 @@ import selery.event.world : WorldEvent;
 import selery.node.server : NodeServer;
 import selery.server : Server;
 
-abstract class NodePlugin {
-
-	//@disable this();
+class NodePlugin {
 
 	protected shared NodeServer server;
 
 }
 
-class PluginOf(T) : Plugin if(is(T == Object) || is(T : NodePlugin)) {
+class NodePluginInfo : Plugin {
+	
+	public this(string name, string[] authors, string version_, string languages, string textures, bool main) {
+		super(name, authors, version_, languages, textures, main);
+	}
+	
+	abstract void load(shared NodeServer server);
+	
+}
 
-	public this(string name, string[] authors, string vers, bool api, string languages, string textures) {
-		this.n_name = name;
-		this.n_authors = authors;
-		this.n_version = vers;
-		this.n_api = api;
-		this.n_languages = languages;
-		this.n_textures = textures;
-		static if(!is(T : Object)) this.hasMain = true;
+class NodePluginOf(T) : NodePluginInfo if(is(T == Object) || is(T : NodePlugin)) {
+
+	public this(string name, string[] authors, string version_, string languages, string textures) {
+		super(name, authors, version_, languages, textures, !is(T == Object));
 	}
 
-	public override void load(shared Server server) {
+	public override void load(shared NodeServer server) {
 		static if(!is(T == Object)) {
-			auto node = cast(shared NodeServer)server;
 			T main = new T();
-			main.server = node;
-			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()node);
+			main.server = server;
+			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()server);
 		}
 	}
 

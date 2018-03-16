@@ -29,7 +29,7 @@ import std.string : startsWith;
 
 import selery.config : Config;
 import selery.crash : logCrash;
-import selery.node.plugin : NodePlugin, PluginOf;
+import selery.node.plugin.plugin : NodePluginOf;
 import selery.node.server : NodeServer;
 import selery.util.util : UnloggedException;
 
@@ -45,7 +45,7 @@ void main(string[] args) {
 
 		try {
 			
-			new shared NodeServer(address, config, loadPlugins!(PluginOf, NodePlugin, true)(config), args);
+			new shared NodeServer(address, config, loadPlugins!(NodePluginOf, "node")(config), args);
 			
 		} catch(LinkTerminated) {
 			

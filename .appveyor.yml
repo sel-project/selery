@@ -123,6 +123,7 @@ before_build:
          }
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
+  - mkdir plugins
 
 build_script:
   - cd builder\init
@@ -176,9 +177,9 @@ after_build:
   - 7z a selery-%selery_version%-windows-%lower_platform%.zip LICENSE selery-hub.exe selery-node.exe selery.exe assets\
 
 test_script:
-  - selery-hub --about --pretty
-  - selery-node --about --pretty
-  - selery --about --pretty
+  - selery-hub --about
+  - selery-node --about
+  - selery --about
   
 on_success:
   - set RESULT=0

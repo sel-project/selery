@@ -32,8 +32,6 @@ import core.atomic : atomicOp;
 
 import selery.about;
 import selery.lang : Translatable;
-import selery.server : Server;
-import selery.util.tuple : Tuple;
 
 private shared uint _id;
 
@@ -45,18 +43,24 @@ class Plugin {
 
 	public immutable uint id;
 
-	protected string n_name;
-	protected string[] n_authors;
-	protected string n_version;
-	protected bool n_api;
-	public bool hasMain;
+	protected string _name;
+	protected string[] _authors;
+	protected string _version;
+	protected bool _api;
+	public bool _main;
 
-	protected string n_languages, n_textures;
+	protected string _languages, _textures;
 	
 	public void delegate()[] onstart, onreload, onstop;
 
-	public this() {
+	public this(string name, string[] authors, string version_, string languages, string textures, bool main) {
 		this.id = atomicOp!"+="(_id, 1);
+		_name = name;
+		_authors = authors;
+		_version = version_;
+		_languages = languages;
+		_textures = textures;
+		_main = main;
 	}
 	
 	/**
@@ -64,7 +68,7 @@ class Plugin {
 	 * package.json file.
 	 */
 	public pure nothrow @property @safe @nogc string name() {
-		return this.n_name;
+		return _name;
 	}
 	
 	/**
@@ -72,7 +76,7 @@ class Plugin {
 	 * package.json file.
 	 */
 	public pure nothrow @property @safe @nogc string[] authors() {
-		return this.n_authors;
+		return _authors;
 	}
 	
 	/**
@@ -81,22 +85,7 @@ class Plugin {
 	 * This should be in major.minor[.revision] [alpha|beta] format.
 	 */
 	public pure nothrow @property @safe @nogc string vers() {
-		return this.n_version;
-	}
-	
-	/**
-	 * Indicates whether or not the plugin has APIs.
-	 * The plugin's APIs are always in the api.d file in
-	 * the plugin's directory.
-	 * Example:
-	 * ---
-	 * static if(__traits(compile, { import example.api; })) {
-	 *    assert(server.plugins.filter!(a => a.namespace == "example")[0].api);
-	 * }
-	 * ---
-	 */
-	public pure nothrow @property @safe @nogc bool api() {
-		return this.n_api;
+		return _version;
 	}
 
 	/**
@@ -104,7 +93,7 @@ class Plugin {
 	 * Returns: null if the plugin has no language files, a path otherwise
 	 */
 	public pure nothrow @property @safe @nogc string languages() {
-		return this.n_languages;
+		return _languages;
 	}
 
 	/**
@@ -112,10 +101,16 @@ class Plugin {
 	 * Returns: null if the plugin has no textures, a path otherwise
 	 */
 	public pure nothrow @property @safe @nogc string textures() {
-		return this.n_textures;
+		return _textures;
 	}
-	
-	public abstract void load(shared Server server);
+
+	/**
+	 * Indicates whether the plugin has an entry point or it is just used
+	 * by other plugins (using APIs).
+	 */
+	public pure nothrow @property @safe @nogc bool main() {
+		return _main;
+	}
 	
 }
 

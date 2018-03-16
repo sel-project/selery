@@ -71,6 +71,7 @@ import selery.lang : LanguageManager, Translation;
 import selery.log : Message, Logger;
 import selery.node.handler; //TODO selective imports
 import selery.node.node : Node;
+import selery.node.plugin.plugin : NodePluginInfo;
 import selery.player.bedrock : BedrockPlayer, BedrockPlayerImpl;
 import selery.player.java : JavaPlayer;
 import selery.player.player : PlayerInfo, PermissionLevel;
@@ -360,14 +361,16 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		}
 
 		foreach(_plugin ; this.n_plugins) {
-			auto plugin = cast()_plugin;
+			auto plugin = cast(NodePluginInfo)_plugin;
 			plugin.load(this);
-			auto args = [
-				Format.green ~ plugin.name ~ Format.reset,
-				Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
-				Format.white ~ plugin.vers
-			];
-			this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
+			if(plugin.main) {
+				auto args = [
+					Format.green ~ plugin.name ~ Format.reset,
+					Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
+					Format.white ~ plugin.vers
+				];
+				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
+			}
 		}
 		
 		// register commands if enabled in the settings

@@ -299,6 +299,10 @@ int main(string[] args) {
 			} else if(author && author.type == TOML_TYPE.STRING) {
 				plugin.authors = [author.str];
 			}
+			auto target = "target" in value;
+			if(target && target.type == TOML_TYPE.STRING) {
+				plugin.target = target.str;
+			}
 			auto main = "main" in value;
 			if(main && main.type == TOML_TYPE.STRING) {
 				string[] spl = main.str.split(".");
@@ -323,6 +327,7 @@ int main(string[] args) {
 					}
 				}
 			}
+			//TODO get version using `git describe --tags`
 			info[plugin.name] = plugin;
 		} else {
 			throw new Exception("Plugin '" ~ plugin.name ~ " at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
@@ -386,14 +391,13 @@ int main(string[] args) {
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
 		
-	string imports = "";
 	string loads = "";
-
-	string[] fimports;
 	
 	if(!exists(".selery")) mkdir(".selery");
 	
 	string[] pluginsFile;
+	
+	JSONValue[] json;
 
 	foreach(ref value ; ordered) {
 		pluginsFile ~= value.name ~ " = " ~ value.enabled.to!string;
@@ -416,8 +420,13 @@ int main(string[] args) {
 							sub["dependencies"][name[4..$]] = toJSON(d);
 						} else {
 							//TODO depends on another plugin
+							sub["dependencies"][":" ~ name] = "*";
 						}
 					}
+				}
+				auto subConfigurations = "subConfigurations" in value.toml;
+				if(subConfigurations && subConfigurations.type == TOML_TYPE.TABLE) {
+					sub["subConfigurations"] = toJSON(*subConfigurations);
 				}
 				builder["subPackages"].array ~= JSONValue(sub);
 				builder["dependencies"][":" ~ value.name] = "*";
@@ -432,10 +441,7 @@ int main(string[] args) {
 				}
 				return "null";
 			}
-			if(value.main.length) {
-				imports ~= "static import " ~ value.mod ~ ";\n";
-			}
-			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ to!string(value.api) ~ ", " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
 			auto conditions = "conditions" in value.toml;
 			if(conditions && conditions.type == TOML_TYPE.TABLE) {
 				string[] conds;
@@ -444,13 +450,14 @@ int main(string[] args) {
 				}
 				load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
 			}
-			if(value.main.length) load = "static if(is(" ~ value.main ~ " : T)){ " ~ load ~ " }";
 			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
+			load = "static if(target == `" ~ value.target ~ "`){ " ~ (value.main.length ? "static import " ~ value.mod ~ "; " : "") ~ load ~ " }";
 			loads ~= "\t" ~ load ~ "\n";
+			json ~= value.toJSON();
 		}
 	}
 
-	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\n" ~ imports ~ "\nPlugin[] loadPlugins(alias PluginOf, T, bool is_node)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}");
+	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\nPlugin[] loadPlugins(alias PluginOf, string target)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}\n\nenum info = `" ~ JSONValue(json).toString() ~ "`;\n");
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
 	
@@ -496,6 +503,16 @@ struct Info {
 	public string path;
 	public string mod;
 	public string main;
+	
+	JSONValue toJSON() {
+		JSONValue[string] ret;
+		ret["name"] = name;
+		ret["authors"] = authors;
+		ret["version"] = version_;
+		ret["target"] = target;
+		if(main.length) ret["main"] = main;
+		return JSONValue(ret);
+	}
 
 }
 
