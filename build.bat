@@ -10,6 +10,7 @@ set build=debug
 set arch=
 set config=default
 set plugins=
+set portable=
 
 :loop
 if "%1"=="" (
@@ -44,6 +45,8 @@ if "%1"=="" (
 	set plugins=--no-plugins
 ) else if "%1" == "-np" (
 	set plugins=--no-plugins
+) else if "%1" == "--portable" (
+	set portable=--portable
 ) else if "%1" == "--clean" (
 	del dub.selections.json
 	del builder\dub.selections.json
@@ -68,7 +71,7 @@ if "%arch%" == "x86" (
 	)
 )
 cd builder\init
-dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %plugins%
+dub run --compiler=%compiler% --build=%build% --arch=%arch% -- %config% %plugins% %portable%
 if %errorlevel% neq 0 (
 	cd ..\..
 	exit /b %errorlevel%

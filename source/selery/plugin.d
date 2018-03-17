@@ -48,18 +48,14 @@ class Plugin {
 	protected string _version;
 	protected bool _api;
 	public bool _main;
-
-	protected string _languages, _textures;
 	
 	public void delegate()[] onstart, onreload, onstop;
 
-	public this(string name, string[] authors, string version_, string languages, string textures, bool main) {
+	public this(string name, string[] authors, string version_, bool main) {
 		this.id = atomicOp!"+="(_id, 1);
 		_name = name;
 		_authors = authors;
 		_version = version_;
-		_languages = languages;
-		_textures = textures;
 		_main = main;
 	}
 	
@@ -92,16 +88,16 @@ class Plugin {
 	 * Gets the absolute location of the plugin's language files.
 	 * Returns: null if the plugin has no language files, a path otherwise
 	 */
-	public pure nothrow @property @safe @nogc string languages() {
-		return _languages;
+	deprecated public pure nothrow @property @safe @nogc string languages() {
+		return null;
 	}
 
 	/**
 	 * Gets the absolute location of the plugin's textures.
 	 * Returns: null if the plugin has no textures, a path otherwise
 	 */
-	public pure nothrow @property @safe @nogc string textures() {
-		return _textures;
+	deprecated public pure nothrow @property @safe @nogc string textures() {
+		return null;
 	}
 
 	/**

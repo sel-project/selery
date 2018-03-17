@@ -9,6 +9,7 @@ BUILD=debug
 ARCH=
 CONFIG=default
 PLUGINS=
+PORTABLE=
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -57,6 +58,10 @@ while [[ $# -gt 0 ]]; do
 		-np | --no-plugins)
 			PLUGINS=--no-plugins
 			;;
+		
+		--portable)
+			PORTABLE=--portable
+			;;
 			
 		--clean)
 			rm -f dub.selections.json
@@ -76,6 +81,6 @@ if [ "$COMPILER" = "" ] ; then
 fi
 
 cd builder/init
-dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $CONFIG $PLUGINS || exit 1
+dub run --compiler=$COMPILER --build=$BUILD $ARCH -- $CONFIG $PLUGINS $PORTABLE || exit 1
 cd ..
 dub build --compiler=$COMPILER --build=$BUILD $ARCH

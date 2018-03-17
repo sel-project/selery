@@ -129,10 +129,7 @@ build_script:
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
-  - cd builder
-  - selery-init --portable
-  - dub build --compiler=%DC% --arch=%Darch% --build=%CONFIGURATION%
-  - cd ..
+  - build.bat -c %DC% %CONFIGURATION% -a %Darch% default --portable
 
 after_build:
   - cd builder\views

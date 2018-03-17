@@ -11,7 +11,7 @@
 *.selections.json
 .dub
 .selery
-/assets/plugin
+/assets/plugins
 /builder/dub.json
 /builder/views
 /crash

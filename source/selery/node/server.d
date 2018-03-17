@@ -395,12 +395,12 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		// load plugin's language files
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			if(plugin.languages !is null) {
-				foreach(language, messages; this.config.lang.parseFolder(plugin.languages)) {
-					this.updateLanguageFiles(language, messages);
-				}
+			foreach(language, messages; this.config.lang.loadPlugin(plugin)) {
+				this.updateLanguageFiles(language, messages);
 			}
 		}
+
+		this.logger.log(Translation("test"));
 
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 		

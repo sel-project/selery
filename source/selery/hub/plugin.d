@@ -42,8 +42,8 @@ class HubPlugin {
 
 class HubPluginInfo : Plugin {
 
-	public this(string name, string[] authors, string version_, string languages, string textures, bool main) {
-		super(name, authors, version_, languages, textures, main);
+	public this(string name, string[] authors, string version_, bool main) {
+		super(name, authors, version_, main);
 	}
 
 	abstract void load(shared HubServer server);
@@ -52,8 +52,8 @@ class HubPluginInfo : Plugin {
 
 class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 	
-	public this(string name, string[] authors, string version_, string languages, string textures) {
-		super(name, authors, version_, languages, textures, !is(T == Object));
+	public this(string name, string[] authors, string version_) {
+		super(name, authors, version_, !is(T == Object));
 	}
 	
 	public override void load(shared HubServer server) {

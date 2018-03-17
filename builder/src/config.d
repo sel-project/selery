@@ -37,6 +37,7 @@ import std.zip : ZipArchive;
 import selery.about;
 import selery.config : Config, Files;
 import selery.lang : LanguageManager;
+import selery.plugin : Plugin;
 
 import toml;
 import toml.json;
@@ -437,6 +438,14 @@ class CompressedFiles : Files {
 		auto member = (cast()this.archive).directory[convert(file)];
 		if(member.expandedData.length != member.expandedSize) (cast()this.archive).expand(member);
 		return cast(void[])member.expandedData;
+	}
+	
+	public override inout bool hasPluginAsset(Plugin plugin, string file) {
+		return this.hasAsset("plugins/" ~ plugin.name ~ "/" ~ file);
+	}
+	
+	public override inout void[] readPluginAsset(Plugin plugin, string file) {
+		return this.readAsset("plugins/" ~ plugin.name ~ "/" ~ file);
 	}
 	
 	private static string convert(string file) {

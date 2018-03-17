@@ -37,6 +37,7 @@ import std.path : dirSeparator;
 import std.string : toUpper, toLower, endsWith, split, indexOf, strip;
 
 import selery.config : Files;
+import selery.plugin : Plugin;
 
 deprecated("Use LanguageManager instead") alias Lang = LanguageManager;
 
@@ -86,7 +87,7 @@ class LanguageManager {
 	}
 
 	/**
-	 * Loads languages in lang/system and lang/messages.
+	 * Loads languages in assets/lang/system and assets/lang/messages.
 	 * Throws: RangeError if one of the given languages is not supported by the software.
 	 */
 	public inout void load() {
@@ -98,12 +99,15 @@ class LanguageManager {
 		}
 	}
 
-	public inout string[string][string] parseFolder(string folder) {
-		if(!folder.endsWith(dirSeparator)) folder ~= dirSeparator;
+	/**
+	 * Loads languages from plugin's assets files, located in plugins/$plugin/assets/lang.
+	 */
+	public inout string[string][string] loadPlugin(Plugin plugin) {
+		immutable folder = "lang" ~ dirSeparator;
 		string[string][string] ret;
 		bool loadImpl(string lang, string file) {
-			if(exists(file)) {
-				ret[lang] = this.parseFile(cast(string)read(file));
+			if(this.files.hasPluginAsset(plugin, file)) {
+				ret[lang] = this.parseFile(cast(string)this.files.readPluginAsset(plugin, file));
 				return true;
 			} else {
 				return false;

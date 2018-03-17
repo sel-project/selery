@@ -40,6 +40,7 @@ import std.uuid : UUID, randomUUID;
 
 import selery.about;
 import selery.lang : LanguageManager;
+import selery.plugin : Plugin;
 
 enum Gamemode : ubyte {
 	
@@ -371,6 +372,14 @@ class Files {
 	 */
 	public inout void[] readAsset(string file) {
 		return read(this.assets ~ file);
+	}
+
+	public inout bool hasPluginAsset(Plugin plugin, string file) {
+		return exists("plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ "assets" ~ dirSeparator ~ file);
+	}
+
+	public inout void[] readPluginAsset(Plugin plugin, string file) {
+		return read("plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ "assets" ~ dirSeparator ~ file);
 	}
 	
 	/**

@@ -69,9 +69,11 @@ int main(string[] args) {
 	{
 		// clear
 		if(exists("views")) {
-			foreach(file ; dirEntries("views", SpanMode.breadth)) {
-				if(file.isFile) remove(file);
-			}
+			try {
+				foreach(file ; dirEntries("views", SpanMode.breadth)) {
+					if(file.isFile) remove(file);
+				}
+			} catch(Exception) {}
 		} else {
 			mkdirRecurse("views");
 		}
@@ -135,38 +137,12 @@ int main(string[] args) {
 				break;
 		}		
 	}
-
-	if(portable) {
-
-		auto zip = new ZipArchive();
-
-		// get all files in assets
-		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
-			immutable name = file[10..$].replace("\\", "/");
-			if(file.isFile && !name.startsWith(".") && !name.endsWith(".ico") && (!name.startsWith("web/") || name.endsWith("/main.css") || name.indexOf("/res/") != -1)) {
-				//TODO optimise .lang files by removing empty lines, windows endings and comments
-				auto data = read(file);
-				auto member = new ArchiveMember();
-				member.name = name;
-				member.expandedData(cast(ubyte[])(file.endsWith(".json") ? parseJSON(cast(string)data).toString() : data));
-				member.compressionMethod = CompressionMethod.deflate;
-				zip.addMember(member);
-			}
-		}
-		mkdirRecurse("views");
-		write("views/portable.zip", zip.build());
-
-	} else if(exists("views/portable.zip")) {
-
-		remove("views/portable.zip");
-
-	}
 	
 	bool[string] active_plugins;
 	
-	if(exists("../plugins.toml")) {
+	if(exists("../build-plugins.toml")) {
 		try {
-			foreach(key, value; parseTOML(cast(string)read("../plugins.toml"))) {
+			foreach(key, value; parseTOML(cast(string)read("../build-plugins.toml"))) {
 				active_plugins[key] = value.type == TOML_TYPE.TRUE;
 			}
 		} catch(TOMLException) {}
@@ -449,17 +425,7 @@ int main(string[] args) {
 				builder["subPackages"].array ~= JSONValue(sub);
 				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			string extra(string path) {
-				auto ret = value.path ~ path;
-				if((value.main.length || value.api) && exists(ret) && ret.isDir) {
-					foreach(f ; dirEntries(ret, SpanMode.breadth)) {
-						// at least one element inside
-						if(f.isFile) return "`" ~ buildNormalizedPath(absolutePath(ret)) ~ dirSeparator ~ "`";
-					}
-				}
-				return "null";
-			}
-			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`, " ~ extra("lang") ~ ", " ~ extra("textures") ~ ");";
+			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
 			auto conditions = "conditions" in value.toml;
 			if(conditions && conditions.type == TOML_TYPE.TABLE) {
 				string[] conds;
@@ -472,6 +438,17 @@ int main(string[] args) {
 			load = "static if(target == `" ~ value.target ~ "`){ " ~ (value.main.length ? "static import " ~ value.mod ~ "; " : "") ~ load ~ " }";
 			loads ~= "\t" ~ load ~ "\n";
 			json ~= value.toJSON();
+			if(portable) {
+				// copy plugins/$plugin/assets into assets/plugins/$plugin
+				immutable assets = value.path ~ "assets" ~ dirSeparator;
+				if(exists(assets) && assets.isDir) {
+					foreach(file ; dirEntries(assets, SpanMode.breadth)) {
+						immutable dest = "../assets/plugins/" ~ value.name ~ "/" ~ file[assets.length..$];
+						if(file.isFile) write(dest, read(file));
+						else if(file.isDir) mkdirRecurse(dest);
+					}
+				}
+			}
 		}
 	}
 
@@ -479,7 +456,33 @@ int main(string[] args) {
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
 	
-	writeDiff("../plugins.toml", pluginsFile.join(newline) ~ newline);
+	write("../build-plugins.toml", pluginsFile.join(newline) ~ newline);
+
+	if(portable) {
+
+		auto zip = new ZipArchive();
+
+		// get all files in assets
+		foreach(string file ; dirEntries("../assets/", SpanMode.breadth)) {
+			immutable name = file[10..$].replace("\\", "/");
+			if(file.isFile && !name.startsWith(".") && !name.endsWith(".ico") && (!name.startsWith("web/") || name.endsWith("/main.css") || name.indexOf("/res/") != -1)) {
+				//TODO optimise .lang files by removing empty lines, windows' line endings and comments
+				auto data = read(file);
+				auto member = new ArchiveMember();
+				member.name = name;
+				member.expandedData(cast(ubyte[])(file.endsWith(".json") ? parseJSON(cast(string)data).toString() : data));
+				member.compressionMethod = CompressionMethod.deflate;
+				zip.addMember(member);
+			}
+		}
+		mkdirRecurse("views");
+		write("views/portable.zip", zip.build());
+
+	} else if(exists("views/portable.zip")) {
+
+		remove("views/portable.zip");
+
+	}
 	
 	return 0;
 
