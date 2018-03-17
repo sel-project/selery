@@ -42,6 +42,7 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		
 		JSONValue[string] json;
 		json["type"] = cast(string)type;
+		json["portable"] = portable;
 		json["software"] = Software.toJSON();
 		json["system"] = ["os": JSONValue(os.to!string), "endian": JSONValue(endian.to!string), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["d": ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)]];
@@ -50,13 +51,18 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		static if(__traits(compiles, import("build_ci.json"))) json["build"]["ci"] = parseJSON(import("build_ci.json"));
 		debug json["build"]["debug"] = true;
 		else json["build"]["debug"] = false;
+		version(X86) json["system"]["arch"] = "x86";
+		else version(X86_64) json["system"]["arch"] = "x86-64";
+		else version(ARM) json["system"]["arch"] = "arm";
+		else version(AArch64) json["system"]["arch"] = "aarch64";
+		else json["system"]["arch"] = "unknown";
 		if(args.canFind("--min")) write(JSONValue(json).toString());
 		else writeln(JSONValue(json).toPrettyString());
 
 	} else if(args.canFind("--changelog") || args.canFind("-c")) {
 		
 		static if(__traits(compiles, import("notes.txt")) && __traits(compiles, import("version.txt")) && Software.displayVersion == import("version.txt")) {
-			import std.string : strip, split, replace;
+			import std.string : strip, split, endsWith;
 			writeln("Release notes for ", Software.name, " ", Software.displayVersion, ":\n");
 			foreach(note ; import("notes.txt").split("\\n\\n")) {
 				string[] lines;
