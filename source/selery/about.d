@@ -130,15 +130,15 @@ const struct Software {
 
 	enum string simpleDisplay = name ~ " " ~ to!string(major) ~ "." ~ to!string(minor) ~ (patch != 0 ? "." ~ to!string(patch) : "");
 	
-	/**
+	/+/**
 	 * Version of the api used by the software. It's used to check the
 	 * compatibility with plugins.
 	 */
-	enum ubyte api = 1;
+	enum ubyte api = 1;+/
 
 	public static JSONValue toJSON() {
 		JSONValue[string] ret;
-		foreach(member ; TypeTuple!("name", "website", "displayVersion", "fullVersion", "codename", "display", "api")) {
+		foreach(member ; TypeTuple!("name", /*"website",*/ "displayVersion", "fullVersion", "codename", "display")) {
 			ret[member] = JSONValue(mixin(member));
 		}
 		ret["version"] = ["major": major, "minor": minor, "patch": patch];

@@ -36,27 +36,39 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 
 	if(args.canFind("--about") || args.canFind("-a")) {
 
-		import std.system : endian;
+		import std.system : os, endian;
 		
 		import pluginloader : info;
 		
 		JSONValue[string] json;
 		json["type"] = cast(string)type;
 		json["software"] = Software.toJSON();
-		json["system"] = ["endian": JSONValue(cast(int)endian), "bits": JSONValue(size_t.sizeof*8)];
-		json["build"] = ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)];
+		json["system"] = ["os": JSONValue(os.to!string), "endian": JSONValue(endian.to!string), "bits": JSONValue(size_t.sizeof*8)];
+		json["build"] = ["d": ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)]];
 		json["plugins"] = parseJSON(info);
-		static if(__traits(compiles, import("release.json"))) json["build"]["builder"] = parseJSON(import("release.json"));
-		debug json["debug"] = true;
-		else json["debug"] = false;
+		static if(__traits(compiles, import("build_git.json"))) json["build"]["git"] = parseJSON(import("build_git.json"));
+		static if(__traits(compiles, import("build_ci.json"))) json["build"]["ci"] = parseJSON(import("build_ci.json"));
+		debug json["build"]["debug"] = true;
+		else json["build"]["debug"] = false;
 		if(args.canFind("--min")) write(JSONValue(json).toString());
 		else writeln(JSONValue(json).toPrettyString());
 
 	} else if(args.canFind("--changelog") || args.canFind("-c")) {
 		
 		static if(__traits(compiles, import("notes.txt")) && __traits(compiles, import("version.txt")) && Software.displayVersion == import("version.txt")) {
-			import std.string : replace;
-			writeln("Release notes for ", Software.name, " ", Software.displayVersion, ":\n\n", replace(import("notes.txt"), "\\n", "\n")); //TODO remove links
+			import std.string : strip, split, replace;
+			writeln("Release notes for ", Software.name, " ", Software.displayVersion, ":\n");
+			foreach(note ; import("notes.txt").split("\\n\\n")) {
+				string[] lines;
+				foreach(line ; note.split("\\n")) {
+					if(lines.length && !lines[$-1].endsWith(".")) lines[$-1] ~= " " ~ line.strip;
+					else lines ~= line.strip;
+				}
+				foreach(line ; lines) {
+					writeln(line);
+				}
+				writeln();
+			}
 		} else {
 			writeln("Release notes were not included in this build.");
 		}

@@ -65,36 +65,54 @@ int main(string[] args) {
 	
 	Type type = Type.default_;
 	
+	// generate files
+	{
+		// clear
+		if(exists("views")) {
+			foreach(file ; dirEntries("views", SpanMode.breadth)) {
+				if(file.isFile) remove(file);
+			}
+		} else {
+			mkdirRecurse("views");
+		}
+		write("views/version.txt", Software.displayVersion);
+		string[] notes;
+		string changelog = cast(string)read("../.github/changelog.md");
+		immutable v = "### " ~ Software.displayVersion;
+		auto start = changelog.indexOf(v);
+		if(start != -1) {
+			start += v.length;
+			changelog = changelog[start..$];
+			immutable end = changelog.indexOf("##");
+			write("views/notes.txt", changelog[0..(end==-1?$:end)].strip.replace("\r", "").replace("\n", "\\n"));
+		} else {
+			write("views/notes.txt", "There are no release notes for this version.");
+		}
+		write("views/is_release.txt", to!string(environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1));
+		// ci info
+		JSONValue[string] ci;
+		if(environment.get("TRAVIS", "") == "true") {
+			ci["name"] = "travis-ci";
+			ci["repo"] = environment["TRAVIS_REPO_SLUG"];
+			ci["job"] = environment["TRAVIS_JOB_NUMBER"];
+		} else if(environment.get("APPVEYOR", "").toLower == "true") {
+			ci["name"] = "appveyor";
+			ci["repo"] = environment["APPVEYOR_REPO_NAME"];
+			ci["job"] = environment["APPVEYOR_BUILD_NUMBER"] ~ "." ~ environment["APPVEYOR_JOB_NUMBER"];
+		}
+		if(ci.length) write("views/build_ci.json", JSONValue(ci).toString());
+		// git info
+		JSONValue[string] git;
+		if(exists("../.git/")) {
+			git["remote"] = executeShell("git config --get remote.origin.url").output.strip;
+			git["branch"] = executeShell("git rev-parse --abbrev-ref HEAD").output.strip;
+			git["head"] = executeShell("git rev-parse HEAD").output.strip;
+		}
+		write("views/build_git.json", JSONValue(git).toString());
+	}
+	
 	foreach(arg ; args) {
 		switch(arg.toLower()) {
-			case "--generate-files":
-				mkdirRecurse("views");
-				write("views/version.txt", Software.displayVersion);
-				string[] notes;
-				string changelog = cast(string)read("../.github/changelog.md");
-				immutable v = "### " ~ Software.displayVersion;
-				auto start = changelog.indexOf(v);
-				if(start != -1) {
-					start += v.length;
-					changelog = changelog[start..$];
-					immutable end = changelog.indexOf("##");
-					write("views/notes.txt", changelog[0..(end==-1?$:end)].strip.replace("\n", "\\n"));
-				} else {
-					write("views/notes.txt", "There are no release notes for this version.");
-				}
-				JSONValue[string] release;
-				if(environment.get("TRAVIS", "") == "true") {
-					release["ci"] = "travis-ci";
-					release["repo"] = environment["TRAVIS_REPO_SLUG"];
-					release["job"] = environment["TRAVIS_JOB_NUMBER"];
-				} else if(environment.get("APPVEYOR", "").toLower == "true") {
-					release["ci"] = "appveyor";
-					release["repo"] = environment["APPVEYOR_REPO_NAME"];
-					release["job"] = environment["APPVEYOR_BUILD_NUMBER"] ~ "." ~ environment["APPVEYOR_JOB_NUMBER"];
-				}
-				write("views/release.json", JSONValue(release).toString());
-				write("views/is_release.txt", to!string(environment.get("APPVEYOR_REPO_COMMIT_MESSAGE", "").indexOf("[release]") != -1));
-				return 0;
 			case "--no-plugins":
 				plugins = false;
 				break;
@@ -368,7 +386,7 @@ int main(string[] args) {
 				}
 			}
 		}
-		if(api.length == 0 || api.canFind(Software.api)) {
+		if(api.length == 0 /*|| api.canFind(Software.api)*/) {
 			writeln(inf.name, " ", inf.version_, ": loaded");
 		} else {
 			writeln(inf.name, " ", inf.version_, ": cannot load due to wrong api ", api);
