@@ -126,15 +126,6 @@ before_build:
   - mkdir plugins
 
 build_script:
-  - cd builder\init
-  - dub build --compiler=%DC% --arch=%Darch% --build=%CONFIGURATION%
-  - cd ..
-  - selery-init --generate-files
-  - cd views
-  - set /p selery_version=<version.txt
-  - set /p release_notes=<notes.txt
-  - set /p selery_is_release=<is_release.txt
-  - cd ..\..
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% node
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% default
@@ -144,6 +135,12 @@ build_script:
   - cd ..
 
 after_build:
+  - cd builder\views
+  - set /p selery_version=<version.txt
+  - set /p release_notes=<notes.txt
+  - set /p selery_is_release=<is_release.txt
+  - cd ..\..
+
   - rcedit selery-hub.exe --set-version-string ProductName "Selery's hub"
   - rcedit selery-hub.exe --set-version-string FileDescription "Selery's hub %selery_version%"
   - rcedit selery-hub.exe --set-version-string OriginalFileName selery-hub.exe
