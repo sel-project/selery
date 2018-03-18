@@ -235,8 +235,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(rcon, "rcon", "enabled");
 				set(rconPassword, "rcon", "password");
 				set(rconAddresses, "rcon", "addresses");
-				set(webView, "web-view", "enabled");
-				set(webViewAddresses, "web-view", "addresses");
 				set(webAdmin, "web-admin", "enabled");
 				set(webAdminOpen, "web-admin", "open-on-startup");
 				set(webAdminAddresses, "web-admin", "addresses");
@@ -382,11 +380,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				file ~= "enabled = " ~ to!string(rcon) ~ newline;
 				file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
 				file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
-			}
-			if(isHub) with(this.hub) {
-				file ~= newline ~ "[web-view]" ~ newline;
-				file ~= "enabled = " ~ to!string(webView) ~ newline;
-				file ~= "addresses = " ~ addressString(webViewAddresses) ~ newline;
 			}
 			if(isHub) with(this.hub) {
 				file ~= newline ~ "[web-admin]" ~ newline;

@@ -124,6 +124,7 @@ before_build:
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
   - mkdir plugins
+#  - git clone https://github.com/selery-plugins/web-view plugins/web-view
 
 build_script:
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub
@@ -174,7 +175,7 @@ test_script:
   - selery-hub --about
   - selery-node --about
   - selery --about
-  - selery-portable-%selery-version% --about
+  - selery-portable-%selery_version% --about
   
 on_success:
   - set RESULT=0

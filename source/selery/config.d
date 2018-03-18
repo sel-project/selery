@@ -134,10 +134,6 @@ class Config {
 		string rconPassword;
 		
 		Address[] rconAddresses = [Address("0.0.0.0", 25575)];
-		
-		bool webView = false;
-		
-		Address[] webViewAddresses = [Address("0.0.0.0", 80), Address("::", 80)];
 
 		bool webAdmin = false;
 

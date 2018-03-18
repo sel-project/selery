@@ -38,6 +38,8 @@ class HubPlugin {
 
 	protected shared HubServer server;
 
+	protected shared Plugin plugin;
+
 }
 
 class HubPluginInfo : Plugin {
@@ -60,6 +62,7 @@ class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 		static if(!is(T == Object)) {
 			T main = new T();
 			main.server = server;
+			main.plugin = cast(shared)this;
 			foreach(member ; __traits(allMembers, T)) {
 				static if(is(typeof(__traits(getMember, T, member)) == function)) {
 					mixin("alias F = T." ~ member ~ ";");

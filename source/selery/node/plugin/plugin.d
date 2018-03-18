@@ -44,6 +44,8 @@ class NodePlugin {
 
 	protected shared NodeServer server;
 
+	protected shared Plugin plugin;
+
 }
 
 class NodePluginInfo : Plugin {
@@ -66,6 +68,7 @@ class NodePluginOf(T) : NodePluginInfo if(is(T == Object) || is(T : NodePlugin))
 		static if(!is(T == Object)) {
 			T main = new T();
 			main.server = server;
+			main.plugin = cast()this;
 			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()server);
 		}
 	}

@@ -384,6 +384,9 @@ int main(string[] args) {
 	];
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
+	
+	//test
+	//builder["dflags"] = ["-w", "-mcpu=cortex-a8", "-mtriple=arm-linux-gnueabihf"/*, "-float-abi=softfp"*/];
 		
 	string loads = "";
 	
