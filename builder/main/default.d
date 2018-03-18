@@ -50,7 +50,7 @@ void main(string[] args) {
 
 		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, "hub")(config), args); }).start();
 
-		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(10)); //TODO add a limit in case of failure
+		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(1)); //TODO add a limit in case of failure
 		
 		try {
 			

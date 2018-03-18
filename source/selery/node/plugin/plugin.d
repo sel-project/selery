@@ -68,7 +68,7 @@ class NodePluginOf(T) : NodePluginInfo if(is(T == Object) || is(T : NodePlugin))
 		static if(!is(T == Object)) {
 			T main = new T();
 			main.server = server;
-			main.plugin = cast()this;
+			main.plugin = cast(shared)this;
 			loadPluginAttributes!(true, NodeServerEvent, WorldEvent, false, CommandSender, false)(main, this, cast()server);
 		}
 	}
