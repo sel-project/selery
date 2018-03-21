@@ -240,77 +240,13 @@ class Config {
 		
 		bool aboutCommand = true;
 
-		bool clearCommand = true;
-
-		bool cloneCommand = true;
-
-		bool defaultgamemodeCommand = true;
-
-		bool deopCommand = true;
-
-		bool difficultyCommand = true;
-
-		bool effectCommand = true;
-
-		bool enchantCommand = true;
-
-		bool experienceCommand = true;
-
-		bool executeCommand = true;
-
-		bool fillCommand = true;
-
-		bool gamemodeCommand = true;
-
-		bool gameruleCommand = true;
-
-		bool giveCommand = true;
-
 		bool helpCommand = true;
-
-		bool kickCommand = true;
-
-		bool killCommand = true;
-
-		bool listCommand = true;
-
-		bool locateCommand = true;
-
-		bool meCommand = true;
-
-		bool opCommand = true;
 
 		bool permissionCommand = true;
 
-		bool sayCommand = true;
-
-		bool seedCommand = true;
-
-		bool setmaxplayersCommand = true;
-
-		bool setworldspawnCommand = true;
-
-		bool spawnpointCommand = true;
-
 		bool stopCommand = true;
 
-		bool summonCommand = true;
-
-		bool titleCommand = true;
-
-		bool tellCommand = true;
-
-		bool timeCommand = true;
-
-		bool toggledownfallCommand = true;
-
-		bool tpCommand = true;
-
 		bool transferCommand = true;
-
-		bool transferserverCommand = true;
-
-		bool weatherCommand = true;
 
 		bool worldCommand = true;
 

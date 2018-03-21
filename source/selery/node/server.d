@@ -61,7 +61,6 @@ import selery.about;
 import selery.command.command : Command;
 import selery.command.execute : executeCommand;
 import selery.command.util : CommandSender;
-import selery.commands : Commands;
 import selery.config : Config, Difficulty, Gamemode;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
@@ -69,6 +68,7 @@ import selery.event.node;
 import selery.event.world.world : WorldEvent;
 import selery.lang : LanguageManager, Translation;
 import selery.log : Message, Logger;
+import selery.node.commands : Commands;
 import selery.node.handler; //TODO selective imports
 import selery.node.node : Node;
 import selery.node.plugin.plugin : NodePluginInfo;
