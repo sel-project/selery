@@ -269,9 +269,9 @@ int main(string[] args) {
 		} else {
 			if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
 		}
+		plugin.path = buildNormalizedPath(absolutePath(path));
 		if(plugin.name !in info) {
 			plugin.toml = value;
-			plugin.path = buildNormalizedPath(absolutePath(path));
 			if(!plugin.path.endsWith(dirSeparator)) plugin.path ~= dirSeparator;
 			auto priority = "priority" in value;
 			if(priority) {
@@ -329,7 +329,7 @@ int main(string[] args) {
 			}
 			info[plugin.name] = plugin;
 		} else {
-			throw new Exception("Plugin '" ~ plugin.name ~ " at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
+			throw new Exception("Plugin '" ~ plugin.name ~ "' at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
 		}
 	}
 	
