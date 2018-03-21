@@ -452,9 +452,11 @@ int main(string[] args) {
 				immutable assets = value.path ~ "assets" ~ dirSeparator;
 				if(exists(assets) && assets.isDir) {
 					foreach(file ; dirEntries(assets, SpanMode.breadth)) {
-						immutable dest = "../assets/plugins/" ~ value.name ~ "/" ~ file[assets.length..$];
-						if(file.isFile) write(dest, read(file));
-						else if(file.isDir) mkdirRecurse(dest);
+						immutable dest = "../assets/plugins" ~ dirSeparator ~ value.name ~ dirSeparator ~ file[assets.length..$];
+						if(file.isFile) {
+							mkdirRecurse(dest[0..dest.lastIndexOf(dirSeparator)]);
+							write(dest, read(file));
+						}
 					}
 				}
 			}
