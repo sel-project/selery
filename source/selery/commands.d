@@ -191,7 +191,7 @@ final class Commands {
 			sender.sendMessage(Translation(Messages.about.plugins, this.server.plugins.length));
 			foreach(_plugin ; this.server.plugins) {
 				auto plugin = cast()_plugin;
-				sender.sendMessage("* ", Format.green, plugin.name, Format.reset, " ", (!plugin.vers.startsWith("~") ? "v" : ""), plugin.vers);
+				sender.sendMessage("* ", Format.green, plugin.name, Format.reset, " ", (!plugin.version_.startsWith("~") ? "v" : ""), plugin.version_);
 			}
 		}
 	}

@@ -70,7 +70,7 @@ import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
 import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
-import selery.hub.plugin : HubPluginInfo;
+import selery.hub.plugin.plugin : HubPluginInfo;
 import selery.lang : Translation;
 import selery.log : Message, Logger;
 import selery.plugin : Plugin;
@@ -196,9 +196,9 @@ class HubServer : PlayerHandler, Server {
 				auto a = [
 					Format.green ~ plugin.name ~ Format.reset,
 					Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
-					Format.white ~ plugin.vers
+					Format.white ~ plugin.version_[1..$]
 				];
-				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), a));
+				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.version_.startsWith("v") ? ".version" : (plugin.authors.length ? ".author" : "")), a));
 			}
 		}
 

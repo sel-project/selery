@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2017-2018 sel-project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,17 +24,12 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/node/plugin/package.d, selery/node/plugin/package.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/plugin/package.d, selery/hub/plugin/package.d)
  */
-module selery.node.plugin;
+module selery.hub.plugin;
 
 public import sel.format : Format;
 
-public import selery.about : Software, tick_t, block_t, item_t;
-public import selery.command.util : CommandSender, WorldCommandSender, SingleEnum, SnakeCaseEnum, Ranged, Position, Target;
+public import selery.hub.plugin.plugin : HubPlugin, start;
+public import selery.hub.server : HubServer;
 public import selery.lang : Translation;
-public import selery.node.plugin.plugin : NodePlugin, start, stop, event, global, inherit, cancel, command, op, permission, unimplemented, hidden;
-public import selery.node.server : NodeServer, ServerCommandSender;
-public import selery.player.player : Player;
-public import selery.util.util;
-public import selery.world.world : World;

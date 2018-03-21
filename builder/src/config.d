@@ -414,6 +414,22 @@ auto loadConfig(ConfigType type, ref string[] args) {
 
 }
 
+class ReleaseFiles : Files {
+
+	public this(string assets, string temp) {
+		super(assets, temp);
+	}
+	
+	public override inout bool hasPluginAsset(Plugin plugin, string file) {
+		return exists(this.assets ~ "plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ file);
+	}
+	
+	public override inout void[] readPluginAsset(Plugin plugin, string file) {
+		return read(this.assets ~ "plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ file);
+	}
+
+}
+
 class CompressedFiles : Files {
 	
 	private ZipArchive archive;

@@ -23,7 +23,7 @@
 module loader.hub;
 
 import selery.config : Config;
-import selery.hub.plugin : HubPluginOf;
+import selery.hub.plugin.plugin : HubPluginOf;
 import selery.hub.server : HubServer;
 
 import config : ConfigType;

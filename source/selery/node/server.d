@@ -336,11 +336,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		}
 
 		// create resource pack files
-		string[] textures = []; // ordered from least prioritised to most prioritised
-		foreach_reverse(_plugin ; this.n_plugins) {
-			auto plugin = cast()_plugin;
-			if(plugin.textures !is null) textures ~= plugin.textures;
-		}
+		/+string[] textures = []; // ordered from least prioritised to most prioritised
 		if(textures.length) {
 			
 			this.logger.log(Translation("startup.resourcePacks"));
@@ -358,7 +354,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			JavaPlayer.updateResourcePacks(rp.java2, rp.java3, ip.length ? ip : "127.0.0.1", port);
 			BedrockPlayer.updateResourcePacks(rp_uuid, rp.pocket1);
 
-		}
+		}+/
 
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast(NodePluginInfo)_plugin;
@@ -367,9 +363,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 				auto args = [
 					Format.green ~ plugin.name ~ Format.reset,
 					Format.white ~ (plugin.authors.length ? plugin.authors.join(Format.reset ~ ", " ~ Format.white) : "?") ~ Format.reset,
-					Format.white ~ plugin.vers
+					Format.white ~ plugin.version_[1..$]
 				];
-				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.authors.length ? ".author" : (!plugin.vers.startsWith("~") ? ".version" : "")), args));
+				this.logger.log(Translation("startup.plugin.enabled" ~ (plugin.version_.startsWith("v") ? ".version" : (plugin.authors.length ? ".author" : "")), args));
 			}
 		}
 		
@@ -384,7 +380,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		nodeInfo.max = this.config.node.maxPlayers; // 0 for unlimited, like in the config file
 		foreach(_plugin ; this.n_plugins) {
 			auto plugin = cast()_plugin;
-			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.id, plugin.name, plugin.vers);
+			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.id, plugin.name, plugin.version_);
 		}
 		if(this.lite) {
 			std.concurrency.send(cast()(cast(shared MessagePassingHandler)this.handler).hub, cast(shared)nodeInfo);

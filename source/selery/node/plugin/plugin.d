@@ -50,8 +50,8 @@ class NodePlugin {
 
 class NodePluginInfo : Plugin {
 	
-	public this(string name, string[] authors, string version_, bool main) {
-		super(name, authors, version_, main);
+	public this(string name, string path, string[] authors, string version_, bool main) {
+		super(name, path, authors, version_, main);
 	}
 	
 	abstract void load(shared NodeServer server);
@@ -60,8 +60,8 @@ class NodePluginInfo : Plugin {
 
 class NodePluginOf(T) : NodePluginInfo if(is(T == Object) || is(T : NodePlugin)) {
 
-	public this(string name, string[] authors, string version_) {
-		super(name, authors, version_, !is(T == Object));
+	public this(string name, string path, string[] authors, string version_) {
+		super(name, path, authors, version_, !is(T == Object));
 	}
 
 	public override void load(shared NodeServer server) {

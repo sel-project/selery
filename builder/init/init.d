@@ -314,14 +314,19 @@ int main(string[] args) {
 			if(plugin.single.length) {
 				plugin.version_ = "~single";
 			} else {
+				// try to get main file and class
 				foreach(string file ; dirEntries(plugin.path ~ "src", SpanMode.breadth)) {
 					if(file.isFile && file.endsWith(dirSeparator ~ "api.d")) {
 						plugin.api = true;
 						break;
 					}
 				}
+				if(exists(plugin.path ~ ".git") && isDir(plugin.path ~ ".git")) {
+					// try to get version using git
+					immutable tag = executeShell("cd " ~ plugin.path ~ " && git describe --tags").output.strip; //TODO do not use &&
+					if(tag.startsWith("v")) plugin.version_ = tag;
+				}
 			}
-			//TODO get version using `git describe --tags`
 			info[plugin.name] = plugin;
 		} else {
 			throw new Exception("Plugin '" ~ plugin.name ~ " at " ~ plugin.path ~ " conflicts with a plugin with the same name at " ~ info[plugin.name].path);
@@ -384,9 +389,6 @@ int main(string[] args) {
 	];
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
-	
-	//test
-	//builder["dflags"] = ["-w", "-mcpu=cortex-a8", "-mtriple=arm-linux-gnueabihf"/*, "-float-abi=softfp"*/];
 		
 	string loads = "";
 	
@@ -415,6 +417,10 @@ int main(string[] args) {
 					foreach(name, d; dptr.table) {
 						if(name.startsWith("dub:")) {
 							sub["dependencies"][name[4..$]] = toJSON(d);
+						} else if(name == "dub" && d.type == TOML_TYPE.TABLE) {
+							foreach(dname, dd; d.table) {
+								sub["dependencies"][dname] = toJSON(dd);
+							}
 						} else {
 							//TODO depends on another plugin
 							sub["dependencies"][":" ~ name] = "*";
@@ -428,7 +434,7 @@ int main(string[] args) {
 				builder["subPackages"].array ~= JSONValue(sub);
 				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
+			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, `" ~ value.path ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
 			auto conditions = "conditions" in value.toml;
 			if(conditions && conditions.type == TOML_TYPE.TABLE) {
 				string[] conds;

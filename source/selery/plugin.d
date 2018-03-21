@@ -43,69 +43,41 @@ class Plugin {
 
 	public immutable uint id;
 
-	protected string _name;
-	protected string[] _authors;
-	protected string _version;
-	protected bool _api;
-	public bool _main;
+	/**
+	 * Plugin's name as declared in plugin.toml.
+	 */
+	public immutable string name;
+
+	/**
+	 * Plugin's absolute path, used to load plugin'a assets.
+	 */
+	public immutable string path;
+
+	/**
+	 * Plugin's authors as declared in plugin.toml.
+	 */
+	public immutable string[] authors;
+
+	/**
+	 * Plugin's version.
+	 */
+	public immutable string version_;
+
+	/**
+	 * Indicates whether the plugin has a main class.
+	 */
+	public immutable bool main;
 	
 	public void delegate()[] onstart, onreload, onstop;
 
-	public this(string name, string[] authors, string version_, bool main) {
+	public this(string name, string path, string[] authors, string version_, bool main) {
+		assert(version_.length);
 		this.id = atomicOp!"+="(_id, 1);
-		_name = name;
-		_authors = authors;
-		_version = version_;
-		_main = main;
-	}
-	
-	/**
-	 * Gets the plugin's name as indicated in the plugin's
-	 * package.json file.
-	 */
-	public pure nothrow @property @safe @nogc string name() {
-		return _name;
-	}
-	
-	/**
-	 * Gets the plugin's authors as indicated in the plugin's
-	 * package.json file.
-	 */
-	public pure nothrow @property @safe @nogc string[] authors() {
-		return _authors;
-	}
-	
-	/**
-	 * Gets the plugin's version as indicated in the plugin's
-	 * package.json file.
-	 * This should be in major.minor[.revision] [alpha|beta] format.
-	 */
-	public pure nothrow @property @safe @nogc string vers() {
-		return _version;
-	}
-
-	/**
-	 * Gets the absolute location of the plugin's language files.
-	 * Returns: null if the plugin has no language files, a path otherwise
-	 */
-	deprecated public pure nothrow @property @safe @nogc string languages() {
-		return null;
-	}
-
-	/**
-	 * Gets the absolute location of the plugin's textures.
-	 * Returns: null if the plugin has no textures, a path otherwise
-	 */
-	deprecated public pure nothrow @property @safe @nogc string textures() {
-		return null;
-	}
-
-	/**
-	 * Indicates whether the plugin has an entry point or it is just used
-	 * by other plugins (using APIs).
-	 */
-	public pure nothrow @property @safe @nogc bool main() {
-		return _main;
+		this.name = name;
+		this.path = path;
+		this.authors = authors.idup;
+		this.version_ = version_;
+		this.main = main;
 	}
 	
 }

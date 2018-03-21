@@ -24,9 +24,9 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/plugin.d, selery/hub/plugin.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/plugin/plugin.d, selery/hub/plugin/plugin.d)
  */
-module selery.hub.plugin;
+module selery.hub.plugin.plugin;
 
 import std.traits : hasUDA, Parameters;
 
@@ -44,8 +44,8 @@ class HubPlugin {
 
 class HubPluginInfo : Plugin {
 
-	public this(string name, string[] authors, string version_, bool main) {
-		super(name, authors, version_, main);
+	public this(string name, string path, string[] authors, string version_, bool main) {
+		super(name, path, authors, version_, main);
 	}
 
 	abstract void load(shared HubServer server);
@@ -54,8 +54,8 @@ class HubPluginInfo : Plugin {
 
 class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 	
-	public this(string name, string[] authors, string version_) {
-		super(name, authors, version_, !is(T == Object));
+	public this(string name, string path, string[] authors, string version_) {
+		super(name, path, authors, version_, !is(T == Object));
 	}
 	
 	public override void load(shared HubServer server) {

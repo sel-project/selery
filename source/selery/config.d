@@ -371,11 +371,11 @@ class Files {
 	}
 
 	public inout bool hasPluginAsset(Plugin plugin, string file) {
-		return exists("plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ "assets" ~ dirSeparator ~ file);
+		return exists(plugin.path ~ "assets" ~ dirSeparator ~ file);
 	}
 
 	public inout void[] readPluginAsset(Plugin plugin, string file) {
-		return read("plugins" ~ dirSeparator ~ plugin.name ~ dirSeparator ~ "assets" ~ dirSeparator ~ file);
+		return read(plugin.path ~ "assets" ~ dirSeparator ~ file);
 	}
 	
 	/**
