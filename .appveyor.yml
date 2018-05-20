@@ -125,7 +125,7 @@ before_build:
   - '"%compilersetup%" %compilersetupargs%'
   - mkdir plugins
   - git clone https://github.com/selery-plugins/vanilla.git plugins/vanilla
-  - git clone https://github.com/selery-plugins/web-view.git plugins/web-view
+#  - git clone https://github.com/selery-plugins/web-view.git plugins/web-view
 
 build_script:
   - build.bat -c %DC% %CONFIGURATION% -a %Darch% hub

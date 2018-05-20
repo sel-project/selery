@@ -142,7 +142,7 @@ class Inventory {
 	 * ---
 	 */
 	public @safe this(Slot[] slots ...) {
-		this.n_slots = slots;
+		this.n_slots = slots.dup;
 	}
 	
 	/// ditto

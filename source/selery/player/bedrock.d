@@ -300,7 +300,7 @@ private class BedrockPlayerOf(uint __protocol) : BedrockPlayer {
 			if(!slot.empty && slot.item.pocketCompound !is null) {
 				stream.writeTag(slot.item.pocketCompound);
 			}
-			return Types.Slot(slot.item.bedrockId, slot.item.bedrockMeta << 8 | slot.count, stream.buffer);
+			return Types.Slot(slot.item.bedrockId, slot.item.bedrockMeta << 8 | slot.count, stream.buffer.data!ubyte);
 		}
 	}
 
@@ -561,7 +561,7 @@ private class BedrockPlayerOf(uint __protocol) : BedrockPlayer {
 				stream.writeTag(compound);
 			}
 		}
-		data.blockEntities = stream.buffer;
+		data.blockEntities = stream.buffer.data!ubyte;
 
 		this.sendPacket(new Play.FullChunkData(chunk.position.tuple, data));
 
@@ -828,7 +828,7 @@ private class BedrockPlayerOf(uint __protocol) : BedrockPlayer {
 		if(tile.pocketCompound !is null) {
 			auto stream = new NetworkStream!(Endian.littleEndian)();
 			stream.writeTag(tile.pocketCompound);
-			packet.nbt = stream.buffer;
+			packet.nbt = stream.buffer.data!ubyte;
 		} else {
 			packet.nbt ~= NBT_TYPE.END;
 		}

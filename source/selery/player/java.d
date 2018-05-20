@@ -230,7 +230,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 			if(slot.item.javaCompound !is null) {
 				auto stream = new ClassicStream!(Endian.bigEndian)();
 				stream.writeTag(cast(Tag)slot.item.javaCompound);
-				ret.nbt = stream.buffer;
+				ret.nbt = stream.buffer.data!ubyte;
 			}
 			return ret;
 		}
@@ -468,7 +468,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 				stream.writeTag(compound);
 			}
 		}
-		packet.tiles = stream.buffer;
+		packet.tiles = stream.buffer.data!ubyte;
 
 		this.sendPacket(packet);
 
@@ -688,7 +688,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 			compound["y"] = new Int(tile.position.y);
 			compound["z"] = new Int(tile.position.z);
 			stream.writeTag(compound);
-			packet.nbt = stream.buffer;
+			packet.nbt = stream.buffer.data!ubyte;
 		} else {
 			packet.nbt ~= 0;
 		}
