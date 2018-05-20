@@ -258,16 +258,14 @@ int main(string[] args) {
 
 	}
 
-	Info[string] info;
+	Plugin[string] info;
 	
 	foreach(path, value; plugs) {
-		Info plugin;
+		Plugin plugin;
 		plugin.name = value["name"].str;
 		checkName(plugin.name);
 		if(path.isFile) {
 			plugin.single = buildNormalizedPath(absolutePath(path));
-		} else {
-			if(!path.endsWith(dirSeparator)) path ~= dirSeparator;
 		}
 		plugin.path = buildNormalizedPath(absolutePath(path));
 		if(plugin.name !in info) {
@@ -295,26 +293,41 @@ int main(string[] args) {
 			}
 			auto target = "target" in value;
 			if(target && target.type == TOML_TYPE.STRING) {
-				plugin.target = target.str;
+				switch(target.str.toLower) {
+					case "default":
+						plugin.target = Type.default_;
+						break;
+					case "hub":
+						plugin.target = Type.hub;
+						break;
+					case "node":
+						plugin.target = Type.node;
+						break;
+					default:
+						break;
+				}
 			}
-			auto main = "main" in value;
-			if(main && main.type == TOML_TYPE.STRING) {
-				string[] spl = main.str.split(".");
-				if(plugin.single.length) {
-					plugin.mod = spl[0];
-					plugin.main = main.str;
-				} else {
-					immutable m = main.str.lastIndexOf(".");
-					if(m != -1) {
-						plugin.mod = main.str[0..m];
-						plugin.main = main.str;
+			foreach(mname, mvalue; (plugin.target == Type.default_ ? ["hub-main": Type.hub, "node-main": Type.node] : ["main": plugin.target])) {
+				auto mptr = mname in value;
+				if(mptr && mptr.type == TOML_TYPE.STRING) {
+					Main main;
+					string[] spl = mptr.str.split(".");
+					if(plugin.single.length) {
+						main.module_ = spl[0];
+						main.main = mptr.str;
+					} else {
+						immutable m = mptr.str.lastIndexOf(".");
+						if(m != -1) {
+							main.module_ = mptr.str[0..m];
+							main.main = mptr.str;
+						}
 					}
+					plugin.main[mvalue] = main;
 				}
 			}
 			if(plugin.single.length) {
 				plugin.version_ = "~single";
 			} else {
-				// try to get main file and class
 				foreach(string file ; dirEntries(plugin.path ~ "src", SpanMode.breadth)) {
 					if(file.isFile && file.endsWith(dirSeparator ~ "api.d")) {
 						plugin.api = true;
@@ -434,18 +447,21 @@ int main(string[] args) {
 				builder["subPackages"].array ~= JSONValue(sub);
 				builder["dependencies"][":" ~ value.name] = "*";
 			}
-			string load = "ret ~= new PluginOf!(" ~ (value.main.length ? value.main : "Object") ~ ")(`" ~ value.name ~ "`, `" ~ value.path ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
-			auto conditions = "conditions" in value.toml;
-			if(conditions && conditions.type == TOML_TYPE.TABLE) {
-				string[] conds;
-				foreach(key, value; conditions.table) {
-					conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.type == TOML_TYPE.TRUE) ~ ")";
+			foreach(string mname; value.target==Type.default_ ? [Type.hub, Type.node] : [value.target]) {
+				auto main = mname in value.main;
+				string load = "ret ~= new PluginOf!(" ~ (main ? main.main : "Object") ~ ")(`" ~ value.name ~ "`, `" ~ value.path ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
+				auto conditions = "conditions" in value.toml;
+				if(conditions && conditions.type == TOML_TYPE.TABLE) {
+					string[] conds;
+					foreach(key, value; conditions.table) {
+						conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.type == TOML_TYPE.TRUE) ~ ")";
+					}
+					load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
 				}
-				load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+				if(value.single.length) load = "static if(is(" ~ value.main[Type.default_].main ~ " == class)){ " ~ load ~ " }";
+				load = "static if(target == `" ~ mname ~ "`){ " ~ (main ? "static import " ~ main.module_ ~ "; " : "") ~ load ~ " }";
+				loads ~= "\t" ~ load ~ "\n";
 			}
-			if(value.single.length) load = "static if(is(" ~ value.main ~ " == class)){ " ~ load ~ " }";
-			load = "static if(target == `" ~ value.target ~ "`){ " ~ (value.main.length ? "static import " ~ value.mod ~ "; " : "") ~ load ~ " }";
-			loads ~= "\t" ~ load ~ "\n";
 			json ~= value.toJSON();
 			if(portable) {
 				// copy plugins/$plugin/assets into assets/plugins/$plugin
@@ -514,44 +530,54 @@ void writeDiff(string location, const void[] data) {
 	if(!exists(location) || read(location) != data) write(location, data);
 }
 
-struct Info {
+struct Plugin {
 
-	public bool enabled = true;
+	bool enabled = true;
+	bool api = false;
 
-	public TOMLDocument toml;
-
-	public string single;
+	TOMLDocument toml;
 	
-	public size_t priority = 1;
-
-	public bool api;
-
-	public string name = "";
-	public string[] authors = [];
-	public string version_ = "~local";
+	string single;
 	
-	public string target = "node";
+	size_t priority = 5;
+	string path;
+
+	string name;
+	string[] authors;
+	string version_ = "~local";
 	
-	public string path;
-	public string mod;
-	public string main;
+	Type target = Type.default_;
+	Main[Type] main;
 	
 	JSONValue toJSON() {
 		JSONValue[string] ret;
+		ret["path"] = path;
 		ret["name"] = name;
 		ret["authors"] = authors;
 		ret["version"] = version_;
 		ret["target"] = target;
-		if(main.length) ret["main"] = main;
+		if(main.length) {
+			JSONValue[string] mret;
+			foreach(key, value; main) {
+				mret[key] = value.toJSON();
+			}
+			ret["main"] = mret;
+		}
 		return JSONValue(ret);
 	}
-
+	
 }
 
-struct Plugin {
+struct Main {
 
-	string name;
-	string[] authors;
-	string version_;
+	string module_;
+	string main;
 	
+	JSONValue toJSON() {
+		return JSONValue([
+			"module": module_,
+			"main": main
+		]);
+	}
+
 }

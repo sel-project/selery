@@ -22,7 +22,8 @@
  */
 module starter;
 
-import std.algorithm : canFind;
+import std.algorithm : canFind, filter;
+import std.array : array;
 import std.conv : to;
 import std.json : JSONValue, parseJSON;
 import std.stdio : write, writeln;
@@ -46,7 +47,8 @@ void start(ConfigType type, ref string[] args, void delegate(Config) startFuncti
 		json["software"] = Software.toJSON();
 		json["system"] = ["os": JSONValue(os.to!string), "endian": JSONValue(endian.to!string), "bits": JSONValue(size_t.sizeof*8)];
 		json["build"] = ["d": ["date": JSONValue(__DATE__), "time": JSONValue(__TIME__), "timestamp": JSONValue(__TIMESTAMP__), "vendor": JSONValue(__VENDOR__), "version": JSONValue(__VERSION__)]];
-		json["plugins"] = parseJSON(info);
+		if(type == ConfigType.default_) json["plugins"] = parseJSON(info);
+		else json["plugins"] = parseJSON(info).array.filter!(a => a["target"].str == type).array;
 		static if(__traits(compiles, import("build_git.json"))) json["build"]["git"] = parseJSON(import("build_git.json"));
 		static if(__traits(compiles, import("build_ci.json"))) json["build"]["ci"] = parseJSON(import("build_ci.json"));
 		debug json["build"]["debug"] = true;
