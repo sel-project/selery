@@ -24,9 +24,9 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler/handler.d, selery/hub/handler/handler.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler.d, selery/hub/handler.d)
  */
-module selery.hub.handler.handler;
+module selery.hub.handler;
 
 import std.json : JSONValue;
 import std.socket : SocketException;
@@ -40,8 +40,7 @@ import sel.server.util : ServerInfo, GenericServer;
 
 import selery.about;
 import selery.config : Config;
-import selery.hub.handler.hncom : HncomHandler, LiteNode;
-import selery.hub.handler.rcon : RconHandler;
+import selery.hub.hncom : HncomHandler, LiteNode;
 import selery.hub.server : HubServer;
 import selery.lang : Translation;
 import selery.util.thread : SafeThread;
@@ -103,11 +102,6 @@ class Handler {
 			if(java) {
 				auto s = new shared JavaServerImpl!supportedJavaProtocols(info, server);
 				startGenericServer(s, "java", java.addresses);
-			}
-
-			if(rcon) {
-				auto s = new shared RconHandler(server);
-				startGenericServer(s, "rcon", rconAddresses);
 			}
 
 		}

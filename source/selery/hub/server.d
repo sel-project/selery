@@ -67,9 +67,8 @@ import selery.about;
 import selery.config : Config;
 import selery.event.event : EventListener;
 import selery.event.hub : HubServerEvent, LogEvent;
-import selery.hub.handler.handler : Handler;
-import selery.hub.handler.hncom : AbstractNode;
-import selery.hub.handler.rcon : RconClient;
+import selery.hub.handler : Handler;
+import selery.hub.hncom : AbstractNode;
 import selery.hub.player : PlayerSession;
 import selery.hub.plugin.plugin : HubPluginInfo;
 import selery.lang : Translation;
@@ -131,8 +130,6 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	private shared AbstractNode[] main_nodes;
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
-
-	private shared RconClient[uint] rcons;
 	
 	private shared PlayerSession[uint] _players;
 
@@ -211,21 +208,6 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		foreach(plugin ; _plugins) {
 			foreach(del ; plugin.onstart) del();
 		}
-
-		// open web admin GUI
-		/+if(config.hub.webAdminOpen) {
-			import std.process : Pid;
-			Pid pid = null;
-			foreach(address ; config.hub.webAdminAddresses) {
-				if(address.ip == "127.0.0.1" || address.ip == "::1") {
-					pid = startWebAdmin(address.port);
-					break;
-				}
-			}
-			if(pid is null && config.hub.webAdminAddresses.length) {
-				pid = startWebAdmin(config.hub.webAdminAddresses[0].port);
-			}
-		}+/
 
 		this.started = milliseconds;
 
@@ -597,17 +579,6 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		//TODO select player and update if changed
 	}
 
-	public synchronized shared void add(shared RconClient rcon) {
-		this.logger.log(Format.green, "+ ", Format.reset, rcon.toString());
-		this.rcons[rcon.id] = rcon;
-	}
-
-	public synchronized shared void remove(shared RconClient rcon) {
-		if(this.rcons.remove(rcon.id)) {
-			this.logger.log(Format.red, "- ", Format.reset, rcon.toString());
-		}
-	}
-
 	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {
 		auto ptr = id in this._players;
 		return ptr ? *ptr : null;
@@ -636,29 +607,8 @@ private class ServerLogger : Logger {
 	}
 
 	public void logWith(Message[] messages, int commandId, int worldId) {
-		//TODO call event
 		(cast()this.server).eventListener.callEventIfExists!LogEvent(this.server, messages, commandId, worldId);
 		super.logImpl(messages);
-		if(this.server.rcons.length) {
-			Appender!string appender;
-			foreach(message ; messages) {
-				final switch(message.type) {
-					case Message.FORMAT:
-						appender.put(cast(string)message.format);
-						break;
-					case Message.TEXT:
-						appender.put(message.text);
-						break;
-					case Message.TRANSLATION:
-						appender.put(this.server.lang.translate(message.translation.translatable.default_, message.translation.parameters));
-						break;
-				}
-			}
-			immutable log = appender.data;
-			foreach(rcon ; this.server.rcons) {
-				rcon.consoleMessage(log, commandId);
-			}
-		}
 	}
 	
 }

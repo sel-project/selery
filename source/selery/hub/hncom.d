@@ -24,9 +24,9 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/handler/hncom.d, selery/hub/handler/hncom.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hub/hncom.d, selery/hub/hncom.d)
  */
-module selery.hub.handler.hncom;
+module selery.hub.hncom;
 
 import core.atomic : atomicOp;
 import core.thread : Thread;

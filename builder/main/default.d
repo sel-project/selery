@@ -32,7 +32,7 @@ import std.string : indexOf, lastIndexOf, replace;
 
 import selery.config : Config;
 import selery.crash : logCrash;
-import selery.hub.handler.hncom : LiteNode;
+import selery.hub.hncom : LiteNode;
 import selery.hub.plugin.plugin : HubPluginOf;
 import selery.hub.server : HubServer;
 import selery.node.handler : TidAddress;

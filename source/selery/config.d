@@ -129,12 +129,6 @@ class Config {
 		
 		string favicon = "favicon.png";
 		
-		bool rcon = false;
-		
-		string rconPassword;
-		
-		Address[] rconAddresses = [Address("0.0.0.0", 25575)];
-		
 		JSONValue social;
 		
 		string[] acceptedNodes;
@@ -146,15 +140,6 @@ class Config {
 		ushort hncomPort = 28232;
 
 		public this() {
-			
-			string randomPassword() {
-				char[] password = new char[uniform!"[]"(8, 12)];
-				foreach(ref char c ; password) {
-					c = uniform!"[]"('a', 'z');
-					if(!uniform!"[]"(0, 4)) c -= 32;
-				}
-				return password.idup;
-			}
 
 			if(lang !is null) {
 				this.displayName = this.java.motd = this.bedrock.motd = (){
@@ -166,8 +151,6 @@ class Config {
 					}
 				}();
 			}
-
-			this.rconPassword = randomPassword();
 
 			this.acceptedNodes ~= getAddress("localhost")[0].toAddrString();
 		}

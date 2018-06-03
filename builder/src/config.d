@@ -228,9 +228,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(query, "query-enabled");
 				set(serverIp, "server-ip");
 				set(favicon, "favicon");
-				set(rcon, "rcon", "enabled");
-				set(rconPassword, "rcon", "password");
-				set(rconAddresses, "rcon", "addresses");
 				set(acceptedNodes, "hncom", "accepted-addresses");
 				set(hncomPassword, "hncom", "password");
 				set(maxNodes, "hncom", "node-limit");
@@ -365,12 +362,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				foreach(command ; Commands) {
 					file ~= command ~ " = " ~ to!string(mixin(command ~ "Command")) ~ newline;
 				}
-			}
-			if(isHub) with(this.hub) {
-				file ~= newline ~ "[rcon]" ~ newline;
-				file ~= "enabled = " ~ to!string(rcon) ~ newline;
-				file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
-				file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
 			}
 			if(type == ConfigType.hub) with(this.hub) {
 				file ~= newline ~ "[hncom]" ~ newline;
