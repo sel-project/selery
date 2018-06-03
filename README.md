@@ -44,7 +44,7 @@ The build scripts supports some useful options that can be viewed by launching i
 | OS      | Arch   | DMD (debug)                      | LDC (debug)                      | LDC (release)                      |
 |--------:|:------:|:--------------------------------:|:--------------------------------:|:----------------------------------:|
 | Windows | x86-64 | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
-| Windows | x86    |                                  | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
+| Windows | x86    | [![][win86-dmd-debug]][appveyor] | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
 | Linux   | x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
 | Linux   | x86    |                                  | [![][lin86-ldc-debug]][travis]   | [![][lin86-ldc-release]][travis]   |
 | OS X    | x86-64 | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
@@ -76,6 +76,7 @@ selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 [win64-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_dmd_debug.svg
 [win64-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc2_debug.svg
 [win64-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x64_ldc2_release.svg
+[win86-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_dmd_debug.svg
 [win86-dmd-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_dmd_debug.svg
 [win86-ldc-debug]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc2_debug.svg
 [win86-ldc-release]: https://sel-bot.github.io/status/sel-project/selery/windows_x86_ldc2_release.svg
