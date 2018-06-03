@@ -71,7 +71,7 @@ install:
               $env:lower_platform = "x64";
             }
             if($env:DC -eq "dmd"){
-              $version = (appveyor DownloadFile "http://downloads.dlang.org/releases/LATEST").toString();
+              $version = (curl -L "http://downloads.dlang.org/releases/LATEST").toString();
               $env:DVersion = $version;
               $env:toolchain = "msvc";
               appveyor DownloadFile "http://downloads.dlang.org/releases/2.x/$($version)/dmd.$($version).windows.7z" -FileName "c:\dmd.7z";
@@ -81,7 +81,7 @@ install:
               popd;
             }
             elseif($env:DC -eq "ldc"){
-              $version = (appveyor DownloadFile "https://ldc-developers.github.io/LATEST").toString().replace("`n","").replace("`r","");
+              $version = (curl -L "https://ldc-developers.github.io/LATEST").toString().replace("`n","").replace("`r","");
               $env:DVersion = $version;
               $env:toolchain = "msvc";
               appveyor DownloadFile "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-$($env:lower_platform).7z" -FileName "c:\ldc.7z";
