@@ -80,7 +80,7 @@ install:
               popd;
             }
             elseif($env:DC -eq "ldc"){
-              appveyor DownloadFile "https://ldc-developers.github.io/LATEST"
+              appveyor DownloadFile "https://ldc-developers.github.io/LATEST" -FileName LATEST
               $version = (Get-Content -Path LATEST).toString().replace("`n","").replace("`r","");
               appveyor DownloadFile "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-$($env:lower_platform).7z" -FileName "c:\ldc.7z";
               echo "finished.";

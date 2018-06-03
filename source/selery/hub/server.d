@@ -65,6 +65,8 @@ import sel.server.util : ServerInfo, PlayerHandler = Handler;
 
 import selery.about;
 import selery.config : Config;
+import selery.event.event : EventListener;
+import selery.event.hub : HubServerEvent, LogEvent;
 import selery.hub.handler.handler : Handler;
 import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
@@ -99,7 +101,7 @@ struct Icon {
 
 }
 
-class HubServer : PlayerHandler, Server {
+class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 
 	public immutable bool lite;
 
@@ -107,6 +109,8 @@ class HubServer : PlayerHandler, Server {
 	private shared ulong uuid_count;
 
 	private immutable ulong started;
+
+	public EventListener!HubServerEvent eventListener;
 
 	private shared Config _config;
 	private shared ServerLogger _logger;
@@ -141,6 +145,8 @@ class HubServer : PlayerHandler, Server {
 		debug Thread.getThis().name = "hub_server";
 
 		this.lite = lite;
+
+		this.eventListener = new EventListener!HubServerEvent();
 
 		this._info = new shared ServerInfo();
 		if(config.hub.query) {
@@ -631,6 +637,7 @@ private class ServerLogger : Logger {
 
 	public void logWith(Message[] messages, int commandId, int worldId) {
 		//TODO call event
+		(cast()this.server).eventListener.callEventIfExists!LogEvent(this.server, messages, commandId, worldId);
 		super.logImpl(messages);
 		if(this.server.rcons.length) {
 			Appender!string appender;

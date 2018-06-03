@@ -2,8 +2,8 @@
 
 The parent/children model for worlds has been replaced by the group system.
 
-The hub now supports plugins. There are no events yet but the @start attribute
-works the same way it does on the node's plugins.
+The hub now supports plugins that can execute functions on start (with the @start
+attribute) and register events like it is done in the node.
 Hub's plugins must specify `target = "hub"` in their `plugin.toml` or add both
 node-main and hub-main in case the plugin is created for both node and hub.
 
