@@ -68,14 +68,12 @@ import selery.config : Config;
 import selery.hub.handler.handler : Handler;
 import selery.hub.handler.hncom : AbstractNode;
 import selery.hub.handler.rcon : RconClient;
-import selery.hub.handler.webadmin : WebAdminClient;
 import selery.hub.player : PlayerSession;
 import selery.hub.plugin.plugin : HubPluginInfo;
 import selery.lang : Translation;
 import selery.log : Message, Logger;
 import selery.plugin : Plugin;
 import selery.server : Server;
-import selery.util.portable : startWebAdmin;
 import selery.util.thread;
 import selery.util.util : milliseconds;
 
@@ -130,7 +128,6 @@ class HubServer : PlayerHandler, Server {
 	private shared AbstractNode[string] nodesNames;
 	private shared size_t[string] n_plugins;
 
-	private shared WebAdminClient[uint] webAdmins;
 	private shared RconClient[uint] rcons;
 	
 	private shared PlayerSession[uint] _players;
@@ -210,7 +207,7 @@ class HubServer : PlayerHandler, Server {
 		}
 
 		// open web admin GUI
-		if(config.hub.webAdminOpen) {
+		/+if(config.hub.webAdminOpen) {
 			import std.process : Pid;
 			Pid pid = null;
 			foreach(address ; config.hub.webAdminAddresses) {
@@ -222,7 +219,7 @@ class HubServer : PlayerHandler, Server {
 			if(pid is null && config.hub.webAdminAddresses.length) {
 				pid = startWebAdmin(config.hub.webAdminAddresses[0].port);
 			}
-		}
+		}+/
 
 		this.started = milliseconds;
 
@@ -594,17 +591,6 @@ class HubServer : PlayerHandler, Server {
 		//TODO select player and update if changed
 	}
 
-	public synchronized shared void add(WebAdminClient webAdmin) {
-		this.logger.log(Format.green, "+ ", Format.reset, webAdmin.toString());
-		this.webAdmins[webAdmin.id] = cast(shared)webAdmin;
-	}
-
-	public synchronized shared void remove(WebAdminClient webAdmin) {
-		if(this.webAdmins.remove(webAdmin.id)) {
-			this.logger.log(Format.red, "- ", Format.reset, webAdmin.toString());
-		}
-	}
-
 	public synchronized shared void add(shared RconClient rcon) {
 		this.logger.log(Format.green, "+ ", Format.reset, rcon.toString());
 		this.rcons[rcon.id] = rcon;
@@ -644,6 +630,7 @@ private class ServerLogger : Logger {
 	}
 
 	public void logWith(Message[] messages, int commandId, int worldId) {
+		//TODO call event
 		super.logImpl(messages);
 		if(this.server.rcons.length) {
 			Appender!string appender;
@@ -664,9 +651,6 @@ private class ServerLogger : Logger {
 			foreach(rcon ; this.server.rcons) {
 				rcon.consoleMessage(log, commandId);
 			}
-		}
-		foreach(webAdmin ; this.server.webAdmins) {
-			(cast()webAdmin).sendLog(messages, commandId, worldId);
 		}
 	}
 	

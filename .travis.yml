@@ -35,7 +35,9 @@ deploy:
 before_install:
   - chmod +x build.sh
   - mkdir plugins
+#  - git clone https://github.com/selery-plugins/rcon.git plugins/rcon
   - git clone https://github.com/selery-plugins/vanilla.git plugins/vanilla
+#  - git clone https://github.com/selery-plugins/web-admin.git plugins/web-admin
   - git clone https://github.com/selery-plugins/web-view.git plugins/web-view
 
 script:

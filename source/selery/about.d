@@ -34,7 +34,6 @@ import std.json : JSONValue;
 import std.string : toLower, split, join, startsWith;
 import std.typetuple : TypeTuple;
 
-
 alias suuid_t = immutable(ubyte)[17];
 
 alias tick_t = size_t;
@@ -42,7 +41,6 @@ alias tick_t = size_t;
 alias block_t = ushort;
 
 alias item_t = size_t;
-
 
 /**
  * Informations about the software, like name, codename,

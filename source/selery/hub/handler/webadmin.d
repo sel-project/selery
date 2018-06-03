@@ -28,6 +28,8 @@
  */
 module selery.hub.handler.webadmin;
 
+version(Test):
+
 import core.atomic : atomicOp;
 import core.thread : Thread;
 

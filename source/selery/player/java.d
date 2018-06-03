@@ -30,7 +30,7 @@ module selery.player.java;
 
 import std.algorithm : sort, min, canFind, clamp, countUntil;
 import std.conv : to;
-import std.digest.digest : toHexString;
+import std.digest : toHexString;
 import std.digest.sha : sha1Of;
 import std.json : JSONValue;
 import std.math : abs, log2, ceil;

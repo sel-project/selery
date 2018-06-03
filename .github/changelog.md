@@ -4,7 +4,18 @@ The parent/children model for worlds has been replaced by the group system.
 
 The hub now supports plugins. There are no events yet but the @start attribute
 works the same way it does on the node's plugins.
-Hub's plugins must specify `target = "hub"` in their `plugin.toml`.
+Hub's plugins must specify `target = "hub"` in their `plugin.toml` or add both
+node-main and hub-main in case the plugin is created for both node and hub.
+
+Some features has been removed and replaced by plugins, included in the ci-built
+releases:
+- [web-view](https://github.com/selery-plugins/web-view)
+- [web-admin](https://github.com/selery-plugins/web-admin)
+- [rcon](https://github.com/selery-plugins/rcon)
+- [commands](https://github.com/selery-plugins/vanilla) (this plugin will also contain more vanilla-like features)
+
+Plugins' language files are now located in the assets/lang folder in the plugin's
+directory instead of in the lang folder.
 
 The `--about` command now prints pretty-printed JSON by default (use `--min`
 to print minified JSON) and has informations about the loaded plugins, git

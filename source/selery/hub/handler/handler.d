@@ -42,7 +42,6 @@ import selery.about;
 import selery.config : Config;
 import selery.hub.handler.hncom : HncomHandler, LiteNode;
 import selery.hub.handler.rcon : RconHandler;
-import selery.hub.handler.webadmin : WebAdminHandler;
 import selery.hub.server : HubServer;
 import selery.lang : Translation;
 import selery.util.thread : SafeThread;
@@ -109,11 +108,6 @@ class Handler {
 			if(rcon) {
 				auto s = new shared RconHandler(server);
 				startGenericServer(s, "rcon", rconAddresses);
-			}
-
-			if(webAdmin) {
-				auto s = new shared WebAdminHandler(server);
-				startGenericServer(s, "web_admin", webAdminAddresses);
 			}
 
 		}

@@ -214,10 +214,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 			
 			if(isHub) with(this.hub = new Config.Hub()) {
 			
-				// override default
-				webAdmin = type == ConfigType.default_;
-				webAdminOpen = portable;
-			
 				set(displayName, "display-name");
 				set(edu, "edu");
 				set(bedrock.enabled, "bedrock", "enabled");
@@ -235,11 +231,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				set(rcon, "rcon", "enabled");
 				set(rconPassword, "rcon", "password");
 				set(rconAddresses, "rcon", "addresses");
-				set(webAdmin, "web-admin", "enabled");
-				set(webAdminOpen, "web-admin", "open-on-startup");
-				set(webAdminAddresses, "web-admin", "addresses");
-				set(webAdminPassword, "web-admin", "password");
-				set(webAdminMaxClients, "web-admin", "max-clients");
 				set(acceptedNodes, "hncom", "accepted-addresses");
 				set(hncomPassword, "hncom", "password");
 				set(maxNodes, "hncom", "node-limit");
@@ -380,14 +371,6 @@ auto loadConfig(ConfigType type, ref string[] args) {
 				file ~= "enabled = " ~ to!string(rcon) ~ newline;
 				file ~= "password = \"" ~ rconPassword ~ "\"" ~ newline;
 				file ~= "addresses = " ~ addressString(rconAddresses) ~ newline;
-			}
-			if(isHub) with(this.hub) {
-				file ~= newline ~ "[web-admin]" ~ newline;
-				file ~= "enabled = " ~ to!string(webAdmin) ~ newline;
-				file ~= "open-on-startup = " ~ to!string(webAdminOpen) ~ newline;
-				file ~= "addresses = " ~ addressString(webAdminAddresses) ~ newline;
-				file ~= "password = \"" ~ webAdminPassword ~ "\"" ~ newline;
-				file ~= "max-clients = " ~ to!string(webAdminMaxClients) ~ newline;
 			}
 			if(type == ConfigType.hub) with(this.hub) {
 				file ~= newline ~ "[hncom]" ~ newline;

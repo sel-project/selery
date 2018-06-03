@@ -32,7 +32,7 @@ import std.algorithm : min, sort, canFind;
 import std.array : Appender;
 import std.base64 : Base64;
 import std.conv : to;
-import std.digest.digest : toHexString;
+import std.digest : toHexString;
 import std.digest.sha : sha256Of;
 import std.json;
 import std.string : split, join, startsWith, replace, strip, toLower;

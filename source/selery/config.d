@@ -134,16 +134,6 @@ class Config {
 		string rconPassword;
 		
 		Address[] rconAddresses = [Address("0.0.0.0", 25575)];
-
-		bool webAdmin = false;
-
-		bool webAdminOpen;
-
-		Address[] webAdminAddresses = [Address("127.0.0.1", 19134)];
-
-		string webAdminPassword = "";
-
-		uint webAdminMaxClients = 1;
 		
 		JSONValue social;
 		
