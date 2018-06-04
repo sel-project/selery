@@ -15,8 +15,6 @@ matrix:
   exclude:
     - DC: dmd
       configuration: release
-#    - DC: dmd
-#      platform: x86
 
 skip_tags: true
 
@@ -80,8 +78,8 @@ install:
               popd;
             }
             elseif($env:DC -eq "ldc"){
-              appveyor DownloadFile "https://ldc-developers.github.io/LATEST" -FileName LDC
-              $version = (Get-Content -Path LDC).toString().replace("`n","").replace("`r","");
+              appveyor DownloadFile "https://raw.githubusercontent.com/ldc-developers/ldc-developers.github.io/master/LATEST"
+              $version = (Get-Content -Path LDC).toString();
               appveyor DownloadFile "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-$($env:lower_platform).7z" -FileName "c:\ldc.7z";
               echo "finished.";
               pushd c:\\;
