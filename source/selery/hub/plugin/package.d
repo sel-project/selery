@@ -30,6 +30,7 @@ module selery.hub.plugin;
 
 public import sel.format : Format;
 
-public import selery.hub.plugin.plugin : HubPlugin, start;
+public import selery.event.hub;
+public import selery.hub.plugin.plugin : HubPlugin, start, event;
 public import selery.hub.server : HubServer;
 public import selery.lang : Translation;

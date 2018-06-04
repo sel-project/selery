@@ -74,6 +74,10 @@ class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 					static if(hasUDA!(F, stop) && Parameters!F.length == 0) {
 						this.onstop ~= mixin(del);
 					}
+					// event
+					static if(hasUDA!(F, event) && Parameters!F.length == 1) {
+						(cast()server.eventListener).addEventListener(mixin(del));
+					}
 				}
 			}
 		}
