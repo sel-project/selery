@@ -1,6 +1,7 @@
 ### 0.2.0
 
 The parent/children model for worlds has been replaced by the group system.
+Players cannot be transferred between worlds yet.
 
 The hub now supports plugins that can execute functions on start (with the @start
 attribute) and register events like it is done in the node.
@@ -10,8 +11,8 @@ node-main and hub-main in case the plugin is created for both node and hub.
 Some features has been removed and replaced by plugins, included in the ci-built
 releases:
 - [web-view](https://github.com/selery-plugins/web-view)
-- [web-admin](https://github.com/selery-plugins/web-admin)
-- [rcon](https://github.com/selery-plugins/rcon)
+- [web-admin](https://github.com/selery-plugins/web-admin) (not finished)
+- [rcon](https://github.com/selery-plugins/rcon) (not finished)
 - [commands](https://github.com/selery-plugins/vanilla) (this plugin will also contain more vanilla-like features)
 
 Plugins' language files are now located in the assets/lang folder in the plugin's
