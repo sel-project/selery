@@ -69,8 +69,8 @@ install:
               $env:lower_platform = "x64";
             }
             if($env:DC -eq "dmd"){
-              appveyor DownloadFile "http://downloads.dlang.org/releases/LATEST" -FileName DMD;
-              $version = (Get-Content -Path DMD).toString();
+              appveyor DownloadFile "http://downloads.dlang.org/releases/LATEST";
+              $version = (Get-Content -Path LATEST).toString();
               appveyor DownloadFile "http://downloads.dlang.org/releases/2.x/$($version)/dmd.$($version).windows.7z" -FileName "c:\dmd.7z";
               echo "finished.";
               pushd c:\\;
@@ -80,7 +80,6 @@ install:
             elseif($env:DC -eq "ldc"){
               appveyor DownloadFile "https://raw.githubusercontent.com/ldc-developers/ldc-developers.github.io/master/LATEST";
               $version = (Get-Content -Path LATEST).toString();
-              #$version = "1.9.0";
               appveyor DownloadFile "https://github.com/ldc-developers/ldc/releases/download/v$($version)/ldc2-$($version)-windows-$($env:lower_platform).7z" -FileName "c:\ldc.7z";
               echo "finished.";
               pushd c:\\;
