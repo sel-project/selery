@@ -39,8 +39,9 @@ import selery.item.items : Items;
 import selery.math.vector;
 import selery.player.player : Player;
 import selery.util.tuple : Tuple;
-import selery.util.util : roman;
 import selery.world.world : World;
+
+import roman : fromRoman;
 
 static import sul.effects;
 static import sul.items;
@@ -56,7 +57,7 @@ enum Residue {
 alias EffectInfo = Tuple!(sul.effects.Effect, "effect", uint, "duration", ubyte, "level", float, "probability");
 
 public EffectInfo effectInfo(sul.effects.Effect effect, uint duration, string level, float prob=1) {
-	return EffectInfo(effect, duration, (level.roman - 1) & 255, prob);
+	return EffectInfo(effect, duration, (level.fromRoman - 1) & 255, prob);
 }
 
 enum Potions : EffectInfo {

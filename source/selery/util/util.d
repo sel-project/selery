@@ -124,7 +124,7 @@ deprecated public @property @trusted ptrdiff_t array_index(T, E)(T value, E[] ar
  * assert("MMXCI".roman == 2016);
  * ---
  */
-public @property @safe uint roman(string str) {
+deprecated @property @safe uint roman(string str) {
 	return str.toUpper.romanImpl;
 }
 
@@ -200,7 +200,7 @@ public @property @safe T safe(T, E)(E value) {
 	}
 }
 
-class UnloggedException : Exception {
+deprecated class UnloggedException : Exception {
 	
 	public @safe this(E...)(E args) {
 		super(args);

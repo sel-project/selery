@@ -38,7 +38,6 @@ import selery.hub.server : HubServer;
 import selery.node.handler : TidAddress;
 import selery.node.plugin.plugin : NodePluginOf;
 import selery.node.server : NodeServer;
-import selery.util.util : UnloggedException;
 
 import config : ConfigType;
 import pluginloader;
@@ -57,8 +56,6 @@ void main(string[] args) {
 			new shared NodeServer(new TidAddress(cast()LiteNode.tid), config, loadPlugins!(NodePluginOf, "node")(config), args);
 			
 		} catch(LinkTerminated) {
-			
-		} catch(UnloggedException) {
 			
 		} catch(Throwable e) {
 

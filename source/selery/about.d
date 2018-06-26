@@ -99,7 +99,7 @@ const struct Software {
 	enum ubyte major = 0;
 	
 	/// ditto
-	enum ubyte minor = 2;
+	enum ubyte minor = 3;
 	
 	/// ditto
 	enum ubyte patch = 0;
@@ -127,6 +127,10 @@ const struct Software {
 	enum string display = name ~ "/" ~ displayVersion;
 
 	enum string simpleDisplay = name ~ " " ~ to!string(major) ~ "." ~ to!string(minor) ~ (patch != 0 ? "." ~ to!string(patch) : "");
+
+	// HNCOM
+
+	enum uint hncomProtocol = 10;
 	
 	/+/**
 	 * Version of the api used by the software. It's used to check the

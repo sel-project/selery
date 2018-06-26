@@ -33,7 +33,7 @@ import std.conv : to;
 import std.regex : ctRegex, replaceAll;
 import std.string : toLower, replace, startsWith;
 
-import selery.util.util : roman;
+import roman : fromRoman;
 
 static import sul.enchantments;
 public import sul.enchantments : Enchantments;
@@ -112,7 +112,7 @@ final class Enchantment {
 	}
 	
 	public @safe this(sul.enchantments.Enchantment enchantment, string level) {
-		this(enchantment, level.roman & 255);
+		this(enchantment, level.fromRoman & 255);
 	}
 	
 	/**
