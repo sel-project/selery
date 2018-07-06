@@ -24,7 +24,7 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/sel-hncom/sel/hncom/about.d, sel/hncom/about.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/hncom/about.d, selery/hncom/about.d)
  */
 module selery.hncom.about;
 
