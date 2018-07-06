@@ -63,7 +63,7 @@ void main(string[] args) {
 			
 		} finally {
 			
-			import std.c.stdlib : exit;
+			import core.stdc.stdlib : exit;
 			exit(1);
 			
 		}

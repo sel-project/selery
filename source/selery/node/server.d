@@ -476,7 +476,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			// perform suicide
 			executeShell("taskkill /PID " ~ to!string(getpid) ~ " /F");
 		} else {*/
-			import std.c.stdlib : exit;
+			import core.stdc.stdlib : exit;
 			exit(0);
 		//}
 

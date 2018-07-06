@@ -31,7 +31,6 @@ import selery.config : Config;
 import selery.crash : logCrash;
 import selery.node.plugin.plugin : NodePluginOf;
 import selery.node.server : NodeServer;
-import selery.util.util : UnloggedException;
 
 import config : ConfigType;
 import pluginloader;
@@ -49,15 +48,13 @@ void main(string[] args) {
 			
 		} catch(LinkTerminated) {
 			
-		} catch(UnloggedException) {
-			
 		} catch(Throwable e) {
 
 			logCrash("node", config.lang, e);
 			
 		} finally {
 			
-			import std.c.stdlib : exit;
+			import core.stdc.stdlib : exit;
 			exit(1);
 			
 		}

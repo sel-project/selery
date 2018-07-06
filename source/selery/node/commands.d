@@ -227,7 +227,7 @@ final class Commands {
 				sender.sendMessage(Format.red, Translation(Messages.stop.failed));
 			}
 		} else {
-			import std.c.stdlib : exit;
+			import core.stdc.stdlib : exit;
 			exit(0);
 		}
 	}

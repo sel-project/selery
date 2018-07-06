@@ -795,7 +795,7 @@ abstract class Player : Human, WorldCommandSender {
 	}
 
 	/// ditto
-	alias kick = this.disconnect;
+	alias kick = typeof(this).disconnect;
 
 	protected abstract void disconnectImpl(const Translation);
 

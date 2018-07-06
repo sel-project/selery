@@ -125,7 +125,7 @@ abstract class JavaPlayer : Player {
 		}
 	}
 	
-	alias world = super.world;
+	alias world = typeof(super).world;
 	
 	public override @property @trusted World world(World world) {
 		this.loaded_maps.length = 0;
@@ -386,7 +386,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 		this.sendPacket(new Clientbound.PlayerListItem().new RemovePlayer(list));
 	}
 	
-	alias sendMetadata = super.sendMetadata;
+	alias sendMetadata = typeof(super).sendMetadata;
 	
 	public override void sendMetadata(Entity entity) {
 		this.sendPacket(new Clientbound.EntityMetadata(entity.id, metadataOf(entity.metadata)));
