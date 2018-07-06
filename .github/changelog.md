@@ -1,3 +1,11 @@
+### 0.3.0
+
+The [sel-hncom](https://github.com/sel-project/sel-hncom) library has been merged
+with Selery and now uses the [packet-maker](https://github.com/Kripth/packet-maker)
+library.
+
+New library for reading roman numbers.
+
 ### 0.2.0
 
 The parent/children model for worlds has been replaced by the group system.
