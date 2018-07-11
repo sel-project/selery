@@ -43,23 +43,23 @@ import std.string;
 import std.system : Endian;
 import std.zlib;
 
-import sel.hncom.about;
-import sel.hncom.handler : Handler = HncomHandler;
 import sel.net.modifiers : LengthPrefixedStream;
 import sel.net.stream : TcpStream;
 import sel.server.query : Query;
 import sel.server.util;
 
 import selery.about;
+import selery.hncom.about;
+import selery.hncom.handler : Handler = HncomHandler;
+import selery.hncom.io : HncomAddress, HncomUUID;
 import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.hub.server : HubServer;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
 
-import Util = sel.hncom.util;
-import Login = sel.hncom.login;
-import Status = sel.hncom.status;
-import Player = sel.hncom.player;
+import Login = selery.hncom.login;
+import Status = selery.hncom.status;
+import Player = selery.hncom.player;
 
 alias HncomStream = LengthPrefixedStream!(uint, Endian.littleEndian);
 
@@ -174,13 +174,13 @@ abstract class AbstractNode : Handler!serverbound {
 			Login.HubInfo.GameInfo[ubyte] games;
 			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
 			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(stream, Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.acceptedLanguages.dup, false, cast()*this.additionalJson));
+			this.sendHubInfo(stream, new Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.acceptedLanguages.dup, false, (cast()*this.additionalJson).toString()));
 		}
 		auto info = this.receiveNodeInfo(stream);
 		this.n_max = info.max;
 		this.accepted = cast(shared uint[][ubyte])info.acceptedGames;
 		this.plugins = cast(shared)info.plugins;
-		foreach(node ; server.nodesList) stream.send(node.addPacket.encode());
+		foreach(node ; server.nodesList) stream.send(node.addPacket.autoEncode());
 		server.add(this);
 		this.loop(stream);
 		server.remove(this);
@@ -282,22 +282,11 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 	
 	public shared @property Status.AddNode addPacket() {
-		return Status.AddNode(this.id, this.name, this.main, cast(uint[][ubyte])this.accepted);
-	}
-
-	protected override void handleUtilUncompressed(Util.Uncompressed packet) {
-		assert(packet.id == 0); //TODO
-		foreach(p ; packet.packets) {
-			if(p.length) this.handleHncom(p.dup);
-		}
-	}
-	
-	protected override void handleUtilCompressed(Util.Compressed packet) {
-		this.handleUtilUncompressed(packet.uncompress());
+		return new Status.AddNode(this.id, this.name, this.main, cast(uint[][ubyte])this.accepted);
 	}
 
 	protected override void handleStatusLatency(Status.Latency packet) {
-		this.send(packet.encode());
+		this.send(packet.autoEncode());
 	}
 
 	protected override void handleStatusLog(Status.Log packet) {
@@ -417,14 +406,14 @@ abstract class AbstractNode : Handler!serverbound {
 	 * Sends data to the node received from a player.
 	 */
 	public shared void sendTo(shared PlayerSession player, ubyte[] data) {
-		this.send(Player.GamePacket(player.id, data).encode());
+		this.send(new Player.GamePacket(player.id, data).autoEncode());
 	}
 	
 	/**
 	 * Executes a remote command.
 	 */
 	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(Status.RemoteCommand(origin, address, command, commandId).encode());
+		this.send(new Status.RemoteCommand(origin, HncomAddress(address), command, commandId).autoEncode());
 	}
 	
 	/**
@@ -432,7 +421,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 * to the hub.
 	 */
 	public shared void addNode(shared AbstractNode node) {
-		this.send(node.addPacket.encode());
+		this.send(node.addPacket.autoEncode());
 	}
 	
 	/**
@@ -440,14 +429,14 @@ abstract class AbstractNode : Handler!serverbound {
 	 * disconnected from the hub.
 	 */
 	public shared void removeNode(shared AbstractNode node) {
-		this.send(Status.RemoveNode(node.id).encode());
+		this.send(new Status.RemoveNode(node.id).autoEncode());
 	}
 	
 	/**
 	 * Sends a message to the node.
 	 */
 	public shared void sendMessage(uint sender, bool broadcasted, ubyte[] payload) {
-		this.send(Status.ReceiveMessage(sender, broadcasted, payload).encode());
+		this.send(new Status.ReceiveMessage(sender, broadcasted, payload).autoEncode());
 	}
 	
 	/**
@@ -455,7 +444,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 * players to the node.
 	 */
 	public shared void updatePlayers(inout uint online, inout uint max) {
-		this.send(Status.UpdatePlayers(online, max).encode());
+		this.send(new Status.UpdatePlayers(online, max).autoEncode());
 	}
 	
 	/**
@@ -463,7 +452,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason, ubyte[] transferMessage) {
 		this.players[player.id] = player;
-		this.send(Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData()).encode());
+		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, HncomUUID(player.uuid), player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, HncomAddress(player.address), Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).autoEncode());
 	}
 	
 	/**
@@ -503,38 +492,38 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	protected shared void onPlayerGone(shared PlayerSession player, ubyte reason) {
 		if(this.players.remove(player.id)) {
-			this.send(Player.Remove(player.id, reason).encode());
+			this.send(new Player.Remove(player.id, reason).autoEncode());
 		}
 	}
 
 	public shared void sendDisplayNameUpdate(shared PlayerSession player, string displayName) {
-		this.send(Player.UpdateDisplayName(player.id, displayName).encode());
+		this.send(new Player.UpdateDisplayName(player.id, displayName).autoEncode());
 	}
 
 	public shared void sendPermissionLevelUpdate(shared PlayerSession player, ubyte permissionLevel) {
-		this.send(Player.UpdatePermissionLevel(player.id, permissionLevel).encode());
+		this.send(new Player.UpdatePermissionLevel(player.id, permissionLevel).autoEncode());
 	}
 
 	public shared void sendViewDistanceUpdate(shared PlayerSession player, uint viewDistance) {
-		this.send(Player.UpdateViewDistance(player.id, viewDistance).encode());
+		this.send(new Player.UpdateViewDistance(player.id, viewDistance).autoEncode());
 	}
 
 	public shared void sendLanguageUpdate(shared PlayerSession player, string language) {
-		this.send(Player.UpdateLanguage(player.id, language).encode());
+		this.send(new Player.UpdateLanguage(player.id, language).autoEncode());
 	}
 	
 	/**
 	 * Updates a player's latency (usually sent every 30 seconds).
 	 */
 	public shared void sendLatencyUpdate(shared PlayerSession player) {
-		this.send(Player.UpdateLatency(player.id, player.latency).encode());
+		this.send(new Player.UpdateLatency(player.id, player.latency).autoEncode());
 	}
 	
 	/**
 	 * Updates a player's packet loss (usually sent every 30 seconds).
 	 */
 	public shared void sendPacketLossUpdate(shared PlayerSession player) {
-		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss).encode());
+		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss).autoEncode());
 	}
 	
 	/**
@@ -586,7 +575,7 @@ class ClassicNode : AbstractNode {
 			else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 			else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
 			else if(["reload", "stop"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
-			stream.send(response.encode());
+			stream.send(response.autoEncode());
 			if(response.status == Login.ConnectionResponse.OK) {
 				this.exchageInfo(stream);
 			}
@@ -595,7 +584,7 @@ class ClassicNode : AbstractNode {
 	}
 
 	protected override shared void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
-		stream.send(packet.encode());
+		stream.send(packet.autoEncode());
 	}
 
 	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {

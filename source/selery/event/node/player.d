@@ -30,11 +30,10 @@ module selery.event.node.player;
 
 import std.conv : to;
 
-import sel.hncom.player : Add, Remove;
-
 import selery.about : Software;
 import selery.event.event : Cancellable;
 import selery.event.node.server : NodeServerEvent;
+import selery.hncom.player : Add, Remove;
 import selery.node.server : NodeServer;
 import selery.player.player : PlayerInfo, Player;
 import selery.world.world : WorldInfo, World;

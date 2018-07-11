@@ -57,8 +57,6 @@ import imageformats : ImageIOException, read_png_header_from_mem;
 import myip : privateAddresses, publicAddress4;
 
 import sel.format : Format;
-import sel.hncom.login : HubInfo, NodeInfo;
-import sel.hncom.status : Log;
 import sel.server.client : Client;
 import sel.server.query : Query;
 import sel.server.util : ServerInfo, PlayerHandler = Handler;
@@ -67,6 +65,8 @@ import selery.about;
 import selery.config : Config;
 import selery.event.event : EventListener;
 import selery.event.hub : HubServerEvent, LogEvent;
+import selery.hncom.login : HubInfo, NodeInfo;
+import selery.hncom.status : Log;
 import selery.hub.handler : Handler;
 import selery.hub.hncom : AbstractNode;
 import selery.hub.player : PlayerSession;

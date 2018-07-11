@@ -97,21 +97,21 @@ mixin template Make() {
 	
 	static import packetmaker.maker;
 	
-	/+enum Members = packetmaker.maker.Members!(typeof(this), null);
+	//enum Members = packetmaker.maker.Members!(typeof(this), null);
 	
 	mixin({
 			
 		string ret = "this(";
-		foreach(member ; Members) {
+		foreach(member ; packetmaker.maker.Members!(typeof(this), null)) {
 			ret ~= "typeof(" ~ member ~ ") " ~ member ~ "=typeof(" ~ member ~ ").init,";
 		}
 		ret ~= "){";
-		foreach(member ; Members) {
+		foreach(member ; packetmaker.maker.Members!(typeof(this), null)) {
 			ret ~= "this." ~ member ~ "=" ~ member ~ ";";
 		}
 		return ret ~ "}";
 		
-	}());+/
+	}());
 	
 	mixin packetmaker.maker.Make;
 	

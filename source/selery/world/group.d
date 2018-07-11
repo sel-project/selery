@@ -40,11 +40,10 @@ import std.string : toUpper;
 import std.traits : isAbstractClass, Parameters;
 import std.typetuple : TypeTuple;
 
-import sel.hncom.about : __BEDROCK__, __JAVA__;
-import sel.hncom.status : HncomAddWorld = AddWorld, HncomRemoveWorld = RemoveWorld;
-
 import selery.about : SupportedBedrockProtocols, SupportedJavaProtocols;
 import selery.config : Difficulty, Gamemode, Config;
+import selery.hncom.about : __BEDROCK__, __JAVA__;
+import selery.hncom.status : HncomAddWorld = AddWorld, HncomRemoveWorld = RemoveWorld;
 import selery.log : Message;
 import selery.math.vector : EntityPosition;
 import selery.node.handler : Handler;
@@ -466,7 +465,7 @@ final class WorldGroup {
 		if(this.info.defaultWorld is null) this.info.defaultWorld = world.info;
 		this._worlds[world.id] = world;
 		// send packet to the hub
-		Handler.sharedInstance.send(HncomAddWorld(info.id, this.info.id, this.info.name, world.dimension, false).encode()); //TODO default?
+		Handler.sharedInstance.send(new HncomAddWorld(info.id, this.info.id, this.info.name, world.dimension, false).autoEncode()); //TODO default?
 		// set events listener
 		world.setListener(cast()server.globalListener);
 	}
@@ -479,7 +478,7 @@ final class WorldGroup {
 		if(world) {
 			//TODO check whether it can be stopped
 			// send packet to the hub
-			Handler.sharedInstance.send(HncomRemoveWorld(worldId).encode());
+			Handler.sharedInstance.send(new HncomRemoveWorld(worldId).autoEncode());
 			//TODO save and delete
 			world.stop();
 		}

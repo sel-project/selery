@@ -38,7 +38,7 @@ import std.conv : to;
 import std.datetime : dur, Duration;
 import std.datetime.stopwatch : StopWatch;
 static import std.file;
-import std.json : JSON_TYPE, JSONValue, parseJSON;
+import std.json : JSON_TYPE, JSONValue, parseJSON, JSONException;
 import std.process : executeShell;
 import std.socket : SocketException, Address;
 import std.string; //TODO selective imports
@@ -51,8 +51,6 @@ import resusage.memory;
 import resusage.cpu;
 
 import sel.format : Format;
-import sel.hncom.about;
-import sel.hncom.handler : HncomHandler;
 import sel.server.bedrock : bedrockSupportedProtocols;
 
 import selery.world.world : World; // do not move this import down
@@ -66,6 +64,8 @@ import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
 import selery.event.node;
 import selery.event.world.world : WorldEvent;
+import selery.hncom.about;
+import selery.hncom.handler : HncomHandler;
 import selery.lang : LanguageManager, Translation;
 import selery.log : Message, Logger;
 import selery.node.commands : Commands;
@@ -85,10 +85,9 @@ import selery.world.world : WorldInfo;
 
 import terminal : Terminal;
 
-import HncomLogin = sel.hncom.login;
-import HncomUtil = sel.hncom.util;
-import HncomStatus = sel.hncom.status;
-import HncomPlayer = sel.hncom.player;
+import HncomLogin = selery.hncom.login;
+import HncomStatus = selery.hncom.status;
+import HncomPlayer = selery.hncom.player;
 
 // the signal could be handled on another thread!
 private shared bool running = true;
@@ -181,7 +180,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 			try {
 				this.handler = new shared SocketHandler(hub);
-				this.handler.send(HncomLogin.ConnectionRequest(config.node.name, config.node.password, config.node.main).encode());
+				this.handler.send(new HncomLogin.ConnectionRequest(__PROTOCOL__, config.node.name, config.node.password, config.node.main).autoEncode());
 			} catch(SocketException e) {
 				this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
 				return;
@@ -245,9 +244,12 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		this.n_id = info.serverId;
 		this.uuid_count = info.reservedUUIDs;
 
-		if(info.additionalJSON.type != JSON_TYPE.OBJECT) info.additionalJSON = parseJSON("{}");
+		JSONValue additionalJSON;
+		try additionalJSON = parseJSON(info.additionalJSON);
+		catch(JSONException) {}
+		if(additionalJSON.type != JSON_TYPE.OBJECT) additionalJSON = parseJSON("{}");
 
-		auto minecraft = "minecraft" in info.additionalJSON;
+		auto minecraft = "minecraft" in additionalJSON;
 		if(minecraft && minecraft.type == JSON_TYPE.OBJECT) {
 			auto edu = "edu" in *minecraft;
 			config.hub.edu = edu && edu.type == JSON_TYPE.TRUE;
@@ -258,7 +260,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		this.n_online = info.online;
 		this.n_max = info.max;
 
-		auto social = "social" in info.additionalJSON;
+		auto social = "social" in additionalJSON;
 		if(social && social.type == JSON_TYPE.OBJECT) {
 			if("website" in *social) this.n_social.website = (*social)["website"].str;
 			if("facebook" in *social) this.n_social.facebook = (*social)["facebook"].str;
@@ -385,7 +387,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		if(this.lite) {
 			std.concurrency.send(cast()(cast(shared MessagePassingHandler)this.handler).hub, cast(shared)nodeInfo);
 		} else {
-			this.handler.send(nodeInfo.encode());
+			this.handler.send(nodeInfo.autoEncode());
 		}
 		
 		// load plugin's language files
@@ -591,7 +593,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 */
 	public shared @property size_t max(uint max) {
 		this._config.node.maxPlayers = max;
-		this.handler.send(HncomStatus.UpdateMaxPlayers(max).encode());
+		this.handler.send(new HncomStatus.UpdateMaxPlayers(max).autoEncode());
 		return max;
 	}
 	
@@ -737,7 +739,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		foreach(node ; nodes) {
 			if(node !is null) addressees ~= node.hubId;
 		}
-		this.handler.send(HncomStatus.SendMessage(addressees, payload).encode());
+		this.handler.send(new HncomStatus.SendMessage(addressees, payload).autoEncode());
 	}
 
 	/// ditto
@@ -758,7 +760,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 */
 	protected shared void updateLanguageFiles(string language, string[string] messages) {
 		if(!this.lite) this.config.lang.add(language, messages);
-		this.handler.send(HncomStatus.UpdateLanguageFiles(language, messages).encode());
+		this.handler.send(new HncomStatus.UpdateLanguageFiles(language, messages).autoEncode());
 	}
 
 	public shared pure nothrow @property shared(GroupInfo) mainWorldGroup() {
@@ -934,14 +936,14 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 */
 	public shared void kick(uint hubId, string reason) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
-			this.handler.send(HncomPlayer.Kick(hubId, reason, false).encode());
+			this.handler.send(new HncomPlayer.Kick(hubId, reason, false).autoEncode());
 		}
 	}
 
 	/// ditto
 	public shared void kick(uint hubId, string reason, inout(string)[] args) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.kicked)) {
-			this.handler.send(HncomPlayer.Kick(hubId, reason, true, cast(string[])args).encode());
+			this.handler.send(new HncomPlayer.Kick(hubId, reason, true, cast(string[])args).autoEncode());
 		}
 	}
 
@@ -950,7 +952,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	 */
 	public shared void transfer(uint hubId, inout Node node) {
 		if(this.removePlayer(hubId, PlayerLeftEvent.Reason.transferred)) {
-			this.handler.send(HncomPlayer.Transfer(hubId, node.hubId).encode());
+			this.handler.send(new HncomPlayer.Transfer(hubId, node.hubId).autoEncode());
 		}
 	}
 
@@ -971,28 +973,17 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	
 	public shared void updatePlayerDisplayName(uint hubId) {
 		auto player = hubId in this._players;
-		if(player) this.handler.send(HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).encode());
+		if(player) this.handler.send(new HncomPlayer.UpdateDisplayName(hubId, (*player).displayName).autoEncode());
 	}
 
 	// hncom handlers
-
-	protected override void handleUtilUncompressed(HncomUtil.Uncompressed packet) {
-		assert(packet.id == 0); //TODO
-		foreach(p ; packet.packets) {
-			if(p.length) this.handleHncom(p.dup);
-		}
-	}
-
-	protected override void handleUtilCompressed(HncomUtil.Compressed packet) {
-		this.handleUtilUncompressed(packet.uncompress());
-	}
 
 	protected override void handleStatusLatency(HncomStatus.Latency packet) {
 		//TODO send packet back
 	}
 	
 	protected override void handleStatusRemoteCommand(HncomStatus.RemoteCommand packet) {
-		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender, command, commandId);
+		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender.value, command, commandId);
 	}
 
 	protected override void handleStatusAddNode(HncomStatus.AddNode packet) {
@@ -1038,13 +1029,9 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		//TODO
 	}
 
-	protected override void handleStatusWebAdminCredentials(HncomStatus.WebAdminCredentials packet) {
-		//TODO start http server for panel
-	}
-
 	protected override void handlePlayerAdd(HncomPlayer.Add packet) {
 
-		Skin skin = Skin(packet.skin.expand);
+		Skin skin = Skin(packet.skin.name, packet.skin.data, packet.skin.cape, packet.skin.geometryName, packet.skin.geometryData);
 
 		if(!skin.valid) {
 			// http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/classes/java/util/UUID.java#l394
@@ -1200,7 +1187,7 @@ private class NodeServerLogger : ServerLogger {
 	// prints to the console and send to the hub
 	protected override void logWithImpl(Message[] messages, int commandId, int worldId) {
 		this.logImpl(messages);
-		Handler.sharedInstance.send(HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).encode());
+		Handler.sharedInstance.send(new HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).autoEncode());
 	}
 
 }
@@ -1213,7 +1200,7 @@ private class LiteServerLogger : ServerLogger {
 
 	// only send to the hub
 	protected override void logWithImpl(Message[] messages, int commandId, int worldId) {
-		Handler.sharedInstance.send(HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).encode());
+		Handler.sharedInstance.send(new HncomStatus.Log(encodeHncomMessage(messages), milliseconds, commandId, worldId).autoEncode());
 	}
 
 }
@@ -1253,7 +1240,7 @@ private void startResourceUsageThread(int pid) {
 	while(true) {
 		ram.update();
 		//TODO send packet directly to the socket
-		Handler.sharedInstance.send(HncomStatus.UpdateUsage(cast(uint)(ram.usedRAM / 1024u), cpu.current()).encode());
+		Handler.sharedInstance.send(new HncomStatus.UpdateUsage(cast(uint)(ram.usedRAM / 1024u), cpu.current()).autoEncode());
 		Thread.sleep(dur!"seconds"(5));
 	}
 	

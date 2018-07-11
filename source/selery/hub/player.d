@@ -44,7 +44,7 @@ import selery.about;
 import selery.hub.hncom : AbstractNode;
 import selery.hub.server : HubServer;
 
-import HncomPlayer = sel.hncom.player;
+import HncomPlayer = selery.hncom.player;
 
 class World {
 	

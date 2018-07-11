@@ -34,15 +34,13 @@ import std.algorithm : canFind, count, max, min, clamp;
 import std.array : join, split;
 import std.concurrency : Tid, send, receiveOnly;
 import std.conv : to;
-import std.json : JSON_TYPE;
+import std.json : JSON_TYPE, JSONValue, parseJSON, JSONException;
 import std.math : abs, isFinite;
 import std.socket : Address;
 import std.string : toLower, toUpper, startsWith, strip, replace;
 import std.uuid : UUID;
 
 import sel.format : Format, unformat;
-import sel.hncom.about : __BEDROCK__, __JAVA__;
-import sel.hncom.player : Add;
 
 import selery.about;
 import selery.block.block : Block, PlacedBlock;
@@ -59,6 +57,8 @@ import selery.entity.interfaces : Collectable;
 import selery.entity.metadata;
 import selery.entity.noai : ItemEntity, Painting, Lightning;
 import selery.event.world;
+import selery.hncom.about : __BEDROCK__, __JAVA__;
+import selery.hncom.player : Add;
 import selery.inventory.inventory;
 import selery.item.item : Item;
 import selery.item.items : Items;
@@ -74,7 +74,7 @@ import selery.world.chunk : Chunk;
 import selery.world.map : Map;
 import selery.world.world : WorldInfo, World;
 
-import HncomPlayer = sel.hncom.player;
+import HncomPlayer = selery.hncom.player;
 
 /**
  * Generic informations about a player in the server.
@@ -136,20 +136,23 @@ final class PlayerInfo {
 		this.displayName = add.displayName;
 		this.uuid = add.uuid;
 		this.permissionLevel = cast(PermissionLevel)add.permissionLevel;
-		this.address = add.clientAddress;
-		this.ip = add.clientAddress.toAddrString();
-		this.port = to!ushort(add.clientAddress.toPortString());
+		this.address = add.clientAddress.value;
+		this.ip = add.clientAddress.value.toAddrString();
+		this.port = to!ushort(add.clientAddress.value.toPortString());
 		this.usedAddress = add.serverAddress;
 		this.language = add.language;
 		this.inputMode = cast(InputMode)add.inputMode;
 		this.gameName = add.gameName;
 		this.gameVersion = add.gameVersion;
-		if(add.gameData.type == JSON_TYPE.OBJECT) {
+		JSONValue gameData;
+		try gameData = parseJSON(add.gameData);
+		catch(JSONException) {}
+		if(gameData.type == JSON_TYPE.OBJECT) {
 			if(type == __BEDROCK__) {
-				this.edu = "edu" in add.gameData && add.gameData["edu"].type == JSON_TYPE.TRUE;
-				auto deviceOs = "DeviceOS" in add.gameData;
+				this.edu = "edu" in gameData && gameData["edu"].type == JSON_TYPE.TRUE;
+				auto deviceOs = "DeviceOS" in gameData;
 				if(deviceOs && deviceOs.type == JSON_TYPE.INTEGER && deviceOs.integer <= 9) this.deviceOs = cast(DeviceOS)deviceOs.integer;
-				auto deviceModel = "DeviceModel" in add.gameData;
+				auto deviceModel = "DeviceModel" in gameData;
 				if(deviceModel && deviceModel.type == JSON_TYPE.STRING) this.deviceModel = deviceModel.str;
 			}
 		}
@@ -616,7 +619,7 @@ abstract class Player : Human, WorldCommandSender {
 			this.info.permissionLevel = permissionLevel;
 			this.sendPermissionLevel(permissionLevel);
 			this.updateAvailableCommands();
-			Handler.sharedInstance.send(HncomPlayer.UpdatePermissionLevel(this.hubId, permissionLevel).encode());
+			Handler.sharedInstance.send(new HncomPlayer.UpdatePermissionLevel(this.hubId, permissionLevel).autoEncode());
 		}
 		return permissionLevel;
 	}
@@ -1503,7 +1506,7 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void flush();
 
 	protected void sendPacketPayload(ubyte[] payload) {
-		Handler.sharedInstance.send(new HncomPlayer.OrderedGamePacket(this.hubId, this.order++, payload).encode());
+		Handler.sharedInstance.send(new HncomPlayer.OrderedGamePacket(this.hubId, this.order++, payload).autoEncode());
 	}
 
 	private Tid compression;
@@ -1534,7 +1537,7 @@ abstract class Player : Human, WorldCommandSender {
 
 				if(data[0] == uint.max) break;
 
-				handler.send(new HncomPlayer.OrderedGamePacket(hubId, data[0], this.compress(data[1].dup)).encode());
+				handler.send(new HncomPlayer.OrderedGamePacket(hubId, data[0], this.compress(data[1].dup)).autoEncode());
 
 			}
 
