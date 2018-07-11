@@ -396,8 +396,6 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 
-		this.logger.log(Translation("test"));
-
 		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 		
 		this.start_time = milliseconds;
