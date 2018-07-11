@@ -546,6 +546,8 @@ abstract class AbstractNode : Handler!serverbound {
 	
 }
 
+import std.stdio;
+
 class ClassicNode : AbstractNode {
 
 	private shared Socket socket;
@@ -563,10 +565,10 @@ class ClassicNode : AbstractNode {
 		auto payload = stream.receive();
 		if(payload.length && payload[0] == Login.ConnectionRequest.ID) {
 			immutable password = server.config.hub.hncomPassword;
-			auto request = Login.ConnectionRequest.fromBuffer(payload[1..$]);
+			auto request = Login.ConnectionRequest.fromBuffer(payload);
 			this.n_name = request.name.idup;
 			this.n_main = request.main;
-			Login.ConnectionResponse response;
+			Login.ConnectionResponse response = new Login.ConnectionResponse();
 			if(request.protocol > __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_HUB;
 			else if(request.protocol < __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_NODE;
 			else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
@@ -590,7 +592,7 @@ class ClassicNode : AbstractNode {
 	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {
 		stream.stream.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generate worlds
 		auto payload = stream.receive();
-		if(payload.length && payload[0] == Login.NodeInfo.ID) return Login.NodeInfo.fromBuffer(payload[1..$]);
+		if(payload.length && payload[0] == Login.NodeInfo.ID) return Login.NodeInfo.fromBuffer(payload);
 		else return Login.NodeInfo.init;
 	}
 

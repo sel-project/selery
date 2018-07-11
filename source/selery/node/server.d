@@ -194,7 +194,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			// wait for ConnectionResponse
 			ubyte[] buffer = this.handler.receive();
 			if(buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
-				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer[1..$]);
+				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
 				if(response.status == HncomLogin.ConnectionResponse.OK) {
 					this.handleInfo();
 				} else {
@@ -230,7 +230,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 		ubyte[] buffer = this.handler.receive();
 		if(buffer.length && buffer[0] == HncomLogin.HubInfo.ID) {
-			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer[1..$]));
+			this.handleInfoImpl(HncomLogin.HubInfo.fromBuffer(buffer));
 		} else {
 			this.logger.logError(Translation("warning.closed"));
 		}
@@ -375,7 +375,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		Commands.register(this);
 
 		// send node's informations to the hub and switch to a non-blocking connection
-		HncomLogin.NodeInfo nodeInfo;
+		HncomLogin.NodeInfo nodeInfo = new HncomLogin.NodeInfo();
 		uint[][ubyte] games;
 		if(this.config.node.bedrock) nodeInfo.acceptedGames[__BEDROCK__] = cast(uint[])this.config.node.bedrock.protocols;
 		if(this.config.node.java) nodeInfo.acceptedGames[__JAVA__] = cast(uint[])this.config.node.java.protocols;

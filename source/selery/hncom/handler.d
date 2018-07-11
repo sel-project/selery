@@ -30,7 +30,7 @@ interface HncomHandler(alias type) if(is(type == clientbound )|| is(type == serv
 				foreach(member ; __traits(allMembers, mixin("selery.hncom." ~ section))) {
 					static if(hasUDA!(__traits(getMember, mixin("selery.hncom." ~ section), member), type)) {
 						mixin("alias T = selery.hncom." ~ section ~ "." ~ member ~ ";");
-						case T.ID: return mixin("this.handle" ~ capitalize(section) ~ member)(T.fromBuffer(buffer[1..$]));
+						case T.ID: return mixin("this.handle" ~ capitalize(section) ~ member)(T.fromBuffer(buffer));
 					}
 				}
 			}

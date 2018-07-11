@@ -7,7 +7,6 @@ targetType "library"
 targetPath "libs"
 
 dependency "imageformats" version="~>6.1.2"
-dependency "libasync" version="~>0.8.3"
 dependency "lighttp" version="~>0.2.0"
 dependency "memutils" version="~>0.4.10"
 dependency "my-ip" version="~>0.1.0"

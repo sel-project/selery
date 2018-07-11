@@ -97,8 +97,6 @@ mixin template Make() {
 	
 	static import packetmaker.maker;
 	
-	//enum Members = packetmaker.maker.Members!(typeof(this), null);
-	
 	mixin({
 			
 		string ret = "this(";
@@ -117,7 +115,7 @@ mixin template Make() {
 	
 	static typeof(this) fromBuffer(ubyte[] buffer) {
 		typeof(this) ret = new typeof(this)();
-		ret.decode(new Buffer(buffer));
+		ret.autoDecode(buffer);
 		return ret;
 	}
 	
