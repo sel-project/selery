@@ -41,25 +41,19 @@ alias HncomPacket = PacketImpl!(Endian.littleEndian, ubyte, ushort);
 
 struct HncomUUID {
 	
-	UUID value;
-	
-	void encodeBody(Buffer buffer) @nogc {
+	public static void encode(UUID value, Buffer buffer) {
 		buffer.write(value.data);
 	}
 
-	void decodeBody(Buffer buffer) {
-		value = UUID(read16(buffer));
+	public static UUID decode(Buffer buffer) {
+		return UUID(read16(buffer));
 	}
-	
-	alias value this;
 	
 }
 
 struct HncomAddress {
 	
-	Address value;
-	
-	void encodeBody(Buffer buffer) @nogc {
+	public static void encode(Address value, Buffer buffer) {
 		if(cast(InternetAddress)value) {
 			InternetAddress address = cast(InternetAddress)value;
 			buffer.write!ubyte(4);
@@ -75,15 +69,12 @@ struct HncomAddress {
 		}
 	}
 	
-	void decodeBody(Buffer buffer) {
-		Address get() {
-			switch(buffer.read!ubyte()) {
-				case 4: return new InternetAddress(buffer.read!(Endian.littleEndian, int)(), buffer.read!(Endian.littleEndian, ushort)());
-				case 6: return new Internet6Address(read16(buffer), buffer.read!(Endian.littleEndian, ushort)());
-				default: return new UnknownAddress();
-			}
+	public static Address decode(Buffer buffer) {
+		switch(buffer.read!ubyte()) {
+			case 4: return new InternetAddress(buffer.read!(Endian.littleEndian, int)(), buffer.read!(Endian.littleEndian, ushort)());
+			case 6: return new Internet6Address(read16(buffer), buffer.read!(Endian.littleEndian, ushort)());
+			default: return new UnknownAddress();
 		}
-		value = get();
 	}
 	
 }

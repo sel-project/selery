@@ -28,7 +28,9 @@
  */
 module selery.hncom.status;
 
-import std.typecons : Tuple;
+import std.socket : Address;
+
+import packetmaker : Custom;
 
 import selery.hncom.about;
 import selery.hncom.io;
@@ -114,7 +116,7 @@ import selery.hncom.io;
 	 * Address of the sender if the command has been sent from an external source.
 	 * It's `null` when the hub is the sender.
 	 */
-	HncomAddress sender;
+	@Custom!HncomAddress Address sender;
 	
 	/**
 	 * Commands and arguments that should be executed on the node.

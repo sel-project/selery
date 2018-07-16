@@ -413,7 +413,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 * Executes a remote command.
 	 */
 	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(new Status.RemoteCommand(origin, HncomAddress(address), command, commandId).autoEncode());
+		this.send(new Status.RemoteCommand(origin, address, command, commandId).autoEncode());
 	}
 	
 	/**
@@ -452,7 +452,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason, ubyte[] transferMessage) {
 		this.players[player.id] = player;
-		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, HncomUUID(player.uuid), player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, HncomAddress(player.address), Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).autoEncode());
+		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).autoEncode());
 	}
 	
 	/**

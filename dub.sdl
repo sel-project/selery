@@ -10,7 +10,7 @@ dependency "imageformats" version="~>6.1.2"
 dependency "lighttp" version="~>0.2.0"
 dependency "memutils" version="~>0.4.10"
 dependency "my-ip" version="~>0.1.0"
-dependency "packet-maker" version="~>0.5.0"
+dependency "packet-maker" version="~>0.6.0"
 dependency "resusage" version="~>0.2.7"
 dependency "roman" version="~>1.0.0"
 dependency "sel-nbt" version="~>2.3.0"
@@ -25,3 +25,4 @@ dependency "xbuffer" version="~>1.0.0"
 
 // for testing
 //dependency "sel-server" path="../sel-server"
+//dependency "packet-maker" path="../packet-maker"

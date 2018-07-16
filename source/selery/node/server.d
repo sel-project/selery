@@ -983,7 +983,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 	}
 	
 	protected override void handleStatusRemoteCommand(HncomStatus.RemoteCommand packet) {
-		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender.value, command, commandId);
+		with(packet) (cast(shared)this).handleCommand(cast(ubyte)(origin + 1), sender, command, commandId);
 	}
 
 	protected override void handleStatusAddNode(HncomStatus.AddNode packet) {

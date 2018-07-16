@@ -136,9 +136,9 @@ final class PlayerInfo {
 		this.displayName = add.displayName;
 		this.uuid = add.uuid;
 		this.permissionLevel = cast(PermissionLevel)add.permissionLevel;
-		this.address = add.clientAddress.value;
-		this.ip = add.clientAddress.value.toAddrString();
-		this.port = to!ushort(add.clientAddress.value.toPortString());
+		this.address = add.clientAddress;
+		this.ip = add.clientAddress.toAddrString();
+		this.port = to!ushort(add.clientAddress.toPortString());
 		this.usedAddress = add.serverAddress;
 		this.language = add.language;
 		this.inputMode = cast(InputMode)add.inputMode;

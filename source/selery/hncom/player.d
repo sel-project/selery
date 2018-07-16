@@ -31,6 +31,11 @@
  */
 module selery.hncom.player;
 
+import std.socket : Address;
+import std.uuid : UUID;
+
+import packetmaker : Custom;
+
 import selery.hncom.about;
 import selery.hncom.io;
 
@@ -106,7 +111,7 @@ import selery.hncom.io;
 	 * Client's UUID, given by Mojang's or Microsoft's services if the server is in
 	 * online mode or given by the client (and not verified) if the server is in offline mode.
 	 */
-	HncomUUID uuid;
+	@Custom!HncomUUID UUID uuid;
 	
 	/**
 	 * Username of the player.
@@ -153,7 +158,7 @@ import selery.hncom.io;
 	/**
 	 * Remote address of the player.
 	 */
-	HncomAddress clientAddress;
+	@Custom!HncomAddress Address clientAddress;
 	
 	/**
 	 * Address used by the client to connect to the server. The value of this field is the address
