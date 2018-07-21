@@ -28,6 +28,8 @@
  */
 module selery.util.util;
 
+import core.stdc.time : time_t, time;
+
 import std.conv : to, ConvException;
 import std.datetime : Clock, UTC;
 import std.traits : isArray, isAssociativeArray, isSafe;
@@ -35,8 +37,8 @@ import std.traits : isArray, isAssociativeArray, isSafe;
 /**
  * Gets the seconds from January 1st, 1970.
  */
-public @property @safe uint seconds() {
-	return Clock.currTime(UTC()).toUnixTime!int;
+public @property @safe time_t seconds() {
+	return time(null);
 }
 
 /**
