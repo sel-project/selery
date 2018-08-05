@@ -398,8 +398,7 @@ int main(string[] args) {
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
 		"toml": ["version": "~>1.0.0-rc.2"],
-		"toml:json": ["version": "~>1.0.0-rc.2"],
-		"libasync": ["version": "~>0.8"], // x86 linking issue on LDC
+		"toml:json": ["version": "~>1.0.0-rc.2"]
 	];
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
