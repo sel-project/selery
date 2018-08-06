@@ -4,11 +4,11 @@ matrix:
   include:
     - {os: linux, d: dmd, env: CONFIG=debug ARCH=x86_64}
     - {os: linux, d: ldc, env: CONFIG=debug ARCH=x86_64}
-    - {os: linux, d: ldc, env: CONFIG=debug ARCH=x86}
+#    - {os: linux, d: ldc, env: CONFIG=debug ARCH=x86}
 #    - {os: linux, d: ldc, env: CONFIG=debug ARCH=arm}
 #    - {os: linux, d: ldc, env: CONFIG=debug ARCH=aarch64}
     - {os: linux, d: ldc, env: CONFIG=release ARCH=x86_64}
-    - {os: linux, d: ldc, env: CONFIG=release ARCH=x86}
+#    - {os: linux, d: ldc, env: CONFIG=release ARCH=x86}
 #    - {os: linux, d: ldc, env: CONFIG=release ARCH=arm}
 #    - {os: linux, d: ldc, env: CONFIG=release ARCH=aarch64}
     - {os: osx, d: dmd, env: CONFIG=debug ARCH=x86_64}

@@ -46,7 +46,6 @@ The build scripts supports some useful options that can be viewed by launching i
 | Windows | x86-64 | [![][win64-dmd-debug]][appveyor] | [![][win64-ldc-debug]][appveyor] | [![][win64-ldc-release]][appveyor] |
 | Windows | x86    | [![][win86-dmd-debug]][appveyor] | [![][win86-ldc-debug]][appveyor] | [![][win86-ldc-release]][appveyor] |
 | Linux   | x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
-| Linux   | x86    |                                  | [![][lin86-ldc-debug]][travis]   | [![][lin86-ldc-release]][travis]   |
 | OS X    | x86-64 | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
 
 ## Setting up
