@@ -3,6 +3,8 @@ Selery
 
 Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition written in [D](https://dlang.org).
 
+[![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/c9uwNMW)
+
 ## Installation
 
 ### From a pre-built package
