@@ -57,42 +57,6 @@ class InventoryRangeError : Error {
 	
 }
 
-/+struct InventorySlot {
-
-	private Slot n_slot;
-
-	public this(Slot slot) {
-		this.n_slot = slot;
-	}
-
-	public this(Item item) {
-		this(Slot(item));
-	}
-
-	public this(Item item, ubyte count) {
-		this(Slot(item, count));
-	}
-
-	public @property ubyte count() {
-		return this.n_slot.count;
-	}
-
-	public @property ubyte count(ubyte count) {
-		return count;
-	}
-
-	public void fill() {
-		//TODO
-	}
-
-	public pure nothrow @property @safe @nogc Slot slot() {
-		return this.n_slot;
-	}
-
-	alias slot this;
-
-}+/
-
 /**
  * Basic inventory class with adding/removing/assigning/filling functions.
  * Example:
