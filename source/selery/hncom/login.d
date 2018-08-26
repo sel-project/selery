@@ -28,10 +28,10 @@
  */
 module selery.hncom.login;
 
-import packetmaker : BigEndian;
-
 import selery.hncom.about;
 import selery.hncom.io;
+
+import xpacket : BigEndian;
 
 /**
  * First packet sent by the client after the connection is established.

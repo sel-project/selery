@@ -33,19 +33,17 @@ import std.socket : Address, InternetAddress, Internet6Address, UnknownAddress;
 import std.system : Endian;
 import std.uuid : UUID;
 
-import packetmaker.packet : PacketImpl;
-
-import xbuffer : Buffer;
+import xpacket;
 
 alias HncomPacket = PacketImpl!(Endian.littleEndian, ubyte, ushort);
 
 struct HncomUUID {
 	
-	public static void encode(UUID value, Buffer buffer) {
+	public static void serialize(UUID value, Buffer buffer) {
 		buffer.write(value.data);
 	}
 
-	public static UUID decode(Buffer buffer) {
+	public static UUID deserialize(Buffer buffer) {
 		return UUID(read16(buffer));
 	}
 	
@@ -53,7 +51,7 @@ struct HncomUUID {
 
 struct HncomAddress {
 	
-	public static void encode(Address value, Buffer buffer) {
+	public static void serialize(Address value, Buffer buffer) {
 		if(cast(InternetAddress)value) {
 			InternetAddress address = cast(InternetAddress)value;
 			buffer.write!ubyte(4);
@@ -69,7 +67,7 @@ struct HncomAddress {
 		}
 	}
 	
-	public static Address decode(Buffer buffer) {
+	public static Address deserialize(Buffer buffer) {
 		switch(buffer.read!ubyte()) {
 			case 4: return new InternetAddress(buffer.read!(Endian.littleEndian, int)(), buffer.read!(Endian.littleEndian, ushort)());
 			case 6: return new Internet6Address(read16(buffer), buffer.read!(Endian.littleEndian, ushort)());
@@ -85,28 +83,30 @@ ubyte[16] read16(Buffer buffer) {
 }
 
 mixin template Make() {
-	
-	static import packetmaker.maker;
+
+	static import xserial.serial;
 	
 	mixin({
 			
 		string ret = "this(";
-		foreach(member ; packetmaker.maker.Members!(typeof(this), null)) {
+		foreach(member ; xserial.serial.Members!(typeof(this), null)) {
 			ret ~= "typeof(" ~ member ~ ") " ~ member ~ "=typeof(" ~ member ~ ").init,";
 		}
 		ret ~= "){";
-		foreach(member ; packetmaker.maker.Members!(typeof(this), null)) {
+		foreach(member ;xserial.serial.Members!(typeof(this), null)) {
 			ret ~= "this." ~ member ~ "=" ~ member ~ ";";
 		}
 		return ret ~ "}";
 		
 	}());
+
+	static import xpacket.maker;
 	
-	mixin packetmaker.maker.Make;
+	mixin xpacket.maker.Make;
 	
 	static typeof(this) fromBuffer(ubyte[] buffer) {
 		typeof(this) ret = new typeof(this)();
-		ret.autoDecode(buffer);
+		ret.decode(buffer);
 		return ret;
 	}
 	

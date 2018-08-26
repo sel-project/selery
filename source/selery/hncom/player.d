@@ -34,10 +34,10 @@ module selery.hncom.player;
 import std.socket : Address;
 import std.uuid : UUID;
 
-import packetmaker : Custom;
-
 import selery.hncom.about;
 import selery.hncom.io;
+
+import xpacket : Custom;
 
 /**
  * Adds a player to the node.

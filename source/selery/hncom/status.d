@@ -30,10 +30,10 @@ module selery.hncom.status;
 
 import std.socket : Address;
 
-import packetmaker : Custom;
-
 import selery.hncom.about;
 import selery.hncom.io;
+
+import xpacket : Custom;
 
 /**
  * Used to calculate latency by both the hub and the node.

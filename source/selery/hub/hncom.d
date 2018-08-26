@@ -180,7 +180,7 @@ abstract class AbstractNode : Handler!serverbound {
 		this.n_max = info.max;
 		this.accepted = cast(shared uint[][ubyte])info.acceptedGames;
 		this.plugins = cast(shared)info.plugins;
-		foreach(node ; server.nodesList) stream.send(node.addPacket.autoEncode());
+		foreach(node ; server.nodesList) stream.send(node.addPacket.encode());
 		server.add(this);
 		this.loop(stream);
 		server.remove(this);
@@ -286,7 +286,7 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusLatency(Status.Latency packet) {
-		this.send(packet.autoEncode());
+		this.send(packet.encode());
 	}
 
 	protected override void handleStatusLog(Status.Log packet) {
@@ -406,14 +406,14 @@ abstract class AbstractNode : Handler!serverbound {
 	 * Sends data to the node received from a player.
 	 */
 	public shared void sendTo(shared PlayerSession player, ubyte[] data) {
-		this.send(new Player.GamePacket(player.id, data).autoEncode());
+		this.send(new Player.GamePacket(player.id, data).encode());
 	}
 	
 	/**
 	 * Executes a remote command.
 	 */
 	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(new Status.RemoteCommand(origin, address, command, commandId).autoEncode());
+		this.send(new Status.RemoteCommand(origin, address, command, commandId).encode());
 	}
 	
 	/**
@@ -421,7 +421,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 * to the hub.
 	 */
 	public shared void addNode(shared AbstractNode node) {
-		this.send(node.addPacket.autoEncode());
+		this.send(node.addPacket.encode());
 	}
 	
 	/**
@@ -429,14 +429,14 @@ abstract class AbstractNode : Handler!serverbound {
 	 * disconnected from the hub.
 	 */
 	public shared void removeNode(shared AbstractNode node) {
-		this.send(new Status.RemoveNode(node.id).autoEncode());
+		this.send(new Status.RemoveNode(node.id).encode());
 	}
 	
 	/**
 	 * Sends a message to the node.
 	 */
 	public shared void sendMessage(uint sender, bool broadcasted, ubyte[] payload) {
-		this.send(new Status.ReceiveMessage(sender, broadcasted, payload).autoEncode());
+		this.send(new Status.ReceiveMessage(sender, broadcasted, payload).encode());
 	}
 	
 	/**
@@ -444,7 +444,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 * players to the node.
 	 */
 	public shared void updatePlayers(inout uint online, inout uint max) {
-		this.send(new Status.UpdatePlayers(online, max).autoEncode());
+		this.send(new Status.UpdatePlayers(online, max).encode());
 	}
 	
 	/**
@@ -452,7 +452,7 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	public shared void addPlayer(shared PlayerSession player, ubyte reason, ubyte[] transferMessage) {
 		this.players[player.id] = player;
-		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).autoEncode());
+		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).encode());
 	}
 	
 	/**
@@ -492,38 +492,38 @@ abstract class AbstractNode : Handler!serverbound {
 	 */
 	protected shared void onPlayerGone(shared PlayerSession player, ubyte reason) {
 		if(this.players.remove(player.id)) {
-			this.send(new Player.Remove(player.id, reason).autoEncode());
+			this.send(new Player.Remove(player.id, reason).encode());
 		}
 	}
 
 	public shared void sendDisplayNameUpdate(shared PlayerSession player, string displayName) {
-		this.send(new Player.UpdateDisplayName(player.id, displayName).autoEncode());
+		this.send(new Player.UpdateDisplayName(player.id, displayName).encode());
 	}
 
 	public shared void sendPermissionLevelUpdate(shared PlayerSession player, ubyte permissionLevel) {
-		this.send(new Player.UpdatePermissionLevel(player.id, permissionLevel).autoEncode());
+		this.send(new Player.UpdatePermissionLevel(player.id, permissionLevel).encode());
 	}
 
 	public shared void sendViewDistanceUpdate(shared PlayerSession player, uint viewDistance) {
-		this.send(new Player.UpdateViewDistance(player.id, viewDistance).autoEncode());
+		this.send(new Player.UpdateViewDistance(player.id, viewDistance).encode());
 	}
 
 	public shared void sendLanguageUpdate(shared PlayerSession player, string language) {
-		this.send(new Player.UpdateLanguage(player.id, language).autoEncode());
+		this.send(new Player.UpdateLanguage(player.id, language).encode());
 	}
 	
 	/**
 	 * Updates a player's latency (usually sent every 30 seconds).
 	 */
 	public shared void sendLatencyUpdate(shared PlayerSession player) {
-		this.send(new Player.UpdateLatency(player.id, player.latency).autoEncode());
+		this.send(new Player.UpdateLatency(player.id, player.latency).encode());
 	}
 	
 	/**
 	 * Updates a player's packet loss (usually sent every 30 seconds).
 	 */
 	public shared void sendPacketLossUpdate(shared PlayerSession player) {
-		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss).autoEncode());
+		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss).encode());
 	}
 	
 	/**
@@ -545,8 +545,6 @@ abstract class AbstractNode : Handler!serverbound {
 	public abstract shared inout string toString();
 	
 }
-
-import std.stdio;
 
 class ClassicNode : AbstractNode {
 
@@ -577,7 +575,7 @@ class ClassicNode : AbstractNode {
 			else if(!this.n_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
 			else if(server.nodeNames.canFind(this.n_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
 			else if(["reload", "stop"].canFind(this.n_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
-			stream.send(response.autoEncode());
+			stream.send(response.encode());
 			if(response.status == Login.ConnectionResponse.OK) {
 				this.exchageInfo(stream);
 			}
@@ -586,7 +584,7 @@ class ClassicNode : AbstractNode {
 	}
 
 	protected override shared void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
-		stream.send(packet.autoEncode());
+		stream.send(packet.encode());
 	}
 
 	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {
