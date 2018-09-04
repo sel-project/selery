@@ -45,7 +45,7 @@ import selery.math.vector : BlockPosition, face;
 import selery.player.player : Player;
 import selery.world.world : World;
 
-static import sul.enchantments;
+static import sel.data.enchantment;
 static import sul.items;
 
 
@@ -639,12 +639,12 @@ class Item {
 	}
 
 	/// ditto
-	public @safe void addEnchantment(sul.enchantments.Enchantment ench, ubyte level) {
+	public @safe void addEnchantment(sel.data.enchantment.Enchantment ench, ubyte level) {
 		this.addEnchantment(new Enchantment(ench, level));
 	}
 
 	/// ditto
-	public @safe void addEnchantment(sul.enchantments.Enchantment ench, string level) {
+	public @safe void addEnchantment(sel.data.enchantment.Enchantment ench, string level) {
 		this.addEnchantment(new Enchantment(ench, level));
 	}
 
@@ -669,7 +669,7 @@ class Item {
 	 * assert(Enchantments.protection in item);
 	 * ---
 	 */
-	public @safe Enchantment* opBinaryRight(string op : "in")(inout sul.enchantments.Enchantment ench) {
+	public @safe Enchantment* opBinaryRight(string op : "in")(inout sel.data.enchantment.Enchantment ench) {
 		return ench.java.id in this.enchantments;
 	}
 
@@ -681,7 +681,7 @@ class Item {
 	 * item -= Enchantments.fortune;
 	 * ---
 	 */
-	public @safe void removeEnchantment(inout sul.enchantments.Enchantment ench) {
+	public @safe void removeEnchantment(inout sel.data.enchantment.Enchantment ench) {
 		if(ench.java.id in this.enchantments) {
 			this.enchantments.remove(ench.java.id);
 			void remove(ref Compound compound, ubyte id) @safe {

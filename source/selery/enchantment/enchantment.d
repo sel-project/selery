@@ -26,7 +26,7 @@
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/enchantment.d, selery/enchantment.d)
  */
-module selery.enchantment;
+module selery.enchantment.enchantment;
 
 import std.algorithm : min;
 import std.conv : to;
@@ -35,8 +35,8 @@ import std.string : toLower, replace, startsWith;
 
 import roman : fromRoman;
 
-static import sul.enchantments;
-public import sul.enchantments : Enchantments;
+static import sel.data.enchantment;
+import sel.data.enchantment : Enchantments;
 
 /**
  * Class that represents an enchantment and its level.
@@ -51,8 +51,8 @@ public import sul.enchantments : Enchantments;
  */
 final class Enchantment {
 	
-	private static const(sul.enchantments.Enchantment)[string] strings;
-	private static const(sul.enchantments.Enchantment)[ubyte] _java, _bedrock;
+	private static const(sel.data.enchantment.Enchantment)[string] strings;
+	private static const(sel.data.enchantment.Enchantment)[ubyte] _java, _bedrock;
 	
 	public static this() {
 		foreach(e ; __traits(allMembers, Enchantments)) {
@@ -103,15 +103,15 @@ final class Enchantment {
 		return ret ? new Enchantment(*ret, level) : null;
 	}
 	
-	public const sul.enchantments.Enchantment enchantment;
+	public const sel.data.enchantment.Enchantment enchantment;
 	public immutable ubyte level;
 	
-	public pure nothrow @safe @nogc this(sul.enchantments.Enchantment enchantment, ubyte level) {
+	public pure nothrow @safe @nogc this(sel.data.enchantment.Enchantment enchantment, ubyte level) {
 		this.enchantment = enchantment;
 		this.level = level == 0 ? ubyte(1) : level;
 	}
 	
-	public @safe this(sul.enchantments.Enchantment enchantment, string level) {
+	public @safe this(sel.data.enchantment.Enchantment enchantment, string level) {
 		this(enchantment, level.fromRoman & 255);
 	}
 	

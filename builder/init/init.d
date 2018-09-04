@@ -397,8 +397,8 @@ int main(string[] args) {
 	builder["sourceFiles"] = ["main/" ~ type ~ ".d", ".selery/builder.d"];
 	builder["dependencies"] = [
 		"selery": ["path": ".."],
-		"toml": ["version": "~>1.0.0-rc.2"],
-		"toml:json": ["version": "~>1.0.0-rc.2"]
+		"toml": ["version": "~>1.0.0-rc.3"],
+		"toml:json": ["version": "~>1.0.0-rc.3"]
 	];
 	builder["configurations"] = [["name": cast(string)type]];
 	builder["subPackages"] = new JSONValue[0];
