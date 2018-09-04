@@ -24,7 +24,7 @@
  * Copyright: Copyright (c) 2017-2018 sel-project
  * License: MIT
  * Authors: Kripth
- * Source: $(HTTP github.com/sel-project/selery/source/selery/enchantment.d, selery/enchantment.d)
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/enchantment/enchantment.d, selery/enchantment/enchantment.d)
  */
 module selery.enchantment.enchantment;
 

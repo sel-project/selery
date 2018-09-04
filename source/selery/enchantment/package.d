@@ -20,6 +20,12 @@
  * SOFTWARE.
  *
  */
+/**
+ * Copyright: Copyright (c) 2017-2018 sel-project
+ * License: MIT
+ * Authors: Kripth
+ * Source: $(HTTP github.com/sel-project/selery/source/selery/enchantment/package.d, selery/enchantment/package.d)
+ */
 module selery.enchantment;
 
 public import selery.enchantment.enchantment : Enchantment, EnchantmentException;
