@@ -1,12 +1,18 @@
 ### 0.3.0
 
+**September 21st, 2018**
+
 The [sel-hncom](https://github.com/sel-project/sel-hncom) library has been merged
-with Selery and now uses the [packet-maker](https://github.com/Kripth/packet-maker)
-library.
+with Selery and now uses the [xpacket](https://github.com/Kripth/xpacket) library.
+
+New library ([sel-data](https://github.com/sel-project/sel-data)) used to provide IDs;
+it will replace sel-utils in the future.
 
 New library for reading roman numbers.
 
 ### 0.2.0
+
+**June 4th, 2018**
 
 The parent/children model for worlds has been replaced by the group system.
 Players cannot be transferred between worlds yet.
@@ -37,8 +43,12 @@ of Selery on Windows x86.
 
 ### 0.1.1
 
+**February 9th, 2018**
+
 Added more command-line options and improved the project's README file.
 
 ### 0.1.0
+
+**February 8th, 2018**
 
 Initial release.

@@ -1,7 +1,7 @@
 Selery
 ======
 
-Selery is a server for Minecraft (Bedrock Engine) and Minecraft: Java Edition written in [D](https://dlang.org).
+Selery is a server for Minecraft (Bedrock Engine) 1.2 and Minecraft: Java Edition 1.10-1.12 written in [D](https://dlang.org).
 
 [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/c9uwNMW)
 
