@@ -1,3 +1,7 @@
+### 0.4.0
+
+The core library [sel-server](https://github.com/sel-project/sel-server) has been updated to version 0.4.0 and is now asynchronous.
+
 ### 0.3.0
 
 **September 21st, 2018**

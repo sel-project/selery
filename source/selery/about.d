@@ -71,12 +71,6 @@ const struct Software {
 	
 	/**
 	 * Website of the software.
-	 * Source code should be at website/source and downloads
-	 * at website/downloads.
-	 * Example:
-	 * ---
-	 * download("http://" ~ Software.website ~ "/downloads/1.0.0.sa", "1.0.0.sa");
-	 * ---
 	 */
 	enum string website = "";
 	
@@ -85,10 +79,10 @@ const struct Software {
 	 * the group of versions of the software.
 	 * Used only for display purposes.
 	 */
-	enum string codename = "Cookie";
+	enum string codename = "Donut";
 	
 	/// ditto
-	enum string codenameEmoji = "🍪";
+	enum string codenameEmoji = "🍩";
 	
 	/// ditto
 	enum string fullCodename = codename ~ " (" ~ codenameEmoji ~ ")";
@@ -99,7 +93,7 @@ const struct Software {
 	enum ubyte major = 0;
 	
 	/// ditto
-	enum ubyte minor = 3;
+	enum ubyte minor = 4;
 	
 	/// ditto
 	enum ubyte patch = 0;

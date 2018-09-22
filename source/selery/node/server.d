@@ -51,7 +51,7 @@ import resusage.memory;
 import resusage.cpu;
 
 import sel.format : Format;
-import sel.server.bedrock : bedrockSupportedProtocols;
+import sel.protocols : bedrockProtocols;
 
 import selery.world.world : World; // do not move this import down
 
@@ -59,7 +59,7 @@ import selery.about;
 import selery.command.command : Command;
 import selery.command.execute : executeCommand;
 import selery.command.util : CommandSender;
-import selery.config : Config, Difficulty, Gamemode;
+import selery.config : Config, Difficulty, Gamemode, Files;
 import selery.entity.human : Skin;
 import selery.event.event : Event, EventListener;
 import selery.event.node;
@@ -329,7 +329,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			string[] failed;
 			if(this.config.hub.bedrock.protocols.canFind(protocol)) {
 				if(!mixin("BedrockPlayerImpl!" ~ protocol.to!string).loadCreativeInventory(this.config.files)) {
-					failed ~= bedrockSupportedProtocols[protocol];
+					failed ~= bedrockProtocols[protocol];
 				}
 			}
 			if(failed.length) {
@@ -532,12 +532,28 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		return this.n_args;
 	}
 
-	public override shared pure nothrow @property @trusted @nogc const(Config) config() {
+	public override pure nothrow @property @trusted @nogc const(Config) config() {
 		return cast()this._config;
 	}
 
-	public override shared @property Logger logger() {
+	public shared @property const(Config) config() pure nothrow @trusted @nogc {
+		return (cast()this).config;
+	}
+
+	public shared @property const(Files) files() pure nothrow @trusted @nogc {
+		return (cast()this).config.files;
+	}
+
+	public shared @property const(LanguageManager) lang() pure nothrow @trusted @nogc {
+		return (cast()this).config.lang;
+	}
+
+	public override @property Logger logger() {
 		return cast()this._logger;
+	}
+
+	public shared @property Logger logger() {
+		return (cast()this).logger;
 	}
 
 	public shared void logCommand(Message[] messages, int commandId) {
@@ -548,8 +564,12 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		(cast()this.serverlogger).logWith(messages, HncomStatus.Log.NO_COMMAND, worldId);
 	}
 
-	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
+	public override pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
 		return cast(const(Plugin)[])this.n_plugins;
+	}
+
+	public shared @property const(Plugin)[] plugins() nothrow @trusted @nogc {
+		return (cast()this).plugins;
 	}
 
 	/**

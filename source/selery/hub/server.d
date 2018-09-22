@@ -54,12 +54,15 @@ import std.utf : UTFException;
 
 import imageformats : ImageIOException, read_png_header_from_mem;
 
+import kiss.event : EventLoop;
+
 import myip : privateAddresses, publicAddress4;
 
 import sel.format : Format;
-import sel.server.client : Client;
-import sel.server.query : Query;
-import sel.server.util : ServerInfo, PlayerHandler = Handler;
+import sel.server.util : Client;
+//import sel.server.query : Query;
+import sel.server.util : ServerInfo;
+import sel.server.server : PlayerHandler = Handler;
 
 import selery.about;
 import selery.config : Config;
@@ -68,7 +71,7 @@ import selery.event.hub : HubServerEvent, LogEvent;
 import selery.hncom.login : HubInfo, NodeInfo;
 import selery.hncom.status : Log;
 import selery.hub.handler : Handler;
-import selery.hub.hncom : AbstractNode;
+import selery.hub.hncom : Node;
 import selery.hub.player : PlayerSession;
 import selery.hub.plugin.plugin : HubPluginInfo;
 import selery.lang : Translation;
@@ -79,6 +82,8 @@ import selery.util.thread;
 import selery.util.util : milliseconds;
 
 import terminal : Terminal;
+
+import xbuffer : Buffer;
 
 struct Icon {
 
@@ -109,31 +114,31 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 
 	private immutable ulong started;
 
+	private EventLoop _eventLoop;
+
 	public EventListener!HubServerEvent eventListener;
 
-	private shared Config _config;
-	private shared ServerLogger _logger;
-	private shared const(AddressRange)[] _accepted_nodes;
-	private shared Icon _icon;
-	private shared ServerInfo _info;
-	private shared Query _query;
+	private Config _config;
+	private ServerLogger _logger;
+	private const(AddressRange)[] _accepted_nodes;
+	private Icon _icon;
+	private ServerInfo _info;
+	//private shared Query _query;
 
-	private shared Plugin[] _plugins;
+	private Plugin[] _plugins;
 
-	private shared uint n_max = 0; //TODO replace with _info.max
+	private uint n_max = 0; //TODO replace with _info.max
 
-	private shared uint n_upload, n_download;
+	private Handler handler;
 
-	private shared Handler handler;
-
-	private shared AbstractNode[uint] nodes;
-	private shared AbstractNode[] main_nodes;
-	private shared AbstractNode[string] nodesNames;
-	private shared size_t[string] n_plugins;
+	private Node[uint] nodes;
+	private Node[] main_nodes;
+	private Node[string] nodesNames;
+	private size_t[string] n_plugins;
 	
-	private shared PlayerSession[uint] _players;
+	private PlayerSession[uint] _players;
 
-	public shared this(bool lite, Config config, Plugin[] plugins=[], string[] args=[]) {
+	public this(bool lite, Config config, Plugin[] plugins=[], string[] args=[]) {
 
 		assert(config.files !is null);
 		assert(config.lang !is null);
@@ -143,19 +148,21 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 
 		this.lite = lite;
 
+		_eventLoop = new EventLoop();
+
 		this.eventListener = new EventListener!HubServerEvent();
 
 		this._info = new shared ServerInfo();
-		if(config.hub.query) {
+		/*if(config.hub.query) {
 			this._query = new shared Query(this._info);
 			this._query.software = Software.name ~ " " ~ Software.displayVersion;
-		}
+		}*/
 
 		AddressRange[] acceptedNodes;
 		foreach(node ; config.hub.acceptedNodes) {
 			acceptedNodes ~= AddressRange.parse(node);
 		}
-		this._accepted_nodes = cast(shared const)acceptedNodes;
+		this._accepted_nodes = acceptedNodes;
 
 		Terminal terminal = new Terminal();
 
@@ -163,7 +170,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		
 		Message[][] errors = this.load(config);
 
-		this._logger = cast(shared)new ServerLogger(this, terminal);
+		this._logger = new ServerLogger(this, terminal);
 		
 		this.logger.log(Translation("startup.starting", [Format.green ~ Software.name ~ Format.reset ~ " " ~ Format.white ~ Software.fullVersion ~ Format.reset ~ " " ~ Software.fullCodename]));
 		
@@ -184,9 +191,9 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		immutable pu4 = publicAddress4;
 		if(pu4.length) this.logger.log(Translation("startup.publicAddress", pu4));
 
-		this.handler = new shared Handler(this, this._info, this._query);
+		this.handler = new Handler(this, this._info/*, this._query*/);
 
-		this._plugins = cast(shared Plugin[])plugins;
+		this._plugins = plugins;
 
 		// load plugins
 		foreach(_plugin ; _plugins) {
@@ -213,7 +220,10 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 
 		if(!this.lite) this.logger.log(Translation("startup.started"));
 
-		int last_online, last_max = this.maxPlayers;
+		this.eventLoop.run();
+
+		//TODO move this into a timer
+		/*int last_online, last_max = this.maxPlayers;
 		size_t next_analytics = 0;
 		while(true) {
 			uint online = this.onlinePlayers.to!uint;
@@ -225,7 +235,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 				}
 			}
 			Thread.sleep(dur!"msecs"(1000));
-		}
+		}*/
 
 	}
 
@@ -237,7 +247,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	 * - validate accepted language(s)
 	 * - load languages
 	 */
-	private shared Message[][] load(ref Config config) {
+	private Message[][] load(ref Config config) {
 		Message[][] errors;
 		// MOTDs and protocols
 		this._info.motd.raw = config.hub.displayName;
@@ -283,14 +293,14 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 				icon = Icon.init;
 			}
 		}
-		this._icon = cast(shared)icon;
+		this._icon = icon;
 		this._info.favicon = this._icon.base64data;
 		// save new config
-		this._config = cast(shared)config;
+		this._config = config;
 		return errors;
 	}
 
-	public shared void shutdown() {
+	public void shutdown() {
 		this.handler.shutdown();
 		foreach(node ; this.nodes) node.onClosed(false);
 		import core.stdc.stdlib : exit;
@@ -298,13 +308,13 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		exit(0);
 	}
 
-	public shared nothrow @property UUID nextUUID() {
+	public nothrow @property UUID nextUUID() {
 		ubyte[16] data = nativeToBigEndian(this.id) ~ nativeToBigEndian(this.uuid_count);
 		atomicOp!"+="(this.uuid_count, 1);
 		return UUID(data);
 	}
 
-	public shared nothrow @property @trusted @nogc ulong nextPool() {
+	public nothrow @property @trusted @nogc ulong nextPool() {
 		ulong pool = this.uuid_count;
 		atomicOp!"+="(this.uuid_count, uint.max);
 		return pool;
@@ -313,47 +323,44 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	/**
 	 * Gets the server's uptime in milliseconds.
 	 */
-	public shared @property @safe const uint uptime() {
+	public @property @safe const uint uptime() {
 		return cast(uint)(milliseconds - this.started);
+	}
+
+	/**
+	 * Gets the server's event loop.
+	 */
+	public @property EventLoop eventLoop() pure nothrow @safe @nogc {
+		return _eventLoop;
 	}
 
 	/**
 	 * Gets the server's configuration.
 	 */
-	public override shared nothrow @property @trusted @nogc const(Config) config() {
-		return cast()this._config;
+	public override nothrow @property @trusted @nogc const(Config) config() {
+		return _config;
 	}
 
-	public override shared @property Logger logger() {
-		return cast()this._logger;
+	public override @property Logger logger() {
+		return _logger;
 	}
 
-	public override shared pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
-		return cast(const(Plugin)[])this._plugins;
+	public override pure nothrow @property @trusted @nogc const(Plugin)[] plugins() {
+		return cast(const(Plugin)[])_plugins;
 	}
 
-	public final shared nothrow @property @safe @nogc shared(ServerInfo) info() {
-		return this._info;
+	public final nothrow @property @safe @nogc ServerInfo info() {
+		return _info;
 	}
 
-	public shared nothrow @property @trusted @nogc const(Icon) icon() {
-		return cast()this._icon;
-	}
-
-	/// ditto
-	public shared nothrow @property @safe @nogc const uint upload() {
-		return this.n_upload;
-	}
-
-	/// ditto
-	public shared nothrow @property @safe @nogc const uint download() {
-		return this.n_download;
+	public nothrow @property @trusted @nogc const(Icon) icon() {
+		return _icon;
 	}
 
 	/**
 	 * Gets the number of online players.
 	 */
-	public shared nothrow @property @safe @nogc const uint onlinePlayers() {
+	public nothrow @property @safe @nogc const uint onlinePlayers() {
 		version(X86_64) {
 			return cast(uint)this._players.length;
 		} else {
@@ -364,11 +371,11 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	/**
 	 * Gets the number of max players.
 	 */
-	public shared nothrow @property @safe @nogc const int maxPlayers() {
+	public nothrow @property @safe @nogc const int maxPlayers() {
 		return this.n_max;
 	}
 
-	public shared @property @safe @nogc void updateMaxPlayers() {
+	public @property @safe @nogc void updateMaxPlayers() {
 		int max = 0;
 		foreach(node ; this.nodes) {
 			if(node.max == NodeInfo.UNLIMITED) {
@@ -384,7 +391,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	/**
 	 * Indicates whether the server is full.
 	 */
-	public shared @property @safe @nogc const(bool) full() {
+	public @property @safe @nogc const(bool) full() {
 		if(this.maxPlayers == HubInfo.UNLIMITED) return false;
 		foreach(node ; this.nodes) {
 			if(!node.full) return false;
@@ -395,15 +402,15 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	/**
 	 * Gets the online players.
 	 */
-	public shared @property shared(PlayerSession[]) players() {
+	public @property PlayerSession[] players() {
 		return this._players.values;
 	}
 
 	/**
 	 * Handles a command.
 	 */
-	public shared void handleCommand(string command, ubyte origin, Address sender, int commandId) {
-		shared AbstractNode recv;
+	public void handleCommand(string command, ubyte origin, Address sender, int commandId) {
+		Node recv;
 		if(this.lite) {
 			recv = this.nodes.values[0];
 		} else {
@@ -423,7 +430,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 	/**
 	 * Handles a log.
 	 */
-	public shared void handleLog(string node, Log.Message[] messages, ulong timestamp, int commandId, int worldId, string worldName) {
+	public void handleLog(string node, Log.Message[] messages, ulong timestamp, int commandId, int worldId, string worldName) {
 		Message[] log;
 		if(node.length) log ~= Message("[node/" ~ node ~ "]");
 		if(worldName.length) log ~= Message("[world/" ~ worldName ~ "]");
@@ -436,7 +443,7 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		(cast()this._logger).logWith(log, commandId, worldId);
 	}
 
-	public shared bool acceptNode(Address address) {
+	public bool acceptNode(Address address) {
 		if(this.config.hub.maxNodes != 0) {
 			if(this.nodes.length >= this.config.hub.maxNodes) return false;
 		}
@@ -454,47 +461,47 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		return false;
 	}
 
-	public shared nothrow @property @safe @nogc bool hasNodes() {
+	public nothrow @property @safe @nogc bool hasNodes() {
 		return this.nodes.length != 0;
 	}
 
 	/**
 	 * Returns: the first main node which is not full
 	 */
-	public shared nothrow @property @safe @nogc shared(AbstractNode) mainNode() {
+	public nothrow @property @safe @nogc Node mainNode() {
 		foreach(node ; this.main_nodes) {
 			if(node.main && (node.max == NodeInfo.UNLIMITED || node.online < node.max)) return node;
 		}
 		return null;
 	}
 
-	public shared nothrow @property @safe shared(AbstractNode)[] mainNodes() {
-		shared AbstractNode[] nodes;
+	public nothrow @property @safe Node[] mainNodes() {
+		Node[] nodes;
 		foreach(node ; this.main_nodes) {
 			if(node.main && (node.max == NodeInfo.UNLIMITED || node.online < node.max)) nodes ~= node;
 		}
 		return nodes;
 	}
 
-	public shared nothrow shared(AbstractNode) nodeByName(string name) {
+	public nothrow Node nodeByName(string name) {
 		auto ptr = name in this.nodesNames;
 		return ptr ? *ptr : null;
 	}
 	
-	public shared nothrow shared(AbstractNode) nodeById(uint id) {
+	public nothrow Node nodeById(uint id) {
 		auto ptr = id in this.nodes;
 		return ptr ? *ptr : null;
 	}
 
-	public shared @property string[] nodeNames() {
+	public @property string[] nodeNames() {
 		return this.nodesNames.keys;
 	}
 
-	public shared @property shared(AbstractNode[]) nodesList() {
+	public @property Node[] nodesList() {
 		return this.nodes.values;
 	}
 
-	public synchronized shared void add(shared AbstractNode node) {
+	public void add(Node node) {
 		if(!this.lite) this.logger.log(Format.green, "+ ", Format.reset, node.toString());
 		this.nodes[node.id] = node;
 		this.nodesNames[node.name] = node;
@@ -506,57 +513,59 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		foreach(plugin ; node.plugins) {
 			string str = plugin.name ~ " " ~ plugin.version_;
 			if(str in this.n_plugins) {
-				atomicOp!"+="(this.n_plugins[str], 1);
+				this.n_plugins[str]++;
 			} else {
 				this.n_plugins[str] = 1;
 				//TODO add to _query.plugins
 			}
 		}
 		// notify other nodes
-		foreach(shared AbstractNode on ; this.nodes) {
+		foreach(on ; this.nodes) {
 			on.addNode(node);
 		}
 	}
 
-	public synchronized shared void remove(shared AbstractNode node) {
-		this.logger.log(Format.red, "- ", Format.reset, node.toString());
-		this.nodes.remove(node.id);
-		this.nodesNames.remove(node.name);
-		// update players
-		this.updateMaxPlayers();
-		// remove from main, if main
-		if(node.main) {
-			foreach(i, n; this.main_nodes) {
-				if(n.id == node.id) {
-					this.main_nodes = this.main_nodes[0..i] ~ this.main_nodes[i+1..$];
-					break;
+	public void remove(Node node) {
+		if(node.id in this.nodes) {
+			this.logger.log(Format.red, "- ", Format.reset, node.toString());
+			this.nodes.remove(node.id);
+			this.nodesNames.remove(node.name);
+			// update players
+			this.updateMaxPlayers();
+			// remove from main, if main
+			if(node.main) {
+				foreach(i, n; this.main_nodes) {
+					if(n.id == node.id) {
+						this.main_nodes = this.main_nodes[0..i] ~ this.main_nodes[i+1..$];
+						break;
+					}
 				}
 			}
-		}
-		// remove plugins
-		foreach(plugin ; node.plugins) {
-			string str = plugin.name ~ " " ~ plugin.version_;
-			auto ptr = str in this.n_plugins;
-			if(ptr) {
-				atomicOp!"-="(*ptr, 1);
-				if(*ptr == 0) {
-					this.n_plugins.remove(str);
-					//TODO remove from _query.plugins
+			// remove plugins
+			foreach(plugin ; node.plugins) {
+				string str = plugin.name ~ " " ~ plugin.version_;
+				auto ptr = str in this.n_plugins;
+				if(ptr) {
+					*ptr += 1;
+					if(*ptr == 0) {
+						this.n_plugins.remove(str);
+						//TODO remove from _query.plugins
+					}
 				}
 			}
-		}
-		// notify other nodes
-		foreach(shared AbstractNode on ; this.nodes) {
-			on.removeNode(node);
+			// notify other nodes
+			foreach(on ; this.nodes) {
+				on.removeNode(node);
+			}
 		}
 	}
 
-	public override shared void onClientJoin(shared Client client) {
-		auto player = new shared PlayerSession(this, client);
+	public override void onJoin(Client client) {
+		auto player = new PlayerSession(this, client);
 		if(player.firstConnect()) this._players[player.id] = player;
 	}
 
-	public override shared void onClientLeft(shared Client client) {
+	public override void onLeft(Client client) {
 		auto player = client.id in this._players;
 		if(player) {
 			this._players.remove(client.id);
@@ -564,28 +573,28 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		}
 	}
 
-	public override shared void onClientPacket(shared Client client, ubyte[] packet) {
+	public override void onPacket(Client client, Buffer buffer) {
 		auto player = client.id in this._players;
 		if(player) {
-			(*player).sendToNode(packet);
+			(*player).sendToNode(buffer.data!ubyte);
 		}
 	}
 
-	public shared void onBedrockClientRequestChunkRadius(shared Client client, uint viewDistance) {
-		//TODO select player and update if changed (the node will send the confirmation back)
+	public override void onLatencyUpdate(Client client) {
+		//TODO
 	}
 
-	public shared void onJavaClientClientSettings(shared Client client, string language, ubyte viewDistance, uint chatMode, bool chatColors, ubyte skinParts, uint mainHand) {
-		//TODO select player and update if changed
+	public override void onPacketLossUpdate(Client client) {
+		//TODO
 	}
 
-	public shared nothrow shared(PlayerSession) playerFromId(immutable(uint) id) {
+	public nothrow PlayerSession playerFromId(immutable(uint) id) {
 		auto ptr = id in this._players;
 		return ptr ? *ptr : null;
 	}
 
-	public shared shared(PlayerSession) playerFromIdentifier(ubyte[] idf) {
-		foreach(shared PlayerSession player ; this.players) {
+	public PlayerSession playerFromIdentifier(ubyte[] idf) {
+		foreach(PlayerSession player ; this.players) {
 			if(player.iusername == idf) return player;
 		}
 		return null;
@@ -595,9 +604,9 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 
 private class ServerLogger : Logger {
 
-	private shared HubServer server;
+	private HubServer server;
 	
-	public this(shared HubServer server, Terminal terminal) {
+	public this(HubServer server, Terminal terminal) {
 		super(terminal, server.lang);
 		this.server = server;
 	}
@@ -607,7 +616,7 @@ private class ServerLogger : Logger {
 	}
 
 	public void logWith(Message[] messages, int commandId, int worldId) {
-		(cast()this.server).eventListener.callEventIfExists!LogEvent(this.server, messages, commandId, worldId);
+		this.server.eventListener.callEventIfExists!LogEvent(this.server, messages, commandId, worldId);
 		super.logImpl(messages);
 	}
 	

@@ -109,5 +109,11 @@ mixin template Make() {
 		ret.decode(buffer);
 		return ret;
 	}
+
+	static typeof(this) fromBuffer(Buffer buffer) {
+		typeof(this) ret = new typeof(this)();
+		ret.decode(buffer);
+		return ret;
+	}
 	
 }

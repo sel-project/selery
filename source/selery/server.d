@@ -49,7 +49,7 @@ interface Server {
 	 * if(server.config.node.java) writeln("Port for Java Edition: ", server.config.node.java.port); 
 	 * ---
 	 */
-	shared nothrow @property @safe @nogc const(Config) config();
+	nothrow @property @safe @nogc const(Config) config();
 
 	/**
 	 * Gets the server's files (assets and temp files).
@@ -61,14 +61,14 @@ interface Server {
 	 * }
 	 * ---
 	 */
-	final shared nothrow @property @safe @nogc const(Files) files() {
+	final nothrow @property @safe @nogc const(Files) files() {
 		return this.config.files;
 	}
 
 	/**
 	 * Gets the server's language manager.
 	 */
-	final shared nothrow @property @safe @nogc const(LanguageManager) lang() {
+	final nothrow @property @safe @nogc const(LanguageManager) lang() {
 		return this.config.lang;
 	}
 
@@ -79,7 +79,7 @@ interface Server {
 	 * server.logger.log("Hello");
 	 * ---
 	 */
-	shared @property Logger logger();
+	@property Logger logger();
 
 	/**
 	 * Gets the plugins actived on the server.
@@ -89,6 +89,6 @@ interface Server {
 	 * writeln("There are ", server.plugins.filter!(a => a.api).length, " plugins with APIs");
 	 * ---
 	 */
-	shared nothrow @property @safe @nogc const(Plugin)[] plugins();
+	nothrow @property @safe @nogc const(Plugin)[] plugins();
 
 }

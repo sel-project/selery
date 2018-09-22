@@ -36,9 +36,9 @@ import selery.server : Server;
 
 class HubPlugin {
 
-	protected shared HubServer server;
+	protected HubServer server;
 
-	protected shared Plugin plugin;
+	protected Plugin plugin;
 
 }
 
@@ -48,7 +48,7 @@ class HubPluginInfo : Plugin {
 		super(name, path, authors, version_, main);
 	}
 
-	abstract void load(shared HubServer server);
+	abstract void load(HubServer server);
 
 }
 
@@ -58,11 +58,11 @@ class HubPluginOf(T) : HubPluginInfo if(is(T == Object) || is(T : HubPlugin)) {
 		super(name, path, authors, version_, !is(T == Object));
 	}
 	
-	public override void load(shared HubServer server) {
+	public override void load(HubServer server) {
 		static if(!is(T == Object)) {
 			T main = new T();
 			main.server = server;
-			main.plugin = cast(shared)this;
+			main.plugin = this;
 			foreach(member ; __traits(allMembers, T)) {
 				static if(is(typeof(__traits(getMember, T, member)) == function)) {
 					mixin("alias F = T." ~ member ~ ";");

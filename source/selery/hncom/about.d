@@ -28,6 +28,8 @@
  */
 module selery.hncom.about;
 
+import sel.server.util : Client;
+
 /**
  * Version of the protocol.
  * The hub and the connecting nodes must use the same protocol.
@@ -35,10 +37,10 @@ module selery.hncom.about;
 enum uint __PROTOCOL__ = 10;
 
 /// Identifier for Minecraft (Bedrock Engine)
-enum ubyte __BEDROCK__ = 0;
+enum ubyte __BEDROCK__ = Client.Type.bedrock;
 
 /// Identifier for Minecraft: Java Edition
-enum ubyte __JAVA__ = 1;
+enum ubyte __JAVA__ = Client.Type.java;
 
 enum clientbound;
 

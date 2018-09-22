@@ -43,15 +43,18 @@ import std.string;
 import std.system : Endian;
 import std.zlib;
 
+import kiss.net : TcpListener, TcpStream;
+
 import sel.net.modifiers : LengthPrefixedStream;
-import sel.net.stream : TcpStream;
-import sel.server.query : Query;
+//import sel.server.query : Query;
 import sel.server.util;
+import sel.server.server : Server;
+import sel.stream : Stream, LengthPrefixedModifier;
 
 import selery.about;
 import selery.hncom.about;
 import selery.hncom.handler : Handler = HncomHandler;
-import selery.hncom.io : HncomAddress, HncomUUID;
+import selery.hncom.io : HncomPacket, HncomAddress, HncomUUID;
 import selery.hub.player : WorldSession = World, PlayerSession, Skin;
 import selery.hub.server : HubServer;
 import selery.util.thread : SafeThread;
@@ -61,142 +64,176 @@ import Login = selery.hncom.login;
 import Status = selery.hncom.status;
 import Player = selery.hncom.player;
 
-alias HncomStream = LengthPrefixedStream!(uint, Endian.littleEndian);
+import xbuffer : Buffer;
 
-class HncomHandler {
+class HncomServer : Server {
 
-	private shared HubServer server;
+	private HubServer server;
 	
-	private shared JSONValue* additionalJson;
+	private JSONValue* additionalJson;
 
-	private shared Address address;
+	private Address address;
 	
-	public shared this(shared HubServer server, shared JSONValue* additionalJson) {
+	public this(HubServer server, JSONValue* additionalJson) {
+		super(server.eventLoop, server.info);
 		this.server = server;
 		this.additionalJson = additionalJson;
 	}
 
-	public shared void start(inout(string)[] accepted, ushort port) {
-		bool v4, v6, public_;
-		foreach(address ; accepted) {
-			switch(address) {
-				case "127.0.0.1":
-					v4 = true;
-					break;
-				case "::1":
-					v6 = true;
-					break;
-				default:
-					if(address.canFind(":")) v6 = true;
-					else v4 = true;
-					public_ = true;
-					break;
-			}
-		}
-		Address address = getAddress(public_ ? (v4 ? "0.0.0.0" : "::") : (v4 ? "127.0.0.1" : "::1"), port)[0];
-		Socket socket = new TcpSocket(v4 && v6 ? AddressFamily.INET | AddressFamily.INET6 : address.addressFamily);
-		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-		socket.setOption(SocketOptionLevel.IPV6, SocketOption.IPV6_V6ONLY, !v4 || !v6);
-		socket.blocking = true;
-		socket.bind(address);
-		socket.listen(8);
-		this.address = cast(shared)address;
-		spawn(&this.acceptClients, cast(shared)socket);
+	public override ushort defaultPort() {
+		return 28232;
+	}
+
+	protected override void hostImpl(Address address) {
+		TcpListener listener = new TcpListener(this.eventLoop, address.addressFamily);
+		listener.bind(address);
+		listener.listen(1024);
+		listener.onConnectionAccepted = &this.handle;
+		listener.start();
 	}
 	
-	private shared void acceptClients(shared Socket _socket) {
-		debug Thread.getThis().name = "hncom_server@" ~ (cast()_socket).localAddress.toString();
-		Socket socket = cast()_socket;
-		while(true) {
-			Socket client = socket.accept();
-			Address address;
-			try {
-				address = client.remoteAddress;
-			} catch(Exception) {
-				continue;
-			}
-			if(this.server.acceptNode(address)) {
-				new SafeThread(this.server.config.lang, {
-					shared ClassicNode node = new shared ClassicNode(this.server, client, this.additionalJson);
-					delete node;
-				}).start();
-			} else {
-				client.close();
-			}
+	private void handle(TcpListener sender, TcpStream conn) {
+		if(this.server.acceptNode(address)) {
+			new Node(this.server, this.additionalJson, conn);
+		} else {
+			conn.close();
 		}
 	}
 
-	public shared pure nothrow @property @safe @nogc shared(Address) localAddress() {
+	public override void stop() {
+		//TODO
+	}
+
+	public deprecated pure nothrow @property @safe @nogc Address localAddress() {
 		return this.address;
 	}
 	
 }
 
 /**
- * Session of a node. It's executed in a dedicated thread.
+ * A node client.
  */
-abstract class AbstractNode : Handler!serverbound {
+class Node : Handler!serverbound {
 
 	private static shared uint _id;
 
 	public immutable uint id;
 	
-	private shared HubServer server;
-	private shared JSONValue* additionalJson;
+	private HubServer server;
+	private JSONValue* additionalJson;
 
-	protected HncomStream stream;
+	private Stream stream;
+	private void delegate(Buffer) handler;
+
+	private immutable string remoteAddress;
 	
-	private shared bool n_main;
-	private shared string n_name;
+	private bool _main;
+	private string _name;
 	
-	private shared uint[][ubyte] accepted;
+	private uint[][ubyte] accepted;
 	
-	private shared uint n_max;
-	public shared Login.NodeInfo.Plugin[] plugins;
+	private uint _max;
+	public Login.NodeInfo.Plugin[] plugins;
 	
-	private shared PlayerSession[uint] players;
-	private shared WorldSession[uint] _worlds;
+	private PlayerSession[uint] players;
+	private WorldSession[uint] _worlds;
 	
-	private uint n_latency;
+	private uint _latency;
 	
-	private shared float n_tps;
-	private shared ulong n_ram;
-	private shared float n_cpu;
+	private float _tps;
+	private ulong _ram;
+	private float _cpu;
 	
-	public shared this(shared HubServer server, shared JSONValue* additionalJson) {
+	public this(HubServer server, JSONValue* additionalJson, TcpStream conn) {
 		this.id = atomicOp!"+="(_id, 1);
 		this.server = server;
 		this.additionalJson = additionalJson;
+		this.remoteAddress = conn.remoteAddress.toString();
+		this.stream = new Stream(conn, &this.handle);
+		this.stream.modify!(LengthPrefixedModifier!(uint, Endian.littleEndian))();
+		this.handler = &this.handleConnectionRequest;
 	}
 
-	protected shared void exchageInfo(HncomStream stream) {
-		with(cast()server.config.hub) {
-			Login.HubInfo.GameInfo[ubyte] games;
-			if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols, bedrock.onlineMode, ushort(0));
-			if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols, java.onlineMode, ushort(0));
-			this.sendHubInfo(stream, new Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.acceptedLanguages.dup, false, (cast()*this.additionalJson).toString()));
+	private void handle(Buffer buffer) {
+		this.handleHncom(buffer.data!ubyte);
+	}
+
+	private void handleConnectionRequest(Buffer buffer) {
+		if(buffer.peek!ubyte == Login.ConnectionRequest.ID) {
+			immutable password = server.config.hub.hncomPassword;
+			Login.ConnectionRequest request = Login.ConnectionRequest.fromBuffer(buffer);
+			_name = request.name.idup;
+			_main = request.main;
+			Login.ConnectionResponse response = new Login.ConnectionResponse();
+			if(request.protocol > __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_HUB;
+			else if(request.protocol < __PROTOCOL__) response.status = Login.ConnectionResponse.OUTDATED_NODE;
+			else if(password.length && !password.length) response.status = Login.ConnectionResponse.PASSWORD_REQUIRED;
+			else if(password.length && password != request.password) response.status = Login.ConnectionResponse.WRONG_PASSWORD;
+			else if(!_name.length || _name.length > 32) response.status = Login.ConnectionResponse.INVALID_NAME_LENGTH;
+			else if(!_name.matchFirst(ctRegex!r"[^a-zA-Z0-9_+-.,!?:@#$%\/]").empty) response.status = Login.ConnectionResponse.INVALID_NAME_CHARACTERS;
+			else if(server.nodeNames.canFind(_name)) response.status = Login.ConnectionResponse.NAME_ALREADY_USED;
+			else if(["reload", "stop"].canFind(_name.toLower)) response.status = Login.ConnectionResponse.NAME_RESERVED;
+			this.send(response);
+			if(response.status == Login.ConnectionResponse.OK) {
+				with(server.config.hub) {
+					Login.HubInfo.GameInfo[ubyte] games;
+					if(bedrock) games[__BEDROCK__] = Login.HubInfo.GameInfo(bedrock.motd, bedrock.protocols.dup, bedrock.onlineMode, ushort(0));
+					if(java) games[__JAVA__] = Login.HubInfo.GameInfo(java.motd, java.protocols.dup, java.onlineMode, ushort(0));
+					this.send(new Login.HubInfo(server.id, server.nextPool, displayName, games, server.onlinePlayers, server.maxPlayers, server.config.lang.acceptedLanguages.dup, false, (cast()*this.additionalJson).toString()));
+				}
+				this.handler = &this.handleNodeInfo;
+			} else {
+				this.close();
+			}
+		} else {
+			this.close();
 		}
-		auto info = this.receiveNodeInfo(stream);
-		this.n_max = info.max;
-		this.accepted = cast(shared uint[][ubyte])info.acceptedGames;
-		this.plugins = cast(shared)info.plugins;
-		foreach(node ; server.nodesList) stream.send(node.addPacket.encode());
-		server.add(this);
-		this.loop(stream);
-		server.remove(this);
-		this.onClosed();
 	}
 
-	protected abstract shared void sendHubInfo(HncomStream stream, Login.HubInfo packet);
+	private void handleNodeInfo(Buffer buffer) {
+		if(buffer.peek!ubyte == Login.NodeInfo.ID) {
+			Login.NodeInfo info = Login.NodeInfo.fromBuffer(buffer);
+			_max = info.max;
+			this.accepted = info.acceptedGames;
+			this.plugins = info.plugins;
+			foreach(node ; server.nodesList) this.send(new Status.AddNode(node.id, node.name, node.main, node.accepted));
+			server.add(this);
+			this.handler = &this.handleConnected;
+		} else {
+			this.close();
+		}
+	}
 
-	protected abstract shared Login.NodeInfo receiveNodeInfo(HncomStream stream);
+	private void handleConnected(Buffer buffer) {
 
-	protected abstract shared void loop(HncomStream stream);
+	}
 
-	protected abstract void send(ubyte[] buffer);
+	private void close() {
+		//TODO
+	}
+	
+	/*
+	 * Called when the client closes the connection.
+	 * Tries to transfer every connected player to the main node.
+	 */
+	public void onClosed(bool transfer=true) {
+		if(transfer) {
+			foreach(PlayerSession player ; this.players) {
+				player.connect(Player.Add.FORCIBLY_TRANSFERRED);
+			}
+		} else {
+			foreach(PlayerSession player ; this.players) {
+				player.kick("disconnect.close", true, []);
+			}
+		}
+	}
 
-	protected shared void send(ubyte[] buffer) {
-		return (cast()this).send(buffer);
+	private void send(ubyte[] buffer) {
+		this.stream.send(buffer);
+	}
+
+	private void send(HncomPacket packet) {
+		this.send(packet.encode());
 	}
 
 	/**
@@ -204,8 +241,8 @@ abstract class AbstractNode : Handler!serverbound {
 	 * connected to hub and it should be used other nodes with
 	 * the transfer function.
 	 */
-	public shared nothrow @property @safe @nogc const string name() {
-		return this.n_name;
+	public nothrow @property @safe @nogc const string name() {
+		return _name;
 	}
 	
 	/**
@@ -216,21 +253,21 @@ abstract class AbstractNode : Handler!serverbound {
 	 * every player that tries to connect will be disconnected with
 	 * the 'end of stream' message.
 	 */
-	public shared nothrow @property @safe @nogc const bool main() {
-		return this.n_main;
+	public nothrow @property @safe @nogc bool main() {
+		return _main;
 	}
 	
 	/**
 	 * Gets the highest number of players that can connect to the node.
 	 */
-	public shared nothrow @property @safe @nogc const uint max() {
-		return this.n_max;
+	public nothrow @property @safe @nogc uint max() {
+		return _max;
 	}
 	
 	/**
 	 * Gets the number of players connected to the node.
 	 */
-	public shared nothrow @property @safe @nogc const uint online() {
+	public nothrow @property @safe @nogc uint online() {
 		version(X86_64) {
 			return cast(uint)this.players.length;
 		} else {
@@ -241,48 +278,44 @@ abstract class AbstractNode : Handler!serverbound {
 	/**
 	 * Indicates whether the node is full.
 	 */
-	public shared nothrow @property @safe @nogc const bool full() {
+	public nothrow @property @safe @nogc bool full() {
 		return this.max != Login.NodeInfo.UNLIMITED && this.online >= this.max;
 	}
 
 	/**
 	 * Gets the list of worlds loaded on the node.
 	 */
-	public shared nothrow @property shared(WorldSession)[] worlds() {
+	public nothrow @property WorldSession[] worlds() {
 		return this._worlds.values;
 	}
 	
 	/**
 	 * Gets the node's latency (it may not be precise).
 	 */
-	public shared nothrow @property @safe @nogc const uint latency() {
-		return this.n_latency;
+	public nothrow @property @safe @nogc const uint latency() {
+		return _latency;
 	}
 	
 	/**
 	 * Gets the node's usage, updated with the ResourcesUsage packet.
 	 */
-	public shared nothrow @property @safe @nogc const float tps() {
-		return this.n_tps;
+	public nothrow @property @safe @nogc const float tps() {
+		return _tps;
 	}
 	
 	/// ditto
-	public shared nothrow @property @safe @nogc const ulong ram() {
-		return this.n_ram;
+	public nothrow @property @safe @nogc const ulong ram() {
+		return _ram;
 	}
 	
 	/// ditto
-	public shared nothrow @property @safe @nogc const float cpu() {
-		return this.n_cpu;
+	public nothrow @property @safe @nogc const float cpu() {
+		return _cpu;
 	}
 	
-	public shared nothrow @property @safe bool accepts(ubyte game, uint protocol) {
+	public nothrow @property @safe bool accepts(ubyte game, uint protocol) {
 		auto p = game in this.accepted;
 		return p && (*p).canFind(protocol);
-	}
-	
-	public shared @property Status.AddNode addPacket() {
-		return new Status.AddNode(this.id, this.name, this.main, cast(uint[][ubyte])this.accepted);
 	}
 
 	protected override void handleStatusLatency(Status.Latency packet) {
@@ -295,7 +328,7 @@ abstract class AbstractNode : Handler!serverbound {
 			auto world = packet.worldId in this._worlds;
 			if(world) name = world.name;
 		}
-		this.server.handleLog((cast(shared)this).name, packet.message, packet.timestamp, packet.commandId, packet.worldId, name);
+		this.server.handleLog(this.name, packet.message, packet.timestamp, packet.commandId, packet.worldId, name);
 	}
 
 	protected override void handleStatusSendMessage(Status.SendMessage packet) {
@@ -312,13 +345,13 @@ abstract class AbstractNode : Handler!serverbound {
 	}
 
 	protected override void handleStatusUpdateMaxPlayers(Status.UpdateMaxPlayers packet) {
-		this.n_max = packet.max;
+		_max = packet.max;
 		this.server.updateMaxPlayers();
 	}
 
 	protected override void handleStatusUpdateUsage(Status.UpdateUsage packet) {
-		this.n_ram = (cast(ulong)packet.ram) * 1024Lu;
-		this.n_cpu = packet.cpu;
+		_ram = (cast(ulong)packet.ram) * 1024Lu;
+		_cpu = packet.cpu;
 	}
 
 	protected override void handleStatusUpdateLanguageFiles(Status.UpdateLanguageFiles packet) {
@@ -327,12 +360,12 @@ abstract class AbstractNode : Handler!serverbound {
 
 	protected override void handleStatusAddWorld(Status.AddWorld packet) {
 		//TODO notify the panel
-		this._worlds[packet.worldId] = new shared WorldSession(packet.worldId, packet.groupId, packet.name, packet.dimension);
+		_worlds[packet.worldId] = new WorldSession(packet.worldId, packet.groupId, packet.name, packet.dimension);
 	}
 
 	protected override void handleStatusRemoveWorld(Status.RemoveWorld packet) {
 		//TODO notify the panel
-		this._worlds.remove(packet.worldId);
+		_worlds.remove(packet.worldId);
 	}
 
 	protected override void handleStatusRemoveWorldGroup(Status.RemoveWorldGroup packet) {
@@ -405,61 +438,61 @@ abstract class AbstractNode : Handler!serverbound {
 	/**
 	 * Sends data to the node received from a player.
 	 */
-	public shared void sendTo(shared PlayerSession player, ubyte[] data) {
-		this.send(new Player.GamePacket(player.id, data).encode());
+	public void sendTo(PlayerSession player, ubyte[] data) {
+		this.send(new Player.GamePacket(player.id, data));
 	}
 	
 	/**
 	 * Executes a remote command.
 	 */
-	public shared void remoteCommand(string command, ubyte origin, Address address, int commandId) {
-		this.send(new Status.RemoteCommand(origin, address, command, commandId).encode());
+	public void remoteCommand(string command, ubyte origin, Address address, int commandId) {
+		this.send(new Status.RemoteCommand(origin, address, command, commandId));
 	}
 	
 	/**
 	 * Notifies the node that another node has connected
 	 * to the hub.
 	 */
-	public shared void addNode(shared AbstractNode node) {
-		this.send(node.addPacket.encode());
+	public void addNode(Node node) {
+		this.send(new Status.AddNode(node.id, node.name, node.main, node.accepted));
 	}
 	
 	/**
 	 * Notifies the node that another node has been
 	 * disconnected from the hub.
 	 */
-	public shared void removeNode(shared AbstractNode node) {
-		this.send(new Status.RemoveNode(node.id).encode());
+	public void removeNode(Node node) {
+		this.send(new Status.RemoveNode(node.id));
 	}
 	
 	/**
 	 * Sends a message to the node.
 	 */
-	public shared void sendMessage(uint sender, bool broadcasted, ubyte[] payload) {
-		this.send(new Status.ReceiveMessage(sender, broadcasted, payload).encode());
+	public void sendMessage(uint sender, bool broadcasted, ubyte[] payload) {
+		this.send(new Status.ReceiveMessage(sender, broadcasted, payload));
 	}
 	
 	/**
 	 * Sends the number of online players and maximum number of
 	 * players to the node.
 	 */
-	public shared void updatePlayers(inout uint online, inout uint max) {
-		this.send(new Status.UpdatePlayers(online, max).encode());
+	public void updatePlayers(uint online, uint max) {
+		this.send(new Status.UpdatePlayers(online, max));
 	}
 	
 	/**
 	 * Adds a player to the node.
 	 */
-	public shared void addPlayer(shared PlayerSession player, ubyte reason, ubyte[] transferMessage) {
+	public void addPlayer(PlayerSession player, ubyte reason, ubyte[] transferMessage) {
 		this.players[player.id] = player;
-		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()).encode());
+		this.send(new Player.Add(player.id, reason, transferMessage, player.type, player.protocol, player.uuid, player.username, player.displayName, player.gameName, player.gameVersion, player.permissionLevel, player.dimension, player.viewDistance, player.address, Player.Add.ServerAddress(player.serverIp, player.serverPort), player.skin is null ? Player.Add.Skin.init : Player.Add.Skin(player.skin.name, player.skin.data.dup, player.skin.cape.dup, player.skin.geometryName, player.skin.geometryData.dup), player.language, cast(ubyte)player.inputMode, player.hncomAddData().toString()));
 	}
 	
 	/**
 	 * Called when a player is transferred by the hub (not by the node)
 	 * to another node.
 	 */
-	public shared void onPlayerTransferred(shared PlayerSession player) {
+	public void onPlayerTransferred(PlayerSession player) {
 		this.onPlayerGone(player, Player.Remove.TRANSFERRED);
 	}
 	
@@ -467,21 +500,21 @@ abstract class AbstractNode : Handler!serverbound {
 	 * Called when a player lefts the server using the disconnect
 	 * button or closing the socket.
 	 */
-	public shared void onPlayerLeft(shared PlayerSession player) {
+	public void onPlayerLeft(PlayerSession player) {
 		this.onPlayerGone(player, Player.Remove.LEFT);
 	}
 	
 	/**
 	 * Called when a player times out.
 	 */
-	public shared void onPlayerTimedOut(shared PlayerSession player) {
+	public void onPlayerTimedOut(PlayerSession player) {
 		this.onPlayerGone(player, Player.Remove.TIMED_OUT);
 	}
 	
 	/**
 	 * Called when a player is kicked (not by the node).
 	 */
-	public shared void onPlayerKicked(shared PlayerSession player) {
+	public void onPlayerKicked(PlayerSession player) {
 		this.onPlayerGone(player, Player.Remove.KICKED);
 	}
 	
@@ -490,71 +523,57 @@ abstract class AbstractNode : Handler!serverbound {
 	 * node's list and sends a PlayerDisconnected packet to
 	 * notify the node of the disconnection.
 	 */
-	protected shared void onPlayerGone(shared PlayerSession player, ubyte reason) {
+	protected void onPlayerGone(PlayerSession player, ubyte reason) {
 		if(this.players.remove(player.id)) {
-			this.send(new Player.Remove(player.id, reason).encode());
+			this.send(new Player.Remove(player.id, reason));
 		}
 	}
 
-	public shared void sendDisplayNameUpdate(shared PlayerSession player, string displayName) {
-		this.send(new Player.UpdateDisplayName(player.id, displayName).encode());
+	public void sendDisplayNameUpdate(PlayerSession player, string displayName) {
+		this.send(new Player.UpdateDisplayName(player.id, displayName));
 	}
 
-	public shared void sendPermissionLevelUpdate(shared PlayerSession player, ubyte permissionLevel) {
-		this.send(new Player.UpdatePermissionLevel(player.id, permissionLevel).encode());
+	public void sendPermissionLevelUpdate(PlayerSession player, ubyte permissionLevel) {
+		this.send(new Player.UpdatePermissionLevel(player.id, permissionLevel));
 	}
 
-	public shared void sendViewDistanceUpdate(shared PlayerSession player, uint viewDistance) {
-		this.send(new Player.UpdateViewDistance(player.id, viewDistance).encode());
+	public void sendViewDistanceUpdate(PlayerSession player, uint viewDistance) {
+		this.send(new Player.UpdateViewDistance(player.id, viewDistance));
 	}
 
-	public shared void sendLanguageUpdate(shared PlayerSession player, string language) {
-		this.send(new Player.UpdateLanguage(player.id, language).encode());
+	public void sendLanguageUpdate(PlayerSession player, string language) {
+		this.send(new Player.UpdateLanguage(player.id, language));
 	}
 	
 	/**
 	 * Updates a player's latency (usually sent every 30 seconds).
 	 */
-	public shared void sendLatencyUpdate(shared PlayerSession player) {
-		this.send(new Player.UpdateLatency(player.id, player.latency).encode());
+	public void sendLatencyUpdate(PlayerSession player) {
+		this.send(new Player.UpdateLatency(player.id, player.latency));
 	}
 	
 	/**
 	 * Updates a player's packet loss (usually sent every 30 seconds).
 	 */
-	public shared void sendPacketLossUpdate(shared PlayerSession player) {
-		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss).encode());
+	public void sendPacketLossUpdate(PlayerSession player) {
+		this.send(new Player.UpdatePacketLoss(player.id, player.packetLoss));
 	}
 	
-	/**
-	 * Called when the client closes the connection.
-	 * Tries to transfer every connected player to the main node.
-	 */
-	public shared void onClosed(bool transfer=true) {
-		if(transfer) {
-			foreach(shared PlayerSession player ; this.players) {
-				player.connect(Player.Add.FORCIBLY_TRANSFERRED);
-			}
-		} else {
-			foreach(shared PlayerSession player ; this.players) {
-				player.kick("disconnect.close", true, []);
-			}
-		}
+	public override string toString() {
+		return "Node(" ~ to!string(this.id) ~ ", " ~ this.name ~ ", " ~ this.remoteAddress ~ ", " ~ to!string(this.main) ~ ")";
 	}
-	
-	public abstract shared inout string toString();
 	
 }
 
-class ClassicNode : AbstractNode {
+/*class ClassicNode : AbstractNode {
 
-	private shared Socket socket;
+	private TcpStream conn;
 	private immutable string remoteAddress;
 
-	public shared this(shared HubServer server, Socket socket, shared JSONValue* additionalJson) {
+	public this(HubServer server, JSONValue* additionalJson, TcpStream conn) {
 		super(server, additionalJson);
-		this.socket = cast(shared)socket;
-		this.remoteAddress = socket.remoteAddress.toString();
+		this.conn = conn;
+		this.remoteAddress = .remoteAddress.toString();
 		debug Thread.getThis().name = "hncom_client#" ~ to!string(this.id);
 		socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(2500));
 		socket.blocking = true;
@@ -583,18 +602,18 @@ class ClassicNode : AbstractNode {
 		socket.close();
 	}
 
-	protected override shared void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
+	protected override void sendHubInfo(HncomStream stream, Login.HubInfo packet) {
 		stream.send(packet.encode());
 	}
 
-	protected override shared Login.NodeInfo receiveNodeInfo(HncomStream stream) {
+	protected override Login.NodeInfo receiveNodeInfo(HncomStream stream) {
 		stream.stream.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"minutes"(5)); // giving it the time to load resorces and generate worlds
 		auto payload = stream.receive();
 		if(payload.length && payload[0] == Login.NodeInfo.ID) return Login.NodeInfo.fromBuffer(payload);
 		else return Login.NodeInfo.init;
 	}
 
-	protected override shared void loop(HncomStream stream) {
+	protected override void loop(HncomStream stream) {
 		auto _this = cast()this;
 		stream.stream.socket.setOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, dur!"msecs"(0)); // blocking without timeout
 		while(true) {
@@ -612,9 +631,9 @@ class ClassicNode : AbstractNode {
 		return "Node(" ~ to!string(this.id) ~ ", " ~ this.name ~ ", " ~ this.remoteAddress ~ ", " ~ to!string(this.n_main) ~ ")";
 	}
 
-}
+}*/
 
-class LiteNode : AbstractNode {
+/*class LiteNode : AbstractNode {
 
 	static import std.concurrency;
 	
@@ -664,4 +683,4 @@ class LiteNode : AbstractNode {
 		return "LiteNode(" ~ to!string(this.id) ~ ")";
 	}
 	
-}
+}*/

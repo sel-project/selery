@@ -34,7 +34,7 @@ void main(string[] args) {
 
 	start(ConfigType.hub, args, (Config config){
 
-		new shared HubServer(false, config, loadPlugins!(HubPluginOf, "hub")(config), args);
+		new HubServer(false, config, loadPlugins!(HubPluginOf, "hub")(config), args);
 
 	});
 

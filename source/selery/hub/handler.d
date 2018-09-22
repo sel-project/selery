@@ -33,14 +33,15 @@ import std.socket : SocketException;
 import std.string : toLower, indexOf, strip, split, join;
 
 import sel.format : Format;
-import sel.server.bedrock : BedrockServerImpl;
-import sel.server.java : JavaServerImpl;
-import sel.server.query : Query;
-import sel.server.util : ServerInfo, GenericServer;
+import sel.server.bedrock : BedrockServer;
+import sel.server.java : JavaServer;
+//import sel.server.query : Query;
+import sel.server.util : ServerInfo;
+//import sel.server.server : GenericServer;
 
 import selery.about;
 import selery.config : Config;
-import selery.hub.hncom : HncomHandler, LiteNode;
+import selery.hub.hncom : HncomServer/*, LiteNode*/;
 import selery.hub.server : HubServer;
 import selery.lang : Translation;
 import selery.util.thread : SafeThread;
@@ -51,12 +52,12 @@ import selery.util.thread : SafeThread;
  */
 class Handler {
 
-	private shared HubServer server;
+	private HubServer server;
 
-	private shared JSONValue additionalJson;
-	private shared string socialJson; // already encoded
+	private JSONValue additionalJson;
+	private string socialJson; // already encoded
 
-	public shared this(shared HubServer server, shared ServerInfo info, shared Query _query) {
+	public this(HubServer server, ServerInfo info/*, shared Query _query*/) {
 
 		this.server = server;
 		
@@ -72,36 +73,20 @@ class Handler {
 
 		// start handlers
 
-		void startGenericServer(shared GenericServer gs, string name, const(Config.Hub.Address)[] addresses) {
-			foreach(address ; addresses) {
-				try {
-					gs.start(address.ip, address.port, _query);
-					debug server.logger.log(Translation("handler.listening", [Format.green ~ name ~ Format.reset, address.toString()]));
-				} catch(SocketException e) {
-					server.logger.logError(Translation("handler.error.bind", [name, address.toString(), (e.msg.indexOf(":")!=-1 ? e.msg.split(":")[$-1].strip : e.msg)]));
-				} catch(Throwable t) {
-					server.logger.logError(Translation("handler.error.address", [name, address.toString()]));
-				}
-			}
-		}
-
 		with(server.config.hub) {
 
-			if(!server.lite) {
-				auto s = new shared HncomHandler(server, &this.additionalJson);
-				s.start(acceptedNodes, hncomPort);
-			} else {
-				new SafeThread(server.config.lang, { new shared LiteNode(server, &this.additionalJson); }).start();
-			}
+			auto hncom = new HncomServer(server, &this.additionalJson);
 
 			if(bedrock) {
-				auto s = new shared BedrockServerImpl!supportedBedrockProtocols(info, server);
-				startGenericServer(s, "bedrock", bedrock.addresses);
+				auto bedrock = new BedrockServer(server.eventLoop, server.info, server, server.config.hub.bedrock.protocols.dup);
+				//TODO host
 			}
 
 			if(java) {
-				auto s = new shared JavaServerImpl!supportedJavaProtocols(info, server);
-				startGenericServer(s, "java", java.addresses);
+				auto java = new JavaServer(server.eventLoop, server.info, server, server.config.hub.java.protocols.dup);
+				foreach(address ; server.config.hub.java.addresses) {
+					java.host(address.ip, address.port);
+				}
 			}
 
 		}
@@ -112,7 +97,7 @@ class Handler {
 	 * Regenerates the social json adding a string field
 	 * for each social field that is not empty in the settings.
 	 */
-	private shared void regenerateSocialJson() {
+	private void regenerateSocialJson() {
 		const config = this.server.config;
 		this.socialJson = config.hub.social.toString();
 		JSONValue[string] additional;
@@ -125,14 +110,8 @@ class Handler {
 	/**
 	 * Closes the handlers and frees the resources.
 	 */
-	public shared void shutdown() {
+	public void shutdown() {
 		//TODO gracefully shutdown every thread
 	}
-
-}
-
-deprecated("Server is never reloaded") interface Reloadable {
-
-	public shared void reload();
 
 }

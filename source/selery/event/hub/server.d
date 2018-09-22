@@ -37,16 +37,16 @@ import selery.log : Message;
  */
 abstract class HubServerEvent : Event {
 	
-	private shared HubServer _server;
+	private HubServer _server;
 	
-	public this(shared HubServer server) pure nothrow @safe @nogc {
+	public this(HubServer server) pure nothrow @safe @nogc {
 		this._server = server;
 	}
 
 	/**
 	 * Gets the hub server that has triggered the event.
 	 */
-	public final @property shared(HubServer) server() pure nothrow @safe @nogc {
+	public final @property HubServer server() pure nothrow @safe @nogc {
 		return this._server;
 	}
 	
@@ -61,7 +61,7 @@ class LogEvent : HubServerEvent {
 	int _commandId;
 	int _worldId;
 
-	public this(shared HubServer server, Message[] messages, int commandId, int worldId) pure nothrow @safe @nogc {
+	public this(HubServer server, Message[] messages, int commandId, int worldId) pure nothrow @safe @nogc {
 		super(server);
 		_messages = messages;
 		_commandId = commandId;
