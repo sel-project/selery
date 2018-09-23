@@ -465,7 +465,7 @@ final class WorldGroup {
 		if(this.info.defaultWorld is null) this.info.defaultWorld = world.info;
 		this._worlds[world.id] = world;
 		// send packet to the hub
-		Handler.sharedInstance.send(new HncomAddWorld(info.id, this.info.id, this.info.name, world.dimension, false).autoEncode()); //TODO default?
+		Handler.sharedInstance.send(new HncomAddWorld(info.id, this.info.id, this.info.name, world.dimension, false)); //TODO default?
 		// set events listener
 		world.setListener(cast()server.globalListener);
 	}
@@ -478,7 +478,7 @@ final class WorldGroup {
 		if(world) {
 			//TODO check whether it can be stopped
 			// send packet to the hub
-			Handler.sharedInstance.send(new HncomRemoveWorld(worldId).autoEncode());
+			Handler.sharedInstance.send(new HncomRemoveWorld(worldId));
 			//TODO save and delete
 			world.stop();
 		}

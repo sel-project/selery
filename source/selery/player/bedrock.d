@@ -148,7 +148,7 @@ abstract class BedrockPlayer : Player {
 		}
 	}
 
-	alias operator = super.operator;
+	alias operator = typeof(super).operator;
 
 	public override @property bool operator(bool op) {
 		if(super.operator(op) == op && this.send_commands) {
@@ -401,7 +401,7 @@ private class BedrockPlayerOf(uint __protocol) : BedrockPlayer {
 		}
 	}
 
-	alias world = super.world;
+	alias world = typeof(super).world;
 
 	public override @property World world(World world) {
 		this.send_commands = false; // world-related commands are removed but no packet is needed as they are updated at respawn

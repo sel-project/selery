@@ -43,10 +43,10 @@ class Color {
 
 	public ubyte r, g, b, a;
 
-	alias red = this.r;
-	alias green = this.g;
-	alias blue = this.b;
-	alias alpha = this.a;
+	alias red = r;
+	alias green = g;
+	alias blue = b;
+	alias alpha = a;
 
 	/**
 	 * Constructs a colour using rgb(a) values (in range 0..255).

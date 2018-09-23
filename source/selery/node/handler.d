@@ -40,6 +40,8 @@ import std.variant : Variant;
 import sel.net.modifiers : LengthPrefixedStream;
 import sel.net.stream : TcpStream;
 
+import selery.hncom.io : HncomPacket;
+
 alias HncomStream = LengthPrefixedStream!(uint, Endian.littleEndian);
 
 abstract class Handler {
@@ -75,6 +77,10 @@ abstract class Handler {
 	 * Returns: the amount of bytes sent
 	 */
 	public shared synchronized abstract ptrdiff_t send(ubyte[] buffer);
+
+	public final shared ptrdiff_t send(HncomPacket packet) {
+		return this.send(packet.encode());
+	}
 
 	/**
 	 * Closes the connection with the hub.
@@ -112,40 +118,5 @@ class SocketHandler : Handler {
 	public shared override void close() {
 		(cast()this.stream.stream.socket).close();
 	}
-
-}
-
-class TidAddress : UnknownAddress {
-
-	public std.concurrency.Tid tid;
-
-	public this(std.concurrency.Tid tid) {
-		this.tid = tid;
-	}
-
-	alias tid this;
-
-}
-
-class MessagePassingHandler : Handler {
-
-	public std.concurrency.Tid hub;
-
-	public shared this(shared std.concurrency.Tid hub) {
-		super();
-		this.hub = hub;
-		std.concurrency.send(cast()hub, std.concurrency.thisTid);
-	}
-
-	public shared override ubyte[] receive() {
-		return std.concurrency.receiveOnly!(immutable(ubyte)[])().dup;
-	}
-
-	public shared synchronized override ptrdiff_t send(ubyte[] buffer) {
-		std.concurrency.send(cast()this.hub, buffer.idup);
-		return buffer.length;
-	}
-
-	public shared override void close() {}
 
 }

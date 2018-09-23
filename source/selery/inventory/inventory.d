@@ -826,7 +826,7 @@ class PlayerInventory : Inventory {
 		}
 	}
 	
-	alias opIndex = super.opIndex;
+	alias opIndex = typeof(super).opIndex;
 	
 	public override @safe Slot opIndex(size_t index) {
 		auto test = this[][index]; // test access violation
@@ -910,9 +910,9 @@ class PlayerInventory : Inventory {
 		return this.boots;
 	}
 	
-	alias cap = this.helmet;
-	alias tunic = this.chestplate;
-	alias pants = this.leggings;
+	alias cap = helmet;
+	alias tunic = chestplate;
+	alias pants = leggings;
 	
 	public @property @safe Inventory armor() {
 		return super.opIndex(Slice(super.length-4, super.length));

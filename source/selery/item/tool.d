@@ -115,7 +115,7 @@ abstract class Tool : Item {
 		if(!this.unbreakable) this.damage += amount;
 	}
 	
-	alias unbreakable = super.unbreakable;
+	alias unbreakable = typeof(super).unbreakable;
 	
 	public override @property @safe bool unbreakable(bool unbreakable) {
 		if(super.unbreakable(unbreakable)) {

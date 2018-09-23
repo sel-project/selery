@@ -654,7 +654,7 @@ class Item {
 	}
 
 	/// ditto
-	alias enchant = this.addEnchantment;
+	alias enchant = addEnchantment;
 
 	/**
 	 * Gets a pointer to the enchantment.

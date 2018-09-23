@@ -619,7 +619,7 @@ abstract class Player : Human, WorldCommandSender {
 			this.info.permissionLevel = permissionLevel;
 			this.sendPermissionLevel(permissionLevel);
 			this.updateAvailableCommands();
-			Handler.sharedInstance.send(new HncomPlayer.UpdatePermissionLevel(this.hubId, permissionLevel).autoEncode());
+			Handler.sharedInstance.send(new HncomPlayer.UpdatePermissionLevel(this.hubId, permissionLevel));
 		}
 		return permissionLevel;
 	}
@@ -892,7 +892,7 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void spawnToItself();
 	
 	// matchs Human.spawn
-	alias spawn = super.spawn;
+	alias spawn = typeof(super).spawn;
 	
 	/// Sets the player's spawn point.
 	public override @property @trusted EntityPosition spawn(EntityPosition spawn) {
@@ -913,7 +913,7 @@ abstract class Player : Human, WorldCommandSender {
 		}
 	}
 
-	alias teleport = super.teleport;
+	alias teleport = typeof(super).teleport;
 
 	public override void teleport(EntityPosition position) {
 		super.teleport(position);
@@ -924,7 +924,7 @@ abstract class Player : Human, WorldCommandSender {
 		//TODO move to another world (parent/child)
 	}
 
-	alias motion = super.motion;
+	alias motion = typeof(super).motion;
 
 	/// Sets the motion and let the client do its physic actions.
 	public override @property @trusted EntityPosition motion(EntityPosition motion) {
@@ -1506,7 +1506,7 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void flush();
 
 	protected void sendPacketPayload(ubyte[] payload) {
-		Handler.sharedInstance.send(new HncomPlayer.OrderedGamePacket(this.hubId, this.order++, payload).autoEncode());
+		Handler.sharedInstance.send(new HncomPlayer.OrderedGamePacket(this.hubId, this.order++, payload));
 	}
 
 	private Tid compression;
@@ -1537,7 +1537,7 @@ abstract class Player : Human, WorldCommandSender {
 
 				if(data[0] == uint.max) break;
 
-				handler.send(new HncomPlayer.OrderedGamePacket(hubId, data[0], this.compress(data[1].dup)).autoEncode());
+				handler.send(new HncomPlayer.OrderedGamePacket(hubId, data[0], this.compress(data[1].dup)));
 
 			}
 
