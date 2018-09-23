@@ -77,7 +77,7 @@ import xpacket : BigEndian;
 	
 	enum : ubyte {
 		
-		OK,
+		OK = 0,
 		OUTDATED_HUB,				/// The hub uses an old version of hncom
 		OUTDATED_NODE,				/// The node uses an old version of hncom
 		PASSWORD_REQUIRED,			/// A password is required to connect

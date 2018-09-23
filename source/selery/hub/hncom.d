@@ -60,19 +60,17 @@ import selery.hub.server : HubServer;
 import selery.util.thread : SafeThread;
 import selery.util.util : microseconds;
 
+import xbuffer : Buffer;
+
 import Login = selery.hncom.login;
 import Status = selery.hncom.status;
 import Player = selery.hncom.player;
-
-import xbuffer : Buffer;
 
 class HncomServer : Server {
 
 	private HubServer server;
 	
 	private JSONValue* additionalJson;
-
-	private Address address;
 	
 	public this(HubServer server, JSONValue* additionalJson) {
 		super(server.eventLoop, server.info);
@@ -93,7 +91,7 @@ class HncomServer : Server {
 	}
 	
 	private void handle(TcpListener sender, TcpStream conn) {
-		if(this.server.acceptNode(address)) {
+		if(this.server.acceptNode(conn.remoteAddress)) {
 			new Node(this.server, this.additionalJson, conn);
 		} else {
 			conn.close();
@@ -102,10 +100,6 @@ class HncomServer : Server {
 
 	public override void stop() {
 		//TODO
-	}
-
-	public deprecated pure nothrow @property @safe @nogc Address localAddress() {
-		return this.address;
 	}
 	
 }
@@ -155,7 +149,7 @@ class Node : Handler!serverbound {
 	}
 
 	private void handle(Buffer buffer) {
-		this.handleHncom(buffer.data!ubyte);
+		this.handler(buffer);
 	}
 
 	private void handleConnectionRequest(Buffer buffer) {
@@ -205,11 +199,11 @@ class Node : Handler!serverbound {
 	}
 
 	private void handleConnected(Buffer buffer) {
-
+		this.handleHncom(buffer.data!ubyte);
 	}
 
 	private void close() {
-		//TODO
+		this.stream.conn.close();
 	}
 	
 	/*

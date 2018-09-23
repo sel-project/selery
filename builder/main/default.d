@@ -28,14 +28,13 @@ import std.concurrency : LinkTerminated;
 import std.conv : to;
 import std.file : write, exists, mkdirRecurse;
 import std.path : dirSeparator;
+import std.socket : InternetAddress;
 import std.string : indexOf, lastIndexOf, replace;
 
 import selery.config : Config;
 import selery.crash : logCrash;
-import selery.hub.hncom : LiteNode;
 import selery.hub.plugin.plugin : HubPluginOf;
 import selery.hub.server : HubServer;
-import selery.node.handler : TidAddress;
 import selery.node.plugin.plugin : NodePluginOf;
 import selery.node.server : NodeServer;
 
@@ -47,13 +46,11 @@ void main(string[] args) {
 
 	start(ConfigType.default_, args, (Config config){
 
-		new Thread({ new shared HubServer(true, config, loadPlugins!(HubPluginOf, "hub")(config), args); }).start();
-
-		while(!LiteNode.ready) Thread.sleep(dur!"msecs"(1)); //TODO add a limit in case of failure
+		new Thread({ new HubServer(true, config, loadPlugins!(HubPluginOf, "hub")(config), args); }).start();
 		
 		try {
 			
-			new shared NodeServer(new TidAddress(cast()LiteNode.tid), config, loadPlugins!(NodePluginOf, "node")(config), args);
+			new shared NodeServer(true, new InternetAddress("127.0.0.1", 28232), config, loadPlugins!(NodePluginOf, "node")(config), args);
 			
 		} catch(LinkTerminated) {
 			

@@ -37,7 +37,6 @@ import sel.server.bedrock : BedrockServer;
 import sel.server.java : JavaServer;
 //import sel.server.query : Query;
 import sel.server.util : ServerInfo;
-//import sel.server.server : GenericServer;
 
 import selery.about;
 import selery.config : Config;
@@ -76,14 +75,16 @@ class Handler {
 		with(server.config.hub) {
 
 			auto hncom = new HncomServer(server, &this.additionalJson);
+			if(server.lite) hncom.host("127.0.0.1", 28232);
+			else hncom.host("0.0.0.0", hncomPort); //TODO calculate IP from hncomAcceptedNodes
 
 			if(bedrock) {
-				auto bedrock = new BedrockServer(server.eventLoop, server.info, server, server.config.hub.bedrock.protocols.dup);
+				auto bedrock = new BedrockServer(server.eventLoop, server.info, server, bedrock.protocols.dup);
 				//TODO host
 			}
 
 			if(java) {
-				auto java = new JavaServer(server.eventLoop, server.info, server, server.config.hub.java.protocols.dup);
+				auto java = new JavaServer(server.eventLoop, server.info, server, java.protocols.dup);
 				foreach(address ; server.config.hub.java.addresses) {
 					java.host(address.ip, address.port);
 				}

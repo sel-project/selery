@@ -146,13 +146,13 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 
 	private shared Command[string] _commands;
 
-	public shared this(Address hub, Config config, Plugin[] plugins=[], string[] args=[]) {
+	public shared this(bool lite, Address hub, Config config, Plugin[] plugins=[], string[] args=[]) {
 
 		assert(config.node !is null);
 
 		debug Thread.getThis().name = "node";
 
-		this.lite = cast(TidAddress)hub !is null;
+		this.lite = lite;
 
 		this.n_plugins = cast(shared)plugins;
 
@@ -163,66 +163,56 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 		this.n_hub_address = cast(shared)hub;
 
 		if(config.hub is null) config.hub = config.new Config.Hub();
-
 		this._config = cast(shared)config;
 
 		Terminal terminal = new Terminal();
 		this._logger = cast(shared)new Logger(terminal, config.lang); // only writes in the console
 
-		if(lite) {
+		if(!lite) this.logger.log(Translation("startup.connecting", [to!string(hub), config.node.name]));
 
-			this.handler = new shared MessagePassingHandler(cast(shared TidAddress)hub);
-			this.handleInfoImpl(cast()std.concurrency.receiveOnly!(shared HncomLogin.HubInfo)());
-
-		} else {
-
-			this.logger.log(Translation("startup.connecting", [to!string(hub), config.node.name]));
-
-			try {
-				this.handler = new shared SocketHandler(hub);
-				this.handler.send(new HncomLogin.ConnectionRequest(__PROTOCOL__, config.node.name, config.node.password, config.node.main).encode());
-			} catch(SocketException e) {
-				this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
-				return;
-			}
-
-			// remove variables in config that plugins should not read
-			config.node.password = "";
-			config.node.ip = "";
-			config.node.port = ushort(0);
-
-			// wait for ConnectionResponse
-			ubyte[] buffer = this.handler.receive();
-			if(buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
-				auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
-				if(response.status == HncomLogin.ConnectionResponse.OK) {
-					this.handleInfo();
-				} else {
-					immutable reason = (){
-						switch(response.status) with(HncomLogin.ConnectionResponse) {
-							case OUTDATED_HUB: return "outdatedHub";
-							case OUTDATED_NODE: return "outdatedNode";
-							case PASSWORD_REQUIRED: return "passwordRequired";
-							case WRONG_PASSWORD: return "wrongPassword";
-							case INVALID_NAME_LENGTH: return "invalidNameLength";
-							case INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
-							case NAME_ALREADY_USED: return "nameAlreadyUsed";
-							case NAME_RESERVED: return "nameReserved";
-							default: return "unknown";
-						}
-					}();
-					this.logger.logError(Translation("status." ~ reason));
-					if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
-						this.logger.logError(Translation("warning.protocolRequired", [to!string(__PROTOCOL__), to!string(response.protocol)]));
-					}
-				}
-			} else {
-				this.logger.logError(Translation("warning.refused"));
-			}
-
-			this.handler.close();
-
+		try {
+			this.handler = new shared SocketHandler(hub);
+			this.handler.send(new HncomLogin.ConnectionRequest(__PROTOCOL__, config.node.name, config.node.password, config.node.main).encode());
+		} catch(SocketException e) {
+			this.logger.logError(Translation("warning.connectionError", [to!string(hub), e.msg]));
+			return;
 		}
+
+		// remove variables in config that plugins should not read
+		config.node.password = "";
+		config.node.ip = "";
+		config.node.port = ushort(0);
+
+		// wait for ConnectionResponse
+		ubyte[] buffer = this.handler.receive();
+		if(buffer.length && buffer[0] == HncomLogin.ConnectionResponse.ID) {
+			auto response = HncomLogin.ConnectionResponse.fromBuffer(buffer);
+			if(response.status == HncomLogin.ConnectionResponse.OK) {
+				this.handleInfo();
+			} else {
+				immutable reason = (){
+					switch(response.status) with(HncomLogin.ConnectionResponse) {
+						case OUTDATED_HUB: return "outdatedHub";
+						case OUTDATED_NODE: return "outdatedNode";
+						case PASSWORD_REQUIRED: return "passwordRequired";
+						case WRONG_PASSWORD: return "wrongPassword";
+						case INVALID_NAME_LENGTH: return "invalidNameLength";
+						case INVALID_NAME_CHARACTERS: return "invalidNameCharacters";
+						case NAME_ALREADY_USED: return "nameAlreadyUsed";
+						case NAME_RESERVED: return "nameReserved";
+						default: return "unknown";
+					}
+				}();
+				this.logger.logError(Translation("status." ~ reason));
+				if(response.status == HncomLogin.ConnectionResponse.OUTDATED_HUB || response.status == HncomLogin.ConnectionResponse.OUTDATED_NODE) {
+					this.logger.logError(Translation("warning.protocolRequired", [to!string(__PROTOCOL__), to!string(response.protocol)]));
+				}
+			}
+		} else {
+			this.logger.logError(Translation("warning.refused"));
+		}
+
+		this.handler.close();
 		
 	}
 
@@ -384,11 +374,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			auto plugin = cast()_plugin;
 			nodeInfo.plugins ~= HncomLogin.NodeInfo.Plugin(plugin.id, plugin.name, plugin.version_);
 		}
-		if(this.lite) {
-			std.concurrency.send(cast()(cast(shared MessagePassingHandler)this.handler).hub, cast(shared)nodeInfo);
-		} else {
-			this.handler.send(nodeInfo.encode());
-		}
+		this.handler.send(nodeInfo.encode());
 		
 		// load plugin's language files
 		foreach(_plugin ; this.n_plugins) {
@@ -398,7 +384,7 @@ final class NodeServer : EventListener!NodeServerEvent, Server, HncomHandler!cli
 			}
 		}
 
-		if(!this.lite) std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
+		std.concurrency.spawn(&this.handler.receiveLoop, cast()this.tid);
 		
 		this.start_time = milliseconds;
 

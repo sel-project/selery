@@ -379,13 +379,13 @@ class HubServer : /*EventListener!HubServerEvent, */PlayerHandler, Server {
 		int max = 0;
 		foreach(node ; this.nodes) {
 			if(node.max == NodeInfo.UNLIMITED) {
-				this.n_max = HubInfo.UNLIMITED;
+				_info.max = this.n_max = HubInfo.UNLIMITED;
 				return;
 			} else {
 				max += node.max;
 			}
 		}
-		this.n_max = max;
+		_info.max = this.n_max = max;
 	}
 
 	/**
