@@ -45,7 +45,6 @@ import std.zlib;
 
 import kiss.net : TcpListener, TcpStream;
 
-import sel.net.modifiers : LengthPrefixedStream;
 //import sel.server.query : Query;
 import sel.server.util;
 import sel.server.server : Server;
@@ -144,6 +143,7 @@ class Node : Handler!serverbound {
 		this.additionalJson = additionalJson;
 		this.remoteAddress = conn.remoteAddress.toString();
 		this.stream = new Stream(conn, &this.handle);
+		this.stream.onClose = { onClosed(false); };
 		this.stream.modify!(LengthPrefixedModifier!(uint, Endian.littleEndian))();
 		this.handler = &this.handleConnectionRequest;
 	}
@@ -199,7 +199,7 @@ class Node : Handler!serverbound {
 	}
 
 	private void handleConnected(Buffer buffer) {
-		this.handleHncom(buffer.data!ubyte);
+		this.handleHncom(buffer);
 	}
 
 	private void close() {

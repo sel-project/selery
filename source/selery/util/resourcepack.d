@@ -40,8 +40,6 @@ import std.string : replace, join, indexOf, startsWith;
 import std.uuid : UUID;
 import std.zip;
 
-import sel.net.http : StatusCodes, Response;
-
 import selery.about : Software;
 import selery.node.server : NodeServer;
 import selery.util.tuple : Tuple;
@@ -97,7 +95,7 @@ private ArchiveMember create(string name, ubyte[] data) {
 
 void serveResourcePacks(Tid server, string pack2, string pack3) {
 	
-	auto port = uniform(ushort(999), ushort.max);
+	/+auto port = uniform(ushort(999), ushort.max);
 	
 	auto socket = new TcpSocket();
 	socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
@@ -127,6 +125,6 @@ void serveResourcePacks(Tid server, string pack2, string pack3) {
 			}
 		}
 		
-	}
+	}+/
 	
 }

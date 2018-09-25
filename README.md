@@ -11,7 +11,9 @@ Selery is a server for ~~Minecraft (Bedrock Engine) 1.2~~ and Minecraft: Java Ed
 
 [![GitHub release](https://img.shields.io/github/release/sel-project/selery.svg)](https://github.com/sel-project/selery/releases)
 
-Pre-built packages are compiled with the latest version of LDC in release mode and can be found in the [releases](https://github.com/sel-project/selery/releases) page.
+Pre-built packages are compiled with the latest version of LDC in release mode and can be found in the [releases](https://github.com/sel-project/selery/releases) page, just unzip the onefor your operative system and run the preferred executable.
+
+The following bash script can be used to download and run the install.sh installer.
 
 ```
 curl -Ls https://goo.gl/5kfhJG | bash
@@ -50,6 +52,25 @@ The build scripts supports some useful options that can be viewed by launching i
 | Linux   | x86-64 | [![][lin64-dmd-debug]][travis]   | [![][lin64-ldc-debug]][travis]   | [![][lin64-ldc-release]][travis]   |
 | OS X    | x86-64 | [![][osx64-dmd-debug]][travis]   | [![][osx64-ldc-debug]][travis]   | [![][osx64-ldc-release]][travis]   |
 
+## Model
+
+Selery is based on a hub-node model where a **hub** asynchronously handles the network part of the software and the **node** the gameplay one.
+The hub and the node are internally connected throught a protocol called **hncom**, the *hub-node communication protocol*.
+
+### Hub
+
+The hub is the interface with the clients, it handles new connections and when they are successfull it forwards them to one of the connected nodes.
+
+A hub with no nodes connected will accept new connections but will kick the players with an `End of Stream` message.
+
+### Node
+
+The node manages the gameplay part of the server, like the worlds and its entities.
+A node cannot work without a hub and must always be connected to one; the life of a node starts when a connection with a hub it's established and ends when the connection is interruped.
+
+Nodes are identified by a unique id (given by the hub when the connection is established) and a name, choosen by the node, that must be unique in the hub (if not, the hub will reject the connection).
+Nodes can also be divided in *main* nodes and normal nodes. Main nodes will receive players before the other nodes if not specified otherwise by a hub's plugin.
+
 ## Setting up
 
 Selery's configuration file is created when the server is started in the same path as the executable.
@@ -60,7 +81,6 @@ Every option can also be overriden by a command-line option without altering the
 selery --display-name="My Minecraft Server"
 selery --java-enabled=false
 selery --language=it
-selery --command-me=false
 selery --bedrock-accepted-protocols=160
 selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 ```
@@ -71,6 +91,7 @@ selery --java-addresses=0.0.0.0:25565,192.168.1.216:8129
 - `--init` or `-i` to initialize the configuration file.
 - `--update-config` or `-uc` to rewrite the configuration file, maintaining the current configuration. It should be used after updating the software to a newer version that changes the configuration format.
 - `--reset` to reset the whole configuration file to its default values.
+
 
 [appveyor]: https://ci.appveyor.com/project/Kripth/selery
 [travis]: https://travis-ci.org/sel-project/selery

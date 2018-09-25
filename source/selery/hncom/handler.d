@@ -6,10 +6,12 @@ import std.typetuple : TypeTuple;
 
 import selery.hncom.about : clientbound, serverbound;
 
+import xbuffer : Buffer;
+
 static import selery.hncom.status;
 static import selery.hncom.player;
 
-interface HncomHandler(alias type) if(is(type == clientbound )|| is(type == serverbound)) {
+interface HncomHandler(alias type) if(is(type == clientbound ) || is(type == serverbound)) {
 	
 	mixin((){
 		string ret;
@@ -23,9 +25,8 @@ interface HncomHandler(alias type) if(is(type == clientbound )|| is(type == serv
 		return ret;
 	}());
 	
-	public final void handleHncom(ubyte[] buffer) {
-		assert(buffer.length);
-		switch(buffer[0]) {
+	public final void handleHncom(Buffer buffer) {
+		switch(buffer.peek!ubyte) {
 			foreach(section ; TypeTuple!("status", "player")) {
 				foreach(member ; __traits(allMembers, mixin("selery.hncom." ~ section))) {
 					static if(hasUDA!(__traits(getMember, mixin("selery.hncom." ~ section), member), type)) {
