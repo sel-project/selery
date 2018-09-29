@@ -344,8 +344,8 @@ auto loadConfig(ConfigType type, ref string[] args) {
 			}
 			if(isNode) with(this.node) {
 				file ~= newline ~ "[world]" ~ newline;
-				file ~= "gamemode = " ~ to!string(gamemode) ~ newline;
-				file ~= "difficulty = " ~ to!string(difficulty) ~ newline;
+				file ~= "gamemode = \"" ~ to!string(gamemode) ~ "\"" ~ newline;
+				file ~= "difficulty = \"" ~ to!string(difficulty) ~ "\"" ~ newline;
 				file ~= "deplete-hunger = " ~ to!string(depleteHunger) ~ newline;
 				file ~= "do-daylight-cycle = " ~ to!string(doDaylightCycle) ~ newline;
 				file ~= "do-entity-drops = " ~ to!string(doEntityDrops) ~ newline;
