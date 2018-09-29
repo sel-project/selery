@@ -494,35 +494,3 @@ import xpacket : Custom;
 	mixin Make;
 	
 }
-
-@serverbound class SerializedGamePacket : HncomPacket {
-	
-	enum ubyte ID = 36;
-	
-	/**
-	 * Player's unique id given by the hub.
-	 */
-	uint hubId;
-	
-	ubyte[] payload;
-	
-	mixin Make;
-	
-}
-
-@serverbound class OrderedGamePacket : HncomPacket {
-	
-	enum ubyte ID = 37;
-	
-	/**
-	 * Player's unique id given by the hub.
-	 */
-	uint hubId;
-	
-	uint order;
-	
-	ubyte[] payload;
-	
-	mixin Make;
-	
-}

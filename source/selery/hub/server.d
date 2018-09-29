@@ -54,7 +54,7 @@ import std.utf : UTFException;
 
 import imageformats : ImageIOException, read_png_header_from_mem;
 
-import kiss.event : EventLoop;
+import libasync : EventLoop;
 
 import myip : privateAddresses, publicAddress4;
 

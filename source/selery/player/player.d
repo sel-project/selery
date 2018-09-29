@@ -1506,7 +1506,7 @@ abstract class Player : Human, WorldCommandSender {
 	public abstract void flush();
 
 	protected void sendPacketPayload(ubyte[] payload) {
-		Handler.sharedInstance.send(new HncomPlayer.OrderedGamePacket(this.hubId, this.order++, payload));
+		Handler.sharedInstance.send(new HncomPlayer.GamePacket(this.hubId, payload));
 	}
 
 	private Tid compression;

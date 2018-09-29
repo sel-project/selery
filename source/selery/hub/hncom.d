@@ -412,20 +412,9 @@ class Node : Handler!serverbound {
 	}
 
 	protected override void handlePlayerGamePacket(Player.GamePacket packet) {
-		//TODO compress if needed and send
-	}
-
-	protected override void handlePlayerSerializedGamePacket(Player.SerializedGamePacket packet) {
 		auto player = packet.hubId in this.players;
 		if(player) {
-			(*player).sendFromNode(packet.payload);
-		}
-	}
-
-	protected override void handlePlayerOrderedGamePacket(Player.OrderedGamePacket packet) {
-		auto player = packet.hubId in this.players;
-		if(player) {
-			(*player).sendOrderedFromNode(packet.order, packet.payload);
+			(*player).sendPacket(packet.payload);
 		}
 	}
 	

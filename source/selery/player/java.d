@@ -281,15 +281,15 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 
 	protected void sendPacket(T)(T packet) if(is(typeof(T.encode))) {
 		ubyte[] payload = packet.encode();
-		if(payload.length > 1024) {
+		/*if(payload.length > 1024) {
 			this.compress(payload);
 		} else {
 			this.sendPacketPayload(0 ~ payload);
-		}
+		}*/
+		this.sendPacketPayload(payload);
 	}
 
 	public override void flush() {}
-
 
 	protected override void sendCompletedMessages(string[] messages) {
 		static if(__protocol < 307) {
@@ -470,7 +470,7 @@ private class JavaPlayerOf(uint __protocol) : JavaPlayer {
 		}
 		packet.tiles = stream.buffer.data!ubyte;
 
-		this.sendPacket(packet);
+		//this.sendPacket(packet);
 
 	}
 	

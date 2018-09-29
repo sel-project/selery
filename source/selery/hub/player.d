@@ -409,6 +409,13 @@ class PlayerSession {
 	public void sendToNode(ubyte[] payload) {
 		this._node.sendTo(this, payload);
 	}
+
+	/**
+	 * Sends a packet to the client.
+	 */
+	public void sendPacket(ubyte[] payload) {
+		this.client.send(payload);
+	}
 	
 	/**
 	 * Sends a packet from the node and mantains the order.
