@@ -15,7 +15,7 @@
 /builder/dub.json
 /builder/views
 /crash
-/plugins
+/plugins/*/
 /resources
 /worlds
 /*.toml
