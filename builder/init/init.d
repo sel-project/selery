@@ -450,13 +450,9 @@ int main(string[] args) {
 			foreach(string mname; value.target==Type.default_ ? [Type.hub, Type.node] : [value.target]) {
 				auto main = mname in value.main;
 				string load = "ret ~= new PluginOf!(" ~ (main ? main.main : "Object") ~ ")(`" ~ value.name ~ "`, `" ~ value.path ~ "`, " ~ value.authors.to!string ~ ", `" ~ value.version_ ~ "`);";
-				auto conditions = "conditions" in value.toml;
-				if(conditions && conditions.type == TOML_TYPE.TABLE) {
-					string[] conds;
-					foreach(key, value; conditions.table) {
-						conds ~= "cond!(`" ~ key ~ "`, is_node)(config, " ~ to!string(value.type == TOML_TYPE.TRUE) ~ ")";
-					}
-					load = "if(" ~ conds.join("&&") ~ "){ " ~ load ~ " }";
+				auto when = "when" in value.toml;
+				if(when && when.type == TOML_TYPE.STRING) {
+					load = "if(" ~ when.str ~ "){ " ~ load ~ " }";
 				}
 				if(value.single.length) load = "static if(is(" ~ value.main[Type.default_].main ~ " == class)){ " ~ load ~ " }";
 				load = "static if(target == `" ~ mname ~ "`){ " ~ (main ? "static import " ~ main.module_ ~ "; " : "") ~ load ~ " }";
@@ -479,7 +475,7 @@ int main(string[] args) {
 		}
 	}
 
-	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nimport condition;\n\nPlugin[] loadPlugins(alias PluginOf, string target)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}\n\nenum info = `" ~ JSONValue(json).toString() ~ "`;\n");
+	writeDiff(".selery/builder.d", "module pluginloader;\n\nimport selery.about : Software;\nimport selery.config : Config;\nimport selery.plugin : Plugin;\n\nPlugin[] loadPlugins(alias PluginOf, string target)(inout Config config){\n\tPlugin[] ret;\n" ~ loads ~ "\treturn ret;\n}\n\nenum info = `" ~ JSONValue(json).toString() ~ "`;\n");
 	
 	writeDiff("dub.json", JSONValue(builder).toString());
 	
