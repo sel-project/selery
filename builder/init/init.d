@@ -455,7 +455,12 @@ int main(string[] args) {
 					load = "if(" ~ when.str ~ "){ " ~ load ~ " }";
 				}
 				if(value.single.length) load = "static if(is(" ~ value.main[Type.default_].main ~ " == class)){ " ~ load ~ " }";
-				load = "static if(target == `" ~ mname ~ "`){ " ~ (main ? "static import " ~ main.module_ ~ "; " : "") ~ load ~ " }";
+				if(main) load = "static import " ~ main.module_ ~ "; " ~ load;
+				auto staticWhen = "static-when" in value.toml;
+				if(staticWhen && staticWhen.type == TOML_TYPE.STRING) {
+					load = "static if(" ~ staticWhen.str ~ "){ " ~ load ~ " }";
+				}
+				load = "static if(target == `" ~ mname ~ "`){ " ~ load ~ " }";
 				loads ~= "\t" ~ load ~ "\n";
 			}
 			json ~= value.toJSON();
