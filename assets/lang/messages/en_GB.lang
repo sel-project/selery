@@ -61,6 +61,7 @@ commands.gamerule.nopermission = Only server owners can change '{0}'
 commands.gamerule.norule = No game rule called '{0}' is available
 commands.gamerule.success = Game rule {0} has been updated to {1}
 commands.gamerule.type.invalid = Invalid type used for game rule '{0}'
+commands.gamerule.type.nocheatsenabled = Game rule '{0}' can only be used if cheats are enabled in this world.
 commands.generic.async.initiated = {0}' command started (async step {1})
 commands.generic.boolean.invalid = '{0}' is not true or false
 commands.generic.chunk.notFound = Specified chunk not found

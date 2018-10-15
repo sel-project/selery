@@ -61,6 +61,7 @@ commands.gamerule.nopermission = Solo i proprietari del server possono cambiare 
 commands.gamerule.norule = Non è disponibile alcuna regola di gioco chiamata "{0}"
 commands.gamerule.success = La regola di gioco {0} è stata aggiornata a {1}
 commands.gamerule.type.invalid = Tipo non valido usato per la regola di gioco "{0}"
+commands.gamerule.type.nocheatsenabled = La regola del gioco '{0}' può essere usata solo se vengono attivati i trucchi in questo mondo.
 commands.generic.async.initiated = Comando "{0}" avviato (passaggio asincrono {1})
 commands.generic.boolean.invalid = "{0}" non è "true" o "false"
 commands.generic.chunk.notFound = Impossibile trovare il trancio indicato
