@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2017-2018 sel-project
+ * Copyright (c) 2017-2019 sel-project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
  * Packets related to a player. The first field of every packet is an `hub id`
  * that uniquely identifies a player in the hub and never changes until it disconnects.
  * 
- * Copyright: Copyright (c) 2017-2018 sel-project
+ * Copyright: Copyright (c) 2017-2019 sel-project
  * License: MIT
  * Authors: Kripth
  * Source: $(HTTP github.com/sel-project/selery/source/selery/hncom/player.d, selery/hncom/player.d)

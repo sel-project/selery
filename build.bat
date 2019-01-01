@@ -1,5 +1,5 @@
 ::
-:: Copyright: 2017-2018 sel-project
+:: Copyright: 2017-2019 sel-project
 :: License: MIT
 ::
 

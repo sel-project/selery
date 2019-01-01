@@ -2,7 +2,7 @@ name "selery"
 description "Server for Minecraft (Bedrock Engine) and Minecraft: Java Edition"
 authors "sel-project"
 license "MIT"
-copyright "Copyright (c) 2017-2018 sel-project"
+copyright "Copyright (c) 2017-2019 sel-project"
 targetType "library"
 targetPath "libs"
 
